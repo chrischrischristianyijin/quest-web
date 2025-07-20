@@ -924,12 +924,12 @@
         .tag-selector {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin-bottom: 8px;
         }
         
         .tag-option {
-            padding: 6px 12px;
+            padding: 4px 10px;
             border: 1px solid #D9D9D9;
             border-radius: 16px;
             background: white;
@@ -944,14 +944,14 @@
         }
         
         .tag-option:hover {
-            border-color: #65558F;
-            background: rgba(101, 85, 143, 0.1);
+            border-color: #B699BB;
+            background: rgba(182, 153, 187, 0.1);
         }
         
         .tag-option.selected {
-            background: #65558F;
-            color: white;
-            border-color: #65558F;
+            background: #65558F !important;
+            color: white !important;
+            border-color: #65558F !important;
         }
         
         .add-tag-section {
@@ -2398,28 +2398,21 @@
             </div>
             <form id="addContentForm">
                 <div class="form-group">
-                    <label class="form-label" for="contentUrl">Website URL *</label>
+                    <label class="form-label" for="contentUrl">Page URL *</label>
                     <input type="url" id="contentUrl" class="form-input" placeholder="https://example.com/article" required>
-                    <div class="form-hint">We'll automatically fetch the title, description, and image from the website.</div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Tags (optional)</label>
-                                    <div class="tag-selector" id="tagSelector">
-                                            <!-- Tags will be dynamically loaded by JavaScript -->
-                    <button type="button" id="showAddTagBtn" class="show-add-tag-btn">+ Add new tag</button>
-                </div>
-                    <div class="add-tag-section" id="addTagSection" style="display: none;">
-                        <input type="text" id="newTagInput" placeholder="Add new tag" class="new-tag-input">
-                        <button type="button" id="addTagBtn" class="add-tag-btn">+</button>
+                    <div class="tag-selector" id="tagSelector">
+                        <!-- Tags will be dynamically loaded by JavaScript -->
                     </div>
-                    <div class="selected-tags-display" id="selectedTagsDisplay"></div>
                 </div>
 
                 <div class="modal-actions">
                     <button type="button" class="modal-btn modal-btn-secondary" onclick="hideAddContentModal()">Cancel</button>
                     <button type="submit" class="modal-btn modal-btn-primary" id="addContentBtn">
-                        <span id="addContentBtnText">Add Content</span>
+                        <span id="addContentBtnText">Save to Collection</span>
                     </button>
                 </div>
             </form>
@@ -3191,20 +3184,19 @@
         // Tag管理功能
         let selectedTags = [];
         
-        // 更新选中的tags显示
+        // 更新选中的tags显示（现在只是更新选中状态，不显示在下方）
         function updateSelectedTagsDisplay() {
-            const container = document.getElementById('selectedTagsDisplay');
-            if (!container) return;
-            container.innerHTML = '';
+            // 移除所有选中状态
+            document.querySelectorAll('.tag-option').forEach(tag => {
+                tag.classList.remove('selected');
+            });
             
+            // 为选中的标签添加选中状态
             selectedTags.forEach(tag => {
-                const tagElement = document.createElement('div');
-                tagElement.className = 'selected-tag';
-                tagElement.innerHTML = `
-                    ${tag}
-                    <div class="tag-remove" onclick="removeTag('${tag}')">×</div>
-                `;
-                container.appendChild(tagElement);
+                const tagElement = document.querySelector(`[data-tag="${tag}"]`);
+                if (tagElement) {
+                    tagElement.classList.add('selected');
+                }
             });
         }
         
@@ -3231,78 +3223,17 @@
             // Tag选择事件
             document.addEventListener('click', function(event) {
                 if (event.target.classList.contains('tag-option')) {
-                    event.target.classList.toggle('selected');
-                    const tag = event.target.dataset.tag;
-                    if (event.target.classList.contains('selected')) {
+                    const tagElement = event.target;
+                    const tag = tagElement.dataset.tag;
+                    
+                    tagElement.classList.toggle('selected');
+                    if (tagElement.classList.contains('selected')) {
                         addTag(tag);
                     } else {
                         removeTag(tag);
                     }
                 }
             });
-            
-            // 添加新tag事件
-            const newTagInput = document.getElementById('newTagInput');
-            const addTagBtn = document.getElementById('addTagBtn');
-            const showAddTagBtn = document.getElementById('showAddTagBtn');
-            const addTagSection = document.getElementById('addTagSection');
-            
-            if (showAddTagBtn) {
-                // 显示/隐藏添加tag区域
-                showAddTagBtn.addEventListener('click', function() {
-                    addTagSection.style.display = 'flex';
-                    showAddTagBtn.style.display = 'none';
-                    newTagInput.focus();
-                });
-            }
-            
-            if (addTagBtn) {
-                // 点击添加按钮
-                addTagBtn.addEventListener('click', async function() {
-                    const value = newTagInput.value.trim();
-                    if (value) {
-                        // 先添加到本地选择
-                        addTag(value);
-                        newTagInput.value = '';
-                        
-                        // 尝试保存为用户自定义标签
-                        await saveUserTag(value);
-                        
-                        // 隐藏添加区域，显示按钮
-                        addTagSection.style.display = 'none';
-                        showAddTagBtn.style.display = 'block';
-                    }
-                });
-            }
-            
-            if (newTagInput) {
-                // 按Enter键添加
-                newTagInput.addEventListener('keydown', async function(event) {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        const value = this.value.trim();
-                        if (value) {
-                            // 先添加到本地选择
-                            addTag(value);
-                            this.value = '';
-                            
-                            // 尝试保存为用户自定义标签
-                            await saveUserTag(value);
-                            
-                            // 隐藏添加区域，显示按钮
-                            addTagSection.style.display = 'none';
-                            showAddTagBtn.style.display = 'block';
-                        }
-                    }
-                    
-                    // 按Escape键取消添加
-                    if (event.key === 'Escape') {
-                        newTagInput.value = '';
-                        addTagSection.style.display = 'none';
-                        showAddTagBtn.style.display = 'block';
-                    }
-                });
-            }
         }
         
         // 保存用户自定义标签
@@ -3351,7 +3282,6 @@
                     if (data.success && data.tags) {
                         // 清空现有的标签选择器
                         const tagSelector = document.getElementById('tagSelector');
-                        const showAddTagBtn = document.getElementById('showAddTagBtn');
                         
                         // 移除所有现有的标签选项
                         const existingTags = tagSelector.querySelectorAll('.tag-option');
@@ -3366,7 +3296,7 @@
                             tagElement.style.borderColor = tag.color;
                             tagElement.style.color = tag.color;
                             tagElement.textContent = tag.name.charAt(0).toUpperCase() + tag.name.slice(1);
-                            tagSelector.insertBefore(tagElement, showAddTagBtn);
+                            tagSelector.appendChild(tagElement);
                         });
                     }
                 }
@@ -3776,19 +3706,13 @@
                 // 清除选中的tags
                 selectedTags = [];
                 updateSelectedTagsDisplay();
-                document.getElementById('newTagInput').value = '';
-                // 清除预设标签的选中状态
-                document.querySelectorAll('.tag-option.selected').forEach(tag => tag.classList.remove('selected'));
-                // 重置添加tag区域
-                addTagSection.style.display = 'none';
-                showAddTagBtn.style.display = 'block';
 
             } catch (error) {
                 console.error('Error adding content:', error);
             } finally {
                 // 恢复按钮状态
                 addBtn.disabled = false;
-                addBtnText.textContent = 'Add Content';
+                addBtnText.textContent = 'Save to Collection';
             }
         });
 
