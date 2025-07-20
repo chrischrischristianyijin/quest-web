@@ -8,7 +8,7 @@ DECLARE
     tag_name TEXT;
     tag_color TEXT;
     tag_names TEXT[] := ARRAY['tech', 'design', 'business', 'lifestyle', 'education'];
-    tag_colors TEXT[] := ARRAY['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+    tag_colors TEXT[] := ARRAY['#65558F', '#65558F', '#65558F', '#65558F', '#65558F'];
 BEGIN
     -- 遍历所有用户
     FOR user_record IN SELECT id FROM public.users LOOP

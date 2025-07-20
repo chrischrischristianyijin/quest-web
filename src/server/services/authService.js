@@ -4,11 +4,11 @@ import bcrypt from 'bcrypt';
 
 // 预设标签配置
 const DEFAULT_TAGS = [
-    { name: 'tech', color: '#FF6B6B' },
-    { name: 'design', color: '#4ECDC4' },
-    { name: 'business', color: '#45B7D1' },
-    { name: 'lifestyle', color: '#96CEB4' },
-    { name: 'education', color: '#FFEAA7' }
+    { name: 'tech', color: '#65558F' },
+    { name: 'design', color: '#65558F' },
+    { name: 'business', color: '#65558F' },
+    { name: 'lifestyle', color: '#65558F' },
+    { name: 'education', color: '#65558F' }
 ];
 
 export const checkEmailExists = async (email) => {

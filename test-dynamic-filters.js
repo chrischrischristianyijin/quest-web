@@ -15,11 +15,11 @@ function createFilterButton(tag) {
 
 // 模拟用户标签数据
 const mockUserTags = [
-    { name: 'tech', color: '#FF6B6B' },
-    { name: 'design', color: '#4ECDC4' },
-    { name: 'business', color: '#45B7D1' },
-    { name: 'my-custom-tag', color: '#96CEB4' },
-    { name: 'another-tag', color: '#FFEAA7' }
+    { name: 'tech', color: '#65558F' },
+    { name: 'design', color: '#65558F' },
+    { name: 'business', color: '#65558F' },
+    { name: 'my-custom-tag', color: '#65558F' },
+    { name: 'another-tag', color: '#65558F' }
 ];
 
 // 模拟生成筛选按钮
