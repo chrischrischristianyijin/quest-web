@@ -20,6 +20,12 @@ const __dirname = dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Debug middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
 // Middleware configuration
 app.use(requestLogger);
 app.use(bodyParser.json());
@@ -42,14 +48,13 @@ app.use('/api/v1/user-tags', userTagsRoutes);
 app.use('/', metadataRoutes);
 
 // Set root path
-app.get('/', async (req, res) => {
+app.get('/', (req, res) => {
     try {
-        // 在 Vercel 环境中，直接返回 AboutUs 页面
-        // 前端 JavaScript 会处理认证逻辑
+        console.log('Root path accessed');
         res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
     } catch (error) {
         console.error('Error serving root page:', error);
-        res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
+        res.status(500).send('Internal Server Error');
     }
 });
 
@@ -57,27 +62,32 @@ app.get('/', async (req, res) => {
 
 // Set login page route
 app.get('/login', (req, res) => {
+    console.log('Login page accessed');
     res.sendFile(path.join(__dirname, '../client/pages/login.html'));
 });
 
 // Set signup page route
 app.get('/signup', (req, res) => {
+    console.log('Signup page accessed');
     res.sendFile(path.join(__dirname, '../client/pages/signup.html'));
 });
 
 // Test page route
 app.get('/test', (req, res) => {
+    console.log('Test page accessed');
     res.sendFile(path.join(__dirname, '../client/pages/test.html'));
 });
 
+// Simple test page route
+app.get('/simple', (req, res) => {
+    console.log('Simple test page accessed');
+    res.sendFile(path.join(__dirname, '../client/pages/simple-test.html'));
+});
+
 // Set page route aliases
-app.get('/about', async (req, res) => {
-    try {
-        res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
-    } catch (error) {
-        console.error('Error serving about page:', error);
-        res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
-    }
+app.get('/about', (req, res) => {
+    console.log('About page accessed');
+    res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
 });
 
 // Add authentication check endpoint

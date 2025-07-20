@@ -8,67 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "src/server/index.js"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "src/client/js/$1"
-    },
-    {
-      "src": "/styles/(.*)",
-      "dest": "src/client/styles/$1"
-    },
-    {
-      "src": "/templates/(.*)",
-      "dest": "src/client/templates/$1"
-    },
-    {
-      "src": "/public/(.*)",
-      "dest": "src/public/$1"
-    },
-    {
-      "src": "/pages/(.*)",
-      "dest": "src/client/pages/$1"
-    },
-    {
-      "src": "/spaces/(.*)",
-      "dest": "src/client/pages/spaces/$1"
-    },
-    {
-      "src": "/login",
-      "dest": "src/server/index.js"
-    },
-    {
-      "src": "/signup",
-      "dest": "src/server/index.js"
-    },
-    {
-      "src": "/about",
-      "dest": "src/server/index.js"
-    },
-    {
-      "src": "/collection",
-      "dest": "src/server/index.js"
-    },
-    {
-      "src": "/collection.html",
-      "dest": "src/server/index.js"
-    },
-    {
-      "src": "/test",
-      "dest": "src/server/index.js"
-    },
-    {
-      "src": "/(.*\\.(html|css|js|png|jpg|jpeg|gif|svg|ico|webp))",
-      "dest": "src/client/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "src/server/index.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 } 
