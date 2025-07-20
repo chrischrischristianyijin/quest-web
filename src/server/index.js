@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 // Middleware configuration
 app.use(requestLogger);
@@ -152,6 +152,11 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-}); 
+// For Vercel deployment
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });
+}
+
+export default app; 
