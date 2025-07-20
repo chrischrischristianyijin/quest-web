@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest - Add Your Pick</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --schemes-primary: #65558F;
+            --schemes-on-surface-variant: #49454F;
+            --quest-purple: #4B264F;
+            --quest-orange: #D76E13;
+            --quest-light-purple: #B699BB;
+            --border-default: #D9D9D9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: white;
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gradient-bg {
+            width: 100%;
+            height: 875px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(228, 228, 255, 0.67) 0%, rgba(255, 255, 255, 0.90) 100%);
+            z-index: -1;
+        }
+
+        .content-wrapper {
+            max-width: 1512px;
+            margin: 0 auto;
+            position: relative;
+            padding: 47px 76px;
+            padding-bottom: 100px; /* Add padding to prevent content from being hidden behind footer */
+        }
+
+        .logo {
+            position: absolute;
+            left: 76px;
+            top: 47px;
+            color: #4B264F;
+            font-size: 50px;
+            font-family: 'Pacifico', cursive;
+            font-weight: 400;
+            line-height: 50px;
+            text-decoration: none;
+            z-index: 10;
+        }
+
+        .nav-tabs {
+            width: 844px;
+            height: 57px;
+            position: relative;
+            margin-left: 210px;
+            margin-top: 15px;
+            display: flex;
+            border-bottom: 1px solid var(--schemes-outline-variant, #CAC4D0);
+        }
+
+        .nav-tab {
+            flex: 1;
+            height: 48px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            color: var(--schemes-on-surface-variant, #49454F);
+            font-size: 22px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 400;
+            line-height: 28px;
+            position: relative;
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56px;
+            height: 3px;
+            background: var(--schemes-primary);
+            border-radius: 100px;
+        }
+
+        .action-buttons {
+            position: relative;
+            margin-top: 50px;
+            margin-left: 196px;
+            display: flex;
+            gap: 27px;
+        }
+
+        .action-button {
+            height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 24px;
+            border-radius: 41.48px;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            line-height: 24px;
+            cursor: pointer;
+        }
+
+        .add-button {
+            background: var(--quest-light-purple);
+            color: white;
+            border: 1px solid white;
+        }
+
+        .visit-button {
+            background: transparent;
+            color: #8E6993;
+            border: 0.44px solid black;
+        }
+
+        .description {
+            width: 100%;
+            max-width: 1151px;
+            position: relative;
+            margin: 40px auto;
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            line-height: 45px;
+        }
+
+        .description-text {
+            color: var(--quest-purple);
+            font-weight: 600;
+        }
+
+        .highlight {
+            color: var(--quest-orange);
+            font-weight: 900;
+        }
+
+        .form-container {
+            width: 671.31px;
+            position: relative;
+            margin: 40px auto;
+            background: rgba(255, 255, 255, 0.70);
+            border-radius: 12.69px;
+            border: 0.42px black solid;
+            padding: 40px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 20px;
+        }
+
+        .input-field {
+            height: 56.55px;
+            padding: 10.15px 13.53px;
+            background: white;
+            border-radius: 8672.60px;
+            border: 0.85px solid var(--border-default);
+            color: #B3B3B3;
+            font-size: 20.30px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            line-height: 20.30px;
+        }
+
+        .input-field.email {
+            width: 323.86px;
+        }
+
+        .input-field.pin {
+            width: 213.34px;
+        }
+
+        .input-field.url {
+            width: 577.03px;
+        }
+
+        .pin-note {
+            color: black;
+            font-size: 13.53px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 300;
+            line-height: 23.68px;
+            letter-spacing: 0.85px;
+            margin-top: 10px;
+        }
+
+        .submit-button {
+            transition: all 0.3s ease;
+            background-color: #ccc;
+            width: 100px;
+        }
+
+        .submit-button.active {
+            background-color: #555;
+            width: 150px;
+        }
+
+        .instructions {
+            width: 100%;
+            max-width: 1164px;
+            position: relative;
+            margin: 40px auto;
+        }
+
+        .instructions-heading {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 45px;
+        }
+
+        .instructions-heading .normal {
+            color: var(--quest-purple);
+        }
+
+        .instructions-heading .highlight {
+            color: var(--quest-orange);
+        }
+
+        .instructions-steps {
+            color: var(--quest-purple);
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 400;
+            line-height: 45px;
+            list-style-position: inside;
+        }
+
+        .footer {
+            width: 100%;
+            height: 342px;
+            background: #E6DFE8;
+            padding: 80px 161px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            flex-shrink: 0;
+            position: relative;
+            margin-top: auto;
+        }
+
+        .footer-section h3 {
+            color: #682870;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            line-height: 45px;
+            margin-bottom: 15px;
+        }
+
+        .footer-text {
+            color: black;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 400;
+            line-height: 45px;
+        }
+
+        .footer-links a {
+            display: block;
+            color: black;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            line-height: 45px;
+            text-decoration: none;
+        }
+
+        /* Add styles for input fields when they contain text */
+        .input-field:focus, 
+        .input-field:not(:placeholder-shown) {
+            color: black !important;
+            font-weight: 400 !important;
+        }
+
+        /* Add styles for the welcome and my space section */
+        .header-right {
+            position: absolute;
+            right: 76px;
+            top: 47px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .welcome-text {
+            color: black;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 300;
+        }
+
+        .my-space-button {
+            background: var(--quest-light-purple);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: 'Roboto', sans-serif;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .my-space-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(182, 153, 187, 0.3);
+        }
+
+        .welcome-message {
+            color: var(--quest-purple);
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    <div class="content-wrapper">
+        <a href="/" class="logo">Quest</a>
+        
+        <!-- Welcome Message -->
+        <div class="welcome-message">Welcome to Quest</div>
+
+        <nav class="nav-tabs">
+            <a href="/Home%3EVisitTheSpace.html" class="nav-tab active">Add Your Pick</a>
+                            <a href="/spaces/my-space.html" class="nav-tab" id="visitSpaceLink">My Space</a>
+        </nav>
+
+        <div class="description">
+            <p class="description-text">
+                Add your favorite <span class="highlight">media</span> to your collection. Share your <span class="highlight">picks</span> with others.
+            </p>
+        </div>
+
+        <div class="form-container">
+            <form id="addForm">
+                <div class="form-row">
+                    <input type="text" id="linkInput" class="input-field url" placeholder="Enter URL" required>
+                </div>
+                <div class="form-row">
+                    <input type="password" id="pinInput" class="input-field pin" placeholder="Enter PIN" required>
+                    <p class="pin-note">Your PIN is required to add to your collection</p>
+                </div>
+                <button type="submit" class="action-button add-button">Add to Collection</button>
+            </form>
+        </div>
+
+        <div class="instructions">
+            <h2 class="instructions-heading">
+                <span class="normal">How to use</span> 
+                <span class="highlight">Quest</span>
+            </h2>
+            <div class="instructions-steps">
+                <p>1. Enter the URL of the media you want to add</p>
+                <p>2. Enter your PIN to confirm</p>
+                <p>3. Click "Add to Collection" to save</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import the JavaScript file -->
+    <script type="module" src="../js/add.js"></script>
+    
+    <script>
+        // 统一的 About Us 链接更新逻辑
+        function updateAboutUsLinks() {
+            const email = localStorage.getItem('userEmail') || (new URLSearchParams(window.location.search)).get('email');
+            document.querySelectorAll('a[href*="about"], a[href*="AboutUs"]').forEach(link => {
+                if (email) {
+                    link.href = `/AboutUs.html?email=${encodeURIComponent(email)}`;
+                } else {
+                    link.href = '/AboutUs.html';
+                }
+            });
+        }
+        
+        // 页面加载时更新 About Us 链接
+        document.addEventListener('DOMContentLoaded', updateAboutUsLinks);
+    </script>
+</body>
+</html>
