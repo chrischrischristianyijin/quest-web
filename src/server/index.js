@@ -44,14 +44,11 @@ app.use('/', metadataRoutes);
 // Set root path
 app.get('/', async (req, res) => {
     try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-            res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
-        } else {
-            res.redirect('/spaces/my-space.html');
-        }
+        // 在 Vercel 环境中，直接返回 AboutUs 页面
+        // 前端 JavaScript 会处理认证逻辑
+        res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
     } catch (error) {
-        console.error('Error checking auth status:', error);
+        console.error('Error serving root page:', error);
         res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
     }
 });
@@ -68,17 +65,17 @@ app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/pages/signup.html'));
 });
 
+// Test page route
+app.get('/test', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/pages/test.html'));
+});
+
 // Set page route aliases
 app.get('/about', async (req, res) => {
     try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-            res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
-        } else {
-            res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
-        }
+        res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
     } catch (error) {
-        console.error('Error checking auth status:', error);
+        console.error('Error serving about page:', error);
         res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
     }
 });

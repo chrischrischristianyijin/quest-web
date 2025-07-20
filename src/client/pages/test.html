@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            border-left: 4px solid #4CAF50;
+        }
+        .info {
+            background: rgba(33, 150, 243, 0.3);
+            border-left: 4px solid #2196F3;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .links {
+            text-align: center;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Quest 部署成功！</h1>
+        
+        <div class="status success">
+            <h3>✅ 部署状态</h3>
+            <p>你的 Quest 应用已经成功部署到 Vercel！</p>
+            <p><strong>时间:</strong> <span id="timestamp"></span></p>
+        </div>
+
+        <div class="status info">
+            <h3>📋 部署信息</h3>
+            <p><strong>项目类型:</strong> Node.js Express 应用</p>
+            <p><strong>数据库:</strong> Supabase</p>
+            <p><strong>部署平台:</strong> Vercel</p>
+        </div>
+
+        <div class="status">
+            <h3>🔗 快速链接</h3>
+            <div class="links">
+                <a href="/" class="button">🏠 首页</a>
+                <a href="/about" class="button">ℹ️ 关于我们</a>
+                <a href="/login" class="button">🔐 登录</a>
+                <a href="/signup" class="button">📝 注册</a>
+                <a href="/api/v1/auth/current-user" class="button">👤 用户状态</a>
+            </div>
+        </div>
+
+        <div class="status">
+            <h3>🧪 API 测试</h3>
+            <p>点击下面的按钮测试 API 是否正常工作：</p>
+            <div class="links">
+                <button onclick="testAPI()" class="button">测试 API</button>
+                <div id="api-result" style="margin-top: 15px; padding: 10px; border-radius: 5px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 显示当前时间
+        document.getElementById('timestamp').textContent = new Date().toLocaleString('zh-CN');
+
+        // 测试 API
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '🔄 测试中...';
+            
+            try {
+                const response = await fetch('/api/v1/auth/current-user');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = '✅ API 正常工作！';
+                    resultDiv.style.background = 'rgba(76, 175, 80, 0.3)';
+                } else {
+                    resultDiv.innerHTML = `⚠️ API 响应: ${data.error || '未知错误'}`;
+                    resultDiv.style.background = 'rgba(255, 193, 7, 0.3)';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ API 错误: ${error.message}`;
+                resultDiv.style.background = 'rgba(244, 67, 54, 0.3)';
+            }
+        }
+    </script>
+</body>
+</html> 
