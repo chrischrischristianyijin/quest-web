@@ -2285,6 +2285,7 @@
                         <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImF2YXRhckJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY1NTU4RjtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojNEIyNjRGO3N0b3Atb3BhY2l0eToxIiAvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiByeD0iNjAiIGZpbGw9InVybCgjYXZhdGFyQmcpLz4KPCEtLSDlm77niYfliqDovb3lpLHotKUgLS0+CjxjaXJjbGUgY3g9IjYwIiBjeT0iNDUiIHI9IjE4IiBmaWxsPSIjRkZGRkZGIi8+CjwhLS0g5Zu+54mH5Yqg6L295aSx6LSlIC0tPgo8Y2lyY2xlIGN4PSI1NSIgY3k9IjQwIiByPSI0IiBmaWxsPSIjMzMzMzMzIi8+CjxjaXJjbGUgY3g9IjY1IiBjeT0iNDAiIHI9IjQiIGZpbGw9IiMzMzMzMzMiLz4KPCEtLSDmnInml6DlpLHotKUgLS0+CjxwYXRoIGQ9Ik01OCA1MEM1OCA0OCA1OSA0NyA2MCA0N0M2MSA0NyA2MiA0OCA2MiA1MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz4KPCEtLSDlm77niYfliqDovb3kgLS0+CjxwYXRoIGQ9Ik0zMCA4NUMzMCA3NSA0MCA2NSA2MCA2NUM4MCA2NSA5MCA3NSA5MCA4NSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz4KPC9zdmc+" alt="Default Avatar" />
                 </div>
                         <div class="UsernamePlaceholder" id="usernamePlaceholder" onclick="editProfile()" tabindex="0" onkeypress="if(event.key==='Enter')editProfile()">Username Placeholder</div>
+                        <div class="logout-button" onclick="logout()" tabindex="0" onkeypress="if(event.key==='Enter')logout()" style="cursor: pointer; margin-top: 8px; font-size: 12px; color: #666; text-decoration: underline;">Logout</div>
                 </div>
             </div>
 
@@ -2900,71 +2901,129 @@
 
         async function changeAvatar() {
             try {
-                const choice = confirm('Choose an action:\n\nOK - Change Avatar\nCancel - Logout');
+                // 创建文件输入元素
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
                 
-                if (choice) {
-                    // 用户选择更换头像
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
                     
-                    input.onchange = async (e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
-                        
-                        const userEmail = document.getElementById('usernameEmail').textContent.trim();
-                        if (!userEmail) {
-                            return;
-                        }
-                        
-                        const fileExt = file.name.split('.').pop();
-                        const fileName = `${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${fileExt}`;
-                        
-                        try {
-                            const formData = new FormData();
-                            formData.append('avatar', file);
-                            formData.append('email', userEmail);
-                            formData.append('fileName', fileName);
-                            
-                            const response = await fetch('/api/v1/user/upload-avatar', {
-                                method: 'POST',
-                                body: formData
-                            });
-                            
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(errorData.error || 'Failed to upload avatar');
-                            }
-                            
-                            const responseData = await response.json();
-                            
-                            // 更新前端头像
-                            const avatarImg = document.querySelector('.profile-avatar img');
-                            if (avatarImg && responseData.avatar_url) {
-                                avatarImg.src = responseData.avatar_url;
-                                avatarImg.alt = `${userEmail}'s avatar`;
-                            }
-                            
-                        } catch (error) {
-                            console.error('Avatar update error:', error);
-                        }
-                    };
-                    
-                    input.click();
-                } else {
-                    // 用户选择登出
-                    if (confirm('Are you sure you want to logout?')) {
-                        // 清除localStorage中的用户会话
-                        localStorage.removeItem('quest_user_session');
-                        localStorage.removeItem('userEmail');
-                        
-                        // 重定向到首页
-                        window.location.href = '/';
+                    const userEmail = document.getElementById('usernameEmail').textContent.trim();
+                    if (!userEmail) {
+                        alert('User email not found');
+                        return;
                     }
-                }
+                    
+                    // 验证文件类型和大小
+                    if (!file.type.startsWith('image/')) {
+                        alert('Please select an image file');
+                        return;
+                    }
+                    
+                    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                        alert('File size must be less than 5MB');
+                        return;
+                    }
+                    
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${fileExt}`;
+                    
+                    try {
+                        // 显示上传进度
+                        const avatarImg = document.querySelector('.profile-avatar img');
+                        if (avatarImg) {
+                            avatarImg.style.opacity = '0.5';
+                        }
+                        
+                        const formData = new FormData();
+                        formData.append('avatar', file);
+                        formData.append('email', userEmail);
+                        formData.append('fileName', fileName);
+                        
+                        const response = await fetch('/api/v1/user/upload-avatar', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to upload avatar');
+                        }
+                        
+                        const responseData = await response.json();
+                        
+                        // 更新前端头像
+                        if (avatarImg && responseData.avatar_url) {
+                            avatarImg.src = responseData.avatar_url;
+                            avatarImg.alt = `${userEmail}'s avatar`;
+                            avatarImg.style.opacity = '1';
+                        }
+                        
+                        // 显示成功消息
+                        showMessage('Avatar updated successfully!', false);
+                        
+                    } catch (error) {
+                        console.error('Avatar update error:', error);
+                        alert('Failed to upload avatar: ' + error.message);
+                        
+                        // 恢复头像透明度
+                        if (avatarImg) {
+                            avatarImg.style.opacity = '1';
+                        }
+                    }
+                };
+                
+                input.click();
             } catch (error) {
                 console.error('changeAvatar error:', error);
+                alert('Error opening file selector');
             }
+        }
+        
+        // 登出函数
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // 清除localStorage中的用户会话
+                localStorage.removeItem('quest_user_session');
+                localStorage.removeItem('userEmail');
+                
+                // 重定向到首页
+                window.location.href = '/';
+            }
+        }
+        
+        // 显示消息的辅助函数
+        function showMessage(message, isError = false) {
+            // 创建消息元素
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                background: ${isError ? '#f44336' : '#4CAF50'};
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                transition: all 0.3s ease;
+            `;
+            messageDiv.textContent = message;
+            
+            document.body.appendChild(messageDiv);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 300);
+            }, 3000);
         }
 
         // 搜索功能
