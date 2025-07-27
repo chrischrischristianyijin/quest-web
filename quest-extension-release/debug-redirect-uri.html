@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirect URI Debug</title>
+</head>
+<body>
+    <h1>Chrome Extension Redirect URI Debug</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Get the redirect URI that Chrome generates
+        const redirectUri = chrome.identity.getRedirectURL();
+        
+        document.getElementById('output').innerHTML = `
+            <h2>Your Extension's Redirect URI:</h2>
+            <p><strong>${redirectUri}</strong></p>
+            
+            <h2>Steps to fix redirect_uri_mismatch:</h2>
+            <ol>
+                <li>Copy the redirect URI above</li>
+                <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                <li>Navigate to "APIs & Services" > "Credentials"</li>
+                <li>Find your OAuth 2.0 Client ID for Chrome Extension</li>
+                <li>Click on it to edit</li>
+                <li>In the "Authorized redirect URIs" section, add the URI above</li>
+                <li>Save the changes</li>
+                <li>Wait a few minutes for changes to propagate</li>
+            </ol>
+            
+            <h2>Important Notes:</h2>
+            <ul>
+                <li>The redirect URI format is: <code>https://[extension-id].chromiumapp.org/</code></li>
+                <li>Make sure there are no extra spaces or characters</li>
+                <li>The extension ID must match exactly</li>
+                <li>Changes may take a few minutes to take effect</li>
+            </ul>
+        `;
+    </script>
+</body>
+</html> 

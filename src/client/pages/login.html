@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest - Login</title>
+    <!-- Add fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap" rel="stylesheet">
+    <script src="/js/login.js" defer></script>
+    <style>
+        :root {
+            --schemes-surface: #FEF7FF;
+            --schemes-outline: #79747E;
+            --schemes-on-surface: #1D1B20;
+            --schemes-on-surface-variant: #49454F;
+            --schemes-primary: #65558F;
+            --border-default: #D9D9D9;
+            --quest-purple: #4B264F;
+            --quest-orange: #D76E13;
+            --quest-light-purple: #B699BB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: white;
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gradient-bg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(228, 228, 255, 0.67) 0%, rgba(255, 255, 255, 0.90) 100%);
+            z-index: -1;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            margin: 20px;
+        }
+
+        .logo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: var(--quest-purple);
+            font-family: 'Pacifico', cursive;
+            font-size: 40px;
+            text-decoration: none;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: var(--quest-purple);
+            font-family: 'Playfair Display', serif;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--quest-purple);
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            height: 50px;
+            padding: 10px 15px;
+            border: 1px solid var(--border-default);
+            border-radius: 25px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--quest-light-purple);
+        }
+
+        .forgot-password {
+            position: absolute;
+            right: 0;
+            top: 0;
+            color: var(--quest-purple);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .login-button {
+            width: 100%;
+            height: 50px;
+            background: var(--quest-light-purple);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: not-allowed;
+            margin-top: 20px;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+
+        .login-button.active {
+            background: var(--quest-purple);
+            cursor: pointer;
+            opacity: 1;
+        }
+
+        .login-button.active:hover {
+            opacity: 0.9;
+        }
+
+        .signup-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .signup-text {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .signup-button {
+            display: inline-block;
+            padding: 12px 40px;
+            background: var(--schemes-surface);
+            color: var(--quest-purple);
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .signup-button:hover {
+            background: #f5f5f5;
+        }
+
+        .signup-link:hover {
+            text-decoration: underline;
+        }
+
+        #message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        #message.error {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        #message.success {
+            background-color: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        /* Forgot Password Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .forgot-password-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: var(--quest-purple);
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 8px;
+        }
+
+        .modal-subtitle {
+            font-size: 14px;
+            color: #666;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .forgot-password-form {
+            margin-bottom: 20px;
+        }
+
+        .forgot-password-form input {
+            width: 100%;
+            height: 50px;
+            padding: 10px 15px;
+            border: 1px solid var(--border-default);
+            border-radius: 25px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: 20px;
+        }
+
+        .forgot-password-form input:focus {
+            outline: none;
+            border-color: var(--quest-light-purple);
+        }
+
+        .forgot-password-button {
+            width: 100%;
+            height: 50px;
+            background: var(--quest-light-purple);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .forgot-password-button:hover {
+            background: var(--quest-purple);
+        }
+
+        .forgot-password-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .modal-message {
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .modal-message.success {
+            background-color: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .modal-message.error {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        /* OAuth Styles */
+        .oauth-divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .oauth-divider span {
+            background-color: white;
+            padding: 0 10px;
+            position: relative;
+            z-index: 1;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .oauth-divider::before, .oauth-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%; /* Adjust as needed */
+            height: 1px;
+            background-color: var(--border-default);
+        }
+
+        .oauth-divider::before {
+            left: 0;
+        }
+
+        .oauth-divider::after {
+            right: 0;
+        }
+
+        .google-oauth-btn {
+            width: 100%;
+            height: 50px;
+            background: #4285F4; /* Google blue */
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .google-oauth-btn:hover {
+            background: #357ABD; /* Darker blue on hover */
+            opacity: 0.9;
+        }
+
+        .google-icon {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    <div class="login-container">
+        <a href="/" class="logo">Quest</a>
+        <h1>Welcome!</h1>
+        <p class="subtitle">Log in to your space.</p>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email/Account Number</label>
+                <input type="email" id="email" placeholder="Registered Email / Account Number" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot Password?</a>
+                <input type="password" id="password" placeholder="Password" required>
+            </div>
+
+            <button type="submit" class="login-button">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Log in
+            </button>
+        </form>
+
+        <!-- OAuth Divider -->
+        <div class="oauth-divider">
+            <span>or</span>
+        </div>
+
+        <!-- Google OAuth Button -->
+        <div class="oauth-section">
+            <button type="button" id="googleOAuthBtn" class="google-oauth-btn">
+                <svg class="google-icon" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Continue with Google
+            </button>
+        </div>
+
+        <div id="message"></div>
+        
+        <div class="signup-section">
+            <p class="signup-text">Don't have an account?</p>
+            <a href="/signup" class="signup-button">Sign Up</a>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="forgotPasswordModal">
+        <div class="forgot-password-modal">
+            <button class="modal-close" id="closeModal">&times;</button>
+            <div class="modal-header">
+                <h2 class="modal-title">Reset Password</h2>
+                <p class="modal-subtitle">Enter your email to receive a password reset link</p>
+            </div>
+            <form class="forgot-password-form" id="forgotPasswordForm">
+                <input type="email" id="resetEmail" placeholder="Enter your email address" required>
+                <div class="modal-message" id="modalMessage"></div>
+                <button type="submit" class="forgot-password-button" id="resetPasswordButton">
+                    Send Reset Link
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html> 

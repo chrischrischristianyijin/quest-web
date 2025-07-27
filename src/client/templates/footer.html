@@ -1,0 +1,93 @@
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-section">
+            <h3>Quest</h3>
+            <p>Your personal knowledge hub for discovering and sharing meaningful content.</p>
+            <p>&copy; 2025 Quest. All rights reserved.</p>
+        </div>
+        <div class="footer-section">
+            <h3>Quick Links</h3>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/spaces/my-space.html">My Space</a></li>
+            </ul>
+        </div>
+        <div class="footer-section">
+            <h3>Contact</h3>
+            <p>Email: contact@quest.com</p>
+            <div class="social-links">
+                <a href="#" target="_blank">Twitter</a>
+                <a href="#" target="_blank">LinkedIn</a>
+            </div>
+        </div>
+    </div>
+</footer>
+<style>
+    .footer {
+        background-color: white;
+        padding: 40px 0 20px;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 60px;
+    }
+
+    .footer-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 40px;
+        padding: 0 2rem;
+    }
+
+    .footer-section h3 {
+        color: #4B2E83;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .footer-section p {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .footer-section ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .footer-section ul li {
+        margin-bottom: 0.5rem;
+    }
+
+    .footer-section a {
+        color: #666;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .footer-section a:hover {
+        color: #4B2E83;
+    }
+
+    .social-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+
+
+    @media (max-width: 768px) {
+        .footer-content {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+
+        .social-links {
+            justify-content: center;
+        }
+    }
+</style>
+</body>
+
+</html>

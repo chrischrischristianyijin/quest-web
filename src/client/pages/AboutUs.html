@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest - About Us</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rozha+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --schemes-primary: #65558F;
+            --schemes-on-surface-variant: #49454F;
+            --quest-purple: #4B264F;
+            --quest-orange: #D76E13;
+            --quest-light-purple: #8E4F9D;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: white;
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .gradient-bg {
+            width: 100%;
+            height: 875px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(228, 228, 255, 0.67) 0%, rgba(255, 255, 255, 0.90) 100%);
+            z-index: -1;
+        }
+
+        .content-wrapper {
+            max-width: 1512px;
+            margin: 0 auto;
+            position: relative;
+            padding: 47px 76px;
+            padding-bottom: 100px;
+            flex: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .left-nav {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .logo {
+            color: var(--quest-purple);
+            font-size: 50px;
+            font-family: 'Pacifico', cursive;
+            font-weight: 400;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-link {
+            color: var(--quest-purple);
+            text-decoration: none;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 20px;
+        }
+
+        .signup-btn, .login-btn {
+            padding: 10px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .signup-btn {
+            border: 2px solid var(--quest-purple);
+            color: var(--quest-purple);
+            background: transparent;
+        }
+
+        .login-btn {
+            background: var(--quest-light-purple);
+            color: white;
+            border: none;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 60px 0;
+        }
+
+        .welcome-title {
+            color: var(--quest-purple);
+            font-size: 96px;
+            font-family: 'Pacifico', cursive;
+            font-weight: 400;
+            line-height: 100px;
+            margin-bottom: 20px;
+        }
+
+        .multimedia-text {
+            color: var(--quest-orange);
+            font-size: 40px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            line-height: 48px;
+            margin-bottom: 30px;
+        }
+
+        .try-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: var(--quest-light-purple);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            margin-top: 30px;
+        }
+
+        .try-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .discover-section {
+            text-align: center;
+            padding: 60px 0;
+            background: rgba(164, 119, 176, 0.11);
+            margin-bottom: 80px;
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+        }
+
+        .discover-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .discover-title {
+            color: #8E4F9D;
+            font-size: 64px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            line-height: 70px;
+            text-shadow: 0px 4px 4px rgba(239, 225, 240, 1.00);
+            margin-bottom: 40px;
+        }
+
+        .welcome-text {
+            color: #4B264F;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 400;
+            line-height: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .feature-section {
+            margin-bottom: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .feature-content-left {
+            flex: 1;
+            max-width: 55%;
+        }
+
+        .feature-content-right {
+            flex: 1;
+            max-width: 55%;
+            order: 1;
+        }
+
+        .feature-image {
+            flex: 1;
+            max-width: 45%;
+            background: radial-gradient(ellipse 50% 50% at 50% 50%, #DEDAFF 0%, white 100%);
+            border-radius: 12px;
+            height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-image img {
+            max-width: 90%;
+            height: auto;
+            border-radius: 8px;
+            z-index: 2;
+        }
+
+        .feature-title {
+            color: #D76E13;
+            font-size: 28px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            line-height: 48px;
+            margin-bottom: 30px;
+        }
+
+        .feature-text {
+            color: #4B264F;
+            font-size: 20px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 400;
+            line-height: 35px;
+        }
+
+        .feature-highlight {
+            color: #D76E13;
+            font-weight: 700;
+        }
+
+        .quote-section {
+            text-align: center;
+            margin: 80px 0;
+            padding: 60px 0;
+            background: radial-gradient(ellipse 50% 50% at 50% 50%, #DFDCFF 0%, white 100%);
+        }
+
+        .quote {
+            color: black;
+            font-size: 55px;
+            font-family: 'Rozha One', serif;
+            font-weight: 400;
+            line-height: 100px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .footer {
+            width: 100%;
+            height: 342px;
+            background: #E6DFE8;
+            padding: 80px 161px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        .footer-section h3 {
+            color: #682870;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            line-height: 45px;
+            margin-bottom: 15px;
+        }
+
+        .footer-text {
+            color: black;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 400;
+            line-height: 45px;
+        }
+
+        .footer-links a {
+            display: block;
+            color: black;
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            line-height: 45px;
+            text-decoration: none;
+        }
+
+        .add-button {
+            transition: all 0.3s ease;
+            background-color: #ccc;
+            width: 100px;
+        }
+
+        .add-button.active {
+            background-color: #555;
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    <div class="content-wrapper">
+        <header class="header">
+            <div class="left-nav">
+                <a href="/" class="logo">Quest</a>
+                <nav class="nav-links" id="navLinks">
+                    <!-- Navigation links will be dynamically updated -->
+                </nav>
+            </div>
+            <div class="auth-buttons" id="authButtons">
+                <!-- Auth buttons will be dynamically updated -->
+            </div>
+        </header>
+
+        <div class="main-content">
+            <section class="welcome-section">
+                <h1 class="welcome-title" id="welcomeTitle"></h1>
+                <p class="multimedia-text">YOUR MULTIMEDIA INSIGHT STACK</p>
+                <a href="/signup" class="try-button" id="tryButton">Try Now</a>
+            </section>
+
+            <section class="discover-section">
+                <div class="discover-content">
+                    <h2 class="discover-title">DISCOVER. ORGANIZE. CONNECT.</h2>
+                    <p class="welcome-text">
+                        Welcome to Quest — where curiosity meets clarity. In a world overflowing with information, we empower you to cut through the noise and focus on what truly matters. 
+                        <span class="feature-highlight">Quest re-imagines how you engage with knowledge, transforming scattered content into a cohesive intellectual journey.</span>
+                        Whether you're a lifelong learner, a professional, or simply someone who loves to explore, Quest is your gateway to a smarter, more connected way of thinking.
+                    </p>
+                </div>
+            </section>
+
+            <section class="feature-section">
+                <div class="feature-content-left">
+                    <h3 class="feature-title">YOUR PERSONAL KNOWLEDGE MAP</h3>
+                    <p class="feature-text">
+                        Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. 
+                        <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms like Google, Twitter, and more.</span>
+                        No more fragmentation; just a seamless, unified library that grows with your interests. Your Space isn't just a collection—it's a reflection of your mind, curated by you and for you.
+                    </p>
+                </div>
+                <div class="feature-image">
+                    <img src="/public/picture1.jpg" alt="Quest dashboard" style="max-width: 90%; height: auto; border-radius: 8px;">
+                </div>
+            </section>
+
+            <section class="feature-section">
+                <div class="feature-image">
+                    <img src="/public/picture2.png" style="max-width: 65%; height: auto; border-radius: 8px;">
+                </div>
+                <div class="feature-content-right">
+                    <h3 class="feature-title">LEARN FROM THE BEST MINDS AROUND YOU.</h3>
+                    <p class="feature-text">
+                        Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? Explore Others' Spaces and turn that wish into reality. We believe everyone is an expert in some fields, and Quest lets you discover hidden gems, trends, and insights from friends you secretly admire. Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment. 
+                        <span class="feature-highlight">Here, your profile isn't just a page—it's a living archive of your intellectual growth.</span>
+                    </p>
+                </div>
+            </section>
+
+            <section class="quote-section">
+                <div class="quote">
+                    Quest.<br>
+                    Curate your world.<br>
+                    Connect through knowledge.
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-section">
+            <h3>Quest</h3>
+            <p class="footer-text">Your personal knowledge hub for discovering and sharing meaningful content.</p>
+        </div>
+        <div class="footer-section">
+            <h3>Quick Links</h3>
+            <div class="footer-links">
+                <a href="/">Home</a>
+            </div>
+        </div>
+        <div class="footer-section">
+            <h3>Contact Us</h3>
+            <p class="footer-text">Email: contact@myquestspace.com</p>
+        </div>
+    </footer>
+
+    <script>
+        // Function to update UI based on login status
+        function updateUIForLoginStatus(isLoggedIn, userEmail = null) {
+            const navLinks = document.getElementById('navLinks');
+            const authButtons = document.getElementById('authButtons');
+            const welcomeTitle = document.getElementById('welcomeTitle');
+            const tryButton = document.getElementById('tryButton');
+
+            // 欢迎语初始为空
+            welcomeTitle.textContent = '';
+
+            if (isLoggedIn && userEmail) {
+                navLinks.innerHTML = `
+                                            <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="nav-link">My Space</a>
+                `;
+                authButtons.innerHTML = `
+                                            <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="signup-btn">My Space</a>
+                    <button class="login-btn" id="logoutBtn">Log out</button>
+                `;
+                tryButton.textContent = 'Go to My Space';
+                tryButton.href = `/spaces/my-space.html?email=${encodeURIComponent(userEmail)}`;
+
+                // 异步获取nickname后只显示一种欢迎语
+                getUserNickname(userEmail).then(nickname => {
+                    if (nickname) {
+                        welcomeTitle.textContent = `Welcome back, ${nickname}!`;
+                    } else {
+                        welcomeTitle.textContent = 'Welcome to Quest!';
+                    }
+                });
+                // 直接绑定logoutBtn事件
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.onclick = function(e) {
+                        e.preventDefault();
+                        handleLogout();
+                    };
+                }
+            } else {
+                navLinks.innerHTML = `
+                `;
+                authButtons.innerHTML = `
+                    <a href="/signup" class="signup-btn">Sign Up</a>
+                    <a href="/login" class="login-btn">Log in</a>
+                `;
+                welcomeTitle.textContent = 'Welcome to Quest!';
+                tryButton.textContent = 'Try Now';
+                tryButton.href = '/signup';
+
+            }
+        }
+
+        // Function to get user nickname
+        async function getUserNickname(email) {
+            try {
+                const response = await fetch(`/api/v1/users?email=${encodeURIComponent(email)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.user?.nickname || null;
+                }
+                return null;
+            } catch (error) {
+                console.error('Error fetching user nickname:', error);
+                return null;
+            }
+        }
+
+        // Handle logout
+        async function handleLogout() {
+            try {
+                // Call the logout API
+                const response = await fetch('/api/v1/auth/signout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Clear local storage regardless of server response
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('quest_user_session');
+                
+                // Update UI to logged out state
+                updateUIForLoginStatus(false);
+                
+                // Redirect to home page
+                window.location.href = '/';
+                
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Even if server logout fails, clear local storage and update UI
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('quest_user_session');
+                updateUIForLoginStatus(false);
+                window.location.href = '/';
+            }
+        }
+
+        // Check login status on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Check for email in URL parameters first
+                const urlParams = new URLSearchParams(window.location.search);
+                const emailFromUrl = urlParams.get('email');
+                
+                if (emailFromUrl) {
+                    // If email is in URL, use it and update UI immediately
+                    localStorage.setItem('userEmail', emailFromUrl);
+                    updateUIForLoginStatus(true, emailFromUrl);
+                    return;
+                }
+                
+                // Check localStorage for cached login status
+                const cachedEmail = localStorage.getItem('userEmail');
+                if (cachedEmail) {
+                    // Update UI immediately with cached email
+                    updateUIForLoginStatus(true, cachedEmail);
+                    return;
+                }
+
+                // If no cached email, check server for current auth status
+                const response = await fetch('/api/v1/auth/current-user', {
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                if (data.user) {
+                        // User is logged in
+                        localStorage.setItem('userEmail', data.user.email);
+                        updateUIForLoginStatus(true, data.user.email);
+                    } else {
+                        // User is not logged in
+                        localStorage.removeItem('userEmail');
+                        updateUIForLoginStatus(false);
+                    }
+                } else {
+                    // Server error or not authenticated
+                    updateUIForLoginStatus(false);
+                }
+
+            } catch (error) {
+                console.error('Error checking user status:', error);
+                // On error, fall back to cached status or default to not logged in
+                const cachedEmail = localStorage.getItem('userEmail');
+                if (cachedEmail) {
+                    updateUIForLoginStatus(true, cachedEmail);
+                } else {
+                    updateUIForLoginStatus(false);
+                }
+            }
+            
+            // 在 updateUIForLoginStatus 之后执行统一的 About Us 链接更新逻辑
+            updateAboutUsLinks();
+        });
+        
+        // 统一的 About Us 链接更新逻辑
+        function updateAboutUsLinks() {
+            const email = localStorage.getItem('userEmail') || (new URLSearchParams(window.location.search)).get('email');
+            document.querySelectorAll('a[href*="about"], a[href*="AboutUs"]').forEach(link => {
+                if (email) {
+                    link.href = `/AboutUs.html?email=${encodeURIComponent(email)}`;
+                } else {
+                    link.href = '/AboutUs.html';
+            }
+        });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest - OAuth Callback</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --quest-purple: #4B264F;
+            --quest-light-purple: #B699BB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: white;
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .callback-container {
+            text-align: center;
+            padding: 40px;
+            max-width: 500px;
+        }
+
+        .logo {
+            color: var(--quest-purple);
+            font-family: 'Pacifico', cursive;
+            font-size: 40px;
+            margin-bottom: 30px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--quest-light-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            font-size: 18px;
+            color: var(--quest-purple);
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: #dc2626;
+        }
+
+        .success-message {
+            color: #16a34a;
+        }
+    </style>
+</head>
+<body>
+    <div class="callback-container">
+        <div class="logo">Quest</div>
+        <div class="loading-spinner" id="spinner"></div>
+        <div class="message" id="message">Completing Google login...</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+            
+            const messageDiv = document.getElementById('message');
+            const spinner = document.getElementById('spinner');
+            
+            if (error) {
+                messageDiv.textContent = 'Google login was cancelled or failed';
+                messageDiv.className = 'message error-message';
+                spinner.style.display = 'none';
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 3000);
+                return;
+            }
+            
+            if (!code || !state) {
+                messageDiv.textContent = 'Invalid OAuth callback';
+                messageDiv.className = 'message error-message';
+                spinner.style.display = 'none';
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 3000);
+                return;
+            }
+            
+            // Verify state
+            const storedState = sessionStorage.getItem('oauth_state');
+            if (state !== storedState) {
+                messageDiv.textContent = 'OAuth state verification failed';
+                messageDiv.className = 'message error-message';
+                spinner.style.display = 'none';
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 3000);
+                return;
+            }
+            
+            // Exchange code for token
+            exchangeCodeForToken(code);
+        });
+        
+        async function exchangeCodeForToken(code) {
+            try {
+                const response = await fetch('/api/v1/auth/google-oauth-web', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'OAuth authentication failed');
+                }
+                
+                const result = await response.json();
+                
+                // Store user session
+                if (result && result.user) {
+                    localStorage.setItem('quest_user_session', JSON.stringify({
+                        user: result.user,
+                        timestamp: Date.now()
+                    }));
+                }
+                
+                // Clean up OAuth state
+                sessionStorage.removeItem('oauth_state');
+                
+                // Show success message
+                document.getElementById('message').textContent = 'Google login successful! Redirecting...';
+                document.getElementById('message').className = 'message success-message';
+                
+                // Redirect to my-space
+                setTimeout(() => {
+                    const email = result.user ? encodeURIComponent(result.user.email) : '';
+                    window.location.href = `/spaces/my-space.html?email=${email}`;
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Token exchange error:', error);
+                document.getElementById('message').textContent = error.message || 'Google login failed, please try again';
+                document.getElementById('message').className = 'message error-message';
+                document.getElementById('spinner').style.display = 'none';
+                sessionStorage.removeItem('oauth_state');
+                
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html> 

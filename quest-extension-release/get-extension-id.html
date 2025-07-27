@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Extension ID</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #2196f3; }
+        .warning { background: #fff3e0; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #ff9800; }
+        code { background: #f5f5f5; padding: 4px 8px; border-radius: 3px; font-family: monospace; }
+        .copy-btn { background: #4caf50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+        .copy-btn:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Get Your Extension ID</h1>
+        
+        <div class="warning">
+            <h3>⚠️ Important:</h3>
+            <p>This file must be opened <strong>within your Chrome extension</strong>, not as a regular webpage.</p>
+        </div>
+
+        <div class="info">
+            <h3>📋 Your Extension Information:</h3>
+            <p><strong>Extension ID:</strong> <code id="extensionId">Loading...</code> 
+               <button class="copy-btn" onclick="copyToClipboard('extensionId')">Copy</button></p>
+            <p><strong>Redirect URI:</strong> <code id="redirectUri">Loading...</code>
+               <button class="copy-btn" onclick="copyToClipboard('redirectUri')">Copy</button></p>
+        </div>
+
+        <div class="info">
+            <h3>🔧 Next Steps:</h3>
+            <ol>
+                <li>Copy your Extension ID above</li>
+                <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                <li>Create a new "Chrome Extension" OAuth client</li>
+                <li>Paste your Extension ID in the "Item ID" field</li>
+                <li>Copy the new Client ID and update your extension code</li>
+            </ol>
+        </div>
+
+        <div class="info">
+            <h3>📝 Files to Update:</h3>
+            <ul>
+                <li><code>quest-extension-release/popup.js</code> - Line with <code>GOOGLE_CLIENT_ID</code></li>
+                <li><code>quest-extension-release/manifest.json</code> - <code>oauth2.client_id</code> field</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Get extension information
+        const extensionId = chrome.runtime.id;
+        const redirectUri = chrome.identity.getRedirectURL();
+        
+        document.getElementById('extensionId').textContent = extensionId;
+        document.getElementById('redirectUri').textContent = redirectUri;
+        
+        // Copy to clipboard function
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.background = '#2196f3';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#4caf50';
+                }, 1000);
+            });
+        }
+        
+        console.log('🔍 Extension ID:', extensionId);
+        console.log('🔍 Redirect URI:', redirectUri);
+    </script>
+</body>
+</html> 

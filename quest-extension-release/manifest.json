@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Quest Insight Collector",
+  "version": "1.1",
+  "description": "Save insights from web pages to your Quest space",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "identity"
+  ],
+  "oauth2": {
+    "client_id": "103202343935-s0f465oi9geq1jg2jdnvbmf4nn9en4l4.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
+  "host_permissions": [
+        "https://quest-jmzuj65mw-chris-jins-projects.vercel.app/*",
+    "http://localhost:3001/*",
+    "https://localhost:3001/*",
+    "https://accounts.google.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "homepage_url": "https://quest-web-nu.vercel.app",
+  "author": "Quest Team"
+} 
