@@ -87,10 +87,33 @@ router.get('/google/login', (req, res) => {
             </html>
         `);
     } else {
-        // For regular web login
-        console.log('🌐 Redirecting to web login');
-        res.redirect('/auth/google/web');
+        // For regular web login, redirect directly to Google OAuth
+        console.log('🌐 Redirecting to Google OAuth for web');
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+            `client_id=${GOOGLE_CLIENT_ID}&` +
+            `response_type=code&` +
+            `scope=email profile&` +
+            `redirect_uri=${encodeURIComponent(WEB_REDIRECT_URI)}&` +
+            `state=web`;
+        
+        console.log('📡 Web Auth URL:', authUrl);
+        res.redirect(authUrl);
     }
+});
+
+// Google OAuth web authentication endpoint (for backward compatibility)
+router.get('/google/web', (req, res) => {
+    console.log('🌐 Google OAuth web authentication endpoint');
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${GOOGLE_CLIENT_ID}&` +
+        `response_type=code&` +
+        `scope=email profile&` +
+        `redirect_uri=${encodeURIComponent(WEB_REDIRECT_URI)}&` +
+        `state=web`;
+    
+    console.log('📡 Web Auth URL:', authUrl);
+    res.redirect(authUrl);
 });
 
 // Google OAuth callback handler

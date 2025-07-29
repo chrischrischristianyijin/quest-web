@@ -259,16 +259,12 @@ document.addEventListener("DOMContentLoaded", function () {
     googleSignupBtn.addEventListener('click', async function() {
       try {
         console.log('🔐 Starting Google OAuth flow for signup...');
+        showMessage('Redirecting to Google...', false);
         
-        // Create OAuth URL for web flow
-        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
-          'client_id=' + GOOGLE_CLIENT_ID + '&' +
-          'response_type=code&' +
-          'scope=' + encodeURIComponent(GOOGLE_SCOPES.join(' ')) + '&' +
-          'redirect_uri=' + encodeURIComponent(window.location.origin + '/api/v1/auth/google/callback') + '&' +
-          'state=web';
+        // Use backend OAuth endpoint (like extension does)
+        const authUrl = window.location.origin + '/api/v1/auth/google/login';
         
-        console.log('📡 Redirecting to Google OAuth...');
+        console.log('📡 Redirecting to backend OAuth endpoint:', authUrl);
         window.location.href = authUrl;
         
       } catch (error) {
