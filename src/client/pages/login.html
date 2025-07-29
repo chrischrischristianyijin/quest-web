@@ -357,6 +357,60 @@
             color: #dc2626;
             border: 1px solid #fecaca;
         }
+
+        .divider {
+            text-align: center;
+            margin: 15px 0;
+            position: relative;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #D9D9D9;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .google-login-btn {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #D9D9D9;
+            border-radius: 25px;
+            background: white;
+            color: #1D1B20;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .google-login-btn:hover {
+            background: #f8f9fa;
+            border-color: #B699BB;
+        }
+
+        .google-login-btn img {
+            width: 18px;
+            height: 18px;
+        }
     </style>
 
 </head>
@@ -386,6 +440,15 @@
                 Log in
             </button>
         </form>
+
+        <div class="divider">
+            <span>or</span>
+        </div>
+
+        <button type="button" id="googleLoginBtn" class="google-login-btn">
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCAxOCAxOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE3LjY0IDkuMjA0NTVDMTcuNjQgOC41NjY0MSAxNy41ODI3IDcuOTUyNzMgMTcuNDc2NCA3LjM2MzY0SDlWMTAuODQ1SDExLjQ0NEMxMS4xODA5IDExLjU2IDEwLjY5MDkgMTIuMTY0NSAxMC4wMTgyIDEyLjU3NzNWMTQuODIxOEgxMi4xODE4QzE0LjI1OTEgMTIuODM2NCAxNS42NCAxMC42NzI3IDE1LjY0IDkuMjA0NTVaIiBmaWxsPSIjNDI4NUY0Ii8+CjxwYXRoIGQ9Ik05IDE4QzExLjQzIDE4IDEzLjQ2NzMgMTcuMTk0MSAxNS4wOTU1IDE1Ljc5NTVMMTIuOTU5MSAxMy42NDA5QzEyLjEwNDUgMTQuMjExNCAxLjA5NTQ1IDE0LjY4MTggOSAxNC42ODE4QzEwLjU5NTUgMTQuNjgxOCAxMi4wNDM2IDE0LjIwNDUgMTMuMjA5MSAxMy40MzY0TDE1LjA5NTUgMTUuNzk1NUMxMy40NjczIDE3LjE5NDEgMTEuNDMgMTggOSAxOFoiIGZpbGw9IjM0QTU1MyIvPgo8cGF0aCBkPSJNMy45NTQ1NSAxMC43NDU1QzMuODg2MzYgMTAuNDU0NSAzLjgxODE4IDEwLjE2MzYgMy44MTgxOCA5Ljg2MzY0QzMuODE4MTggOS41NjM2NCAzLjg4NjM2IDkuMjc3MjcgMy45NTQ1NSA4Ljk4MTgyVjYuNzI3MjdIMC42ODE4MkMwLjY4MTgyIDguMTgxODIgMS4wNDU0NSA5LjU2MzY0IDEuNjgxODIgMTAuNzI3MjdMMy45NTQ1NSAxMC43NDU1WiIgZmlsbD0iI0ZGRDkzMyIvPgo8cGF0aCBkPSJNOSAzLjQwOTA5QzEwLjQ2MzYgMy40MDkwOSAxMS40MzY0IDMuNzcyNzMgMTIuMTgxOCA0LjQ1NDU1TDE1LjA5NTUgMS42MzYzNkMxMy40NjczIDAuNTk1NDU1IDExLjQzIDAgOSAwQzYuNTcgMCA0LjI1OTEgMS4xODE4MiAyLjY4MTgyIDMuMjcyNzNMNS4wOTU0NSA1LjU5NTQ1QzUuNjgxODIgNC4xODE4MiA3LjI3MjczIDMuNDA5MDkgOSAzLjQwOTA5WiIgZmlsbD0iI0VBNzQzIi8+Cjwvc3ZnPgo=" alt="Google">
+            Continue with Google
+        </button>
 
         <div id="message"></div>
         

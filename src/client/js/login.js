@@ -233,4 +233,37 @@ document.addEventListener("DOMContentLoaded", function () {
             resetPasswordButton.textContent = "Send Reset Link";
         }
     });
+
+    // Google OAuth Configuration
+    const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
+    const GOOGLE_SCOPES = [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ];
+
+    // Google Login Button
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', async function() {
+            try {
+                console.log('🔐 Starting Google OAuth flow...');
+                
+                // Create OAuth URL for web flow
+                const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+                    'client_id=' + GOOGLE_CLIENT_ID + '&' +
+                    'response_type=code&' +
+                    'scope=' + encodeURIComponent(GOOGLE_SCOPES.join(' ')) + '&' +
+                    'redirect_uri=' + encodeURIComponent(window.location.origin + '/api/v1/auth/google/callback') + '&' +
+                    'state=web';
+                
+                console.log('📡 Redirecting to Google OAuth...');
+                window.location.href = authUrl;
+                
+            } catch (error) {
+                console.error('❌ Google auth error:', error);
+                showMessage('Google authentication failed', true);
+            }
+        });
+    }
 }); 

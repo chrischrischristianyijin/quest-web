@@ -2480,7 +2480,36 @@
             
             const urlParams = new URLSearchParams(window.location.search);
             const email = urlParams.get('email');
+            const googleAuth = urlParams.get('google_auth');
+            const userId = urlParams.get('user_id');
             console.log('Email from URL params:', email);
+            console.log('Google auth:', googleAuth);
+            console.log('User ID:', userId);
+
+            // 处理Google登录后的用户信息
+            if (googleAuth === 'true' && userId) {
+                console.log('Processing Google authentication...');
+                
+                try {
+                    // 获取Google用户信息
+                    const userResponse = await fetch(`/api/v1/user/profile/${encodeURIComponent(email)}`);
+                    const userData = await userResponse.json();
+                    
+                    if (userResponse.ok && userData.success) {
+                        const user = userData.profile;
+                        
+                        // 存储用户会话
+                        localStorage.setItem('quest_user_session', JSON.stringify({
+                            user: user,
+                            timestamp: Date.now()
+                        }));
+                        
+                        console.log('Google user session stored:', user);
+                    }
+                } catch (error) {
+                    console.error('Error processing Google auth:', error);
+                }
+            }
 
             // 先显示添加卡片，即使在加载数据时也能看到
             renderContentCards([]);

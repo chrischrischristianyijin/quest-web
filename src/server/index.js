@@ -89,6 +89,8 @@ app.get('/about', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/pages/AboutUs.html'));
 });
 
+
+
 // Add authentication check endpoint
 app.get('/api/v1/auth/current-user', async (req, res) => {
     try {

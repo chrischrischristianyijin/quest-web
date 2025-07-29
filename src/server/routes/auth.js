@@ -9,6 +9,9 @@ const router = express.Router();
 const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || config.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
+const WEB_REDIRECT_URI = process.env.NODE_ENV === 'production' 
+    ? 'https://quest-web-psi.vercel.app/api/v1/auth/google/callback'
+    : 'http://localhost:3001/api/v1/auth/google/callback';
 
 // Google OAuth login page
 router.get('/google/login', (req, res) => {
@@ -99,6 +102,11 @@ router.get('/google/callback', async (req, res) => {
     
     try {
         console.log('🔄 Starting token exchange...');
+        
+        // Use different redirect URI based on state
+        const redirectUri = state === 'web' ? WEB_REDIRECT_URI : REDIRECT_URI;
+        console.log('📡 Using redirect URI:', redirectUri);
+        
         // Exchange code for access token
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
@@ -107,7 +115,7 @@ router.get('/google/callback', async (req, res) => {
                 code,
                 client_id: GOOGLE_CLIENT_ID,
                 client_secret: GOOGLE_CLIENT_SECRET,
-                redirect_uri: REDIRECT_URI,
+                redirect_uri: redirectUri,
                 grant_type: 'authorization_code'
             })
         });
@@ -196,8 +204,14 @@ router.get('/google/callback', async (req, res) => {
                 </body>
                 </html>
             `);
+        } else if (state === 'web') {
+            // Web flow - directly redirect to my-space
+            console.log('🌐 Redirecting to my-space for web user');
+            
+            // Store user session and redirect directly
+            res.redirect(`/spaces/my-space.html?email=${encodeURIComponent(user.email)}&google_auth=true&user_id=${user.id}`);
         } else {
-            // Regular web flow
+            // Regular web flow (fallback)
             console.log('🌐 Redirecting to dashboard');
             res.redirect('/dashboard');
         }
