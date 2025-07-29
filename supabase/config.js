@@ -47,8 +47,28 @@ console.log('Supabase配置检查通过:', {
 });
 
 // 创建两个客户端实例
-const supabase = createClient(supabaseUrl, supabaseKey);
-const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
+console.log('🔧 Creating Supabase clients...');
+console.log('- URL:', supabaseUrl?.substring(0, 50) + '...');
+console.log('- Anon key length:', supabaseKey?.length);
+console.log('- Service key length:', supabaseServiceKey?.length);
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+        autoRefreshToken: true,
+        persistSession: false,
+        detectSessionInUrl: false
+    }
+});
+
+const supabaseService = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+    }
+});
+
+console.log('✅ Supabase clients created successfully');
 
 // 检查数据库表结构
 async function checkDatabaseStructure() {

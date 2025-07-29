@@ -209,6 +209,11 @@ export const getUserByEmail = async (email) => {
         
         // Test basic connection first
         console.log('🧪 Testing basic Supabase connection...');
+        console.log('🔧 Connection details:');
+        console.log('- Supabase URL:', process.env.SUPABASE_URL?.substring(0, 50) + '...');
+        console.log('- Service key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+        console.log('- Service key length:', process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
+        
         try {
             const { data: testData, error: testError } = await supabaseService
                 .from('users')
@@ -217,13 +222,26 @@ export const getUserByEmail = async (email) => {
             
             if (testError) {
                 console.error('❌ Basic connection test failed:', testError);
+                console.error('🔧 Error details:', {
+                    code: testError.code,
+                    message: testError.message,
+                    details: testError.details,
+                    hint: testError.hint
+                });
                 
                 // Try to reinitialize Supabase client if connection fails
                 console.log('🔄 Attempting to reinitialize Supabase client...');
                 const { createClient } = await import('@supabase/supabase-js');
                 const freshClient = createClient(
                     process.env.SUPABASE_URL, 
-                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                    process.env.SUPABASE_SERVICE_ROLE_KEY,
+                    {
+                        auth: {
+                            autoRefreshToken: false,
+                            persistSession: false,
+                            detectSessionInUrl: false
+                        }
+                    }
                 );
                 
                 const { data: retestData, error: retestError } = await freshClient
@@ -233,6 +251,11 @@ export const getUserByEmail = async (email) => {
                     
                 if (retestError) {
                     console.error('❌ Fresh client test also failed:', retestError);
+                    console.error('🔧 Fresh client error details:', {
+                        code: retestError.code,
+                        message: retestError.message,
+                        details: retestError.details
+                    });
                 } else {
                     console.log('✅ Fresh client test passed - using fresh client');
                 }
@@ -247,6 +270,7 @@ export const getUserByEmail = async (email) => {
             console.log('- Error name:', connectionError.name);
             console.log('- Error code:', connectionError.code);
             console.log('- Error cause:', connectionError.cause);
+            console.log('- Error stack (first 300 chars):', connectionError.stack?.substring(0, 300));
         }
         
         // Add timeout to prevent hanging

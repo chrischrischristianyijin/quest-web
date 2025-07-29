@@ -86,6 +86,367 @@ router.get('/debug/supabase-direct', async (req, res) => {
     }
 });
 
+// COMPARISON: Local vs Production environment comparison
+router.get('/debug/env-comparison', (req, res) => {
+    const comparison = {
+        environment: {
+            nodeEnv: process.env.NODE_ENV,
+            isVercel: !!process.env.VERCEL,
+            isLocal: !process.env.VERCEL && process.env.NODE_ENV !== 'production',
+            platform: process.platform,
+            nodeVersion: process.version
+        },
+        supabase: {
+            url: {
+                exists: !!process.env.SUPABASE_URL,
+                value: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 50) + '...' : null,
+                domain: process.env.SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1]
+            },
+            anonKey: {
+                exists: !!process.env.SUPABASE_ANON_KEY,
+                length: process.env.SUPABASE_ANON_KEY?.length || 0,
+                prefix: process.env.SUPABASE_ANON_KEY?.substring(0, 20)
+            },
+            serviceKey: {
+                exists: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+                length: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+                prefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20)
+            }
+        },
+        google: {
+            clientId: {
+                exists: !!GOOGLE_CLIENT_ID,
+                prefix: GOOGLE_CLIENT_ID?.substring(0, 20)
+            },
+            clientSecret: {
+                exists: !!GOOGLE_CLIENT_SECRET
+            },
+            redirectUri: {
+                exists: !!WEB_REDIRECT_URI,
+                value: WEB_REDIRECT_URI
+            }
+        },
+        allEnvKeys: {
+            supabase: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
+            google: Object.keys(process.env).filter(k => k.includes('GOOGLE')),
+            total: Object.keys(process.env).length
+        },
+        timestamp: new Date().toISOString()
+    };
+    
+    console.log('🔍 Environment comparison:', comparison);
+    res.json(comparison);
+});
+
+// NETWORK TEST: Test basic network connectivity
+router.get('/debug/network-test', async (req, res) => {
+    const tests = {
+        timestamp: new Date().toISOString(),
+        results: {}
+    };
+    
+    try {
+        console.log('🌐 Testing network connectivity...');
+        
+        // Test 1: Basic fetch to external service
+        try {
+            console.log('🧪 Test 1: Basic fetch to google.com...');
+            const startTime = Date.now();
+            const response = await fetch('https://www.google.com', { 
+                method: 'HEAD',
+                signal: AbortSignal.timeout(5000) // 5 second timeout
+            });
+            const responseTime = Date.now() - startTime;
+            
+            tests.results.basicFetch = {
+                success: true,
+                status: response.status,
+                responseTime,
+                message: 'Basic internet connectivity working'
+            };
+            console.log('✅ Basic fetch test passed');
+        } catch (error) {
+            tests.results.basicFetch = {
+                success: false,
+                error: error.message,
+                message: 'Basic internet connectivity failed'
+            };
+            console.error('❌ Basic fetch test failed:', error.message);
+        }
+        
+        // Test 2: Supabase URL connectivity
+        if (process.env.SUPABASE_URL) {
+            try {
+                console.log('🧪 Test 2: Testing Supabase URL connectivity...');
+                const startTime = Date.now();
+                const response = await fetch(process.env.SUPABASE_URL, { 
+                    method: 'HEAD',
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                });
+                const responseTime = Date.now() - startTime;
+                
+                tests.results.supabaseUrl = {
+                    success: true,
+                    status: response.status,
+                    responseTime,
+                    message: 'Supabase URL is reachable'
+                };
+                console.log('✅ Supabase URL test passed');
+            } catch (error) {
+                tests.results.supabaseUrl = {
+                    success: false,
+                    error: error.message,
+                    message: 'Supabase URL is not reachable'
+                };
+                console.error('❌ Supabase URL test failed:', error.message);
+            }
+        } else {
+            tests.results.supabaseUrl = {
+                success: false,
+                error: 'SUPABASE_URL not set',
+                message: 'SUPABASE_URL environment variable missing'
+            };
+        }
+        
+        // Test 3: DNS resolution
+        try {
+            console.log('🧪 Test 3: Testing DNS resolution...');
+            const supabaseDomain = process.env.SUPABASE_URL?.match(/https:\/\/([^\/]+)/)?.[1];
+            if (supabaseDomain) {
+                const { lookup } = await import('dns/promises');
+                const startTime = Date.now();
+                const addresses = await lookup(supabaseDomain);
+                const responseTime = Date.now() - startTime;
+                
+                tests.results.dnsResolution = {
+                    success: true,
+                    domain: supabaseDomain,
+                    addresses: addresses.address,
+                    responseTime,
+                    message: 'DNS resolution successful'
+                };
+                console.log('✅ DNS resolution test passed');
+            } else {
+                tests.results.dnsResolution = {
+                    success: false,
+                    error: 'Could not extract domain from SUPABASE_URL',
+                    message: 'Invalid SUPABASE_URL format'
+                };
+            }
+        } catch (error) {
+            tests.results.dnsResolution = {
+                success: false,
+                error: error.message,
+                message: 'DNS resolution failed'
+            };
+            console.error('❌ DNS resolution test failed:', error.message);
+        }
+        
+        const overallSuccess = Object.values(tests.results).every(test => test.success);
+        
+        res.status(overallSuccess ? 200 : 500).json({
+            success: overallSuccess,
+            message: overallSuccess ? 'All network tests passed' : 'Some network tests failed',
+            tests: tests
+        });
+        
+    } catch (error) {
+        console.error('❌ Network test failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Network test failed',
+            error: error.message,
+            tests: tests
+        });
+    }
+});
+
+// DIRECT SUPABASE TEST: Test with minimal configuration
+router.get('/debug/supabase-minimal', async (req, res) => {
+    try {
+        console.log('🧪 Testing minimal Supabase connection...');
+        
+        // Test with absolute minimal setup
+        const { createClient } = await import('@supabase/supabase-js');
+        
+        console.log('🔧 Environment check:');
+        console.log('- SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
+        console.log('- SUPABASE_SERVICE_ROLE_KEY exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+        console.log('- URL first 30 chars:', process.env.SUPABASE_URL?.substring(0, 30));
+        console.log('- Key first 20 chars:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20));
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            return res.status(500).json({
+                success: false,
+                message: 'Missing environment variables',
+                env: {
+                    hasUrl: !!process.env.SUPABASE_URL,
+                    hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+                }
+            });
+        }
+        
+        // Create client with minimal config
+        const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        
+        // Test 1: Simple select query
+        console.log('🧪 Test 1: Simple select query...');
+        const startTime = Date.now();
+        const { data, error } = await client
+            .from('users')
+            .select('count')
+            .limit(1);
+        const responseTime = Date.now() - startTime;
+        
+        if (error) {
+            console.error('❌ Minimal test failed:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Minimal Supabase test failed',
+                error: {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details
+                },
+                responseTime,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        console.log('✅ Minimal test successful!');
+        res.json({
+            success: true,
+            message: 'Minimal Supabase connection working!',
+            responseTime,
+            data: data,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ Minimal test exception:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Minimal test exception',
+            error: {
+                name: error.name,
+                message: error.message,
+                stack: error.stack?.substring(0, 500)
+            },
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// SUPABASE PROJECT STATUS: Check project health and permissions
+router.get('/debug/supabase-status', async (req, res) => {
+    try {
+        console.log('🔍 Checking Supabase project status...');
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            return res.status(500).json({
+                success: false,
+                message: 'Missing Supabase environment variables',
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        const { createClient } = await import('@supabase/supabase-js');
+        const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        
+        const status = {
+            timestamp: new Date().toISOString(),
+            project: {
+                url: process.env.SUPABASE_URL?.substring(0, 50) + '...',
+                domain: process.env.SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1],
+                hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+                serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length
+            },
+            tests: {}
+        };
+        
+        // Test 1: Basic connectivity
+        try {
+            console.log('🧪 Test 1: Basic connectivity...');
+            const { data, error } = await client
+                .from('users')
+                .select('count')
+                .limit(1);
+                
+            status.tests.connectivity = {
+                success: !error,
+                error: error ? { code: error.code, message: error.message } : null
+            };
+            console.log('✅ Connectivity test:', !error ? 'PASSED' : 'FAILED');
+        } catch (error) {
+            status.tests.connectivity = {
+                success: false,
+                error: { name: error.name, message: error.message }
+            };
+            console.error('❌ Connectivity test failed:', error.message);
+        }
+        
+        // Test 2: Table access permissions
+        try {
+            console.log('🧪 Test 2: Table access permissions...');
+            const { data, error } = await client
+                .from('signup')
+                .select('count')
+                .limit(1);
+                
+            status.tests.tableAccess = {
+                success: !error,
+                error: error ? { code: error.code, message: error.message } : null
+            };
+            console.log('✅ Table access test:', !error ? 'PASSED' : 'FAILED');
+        } catch (error) {
+            status.tests.tableAccess = {
+                success: false,
+                error: { name: error.name, message: error.message }
+            };
+            console.error('❌ Table access test failed:', error.message);
+        }
+        
+        // Test 3: Insert permissions (read-only test)
+        try {
+            console.log('🧪 Test 3: Insert permissions (simulation)...');
+            // We'll test if we can at least query the table structure
+            const { data, error } = await client
+                .from('users')
+                .select('*')
+                .limit(0); // No actual data, just test query structure
+                
+            status.tests.insertPermissions = {
+                success: !error,
+                error: error ? { code: error.code, message: error.message } : null
+            };
+            console.log('✅ Insert permissions test:', !error ? 'PASSED' : 'FAILED');
+        } catch (error) {
+            status.tests.insertPermissions = {
+                success: false,
+                error: { name: error.name, message: error.message }
+            };
+            console.error('❌ Insert permissions test failed:', error.message);
+        }
+        
+        const overallSuccess = Object.values(status.tests).every(test => test.success);
+        
+        res.status(overallSuccess ? 200 : 500).json({
+            success: overallSuccess,
+            message: overallSuccess ? 'All Supabase tests passed' : 'Some Supabase tests failed',
+            status: status
+        });
+        
+    } catch (error) {
+        console.error('❌ Supabase status check failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Supabase status check failed',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // Google OAuth configuration - all from environment variables
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
