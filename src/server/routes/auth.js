@@ -47,6 +47,34 @@ router.get('/debug/test', (req, res) => {
     });
 });
 
+// Global error log storage (simple in-memory for debugging)
+let errorLogs = [];
+const MAX_LOGS = 20;
+
+function logError(error, context = '') {
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        context: context
+    };
+    errorLogs.unshift(logEntry);
+    if (errorLogs.length > MAX_LOGS) {
+        errorLogs = errorLogs.slice(0, MAX_LOGS);
+    }
+    console.error('🚨 Error logged:', logEntry);
+}
+
+// Endpoint to get recent error logs
+router.get('/debug/errors', (req, res) => {
+    res.json({
+        errors: errorLogs,
+        count: errorLogs.length,
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Google OAuth login page
 router.get('/google/login', (req, res) => {
     console.log('🔐 Google OAuth login page requested');
@@ -219,6 +247,7 @@ router.get('/google/callback', async (req, res) => {
             console.error('  - Error name:', fetchError.name);
             console.error('  - Error message:', fetchError.message);
             console.error('  - Error cause:', fetchError.cause);
+            logError(fetchError, 'Token exchange fetch failed');
             throw new Error(`Network error during token exchange: ${fetchError.message}`);
         }
         
@@ -331,6 +360,7 @@ router.get('/google/callback', async (req, res) => {
         
     } catch (error) {
         console.error('❌ OAuth error:', error);
+        logError(error, 'OAuth callback handler');
         const { state } = req.query;
         
         if (state === 'extension') {
