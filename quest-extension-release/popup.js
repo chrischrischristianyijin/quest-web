@@ -11,7 +11,119 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize state
     let currentUser = null;
-    const API_BASE = 'http://localhost:3001/api/v1';
+    // Use production URL if available, otherwise fallback to localhost for development
+    const API_BASE = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1';
+    
+    // Google OAuth configuration
+    const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
+    const GOOGLE_SCOPES = [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ];
+    
+    // Handle Google OAuth authentication
+    async function handleGoogleAuth() {
+        console.log('🔐 Starting Google OAuth flow...');
+        try {
+            // Launch OAuth flow using Chrome extension identity API
+            console.log('📡 Launching Chrome identity OAuth flow...');
+            const authResult = await chrome.identity.launchWebAuthFlow({
+                url: `https://accounts.google.com/o/oauth2/v2/auth?` +
+                     `client_id=${GOOGLE_CLIENT_ID}&` +
+                     `response_type=code&` +
+                     `scope=${encodeURIComponent(GOOGLE_SCOPES.join(' '))}&` +
+                     `redirect_uri=${encodeURIComponent(chrome.identity.getRedirectURL())}&` +
+                     `state=${Math.random().toString(36).substring(7)}`,
+                interactive: true
+            });
+            
+            console.log('✅ OAuth flow completed, result:', authResult);
+            
+            if (chrome.runtime.lastError) {
+                console.error('❌ OAuth error:', chrome.runtime.lastError);
+                showMessage('Google authentication failed', true);
+                return;
+            }
+            
+            // Extract authorization code from URL
+            const url = new URL(authResult);
+            const code = url.searchParams.get('code');
+            const state = url.searchParams.get('state');
+            
+            console.log('🔍 Extracted from OAuth response:');
+            console.log('  - Code:', code ? 'Present' : 'Missing');
+            console.log('  - State:', state);
+            console.log('  - Full URL:', authResult);
+            
+            if (!code) {
+                console.error('❌ No authorization code found in response');
+                showMessage('Google authentication failed', true);
+                return;
+            }
+            
+            // Exchange code for tokens and user info
+            console.log('🔄 Exchanging authorization code for tokens...');
+            await exchangeCodeForUserInfo(code);
+            
+        } catch (error) {
+            console.error('❌ Google auth error:', error);
+            showMessage('Google authentication failed', true);
+        }
+    }
+    
+    // Exchange authorization code for user info
+    async function exchangeCodeForUserInfo(code) {
+        console.log('🔄 Starting token exchange...');
+        try {
+            const redirectUri = chrome.identity.getRedirectURL();
+            console.log('📡 Redirect URI:', redirectUri);
+            
+            // Send the authorization code to our backend for secure token exchange
+            console.log('📤 Sending authorization code to backend...');
+            const response = await fetch(`${API_BASE}/auth/google/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    code: code,
+                    redirect_uri: redirectUri
+                })
+            });
+            
+            console.log('📥 Backend token response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Token exchange failed:', errorText);
+                throw new Error('Failed to exchange code for token');
+            }
+            
+            const result = await response.json();
+            console.log('✅ Token exchange successful, user info received');
+            
+            // The backend has already processed the user info and returned the user data
+            currentUser = result.user;
+            console.log('👤 Current user set:', currentUser);
+            
+            // Save session
+            console.log('💾 Saving session to Chrome storage...');
+            await chrome.storage.local.set({
+                quest_user_session: {
+                    user: result.user,
+                    timestamp: Date.now()
+                }
+            });
+            
+            console.log('✅ Session saved successfully');
+            showUserInterface();
+            showMessage('Successfully logged in with Google!');
+            
+        } catch (error) {
+            console.error('❌ Token exchange error:', error);
+            showMessage('Authentication failed', true);
+        }
+    }
     
     // Show message
     function showMessage(message, isError = false) {
@@ -300,6 +412,10 @@ document.addEventListener('DOMContentLoaded', function() {
     loginForm.addEventListener('submit', handleLogin);
     signupForm.addEventListener('submit', handleSignup);
     insightsForm.addEventListener('submit', handleSaveInsight);
+    
+    // Google OAuth button event listeners
+    document.getElementById('googleLoginBtn').addEventListener('click', handleGoogleAuth);
+    document.getElementById('googleSignupBtn').addEventListener('click', handleGoogleAuth);
 
     // Tag选择事件
     document.addEventListener('click', function(event) {

@@ -194,6 +194,30 @@ export const getCurrentUser = async () => {
     }
 };
 
+// Get user by email for Google OAuth
+export const getUserByEmail = async (email) => {
+    try {
+        const { data, error } = await supabaseService
+            .from('users')
+            .select('id, email, nickname, avatar_url, created_at')
+            .eq('email', email)
+            .single();
+        
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // No user found
+                return null;
+            }
+            throw error;
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('Get user by email error:', error);
+        throw error;
+    }
+};
+
 // 为用户创建预设标签
 async function createDefaultTags(userId) {
     try {
