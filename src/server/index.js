@@ -81,17 +81,7 @@ app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/pages/signup.html'));
 });
 
-// Test page route
-app.get('/test', (req, res) => {
-    console.log('Test page accessed');
-    res.sendFile(path.join(__dirname, '../client/pages/test.html'));
-});
 
-// Simple test page route
-app.get('/simple', (req, res) => {
-    console.log('Simple test page accessed');
-    res.sendFile(path.join(__dirname, '../client/pages/simple-test.html'));
-});
 
 // Set page route aliases
 app.get('/about', (req, res) => {
