@@ -172,6 +172,20 @@ router.get('/google/callback', async (req, res) => {
         return res.redirect(`/login?error=${encodeURIComponent('No authorization code received')}`);
     }
     
+    // Validate required environment variables
+    if (!GOOGLE_CLIENT_ID) {
+        console.error('❌ GOOGLE_CLIENT_ID is missing');
+        return res.redirect(`/login?error=${encodeURIComponent('Server configuration error: GOOGLE_CLIENT_ID missing')}`);
+    }
+    if (!GOOGLE_CLIENT_SECRET) {
+        console.error('❌ GOOGLE_CLIENT_SECRET is missing');
+        return res.redirect(`/login?error=${encodeURIComponent('Server configuration error: GOOGLE_CLIENT_SECRET missing')}`);
+    }
+    if (!WEB_REDIRECT_URI) {
+        console.error('❌ WEB_REDIRECT_URI is missing');
+        return res.redirect(`/login?error=${encodeURIComponent('Server configuration error: GOOGLE_REDIRECT_URI missing')}`);
+    }
+    
     try {
         console.log('🔄 Starting token exchange...');
         
@@ -180,17 +194,33 @@ router.get('/google/callback', async (req, res) => {
         console.log('📡 Using redirect URI:', redirectUri);
         
         // Exchange code for access token
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                code,
-                client_id: GOOGLE_CLIENT_ID,
-                client_secret: GOOGLE_CLIENT_SECRET,
-                redirect_uri: redirectUri,
-                grant_type: 'authorization_code'
-            })
-        });
+        console.log('🔄 Preparing token exchange request...');
+        console.log('  - Target URL: https://oauth2.googleapis.com/token');
+        console.log('  - Client ID:', GOOGLE_CLIENT_ID);
+        console.log('  - Redirect URI:', redirectUri);
+        console.log('  - Has Client Secret:', !!GOOGLE_CLIENT_SECRET);
+        console.log('  - Code (first 20 chars):', code?.substring(0, 20) + '...');
+        
+        let tokenResponse;
+        try {
+            tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    code,
+                    client_id: GOOGLE_CLIENT_ID,
+                    client_secret: GOOGLE_CLIENT_SECRET,
+                    redirect_uri: redirectUri,
+                    grant_type: 'authorization_code'
+                })
+            });
+        } catch (fetchError) {
+            console.error('❌ Fetch to Google token endpoint failed:', fetchError);
+            console.error('  - Error name:', fetchError.name);
+            console.error('  - Error message:', fetchError.message);
+            console.error('  - Error cause:', fetchError.cause);
+            throw new Error(`Network error during token exchange: ${fetchError.message}`);
+        }
         
         console.log('📥 Token response status:', tokenResponse.status);
         
@@ -203,7 +233,7 @@ router.get('/google/callback', async (req, res) => {
             console.error('  - Has Client Secret:', !!GOOGLE_CLIENT_SECRET);
             console.error('  - Code length:', code?.length);
             console.error('  - Response status:', tokenResponse.status);
-            throw new Error(`Failed to exchange code for token: ${errorText}`);
+            throw new Error(`Token exchange failed [${tokenResponse.status}]: ${errorText}`);
         }
         
         const tokenData = await tokenResponse.json();
