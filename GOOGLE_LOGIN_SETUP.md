@@ -84,7 +84,7 @@ const GOOGLE_SCOPES = [
 4. 自动重定向到用户空间
 
 #### Vercel生产环境
-1. 访问登录页面: `https://quest-web-psi.vercel.app/login`
+1. 访问登录页面: `https://myquestspace.com/login`
 2. 点击"Continue with Google"按钮
 3. 完成Google授权
 4. 自动重定向到用户空间（无中间页面）
@@ -103,7 +103,7 @@ const GOOGLE_SCOPES = [
 访问测试页面: `http://localhost:3001/test-google`
 
 #### Vercel生产环境
-访问测试页面: `https://quest-web-psi.vercel.app/test-google`
+访问测试页面: `https://myquestspace.com/test-google`
 
 ## 环境配置
 
@@ -127,7 +127,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 4. 创建OAuth 2.0客户端ID
 5. 添加授权重定向URI:
    - 本地开发: `http://localhost:3001/api/v1/auth/google/callback`
-   - Vercel生产环境: `https://quest-web-psi.vercel.app/api/v1/auth/google/callback`
+   - 生产环境: `https://myquestspace.com/api/v1/auth/google/callback`
    - 扩展端: `https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/`
 
 ## 部署注意事项

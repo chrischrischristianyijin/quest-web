@@ -10,7 +10,7 @@ const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.goo
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || config.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
 const WEB_REDIRECT_URI = process.env.NODE_ENV === 'production' 
-    ? 'https://quest-web-psi.vercel.app/api/v1/auth/google/callback'
+    ? 'https://myquestspace.com/api/v1/auth/google/callback'
     : 'http://localhost:3001/api/v1/auth/google/callback';
 
 // Google OAuth login page

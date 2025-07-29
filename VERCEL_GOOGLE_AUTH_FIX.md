@@ -78,7 +78,7 @@ NODE_ENV=production
 ### 5. 验证配置
 保存Google Cloud Console的更改后，等待几分钟让配置生效，然后测试：
 
-1. 访问: `https://quest-web-psi.vercel.app/login`
+1. 访问: `https://myquestspace.com/login`
 2. 点击"Continue with Google"按钮
 3. 应该能够正常完成OAuth流程
 
