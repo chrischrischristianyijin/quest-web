@@ -8,10 +8,23 @@ document.addEventListener("DOMContentLoaded", function () {
     // Check for OAuth error in URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const oauthError = urlParams.get('error');
+    const debugMode = urlParams.get('debug');
+    
     if (oauthError) {
+        console.error('OAuth Error received:', oauthError);
         showMessage(oauthError, true);
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // If debug mode, also log to console and show more info
+        if (debugMode) {
+            console.error('Debug mode enabled - error details logged');
+            // Keep URL for debugging purposes, don't clean up immediately
+            setTimeout(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }, 10000);
+        } else {
+            // Clean up URL immediately
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }
     
     // Forgot Password Modal Elements

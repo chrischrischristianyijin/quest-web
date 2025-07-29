@@ -22,13 +22,28 @@ router.get('/google/config', (req, res) => {
 
 // Debug endpoint to check environment variables
 router.get('/debug/env', (req, res) => {
-    res.json({
+    console.log('🔧 Debug endpoint accessed');
+    const debugInfo = {
         hasClientId: !!GOOGLE_CLIENT_ID,
         hasClientSecret: !!GOOGLE_CLIENT_SECRET,
-        hasRedirectUri: !!REDIRECT_URI,
-        redirectUri: REDIRECT_URI,
+        hasWebRedirectUri: !!WEB_REDIRECT_URI,
+        hasExtensionRedirectUri: !!REDIRECT_URI,
+        webRedirectUri: WEB_REDIRECT_URI,
+        extensionRedirectUri: REDIRECT_URI,
         nodeEnv: process.env.NODE_ENV,
-        allEnvKeys: Object.keys(process.env).filter(key => key.includes('GOOGLE'))
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes('GOOGLE')),
+        timestamp: new Date().toISOString()
+    };
+    console.log('🔧 Debug info:', debugInfo);
+    res.json(debugInfo);
+});
+
+// Simple test endpoint
+router.get('/debug/test', (req, res) => {
+    res.json({ 
+        message: 'Auth route is working', 
+        timestamp: new Date().toISOString(),
+        method: 'GET'
     });
 });
 
@@ -341,7 +356,9 @@ router.get('/google/callback', async (req, res) => {
         } else {
             // Web redirect flow - redirect to error page
             console.log('🌐 Web flow error - redirecting to login with error');
-            res.redirect(`/login?error=${encodeURIComponent('Authentication failed. Please try again.')}`);
+            console.log('🔧 Error details:', error.message);
+            console.log('🔧 Error stack:', error.stack);
+            res.redirect(`/login?error=${encodeURIComponent('OAuth Error: ' + error.message)}&debug=true`);
         }
     }
 });
