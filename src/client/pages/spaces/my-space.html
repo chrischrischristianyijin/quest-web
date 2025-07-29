@@ -395,11 +395,11 @@
         }
 
         .FilterButton.tag-btn.active {
-            background: rgba(75, 38, 79, 0.2);
-            color: var(--quest-purple);
-            border-color: var(--quest-purple);
-            opacity: 1;
-            box-shadow: 0 2px 8px rgba(75, 38, 79, 0.2);
+            background: var(--quest-purple) !important;
+            color: white !important;
+            border-color: var(--quest-purple) !important;
+            opacity: 1 !important;
+            box-shadow: 0 2px 8px rgba(75, 38, 79, 0.3) !important;
         }
         
         .FilterButton.add-tag-filter-btn {
@@ -1185,10 +1185,40 @@
             overflow: hidden;
         }
 
-        .card-image img {
+                    .card-image img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .card-image .card-logo {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(45deg, #E9E1F3, #D1C1E6);
+            }
+
+            .card-image .card-logo img {
+                width: 60px;
+                height: 60px;
+                object-fit: contain;
+            }
+
+        .card-image .card-logo {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #E9E1F3, #D1C1E6);
+        }
+
+        .card-image .card-logo img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
         }
 
         .card-content {
@@ -1321,6 +1351,11 @@
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
+
+            .card-image .card-logo img {
+                width: 75px;
+                height: 75px;
+            }
         }
 
         @media (max-width: 600px) {
@@ -1389,6 +1424,11 @@
                 image-rendering: -webkit-optimize-contrast;
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
+            }
+
+            .card-image .card-logo img {
+                width: 60px;
+                height: 60px;
             }
         }
 
@@ -1530,7 +1570,7 @@
         .add-content-image-area {
             width: 100%;
             height: 160px;
-            background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
+            background: linear-gradient(45deg, #F5F2F8, #EDE8F4);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2324,7 +2364,9 @@
         <!-- Header Section -->
         <div class="header-section">
             <div class="header-left">
-                <a href="/" class="Quest">Quest</a>
+                <a href="/" class="Quest">
+            <img src="/public/logo.png" alt="Quest" style="height: 40px; width: auto;">
+        </a>
             </div>
             <div class="header-right">
                 <div class="WelcomeToYourPersonalSpacePlaceholder">
@@ -2448,7 +2490,9 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-section">
-                <h3>Quest</h3>
+                <h3>
+                    <img src="/public/logo.png" alt="Quest" style="height: 30px; width: auto;">
+                </h3>
                 <p>Your personal knowledge hub for discovering and sharing meaningful content.</p>
                 <p>&copy; 2025 Quest. All rights reserved.</p>
             </div>
@@ -2686,7 +2730,7 @@
             // 限制标题和描述长度
             const title = truncateText(insight.title || 'Title Placeholder', 60);
             const description = truncateText(insight.description || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas facilisis tempor elementum. Mauris eu bibendum est, nec iaculis nunc.', 150);
-            const imageUrl = insight.image_url || 'https://placehold.co/400x200';
+            const imageUrl = insight.image_url;
             const originalUrl = insight.url || '#';
             const date = new Date(insight.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -2705,10 +2749,22 @@
                 tagsHTML += '</div>';
             }
             
+            // 判断是否显示图片或logo
+            let imageHTML = '';
+            if (imageUrl && imageUrl.trim() !== '') {
+                imageHTML = `<img src="${imageUrl}" alt="${title}" />`;
+            } else {
+                imageHTML = `
+                    <div class="card-logo">
+                        <img src="/public/logo.png" alt="Quest Logo" />
+                    </div>
+                `;
+            }
+            
             cardWrapper.innerHTML = `
                 <div class="content-card">
                 <div class="card-image">
-                    <img src="${imageUrl}" alt="${title}" />
+                    ${imageHTML}
                 </div>
                 <div class="card-content">
                     <div class="TitlePlaceholder">${title}</div>
