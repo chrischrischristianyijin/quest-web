@@ -5,6 +5,23 @@ const supabaseUrl = config.SUPABASE_URL;
 const supabaseKey = config.SUPABASE_ANON_KEY;
 const supabaseServiceKey = config.SUPABASE_SERVICE_KEY;
 
+console.log('🔧 Supabase Config Environment check:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- Is Production:', process.env.NODE_ENV === 'production');
+console.log('- Is Vercel:', !!process.env.VERCEL);
+console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+console.log('- SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET');
+
+// Additional production debugging
+if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    console.log('🏭 Production environment detected:');
+    console.log('- Process CWD:', process.cwd());
+    console.log('- All SUPABASE env keys:', Object.keys(process.env).filter(k => k.includes('SUPABASE')));
+    console.log('- URL first 50 chars:', process.env.SUPABASE_URL?.substring(0, 50));
+    console.log('- Service key first 20 chars:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20));
+}
+
 // 验证URL格式
 if (!supabaseUrl || !supabaseUrl.startsWith('https://')) {
     console.error('Supabase URL格式错误:', supabaseUrl);

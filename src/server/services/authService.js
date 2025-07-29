@@ -198,6 +198,56 @@ export const getCurrentUser = async () => {
 export const getUserByEmail = async (email) => {
     try {
         console.log('🔍 getUserByEmail called for:', email);
+        console.log('🔧 Supabase config check:', {
+            hasUrl: !!process.env.SUPABASE_URL,
+            hasAnonKey: !!process.env.SUPABASE_ANON_KEY,
+            hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            urlDomain: process.env.SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1],
+            anonKeyPrefix: process.env.SUPABASE_ANON_KEY?.substring(0, 20),
+            serviceKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20)
+        });
+        
+        // Test basic connection first
+        console.log('🧪 Testing basic Supabase connection...');
+        try {
+            const { data: testData, error: testError } = await supabaseService
+                .from('users')
+                .select('count')
+                .limit(1);
+            
+            if (testError) {
+                console.error('❌ Basic connection test failed:', testError);
+                
+                // Try to reinitialize Supabase client if connection fails
+                console.log('🔄 Attempting to reinitialize Supabase client...');
+                const { createClient } = await import('@supabase/supabase-js');
+                const freshClient = createClient(
+                    process.env.SUPABASE_URL, 
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+                
+                const { data: retestData, error: retestError } = await freshClient
+                    .from('users')
+                    .select('count')
+                    .limit(1);
+                    
+                if (retestError) {
+                    console.error('❌ Fresh client test also failed:', retestError);
+                } else {
+                    console.log('✅ Fresh client test passed - using fresh client');
+                }
+            } else {
+                console.log('✅ Basic connection test passed');
+            }
+        } catch (connectionError) {
+            console.error('❌ Connection test exception:', connectionError.message);
+            
+            // Log network-related information
+            console.log('🌐 Network diagnostics:');
+            console.log('- Error name:', connectionError.name);
+            console.log('- Error code:', connectionError.code);
+            console.log('- Error cause:', connectionError.cause);
+        }
         
         // Add timeout to prevent hanging
         const queryPromise = supabaseService

@@ -1,9 +1,90 @@
 import express from 'express';
+import fetch from 'node-fetch';
 import { signUp, signIn, signOut, checkEmailExists, getCurrentUser, getUserByEmail, updateUserProfile, recreateAuthTables, addNicknameColumn, forgotPassword } from '../services/authService.js';
+import { emergencyGetUserByEmail, emergencySignIn } from '../services/emergencySupabase.js';
 import { authenticate } from '../middleware/auth.js';
 import { config } from '../../config.js';
 
 const router = express.Router();
+
+// EMERGENCY: Direct Supabase connection test (bypass existing clients)
+router.get('/debug/supabase-direct', async (req, res) => {
+    try {
+        console.log('🚨 EMERGENCY: Direct Supabase connection test');
+        console.log('🔧 Environment variables:');
+        console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+        console.log('- SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET');
+        console.log('- NODE_ENV:', process.env.NODE_ENV);
+        console.log('- VERCEL:', !!process.env.VERCEL);
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            return res.status(500).json({
+                success: false,
+                message: 'Missing Supabase environment variables',
+                env: {
+                    hasUrl: !!process.env.SUPABASE_URL,
+                    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+                    allSupabaseKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+                }
+            });
+        }
+        
+        // Test 1: Create fresh Supabase client
+        console.log('🧪 Test 1: Creating fresh Supabase client...');
+        const { createClient } = await import('@supabase/supabase-js');
+        const testClient = createClient(
+            process.env.SUPABASE_URL, 
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
+        
+        // Test 2: Simple query
+        console.log('🧪 Test 2: Testing simple query...');
+        const startTime = Date.now();
+        const { data, error } = await testClient
+            .from('users')
+            .select('count')
+            .limit(1);
+        const responseTime = Date.now() - startTime;
+        
+        if (error) {
+            console.error('❌ Direct query failed:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Direct Supabase query failed',
+                error: {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint
+                },
+                responseTime,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        console.log('✅ Direct Supabase connection successful!');
+        res.json({
+            success: true,
+            message: 'Direct Supabase connection working!',
+            responseTime,
+            data: data,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ Emergency test failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Emergency Supabase test failed',
+            error: {
+                name: error.name,
+                message: error.message,
+                stack: error.stack?.substring(0, 500)
+            },
+            timestamp: new Date().toISOString()
+        });
+    }
+});
 
 // Google OAuth configuration - all from environment variables
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -12,6 +93,32 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const WEB_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 // For extension, use the Chrome extension redirect URI
 const REDIRECT_URI = 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
+
+// Test emergency Supabase functions
+router.get('/debug/emergency-test', async (req, res) => {
+    try {
+        console.log('🧪 Testing emergency Supabase functions...');
+        
+        // Test emergency getUserByEmail
+        const testUser = await emergencyGetUserByEmail('test@example.com');
+        
+        res.json({
+            success: true,
+            message: 'Emergency functions working!',
+            test: testUser === null ? 'No user found (expected)' : 'User found',
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ Emergency test failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Emergency test failed',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
 
 // Google OAuth configuration endpoint for frontend
 router.get('/google/config', (req, res) => {
@@ -24,14 +131,35 @@ router.get('/google/config', (req, res) => {
 router.get('/debug/env', (req, res) => {
     console.log('🔧 Debug endpoint accessed');
     const debugInfo = {
-        hasClientId: !!GOOGLE_CLIENT_ID,
-        hasClientSecret: !!GOOGLE_CLIENT_SECRET,
-        hasWebRedirectUri: !!WEB_REDIRECT_URI,
-        hasExtensionRedirectUri: !!REDIRECT_URI,
-        webRedirectUri: WEB_REDIRECT_URI,
-        extensionRedirectUri: REDIRECT_URI,
-        nodeEnv: process.env.NODE_ENV,
-        allEnvKeys: Object.keys(process.env).filter(key => key.includes('GOOGLE')),
+        google: {
+            hasClientId: !!GOOGLE_CLIENT_ID,
+            hasClientSecret: !!GOOGLE_CLIENT_SECRET,
+            hasWebRedirectUri: !!WEB_REDIRECT_URI,
+            hasExtensionRedirectUri: !!REDIRECT_URI,
+            webRedirectUri: WEB_REDIRECT_URI,
+            extensionRedirectUri: REDIRECT_URI,
+        },
+        supabase: {
+            hasUrl: !!process.env.SUPABASE_URL,
+            hasAnonKey: !!process.env.SUPABASE_ANON_KEY,
+            hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            url: process.env.SUPABASE_URL,
+            urlDomain: process.env.SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1],
+            anonKeyLength: process.env.SUPABASE_ANON_KEY?.length || 0,
+            serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+            anonKeyPrefix: process.env.SUPABASE_ANON_KEY?.substring(0, 20),
+            serviceKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20)
+        },
+        runtime: {
+            nodeEnv: process.env.NODE_ENV,
+            platform: process.platform,
+            nodeVersion: process.version,
+            isVercel: !!process.env.VERCEL,
+            isLambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME
+        },
+        allEnvKeys: Object.keys(process.env).filter(key => 
+            key.includes('GOOGLE') || key.includes('SUPABASE')
+        ),
         timestamp: new Date().toISOString()
     };
     console.log('🔧 Debug info:', debugInfo);
@@ -77,29 +205,91 @@ router.get('/debug/errors', (req, res) => {
 
 // Test Supabase connection endpoint
 router.get('/debug/supabase', async (req, res) => {
+    const testResults = {
+        configCheck: {},
+        connectionTest: {},
+        queryTest: {},
+        timestamp: new Date().toISOString()
+    };
+    
     try {
         console.log('🧪 Testing Supabase connection from endpoint...');
         
-        // Test basic query
-        const result = await getUserByEmail('test@example.com');
+        // 1. Configuration check
+        testResults.configCheck = {
+            hasUrl: !!process.env.SUPABASE_URL,
+            hasAnonKey: !!process.env.SUPABASE_ANON_KEY,
+            hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            urlValid: process.env.SUPABASE_URL?.startsWith('https://'),
+            urlDomain: process.env.SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1],
+        };
         
-        res.json({
-            success: true,
-            message: 'Supabase connection test successful',
-            testResult: result === null ? 'No user found (normal)' : 'User found',
-            timestamp: new Date().toISOString()
+        // 2. Basic connection test
+        try {
+            const { supabaseService } = await import('../../../supabase/config.js');
+            const startTime = Date.now();
+            
+            const { data, error } = await supabaseService
+                .from('users')
+                .select('count')
+                .limit(1);
+                
+            const responseTime = Date.now() - startTime;
+            
+            testResults.connectionTest = {
+                success: !error,
+                responseTime: responseTime,
+                error: error ? { code: error.code, message: error.message } : null
+            };
+            
+        } catch (connectionError) {
+            testResults.connectionTest = {
+                success: false,
+                error: {
+                    name: connectionError.name,
+                    message: connectionError.message
+                }
+            };
+        }
+        
+        // 3. getUserByEmail test
+        try {
+            const result = await getUserByEmail('test@example.com');
+            testResults.queryTest = {
+                success: true,
+                result: result === null ? 'No user found (expected)' : 'User found'
+            };
+        } catch (queryError) {
+            testResults.queryTest = {
+                success: false,
+                error: {
+                    name: queryError.name,
+                    message: queryError.message,
+                    code: queryError.code
+                }
+            };
+        }
+        
+        const overallSuccess = testResults.configCheck.hasUrl && 
+                              testResults.configCheck.hasServiceKey &&
+                              testResults.connectionTest.success;
+        
+        res.status(overallSuccess ? 200 : 500).json({
+            success: overallSuccess,
+            message: overallSuccess ? 'All Supabase tests passed' : 'Some Supabase tests failed',
+            details: testResults
         });
+        
     } catch (error) {
         console.error('❌ Supabase test endpoint error:', error);
         res.status(500).json({
             success: false,
-            message: 'Supabase connection test failed',
+            message: 'Supabase test endpoint failed',
             error: {
                 name: error.name,
-                message: error.message,
-                code: error.code
+                message: error.message
             },
-            timestamp: new Date().toISOString()
+            details: testResults
         });
     }
 });
@@ -356,6 +546,18 @@ router.get('/google/callback', async (req, res) => {
         
         // Create or update user in your database
         console.log('🔄 Creating/updating user in database...');
+        
+        // Pre-flight environment check in production OAuth callback
+        console.log('🔧 OAuth callback environment check:');
+        console.log('- NODE_ENV:', process.env.NODE_ENV);
+        console.log('- VERCEL:', !!process.env.VERCEL);
+        console.log('- SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
+        console.log('- SUPABASE_SERVICE_ROLE_KEY exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+        console.log('- SUPABASE_URL value:', process.env.SUPABASE_URL?.substring(0, 50) + '...');
+        console.log('- Current working directory:', process.cwd());
+        console.log('- Available SUPABASE env vars:', 
+            Object.keys(process.env).filter(key => key.includes('SUPABASE')));
+        
         const user = await createOrUpdateGoogleUser(userInfo);
         console.log('✅ User processed:', user);
         
@@ -614,7 +816,23 @@ async function createOrUpdateGoogleUser(googleUserInfo) {
     try {
         // Check if user exists
         console.log('🔍 Checking if user exists by email:', googleUserInfo.email);
-        const existingUser = await getUserByEmail(googleUserInfo.email);
+        let existingUser;
+        
+        try {
+            existingUser = await getUserByEmail(googleUserInfo.email);
+        } catch (normalError) {
+            console.error('❌ Normal getUserByEmail failed, trying emergency mode:', normalError.message);
+            
+            // Try emergency mode
+            try {
+                console.log('🚨 Switching to EMERGENCY mode...');
+                existingUser = await emergencyGetUserByEmail(googleUserInfo.email);
+                console.log('✅ Emergency mode successful!');
+            } catch (emergencyError) {
+                console.error('❌ Emergency mode also failed:', emergencyError.message);
+                throw new Error(`Both normal and emergency Supabase connections failed: ${normalError.message}`);
+            }
+        }
         
         if (existingUser) {
             console.log('✅ User exists, updating with Google info:', existingUser);
@@ -702,7 +920,28 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
-        const result = await signIn(email, password);
+        let result;
+        
+        try {
+            result = await signIn(email, password);
+        } catch (normalError) {
+            console.error('❌ Normal signIn failed, trying emergency mode:', normalError.message);
+            
+            // Try emergency mode if normal signIn fails with fetch error
+            if (normalError.message?.includes('fetch failed')) {
+                try {
+                    console.log('🚨 Switching to EMERGENCY signIn mode...');
+                    result = await emergencySignIn(email, password);
+                    console.log('✅ Emergency signIn successful!');
+                } catch (emergencyError) {
+                    console.error('❌ Emergency signIn also failed:', emergencyError.message);
+                    throw normalError; // Throw original error
+                }
+            } else {
+                throw normalError; // Not a fetch error, throw original
+            }
+        }
+        
         res.json(result);
     } catch (error) {
         console.error('Login error:', error);

@@ -1,4 +1,24 @@
 import 'dotenv/config';
+
+// Force environment check at startup
+console.log('🚀 Server startup environment check:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- VERCEL:', !!process.env.VERCEL);
+console.log('- Process CWD:', process.cwd());
+console.log('- SUPABASE vars available:', Object.keys(process.env).filter(k => k.includes('SUPABASE')));
+
+// Verify critical environment variables
+const criticalEnvVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
+const missingVars = criticalEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+    console.error('❌ Missing critical environment variables:', missingVars);
+    console.error('🔧 Available env keys containing "SUPABASE":', 
+        Object.keys(process.env).filter(k => k.includes('SUPABASE')));
+} else {
+    console.log('✅ All critical environment variables present');
+}
+
 import express from 'express';
 import bodyParser from 'body-parser';
 import path from 'path';
