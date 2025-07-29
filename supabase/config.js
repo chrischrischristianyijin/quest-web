@@ -3,7 +3,7 @@ import { config } from '../src/config.js';
 
 const supabaseUrl = config.SUPABASE_URL;
 const supabaseKey = config.SUPABASE_ANON_KEY;
-const supabaseServiceKey = config.SUPABASE_SERVICE_KEY;
+const supabaseServiceKey = config.SUPABASE_SERVICE_ROLE_KEY;
 
 console.log('🔧 Supabase Config Environment check:');
 console.log('- NODE_ENV:', process.env.NODE_ENV);
