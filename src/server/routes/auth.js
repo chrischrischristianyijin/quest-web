@@ -8,13 +8,27 @@ const router = express.Router();
 // Google OAuth configuration - all from environment variables
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+// For web flow, use GOOGLE_REDIRECT_URI from Vercel
 const WEB_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+// For extension, use the Chrome extension redirect URI
+const REDIRECT_URI = 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
 
 // Google OAuth configuration endpoint for frontend
 router.get('/google/config', (req, res) => {
     res.json({
         client_id: GOOGLE_CLIENT_ID
+    });
+});
+
+// Debug endpoint to check environment variables
+router.get('/debug/env', (req, res) => {
+    res.json({
+        hasClientId: !!GOOGLE_CLIENT_ID,
+        hasClientSecret: !!GOOGLE_CLIENT_SECRET,
+        hasRedirectUri: !!REDIRECT_URI,
+        redirectUri: REDIRECT_URI,
+        nodeEnv: process.env.NODE_ENV,
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes('GOOGLE'))
     });
 });
 
@@ -125,8 +139,23 @@ router.get('/google/web', (req, res) => {
 router.get('/google/callback', async (req, res) => {
     console.log('🔄 Google OAuth callback received');
     console.log('📋 Query parameters:', req.query);
+    console.log('🔧 Environment check:');
+    console.log('  - GOOGLE_CLIENT_ID:', !!GOOGLE_CLIENT_ID ? 'Present' : 'MISSING');
+    console.log('  - GOOGLE_CLIENT_SECRET:', !!GOOGLE_CLIENT_SECRET ? 'Present' : 'MISSING');
+    console.log('  - GOOGLE_REDIRECT_URI:', !!REDIRECT_URI ? REDIRECT_URI : 'MISSING');
     
-    const { code, state } = req.query;
+    const { code, state, error } = req.query;
+    
+    // Check for OAuth error from Google
+    if (error) {
+        console.error('❌ Google OAuth error:', error);
+        return res.redirect(`/login?error=${encodeURIComponent('Google OAuth error: ' + error)}`);
+    }
+    
+    if (!code) {
+        console.error('❌ No authorization code received');
+        return res.redirect(`/login?error=${encodeURIComponent('No authorization code received')}`);
+    }
     
     try {
         console.log('🔄 Starting token exchange...');
