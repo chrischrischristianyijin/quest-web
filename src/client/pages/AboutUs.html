@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quest - About Us</title>
+    <title>Quest - Curate your world</title>
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Rozha+One&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --schemes-primary: #65558F;
-            --schemes-on-surface-variant: #49454F;
             --quest-purple: #4B264F;
-            --quest-orange: #D76E13;
             --quest-light-purple: #8E4F9D;
+            --quest-orange: #D76E13;
+            --quest-gradient: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
+            --quest-bg-gradient: linear-gradient(180deg, rgba(209, 193, 230, 0.15) 0%, rgba(233, 225, 243, 0.1) 25%, rgba(245, 240, 250, 0.05) 50%, rgba(255, 255, 255, 0) 100%);
         }
 
         * {
@@ -26,388 +25,969 @@
 
         body {
             background: white;
-            font-family: 'Roboto', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            font-family: 'Inter', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
             overflow-x: hidden;
         }
 
-        .gradient-bg {
-            width: 100%;
-            height: 875px;
-            position: absolute;
-            left: 0;
+        /* 背景装饰 */
+        .bg-decoration {
+            position: fixed;
             top: 0;
-            background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(228, 228, 255, 0.67) 0%, rgba(255, 255, 255, 0.90) 100%);
-            z-index: -1;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -10;
+            pointer-events: none;
         }
 
-        .content-wrapper {
-            max-width: 1512px;
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(139, 79, 157, 0.04) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(75, 38, 79, 0.03) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(24px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(75, 38, 79, 0.08);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.02);
+        }
+
+        .nav-container {
+            max-width: 1400px;
             margin: 0 auto;
-            position: relative;
-            padding: 47px 76px;
-            padding-bottom: 100px;
-            flex: 1;
-        }
-
-        .header {
+            padding: 0 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
-        }
-
-        .left-nav {
-            display: flex;
-            align-items: center;
-            gap: 40px;
+            height: 72px;
         }
 
         .logo {
-            color: var(--quest-purple);
-            font-size: 50px;
-            font-family: 'Pacifico', cursive;
-            font-weight: 400;
+            display: flex;
+            align-items: center;
             text-decoration: none;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .logo img {
+            height: 42px;
+            width: auto;
         }
 
         .nav-links {
             display: flex;
-            gap: 30px;
+            align-items: center;
+            gap: 2rem;
         }
 
         .nav-link {
             color: var(--quest-purple);
             text-decoration: none;
-            font-size: 24px;
-            font-weight: 600;
+            font-weight: 500;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+
+        .nav-link:hover {
+            background: rgba(75, 38, 79, 0.1);
         }
 
         .auth-buttons {
             display: flex;
-            gap: 20px;
+            gap: 12px;
         }
 
-        .signup-btn, .login-btn {
-            padding: 10px 30px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 600;
+        .btn {
+            padding: 10px 32px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 500;
             text-decoration: none;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 44px;
+            min-width: 100px;
+            justify-content: center;
         }
 
-        .signup-btn {
-            border: 2px solid var(--quest-purple);
+        .btn-outline {
+            border: 2px solid rgba(75, 38, 79, 0.4);
             color: var(--quest-purple);
-            background: transparent;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
         }
 
-        .login-btn {
-            background: var(--quest-light-purple);
+        .btn-outline:hover {
+            background: var(--quest-purple);
+            color: white;
+            border-color: var(--quest-purple);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(75, 38, 79, 0.2);
+        }
+
+        .btn-primary {
+            background: var(--quest-gradient);
             color: white;
             border: none;
-        }
-
-        .welcome-section {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 60px 0;
-        }
-
-        .welcome-title {
-            color: var(--quest-purple);
-            font-size: 96px;
-            font-family: 'Pacifico', cursive;
-            font-weight: 400;
-            line-height: 100px;
-            margin-bottom: 20px;
-        }
-
-        .multimedia-text {
-            color: var(--quest-orange);
-            font-size: 40px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 600;
-            line-height: 48px;
-            margin-bottom: 30px;
-        }
-
-        .try-button {
-            display: inline-block;
-            padding: 15px 40px;
-            background: var(--quest-light-purple);
-            color: white;
-            font-size: 18px;
-            font-weight: 600;
-            text-decoration: none;
-            border-radius: 30px;
+            box-shadow: 0 2px 12px rgba(75, 38, 79, 0.15);
             transition: all 0.3s ease;
-            margin-top: 30px;
         }
 
-        .try-button:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
+        .btn-primary:hover {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--quest-purple);
+            border: 2px solid var(--quest-purple);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(75, 38, 79, 0.25);
         }
 
-        .discover-section {
-            text-align: center;
-            padding: 60px 0;
-            background: rgba(164, 119, 176, 0.11);
-            margin-bottom: 80px;
-            width: 100vw;
-            position: relative;
-            left: 50%;
-            right: 50%;
-            margin-left: -50vw;
-            margin-right: -50vw;
+        /* 主要内容 */
+        .main-content {
+            padding-top: 72px;
         }
 
-        .discover-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        .discover-title {
-            color: #8E4F9D;
-            font-size: 64px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 600;
-            line-height: 70px;
-            text-shadow: 0px 4px 4px rgba(239, 225, 240, 1.00);
-            margin-bottom: 40px;
-        }
-
-        .welcome-text {
-            color: #4B264F;
-            font-size: 24px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: 400;
-            line-height: 40px;
-            max-width: 1200px;
-            margin: 0 auto;
-            text-align: left;
-        }
-
-        .feature-section {
-            margin-bottom: 80px;
+        /* Hero 区域 */
+        .hero-section {
+            min-height: 80vh;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            gap: 40px;
-        }
-
-        .feature-content-left {
-            flex: 1;
-            max-width: 55%;
-        }
-
-        .feature-content-right {
-            flex: 1;
-            max-width: 55%;
-            order: 1;
-        }
-
-        .feature-image {
-            flex: 1;
-            max-width: 45%;
-            background: radial-gradient(ellipse 50% 50% at 50% 50%, #DEDAFF 0%, white 100%);
-            border-radius: 12px;
-            height: 500px;
-            display: flex;
             justify-content: center;
+            text-align: center;
+            padding: 2rem 2rem 4rem;
+            background: transparent;
+            position: relative;
+            z-index: 10;
+            margin-top: 0;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, 
+                rgba(65, 35, 115, 0.25) 0%, 
+                rgba(85, 55, 145, 0.18) 20%, 
+                rgba(105, 75, 175, 0.12) 40%, 
+                rgba(125, 95, 205, 0.08) 60%, 
+                rgba(145, 115, 235, 0.04) 80%, 
+                transparent 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            gap: 1.2rem;
+            overflow: visible;
+            padding: 1.5rem 3rem;
+            background: transparent;
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+        }
+
+        .hero-title {
+            font-size: clamp(3.5rem, 7vw, 6.5rem);
+            font-family: 'Pacifico', cursive;
+            background: linear-gradient(135deg, var(--quest-purple) 0%, var(--quest-light-purple) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0;
+            line-height: 1.4;
+            text-shadow: 0 2px 8px rgba(75, 38, 79, 0.15);
+            animation: titleFloat 6s ease-in-out infinite;
+            position: relative;
+            z-index: 20;
+            text-align: center;
+            max-width: 100%;
+            word-break: keep-all;
+            hyphens: none;
+            padding: 0.1em 0.3em 0.2em 0.3em;
+            overflow: visible;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        @keyframes titleFloat {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 2.8vw, 1.8rem);
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--quest-orange);
+            font-weight: 600;
+            margin-bottom: 0;
+            letter-spacing: 1.2px;
+            text-shadow: 0 2px 12px rgba(215, 110, 19, 0.4);
+            animation: subtitlePulse 3s ease-in-out infinite;
+            line-height: 1.3;
+            text-align: center;
+            opacity: 0.95;
+            position: relative;
+            z-index: 20;
+        }
+
+        @keyframes subtitlePulse {
+            0%, 100% {
+                text-shadow: 0 2px 12px rgba(215, 110, 19, 0.4);
+                letter-spacing: 2px;
+            }
+            50% {
+                text-shadow: 0 4px 20px rgba(215, 110, 19, 0.6);
+                letter-spacing: 3px;
+            }
+        }
+
+        .hero-description {
+            font-size: clamp(1.1rem, 2.2vw, 1.3rem);
+            color: var(--quest-purple);
+            margin-bottom: 3rem;
+            line-height: 1.7;
+            opacity: 0.9;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            font-weight: 400;
+        }
+
+        .hero-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 28px;
+            background: var(--quest-gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(75, 38, 79, 0.2), 0 1px 4px rgba(75, 38, 79, 0.1);
+            border: none;
             position: relative;
             overflow: hidden;
+            animation: ctaGlow 4s ease-in-out infinite;
+            margin-top: 0.5rem;
+            min-width: 180px;
+            z-index: 20;
         }
 
-        .feature-image img {
-            max-width: 90%;
-            height: auto;
-            border-radius: 8px;
+        .hero-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .hero-cta:hover::before {
+            left: 100%;
+        }
+
+        .hero-cta:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 16px 48px rgba(75, 38, 79, 0.5), 0 8px 24px rgba(75, 38, 79, 0.3);
+        }
+
+        @keyframes ctaGlow {
+            0%, 100% {
+                box-shadow: 0 4px 16px rgba(75, 38, 79, 0.2), 0 1px 4px rgba(75, 38, 79, 0.1);
+            }
+            50% {
+                box-shadow: 0 6px 20px rgba(75, 38, 79, 0.3), 0 2px 8px rgba(75, 38, 79, 0.15);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .hero-title {
+                font-size: clamp(3rem, 6vw, 5.5rem);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .hero-title {
+                font-size: clamp(2.8rem, 7.5vw, 4.5rem);
+                white-space: normal;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 1.5rem 1.5rem 2.5rem;
+                min-height: 70vh;
+            }
+            
+            .hero-content {
+                max-width: 100%;
+                gap: 1rem;
+                padding: 1rem 2rem;
+                background: transparent;
+            }
+            
+            .hero-title {
+                font-size: clamp(2.2rem, 8vw, 3.5rem);
+                line-height: 1.5;
+                padding: 0.3em 0.4em 0.4em 0.4em;
+                letter-spacing: 0.03em;
+                white-space: normal;
+            }
+            
+            .hero-subtitle {
+                font-size: clamp(0.9rem, 3.8vw, 1.4rem);
+                letter-spacing: 0.8px;
+            }
+            
+            .hero-cta {
+                padding: 12px 24px;
+                font-size: clamp(0.8rem, 3vw, 1rem);
+                min-width: 160px;
+            }
+            
+            .feature-title {
+                font-size: clamp(1rem, 2.8vw, 1.3rem);
+                letter-spacing: 0.6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-section {
+                padding: 1.5rem 1rem 2rem;
+                min-height: 60vh;
+            }
+            
+            .hero-content {
+                padding: 1rem 1.5rem;
+                border-radius: 20px;
+                background: transparent;
+                gap: 0.8rem;
+            }
+            
+            .hero-title {
+                font-size: clamp(2rem, 12vw, 3rem);
+                line-height: 1.6;
+                padding: 0.4em 0.5em 0.5em 0.5em;
+                letter-spacing: 0.04em;
+            }
+            
+            .hero-subtitle {
+                font-size: clamp(0.8rem, 5vw, 1.1rem);
+            }
+            
+            .feature-title {
+                font-size: clamp(0.9rem, 3vw, 1.2rem);
+                letter-spacing: 0.5px;
+            }
+        }
+
+        /* 特性区域 */
+        .features-section {
+            padding: 40px 2rem 120px 2rem;
+            background: rgba(248, 246, 250, 0.5);
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        .features-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+            padding: 50px 30px;
+            background: linear-gradient(135deg, rgba(248, 246, 250, 0.85) 0%, rgba(240, 235, 245, 0.95) 50%, rgba(235, 230, 240, 0.9) 100%);
+            border-radius: 32px;
+            box-shadow: 0 8px 32px rgba(75, 38, 79, 0.12), 0 2px 8px rgba(75, 38, 79, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(248, 246, 250, 0.6);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+
+
+
+
+        .section-title {
+            font-size: clamp(2.4rem, 5vw, 3.8rem);
+            font-family: 'IBM Plex Mono', monospace;
+            background: linear-gradient(135deg, var(--quest-light-purple) 0%, var(--quest-purple) 50%, var(--quest-orange) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 4s ease-in-out infinite;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            letter-spacing: 2px;
+            text-shadow: 0 4px 16px rgba(75, 38, 79, 0.2);
+            position: relative;
             z-index: 2;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 4px;
+            background: linear-gradient(90deg, transparent 0%, var(--quest-orange) 20%, var(--quest-light-purple) 50%, var(--quest-purple) 80%, transparent 100%);
+            border-radius: 2px;
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% {
+                opacity: 0.7;
+                transform: translateX(-50%) scaleX(1);
+            }
+            50% {
+                opacity: 1;
+                transform: translateX(-50%) scaleX(1.1);
+            }
+        }
+
+        .section-description {
+            font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+            color: var(--quest-purple);
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.8;
+            font-weight: 400;
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            opacity: 0.95;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 100px;
+            align-items: start;
+        }
+
+        .feature {
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+        }
+
+        .feature-content {
+            flex: 1;
         }
 
         .feature-title {
-            color: #D76E13;
-            font-size: 28px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 600;
-            line-height: 48px;
-            margin-bottom: 30px;
+            font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+            font-family: 'Inter', sans-serif;
+            color: var(--quest-purple);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            line-height: 1.3;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
         }
 
         .feature-text {
-            color: #4B264F;
-            font-size: 20px;
-            font-family: 'Roboto', sans-serif;
+            font-size: clamp(1rem, 2vw, 1.1rem);
+            color: var(--quest-purple);
+            line-height: 1.8;
+            font-family: 'Inter', sans-serif;
             font-weight: 400;
-            line-height: 35px;
+            opacity: 0.9;
         }
 
         .feature-highlight {
-            color: #D76E13;
-            font-weight: 700;
+            color: var(--quest-orange);
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--quest-orange) 0%, var(--quest-light-purple) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .quote-section {
+        .feature-image {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .feature-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 16px;
+            box-shadow: 0 12px 48px rgba(75, 38, 79, 0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-image img:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(75, 38, 79, 0.2);
+        }
+
+        /* CTA 区域 */
+        .cta-section {
+            background: var(--quest-gradient);
+            color: white;
+            padding: 100px 2rem;
             text-align: center;
-            margin: 80px 0;
-            padding: 60px 0;
-            background: radial-gradient(ellipse 50% 50% at 50% 50%, #DFDCFF 0%, white 100%);
+            margin: 0;
         }
 
-        .quote {
-            color: black;
-            font-size: 55px;
-            font-family: 'Rozha One', serif;
-            font-weight: 400;
-            line-height: 100px;
+        .cta-content {
             max-width: 800px;
             margin: 0 auto;
         }
 
+        .cta-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-family: 'Pacifico', cursive;
+            margin-bottom: 2rem;
+            line-height: 1.2;
+        }
+
+        .cta-description {
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+            line-height: 1.7;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 3rem;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 32px;
+            background: white;
+            color: var(--quest-purple);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Footer */
         .footer {
-            width: 100%;
-            height: 342px;
-            background: #E6DFE8;
-            padding: 80px 161px;
+            background: #F8F6FA;
+            padding: 80px 2rem 30px;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 40px;
-            flex-shrink: 0;
-            margin-top: auto;
         }
 
         .footer-section h3 {
-            color: #682870;
-            font-size: 24px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: 700;
-            line-height: 45px;
-            margin-bottom: 15px;
+            color: var(--quest-purple);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
         }
 
         .footer-text {
-            color: black;
-            font-size: 24px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: 400;
-            line-height: 45px;
+            color: #666;
+            line-height: 1.6;
         }
 
         .footer-links a {
             display: block;
-            color: black;
-            font-size: 24px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: 700;
-            line-height: 45px;
+            color: #666;
             text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s ease;
         }
 
-        .add-button {
-            transition: all 0.3s ease;
-            background-color: #ccc;
-            width: 100px;
+        .footer-links a:hover {
+            color: var(--quest-purple);
         }
 
-        .add-button.active {
-            background-color: #555;
-            width: 150px;
+        .footer-bottom {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(75, 38, 79, 0.1);
+            text-align: center;
+            color: #666;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0 1rem;
+                height: 64px;
+            }
+
+            .logo img {
+                height: 36px;
+            }
+
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .auth-buttons {
+                gap: 8px;
+            }
+
+            .btn {
+                padding: 8px 24px;
+                font-size: 13px;
+                height: 40px;
+                min-width: 80px;
+            }
+
+            .main-content {
+                padding-top: 70px;
+            }
+
+            .hero-section {
+                margin-top: 70px;
+                min-height: calc(100vh - 70px);
+                padding: 2rem 1rem 1rem;
+            }
+
+            .hero-section {
+                padding: 1rem;
+            }
+
+            .features-section {
+                padding: 80px 1rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 80px;
+            }
+
+            .feature {
+                gap: 40px;
+            }
+
+            .feature-title {
+                font-size: clamp(1.2rem, 4vw, 1.5rem) !important;
+                margin-bottom: 1rem !important;
+            }
+
+            .section-header {
+                margin-bottom: 60px;
+                padding: 35px 20px;
+                border-radius: 24px;
+            }
+
+            .section-title {
+                letter-spacing: 1px;
+                margin-bottom: 1.5rem;
+                font-size: clamp(1.8rem, 7vw, 2.8rem) !important;
+                line-height: 1.3 !important;
+            }
+
+            .section-title::after {
+                width: 100px;
+                bottom: -15px;
+                height: 3px;
+            }
+
+            .hero-title {
+                font-size: clamp(2.2rem, 10vw, 3.5rem) !important;
+                line-height: 1.1 !important;
+                margin-bottom: 1.5rem !important;
+            }
+
+            .hero-subtitle {
+                font-size: clamp(1rem, 5vw, 1.6rem) !important;
+                letter-spacing: 1px !important;
+                line-height: 1.2 !important;
+            }
+
+            .hero-cta {
+                padding: 18px 35px;
+                font-size: 1.1rem !important;
+            }
+
+            .cta-section {
+                padding: 80px 1rem;
+                margin: 80px 0 0 0;
+            }
+
+            .footer {
+                padding: 60px 1rem 20px;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-content > * {
+            animation: fadeInUp 1s ease forwards;
+            opacity: 0;
+        }
+
+        .hero-title {
+            animation-delay: 0.2s;
+        }
+
+        .hero-subtitle {
+            animation-delay: 0.4s;
+        }
+
+        .hero-description {
+            animation-delay: 0.6s;
+        }
+
+        .hero-cta {
+            animation-delay: 0.8s;
+        }
+
+        /* Section Header 动画 */
+        .section-header {
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+
+        .section-title {
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 0.4s;
+            opacity: 0;
+        }
+
+        .section-description {
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 0.6s;
+            opacity: 0;
+        }
+
+        .section-title::after {
+            animation: scaleIn 0.6s ease forwards;
+            animation-delay: 0.8s;
+            transform: translateX(-50%) scaleX(0);
+        }
+
+        @keyframes scaleIn {
+            to {
+                transform: translateX(-50%) scaleX(1);
+            }
         }
     </style>
 </head>
 <body>
-    <div class="gradient-bg"></div>
-    <div class="content-wrapper">
-        <header class="header">
-            <div class="left-nav">
-                <a href="/" class="logo">
-            <img src="/public/logo.png" alt="Quest" style="height: 40px; width: auto;">
-        </a>
-                <nav class="nav-links" id="navLinks">
-                    <!-- Navigation links will be dynamically updated -->
-                </nav>
+    <div class="bg-decoration"></div>
+    
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+                         <a href="/" class="logo">
+                 <img src="/public/logo.png" alt="Quest">
+             </a>
+            <div class="nav-links" id="navLinks">
+                <!-- Navigation links will be dynamically updated -->
             </div>
             <div class="auth-buttons" id="authButtons">
                 <!-- Auth buttons will be dynamically updated -->
             </div>
-        </header>
-
-        <div class="main-content">
-            <section class="welcome-section">
-                <h1 class="welcome-title" id="welcomeTitle"></h1>
-                <p class="multimedia-text">YOUR MULTIMEDIA INSIGHT STACK</p>
-                <a href="/signup" class="try-button" id="tryButton">Try Now</a>
-            </section>
-
-            <section class="discover-section">
-                <div class="discover-content">
-                    <h2 class="discover-title">DISCOVER. ORGANIZE. CONNECT.</h2>
-                    <p class="welcome-text">
-                        Welcome to Quest — where curiosity meets clarity. In a world overflowing with information, we empower you to cut through the noise and focus on what truly matters. 
-                        <span class="feature-highlight">Quest re-imagines how you engage with knowledge, transforming scattered content into a cohesive intellectual journey.</span>
-                        Whether you're a lifelong learner, a professional, or simply someone who loves to explore, Quest is your gateway to a smarter, more connected way of thinking.
-                    </p>
-                </div>
-            </section>
-
-            <section class="feature-section">
-                <div class="feature-content-left">
-                    <h3 class="feature-title">YOUR PERSONAL KNOWLEDGE MAP</h3>
-                    <p class="feature-text">
-                        Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. 
-                        <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms like Google, Twitter, and more.</span>
-                        No more fragmentation; just a seamless, unified library that grows with your interests. Your Space isn't just a collection—it's a reflection of your mind, curated by you and for you.
-                    </p>
-                </div>
-                <div class="feature-image">
-                    <img src="/public/picture1.jpg" alt="Quest dashboard" style="max-width: 90%; height: auto; border-radius: 8px;">
-                </div>
-            </section>
-
-            <section class="feature-section">
-                <div class="feature-image">
-                    <img src="/public/picture2.png" style="max-width: 65%; height: auto; border-radius: 8px;">
-                </div>
-                <div class="feature-content-right">
-                    <h3 class="feature-title">LEARN FROM THE BEST MINDS AROUND YOU.</h3>
-                    <p class="feature-text">
-                        Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? Explore Others' Spaces and turn that wish into reality. We believe everyone is an expert in some fields, and Quest lets you discover hidden gems, trends, and insights from friends you secretly admire. Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment. 
-                        <span class="feature-highlight">Here, your profile isn't just a page—it's a living archive of your intellectual growth.</span>
-                    </p>
-                </div>
-            </section>
-
-            <section class="quote-section">
-                <div class="quote">
-                    Quest.<br>
-                    Curate your world.<br>
-                    Connect through knowledge.
-                </div>
-            </section>
         </div>
-    </div>
+    </nav>
 
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title" id="welcomeTitle">Welcome to Quest</h1>
+                <p class="hero-subtitle">MULTIMEDIA INSIGHT STACK</p>
+
+                <a href="/signup" class="hero-cta" id="tryButton">
+                    Start Your Journey
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+
+                 <!-- Features Section -->
+         <section class="features-section">
+             <div class="features-container">
+                 <div class="section-header">
+                     <h2 class="section-title">DISCOVER. ORGANIZE. CONNECT.</h2>
+                     <p class="section-description">
+                         In a world overflowing with information, we empower you to cut through the noise 
+                         and focus on what truly matters.
+                     </p>
+                 </div>
+
+                 <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-content">
+                        <h3 class="feature-title">YOUR PERSONAL KNOWLEDGE MAP</h3>
+                        <p class="feature-text">
+                            Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. 
+                            <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span>
+                            No more fragmentation; just a seamless, unified library that grows with your interests.
+                        </p>
+                    </div>
+                    <div class="feature-image">
+                        <img src="/public/picture1.jpg" alt="Quest dashboard showing organized content">
+                    </div>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-image">
+                        <img src="/public/picture2.png" alt="Connect with other users">
+                    </div>
+                    <div class="feature-content">
+                        <h3 class="feature-title">LEARN FROM THE BEST MINDS AROUND YOU</h3>
+                        <p class="feature-text">
+                            Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? 
+                            Explore Others' Spaces and turn that wish into reality. 
+                            <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span>
+                            Here, your profile isn't just a page—it's a living archive of your intellectual growth.
+                        </p>
+                    </div>
+                </div>
+                        </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <div class="cta-content">
+                <h2 class="cta-title">Ready to Transform Your Learning?</h2>
+                <p class="cta-description">
+                    Transform scattered content into a cohesive intellectual journey. Curate your world, connect through knowledge.
+                </p>
+                <a href="/signup" class="cta-button" id="ctaButton">
+                    Get Started for Free
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
     <footer class="footer">
-        <div class="footer-section">
-            <h3>Quest</h3>
-            <p class="footer-text">Your personal knowledge hub for discovering and sharing meaningful content.</p>
-        </div>
-        <div class="footer-section">
-            <h3>Quick Links</h3>
-            <div class="footer-links">
-                <a href="/">Home</a>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Quest</h3>
+                <p class="footer-text">Your personal knowledge hub for discovering and sharing meaningful content across the web.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <div class="footer-links">
+                    <a href="/">Home</a>
+                    <a href="/signup">Sign Up</a>
+                    <a href="/login">Log In</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <p class="footer-text">Email: contact@myquestspace.com</p>
             </div>
         </div>
-        <div class="footer-section">
-            <h3>Contact Us</h3>
-            <p class="footer-text">Email: contact@myquestspace.com</p>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Quest. All rights reserved.</p>
         </div>
     </footer>
 
@@ -418,30 +998,31 @@
             const authButtons = document.getElementById('authButtons');
             const welcomeTitle = document.getElementById('welcomeTitle');
             const tryButton = document.getElementById('tryButton');
-
-            // 欢迎语初始为空
-            welcomeTitle.textContent = '';
+            const ctaButton = document.getElementById('ctaButton');
 
             if (isLoggedIn && userEmail) {
                 navLinks.innerHTML = `
-                                            <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="nav-link">My Space</a>
+                    <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="nav-link">My Space</a>
                 `;
                 authButtons.innerHTML = `
-                                            <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="signup-btn">My Space</a>
-                    <button class="login-btn" id="logoutBtn">Log out</button>
+                    <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="btn btn-outline">My Space</a>
+                    <button class="btn btn-primary" id="logoutBtn">Log out</button>
                 `;
                 tryButton.textContent = 'Go to My Space';
                 tryButton.href = `/spaces/my-space.html?email=${encodeURIComponent(userEmail)}`;
+                ctaButton.textContent = 'Go to My Space';
+                ctaButton.href = `/spaces/my-space.html?email=${encodeURIComponent(userEmail)}`;
 
-                // 异步获取nickname后只显示一种欢迎语
+                // Get and display nickname
                 getUserNickname(userEmail).then(nickname => {
                     if (nickname) {
                         welcomeTitle.textContent = `Welcome back, ${nickname}!`;
                     } else {
-                        welcomeTitle.textContent = 'Welcome to Quest!';
+                        welcomeTitle.textContent = 'Welcome back to Quest!';
                     }
                 });
-                // 直接绑定logoutBtn事件
+
+                // Bind logout event
                 const logoutBtn = document.getElementById('logoutBtn');
                 if (logoutBtn) {
                     logoutBtn.onclick = function(e) {
@@ -450,16 +1031,26 @@
                     };
                 }
             } else {
-                navLinks.innerHTML = `
-                `;
+                navLinks.innerHTML = '';
                 authButtons.innerHTML = `
-                    <a href="/signup" class="signup-btn">Sign Up</a>
-                    <a href="/login" class="login-btn">Log in</a>
+                    <a href="/signup" class="btn btn-outline">Sign Up</a>
+                    <a href="/login" class="btn btn-primary">Log In</a>
                 `;
-                welcomeTitle.textContent = 'Welcome to Quest!';
-                tryButton.textContent = 'Try Now';
+                welcomeTitle.textContent = 'Welcome to Quest';
+                tryButton.innerHTML = `
+                    Start Your Journey
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
                 tryButton.href = '/signup';
-
+                ctaButton.innerHTML = `
+                    Get Started for Free
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+                ctaButton.href = '/signup';
             }
         }
 
@@ -481,7 +1072,6 @@
         // Handle logout
         async function handleLogout() {
             try {
-                // Call the logout API
                 const response = await fetch('/api/v1/auth/signout', {
                     method: 'POST',
                     credentials: 'include',
@@ -490,19 +1080,14 @@
                     }
                 });
 
-                // Clear local storage regardless of server response
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('quest_user_session');
                 
-                // Update UI to logged out state
                 updateUIForLoginStatus(false);
-                
-                // Redirect to home page
                 window.location.href = '/';
                 
             } catch (error) {
                 console.error('Logout error:', error);
-                // Even if server logout fails, clear local storage and update UI
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('quest_user_session');
                 updateUIForLoginStatus(false);
@@ -513,26 +1098,21 @@
         // Check login status on page load
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // Check for email in URL parameters first
                 const urlParams = new URLSearchParams(window.location.search);
                 const emailFromUrl = urlParams.get('email');
                 
                 if (emailFromUrl) {
-                    // If email is in URL, use it and update UI immediately
                     localStorage.setItem('userEmail', emailFromUrl);
                     updateUIForLoginStatus(true, emailFromUrl);
                     return;
                 }
                 
-                // Check localStorage for cached login status
                 const cachedEmail = localStorage.getItem('userEmail');
                 if (cachedEmail) {
-                    // Update UI immediately with cached email
                     updateUIForLoginStatus(true, cachedEmail);
                     return;
                 }
 
-                // If no cached email, check server for current auth status
                 const response = await fetch('/api/v1/auth/current-user', {
                     credentials: 'include',
                     headers: {
@@ -542,23 +1122,19 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                if (data.user) {
-                        // User is logged in
+                    if (data.user) {
                         localStorage.setItem('userEmail', data.user.email);
                         updateUIForLoginStatus(true, data.user.email);
                     } else {
-                        // User is not logged in
                         localStorage.removeItem('userEmail');
                         updateUIForLoginStatus(false);
                     }
                 } else {
-                    // Server error or not authenticated
                     updateUIForLoginStatus(false);
                 }
 
             } catch (error) {
                 console.error('Error checking user status:', error);
-                // On error, fall back to cached status or default to not logged in
                 const cachedEmail = localStorage.getItem('userEmail');
                 if (cachedEmail) {
                     updateUIForLoginStatus(true, cachedEmail);
@@ -567,11 +1143,9 @@
                 }
             }
             
-            // 在 updateUIForLoginStatus 之后执行统一的 About Us 链接更新逻辑
             updateAboutUsLinks();
         });
         
-        // 统一的 About Us 链接更新逻辑
         function updateAboutUsLinks() {
             const email = localStorage.getItem('userEmail') || (new URLSearchParams(window.location.search)).get('email');
             document.querySelectorAll('a[href*="about"], a[href*="AboutUs"]').forEach(link => {
@@ -579,9 +1153,33 @@
                     link.href = `/AboutUs.html?email=${encodeURIComponent(email)}`;
                 } else {
                     link.href = '/AboutUs.html';
+                }
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.background = 'rgba(255, 255, 255, 0.99)';
+                navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.12)';
+                navbar.style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.06)';
+            } else {
+                navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+                navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.08)';
+                navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.02)';
             }
         });
-        }
     </script>
 </body>
 </html>
