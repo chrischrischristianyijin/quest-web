@@ -5,6 +5,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const passwordInput = document.getElementById("password");
     const loginButton = form.querySelector(".login-button");
     
+    // Check for OAuth error in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthError = urlParams.get('error');
+    if (oauthError) {
+        showMessage(oauthError, true);
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     // Forgot Password Modal Elements
     const forgotPasswordLink = document.getElementById("forgotPasswordLink");
     const forgotPasswordModal = document.getElementById("forgotPasswordModal");

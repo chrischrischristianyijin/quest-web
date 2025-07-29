@@ -227,75 +227,93 @@ router.get('/google/callback', async (req, res) => {
                         <div class="success">✓ Authentication successful!</div>
                         <div>You can close this window now.</div>
                     </div>
-                    <script>
-                        console.log('✅ Sending success message to extension');
+                                    <script>
+                    console.log('✅ Sending success message to extension');
+                    if (window.opener) {
                         window.opener.postMessage({
                             type: 'GOOGLE_AUTH_SUCCESS',
                             user: ${JSON.stringify(user)}
                         }, '*');
                         setTimeout(() => window.close(), 2000);
-                    </script>
+                    } else {
+                        console.error('No window.opener found');
+                        document.body.innerHTML += '<p>Please close this window and try again.</p>';
+                    }
+                </script>
                 </body>
                 </html>
             `);
         } else if (state === 'web') {
-            // Web flow - directly redirect to my-space
-            console.log('🌐 Redirecting to my-space for web user');
+            // Web flow - redirect flow (not popup)
+            console.log('🌐 Web redirect flow - redirecting to my-space');
             
-            // Store user session and redirect directly
+            // Store user session and redirect directly (no postMessage needed)
             res.redirect(`/spaces/my-space.html?email=${encodeURIComponent(user.email)}&google_auth=true&user_id=${user.id}`);
         } else {
-            // Regular web flow (fallback)
-            console.log('🌐 Redirecting to dashboard');
+            // Regular web flow (fallback) - redirect flow
+            console.log('🌐 Regular redirect flow - redirecting to dashboard');
             res.redirect('/dashboard');
         }
         
     } catch (error) {
         console.error('❌ OAuth error:', error);
-        res.send(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Authentication Failed</title>
-                <style>
-                    body { 
-                        font-family: Arial, sans-serif; 
-                        display: flex; 
-                        justify-content: center; 
-                        align-items: center; 
-                        height: 100vh; 
-                        margin: 0; 
-                        background: #f5f5f5;
-                    }
-                    .container {
-                        text-align: center;
-                        background: white;
-                        padding: 40px;
-                        border-radius: 10px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    }
-                    .error {
-                        color: #f44336;
-                        margin-bottom: 20px;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="error">✗ Authentication failed</div>
-                    <div>Please try again.</div>
-                </div>
-                <script>
-                    console.log('❌ Sending error message to extension');
-                    window.opener.postMessage({
-                        type: 'GOOGLE_AUTH_ERROR',
-                        error: 'Authentication failed: ${error.message}'
-                    }, '*');
-                    setTimeout(() => window.close(), 2000);
-                </script>
-            </body>
-            </html>
-        `);
+        const { state } = req.query;
+        
+        if (state === 'extension') {
+            // Extension popup flow - use postMessage
+            res.send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Authentication Failed</title>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            display: flex; 
+                            justify-content: center; 
+                            align-items: center; 
+                            height: 100vh; 
+                            margin: 0; 
+                            background: #f5f5f5;
+                        }
+                        .container {
+                            text-align: center;
+                            background: white;
+                            padding: 40px;
+                            border-radius: 10px;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        .error {
+                            color: #f44336;
+                            margin-bottom: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="error">✗ Authentication failed</div>
+                        <div>Please try again.</div>
+                    </div>
+                    <script>
+                        console.log('❌ Sending error message to extension');
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'GOOGLE_AUTH_ERROR',
+                                error: 'Authentication failed: ${error.message}'
+                            }, '*');
+                            setTimeout(() => window.close(), 2000);
+                        } else {
+                            console.error('No window.opener found');
+                        }
+                    </script>
+                </body>
+                </html>
+            `);
+        } else {
+            // Web redirect flow - redirect to error page
+            console.log('🌐 Web flow error - redirecting to login with error');
+            res.redirect(`/login?error=${encodeURIComponent('Authentication failed. Please try again.')}`);
+        }
     }
 });
 
