@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Quest Insight Collector",
-  "version": "1.0",
+  "version": "1.3",
   "description": "Save insights from web pages to your Quest space",
   "permissions": [
     "storage",
