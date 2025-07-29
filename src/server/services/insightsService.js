@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase.js';
+import { supabaseService } from '../../../supabase/config.js';
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';

@@ -75,6 +75,71 @@ router.get('/debug/errors', (req, res) => {
     });
 });
 
+// Test Supabase connection endpoint
+router.get('/debug/supabase', async (req, res) => {
+    try {
+        console.log('🧪 Testing Supabase connection from endpoint...');
+        
+        // Test basic query
+        const result = await getUserByEmail('test@example.com');
+        
+        res.json({
+            success: true,
+            message: 'Supabase connection test successful',
+            testResult: result === null ? 'No user found (normal)' : 'User found',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Supabase test endpoint error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Supabase connection test failed',
+            error: {
+                name: error.name,
+                message: error.message,
+                code: error.code
+            },
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// Test Google OAuth simulation endpoint
+router.post('/debug/google-user', async (req, res) => {
+    try {
+        console.log('🧪 Testing Google user creation...');
+        
+        const testUserInfo = {
+            email: 'test.oauth@example.com',
+            name: 'Test OAuth User',
+            picture: 'https://example.com/avatar.jpg',
+            id: 'google_test_123'
+        };
+        
+        const user = await createOrUpdateGoogleUser(testUserInfo);
+        
+        res.json({
+            success: true,
+            message: 'Google user test successful',
+            user: user,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Google user test error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Google user test failed',
+            error: {
+                name: error.name,
+                message: error.message,
+                code: error.code,
+                stack: error.stack?.substring(0, 500)
+            },
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // Google OAuth login page
 router.get('/google/login', (req, res) => {
     console.log('🔐 Google OAuth login page requested');

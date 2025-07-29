@@ -11,7 +11,7 @@ import userRoutes from './routes/user.js';
 import userTagsRoutes from './routes/userTags.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
-import { supabase } from './lib/supabase.js';
+import { supabaseService } from '../../supabase/config.js';
 import { authenticate } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -94,7 +94,7 @@ app.get('/about', (req, res) => {
 // Add authentication check endpoint
 app.get('/api/v1/auth/current-user', async (req, res) => {
     try {
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { user }, error } = await supabaseService.auth.getUser();
         if (error) {
             res.status(401).json({ error: 'Not authenticated' });
         } else {
@@ -114,7 +114,7 @@ app.get('/api/v1/users', async (req, res) => {
             return res.status(400).json({ error: 'Email parameter is required' });
         }
 
-        const { data: user, error } = await supabase
+        const { data: user, error } = await supabaseService
             .from('users')
             .select('nickname, email')
             .eq('email', email)

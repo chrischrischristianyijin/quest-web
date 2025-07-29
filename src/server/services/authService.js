@@ -197,23 +197,50 @@ export const getCurrentUser = async () => {
 // Get user by email for Google OAuth
 export const getUserByEmail = async (email) => {
     try {
-        const { data, error } = await supabaseService
+        console.log('🔍 getUserByEmail called for:', email);
+        
+        // Add timeout to prevent hanging
+        const queryPromise = supabaseService
             .from('users')
             .select('id, email, nickname, avatar_url, created_at')
             .eq('email', email)
             .single();
+            
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Supabase query timeout after 10 seconds')), 10000);
+        });
+        
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
         
         if (error) {
+            console.error('❌ Supabase query error:', {
+                code: error.code,
+                message: error.message,
+                details: error.details
+            });
+            
             if (error.code === 'PGRST116') {
-                // No user found
+                console.log('✅ User not found (normal case)');
                 return null;
             }
             throw error;
         }
         
+        console.log('✅ User found successfully');
         return data;
     } catch (error) {
-        console.error('Get user by email error:', error);
+        console.error('❌ getUserByEmail error:', {
+            name: error.name,
+            message: error.message,
+            code: error?.code,
+            stack: error.stack?.substring(0, 300)
+        });
+        
+        // If it's a timeout or fetch error, throw a more specific error
+        if (error.message?.includes('timeout') || error.message?.includes('fetch failed')) {
+            throw new Error(`Database connection failed: ${error.message}`);
+        }
+        
         throw error;
     }
 };

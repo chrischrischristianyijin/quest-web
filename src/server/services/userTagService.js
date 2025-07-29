@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase.js';
+import { supabaseService } from '../../../supabase/config.js';
 
 // 获取用户的所有标签
 export const getUserTags = async (email) => {
