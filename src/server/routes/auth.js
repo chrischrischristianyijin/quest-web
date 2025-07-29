@@ -5,14 +5,18 @@ import { config } from '../../config.js';
 
 const router = express.Router();
 
-// Google OAuth configuration
-const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || config.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.EXTENSION_REDIRECT_URI || 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
-const WEB_REDIRECT_URI = process.env.WEB_REDIRECT_URI || 
-    (process.env.NODE_ENV === 'production' 
-        ? 'https://myquestspace.com/api/v1/auth/google/callback'
-        : 'http://localhost:3001/api/v1/auth/google/callback');
+// Google OAuth configuration - all from environment variables
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+const WEB_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+
+// Google OAuth configuration endpoint for frontend
+router.get('/google/config', (req, res) => {
+    res.json({
+        client_id: GOOGLE_CLIENT_ID
+    });
+});
 
 // Google OAuth login page
 router.get('/google/login', (req, res) => {
@@ -149,7 +153,13 @@ router.get('/google/callback', async (req, res) => {
         if (!tokenResponse.ok) {
             const errorText = await tokenResponse.text();
             console.error('❌ Token exchange failed:', errorText);
-            throw new Error('Failed to exchange code for token');
+            console.error('🔧 DEBUG Token Exchange Request Details:');
+            console.error('  - Client ID:', GOOGLE_CLIENT_ID);
+            console.error('  - Redirect URI:', redirectUri);
+            console.error('  - Has Client Secret:', !!GOOGLE_CLIENT_SECRET);
+            console.error('  - Code length:', code?.length);
+            console.error('  - Response status:', tokenResponse.status);
+            throw new Error(`Failed to exchange code for token: ${errorText}`);
         }
         
         const tokenData = await tokenResponse.json();

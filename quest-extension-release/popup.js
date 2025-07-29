@@ -14,17 +14,35 @@ document.addEventListener('DOMContentLoaded', function() {
     // Use production URL for released extension
     const API_BASE = 'https://myquestspace.com/api/v1';
     
-    // Google OAuth configuration
-    const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
+    // Google OAuth configuration - will be fetched from backend
+    let GOOGLE_CLIENT_ID = null;
     const GOOGLE_SCOPES = [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile'
     ];
     
+    // Get Google OAuth configuration from backend
+    async function getGoogleOAuthConfig() {
+        if (!GOOGLE_CLIENT_ID) {
+            try {
+                const response = await fetch(`${API_BASE}/auth/google/config`);
+                const config = await response.json();
+                GOOGLE_CLIENT_ID = config.client_id;
+            } catch (error) {
+                console.error('Failed to get OAuth config:', error);
+                // Fallback - this should not happen in production
+                throw new Error('Unable to get OAuth configuration');
+            }
+        }
+        return GOOGLE_CLIENT_ID;
+    }
+
     // Handle Google OAuth authentication
     async function handleGoogleAuth() {
         console.log('🔐 Starting Google OAuth flow...');
         try {
+            // Ensure we have the client ID
+            await getGoogleOAuthConfig();
             // Launch OAuth flow using Chrome extension identity API
             console.log('📡 Launching Chrome identity OAuth flow...');
             const authResult = await chrome.identity.launchWebAuthFlow({

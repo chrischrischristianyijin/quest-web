@@ -234,12 +234,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Google OAuth Configuration
-    const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
-    const GOOGLE_SCOPES = [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile'
-    ];
+    // Google OAuth Configuration - will be handled by backend
+    // Client ID and scopes are managed through backend OAuth flow
 
     // Google Login Button
     const googleLoginBtn = document.getElementById('googleLoginBtn');
