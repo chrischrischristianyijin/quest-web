@@ -47,7 +47,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Inject content script into Quest website
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url && tab.url.includes('localhost:3001')) {
+    if (changeInfo.status === 'complete' && tab.url && (tab.url.includes('localhost:3001') || tab.url.includes('myquestspace.com'))) {
         chrome.scripting.executeScript({
             target: { tabId: tabId },
             files: ['content-script.js']

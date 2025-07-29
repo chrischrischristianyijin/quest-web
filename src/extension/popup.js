@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize state
     let currentUser = null;
-    const API_BASE = 'http://localhost:3001/api/v1';
+    // Use production URL for released extension, localhost for development
+    const API_BASE = chrome.runtime.getManifest().version ? 'https://myquestspace.com/api/v1' : 'http://localhost:3001/api/v1';
     
     // Show message
     function showMessage(message, isError = false) {

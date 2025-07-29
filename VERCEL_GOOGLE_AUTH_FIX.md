@@ -73,6 +73,7 @@ https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/
 ```bash
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 WEB_REDIRECT_URI=https://myquestspace.com/api/v1/auth/google/callback
+EXTENSION_REDIRECT_URI=https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/
 NODE_ENV=production
 ```
 
@@ -119,6 +120,7 @@ NODE_ENV=production
 |------|-------|-------------|
 | `GOOGLE_CLIENT_SECRET` | your_google_client_secret | Production |
 | `WEB_REDIRECT_URI` | `https://myquestspace.com/api/v1/auth/google/callback` | Production |
+| `EXTENSION_REDIRECT_URI` | `https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/` | Production |
 | `NODE_ENV` | `production` | Production |
 
 5. 点击 "Save" 保存所有环境变量
@@ -156,11 +158,47 @@ git push origin main
 2. 测试"Continue with Google"按钮
 3. 确保流程一致
 
-## 如果仍有问题
-检查浏览器开发者工具的Network和Console选项卡，查看详细的错误信息。
+## 🔍 问题诊断清单
+
+如果OAuth仍然失败，按以下步骤排查：
+
+### 1. 检查环境变量
+确保Vercel中设置了所有必需的环境变量：
+```bash
+# 在Vercel Dashboard检查这些变量是否都存在
+GOOGLE_CLIENT_SECRET ✓
+WEB_REDIRECT_URI ✓  
+EXTENSION_REDIRECT_URI ✓
+NODE_ENV=production ✓
+```
+
+### 2. 检查Google Cloud Console配置
+确保添加了所有redirect URI：
+```
+✓ https://myquestspace.com/api/v1/auth/google/callback
+✓ http://localhost:3001/api/v1/auth/google/callback  
+✓ https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/
+```
+
+### 3. 检查部署状态
+- 访问 `https://myquestspace.com` 确保网站正常
+- 检查Vercel部署日志没有错误
+- 确保最新代码已部署
+
+### 4. 扩展相关检查
+- 扩展API_BASE指向正确的生产环境
+- 扩展manifest.json包含正确的host_permissions
+- 扩展background.js支持生产域名
+
+### 5. 浏览器调试
+检查浏览器开发者工具：
+- Network选项卡：查看OAuth请求的具体错误
+- Console选项卡：查看JavaScript错误信息
+- 确保没有CORS错误
 
 ## 联系支持
 如果问题持续存在，请提供：
-1. 具体的错误信息
-2. 浏览器开发者工具的截图
-3. 您的生产部署URL 
+1. 具体的错误信息和错误代码
+2. 浏览器开发者工具的Network截图
+3. 当前使用的redirect URI
+4. 环境变量配置截图 

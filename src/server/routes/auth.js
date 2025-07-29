@@ -8,7 +8,7 @@ const router = express.Router();
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || config.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
+const REDIRECT_URI = process.env.EXTENSION_REDIRECT_URI || 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
 const WEB_REDIRECT_URI = process.env.WEB_REDIRECT_URI || 
     (process.env.NODE_ENV === 'production' 
         ? 'https://myquestspace.com/api/v1/auth/google/callback'

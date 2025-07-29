@@ -11,8 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize state
     let currentUser = null;
-    // Use production URL if available, otherwise fallback to localhost for development
-    const API_BASE = 'http://localhost:3001/api/v1';
+    // Use production URL for released extension
+    const API_BASE = 'https://myquestspace.com/api/v1';
     
     // Google OAuth configuration
     const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';

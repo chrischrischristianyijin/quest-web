@@ -10,7 +10,7 @@
     "identity"
   ],
   "host_permissions": [
-        "https://quest-jmzuj65mw-chris-jins-projects.vercel.app/*",
+    "https://myquestspace.com/*",
     "http://localhost:3001/*",
     "https://localhost:3001/*"
   ],
