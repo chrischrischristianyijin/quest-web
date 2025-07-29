@@ -7,8 +7,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const confirmPasswordInput = document.getElementById("confirmPassword");
   const signupButton = form.querySelector(".signup-button");
   
-  let isPasswordValid = false;
-  let isPasswordMatch = false;
   let isNicknameValid = false;
 
   function showMessage(message, isError = false) {
@@ -30,14 +28,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function validatePassword(password) {
     const minLength = 8;
-    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
     
     if (password.length < minLength) {
       return "Password must be at least 8 characters long";
-    }
-    
-    if (!specialCharRegex.test(password)) {
-      return "Password must contain at least one special character";
     }
     
     return null; // Password is valid
@@ -98,22 +91,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
     
-    // Update password validation state
-    const passwordError = validatePassword(password);
-    isPasswordValid = !passwordError;
-    
-    // Update password match state
-    isPasswordMatch = password && confirmPassword && password === confirmPassword;
-    
-    // Check if email is valid format (separate from availability)
-    const isEmailFormatValid = email && validateEmail(email);
+    // Check if email is filled (not empty)
+    const isEmailFilled = email.length > 0;
     
     // Check if nickname is valid (not empty)
     isNicknameValid = nickname.length > 0;
     
-    // Update button appearance if all validations pass
-    // Note: Email availability is now checked only on form submission
-    const isFormValid = isEmailFormatValid && isPasswordValid && isPasswordMatch && isNicknameValid;
+    // Check if password and confirm password are not empty
+    const isPasswordFilled = password.length > 0;
+    const isConfirmPasswordFilled = confirmPassword.length > 0;
+    
+    // Update button appearance if basic validations pass
+    // Note: Detailed validation (email format, password requirements, email availability) are checked only on form submission
+    const isFormValid = isEmailFilled && isNicknameValid && isPasswordFilled && isConfirmPasswordFilled;
     
     if (isFormValid) {
       signupButton.classList.add("active");
@@ -122,53 +112,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Email validation - only check format, not availability
+  // Email input - only clear messages, no real-time validation
   emailInput.addEventListener("input", function() {
-    const email = this.value.trim();
     messageDiv.style.display = "none";
-    
-    // Only check email format, not availability
-    if (email && !validateEmail(email)) {
-      showMessage("Please enter a valid email address", true);
-    } else if (email && validateEmail(email)) {
-      messageDiv.style.display = "none";
-    }
-    
     updateButtonState();
   });
 
-  // Password validation
+  // Password input - only clear messages, no real-time validation
   passwordInput.addEventListener("input", function() {
-    const error = validatePassword(this.value);
-    isPasswordValid = !error;
-    
-    if (error) {
-      showMessage(error, true);
-    } else {
-      messageDiv.style.display = "none";
-    }
-    
-    // Check password match if confirm password is not empty
-    if (confirmPasswordInput.value) {
-      isPasswordMatch = this.value === confirmPasswordInput.value;
-      if (!isPasswordMatch) {
-        showMessage("Passwords do not match", true);
-      }
-    }
-    
+    messageDiv.style.display = "none";
     updateButtonState();
   });
 
-  // Confirm password validation
+  // Confirm password input - only clear messages, no real-time validation
   confirmPasswordInput.addEventListener("input", function() {
-    if (this.value) {
-      isPasswordMatch = this.value === passwordInput.value;
-      if (!isPasswordMatch) {
-        showMessage("Passwords do not match", true);
-      } else {
-        messageDiv.style.display = "none";
-      }
-    }
+    messageDiv.style.display = "none";
     updateButtonState();
   });
 
