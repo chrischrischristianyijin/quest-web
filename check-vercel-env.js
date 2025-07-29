@@ -23,7 +23,7 @@ Object.entries(envVars).forEach(([key, value]) => {
 console.log('\n🔧 配置对象状态:');
 console.log('  SUPABASE_URL:', config.SUPABASE_URL ? '✅ 已配置' : '❌ 未配置');
 console.log('  SUPABASE_ANON_KEY:', config.SUPABASE_ANON_KEY ? '✅ 已配置' : '❌ 未配置');
-console.log('  SUPABASE_SERVICE_KEY:', config.SUPABASE_SERVICE_KEY ? '✅ 已配置' : '❌ 未配置');
+console.log('  SUPABASE_SERVICE_ROLE_KEY:', config.SUPABASE_SERVICE_ROLE_KEY ? '✅ 已配置' : '❌ 未配置');
 
 console.log('\n🌐 运行时环境:');
 console.log('  NODE_ENV:', process.env.NODE_ENV || 'development');
