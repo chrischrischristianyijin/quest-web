@@ -232,7 +232,7 @@ router.get('/google/callback', async (req, res) => {
         } else {
             // Web flow - redirect back to login/signup page with success
             console.log('🌐 Redirecting to web login/signup with success');
-            const redirectUrl = new URL('/login', 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app');
+            const redirectUrl = new URL('/login', req.protocol + '://' + req.get('host'));
             redirectUrl.searchParams.set('code', code);
             redirectUrl.searchParams.set('state', state);
             res.redirect(redirectUrl.toString());
@@ -288,7 +288,7 @@ router.get('/google/callback', async (req, res) => {
         } else {
             // Web flow - redirect back to login/signup page with error
             console.log('🌐 Redirecting to web login/signup with error');
-            const redirectUrl = new URL('/login', 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app');
+            const redirectUrl = new URL('/login', req.protocol + '://' + req.get('host'));
             redirectUrl.searchParams.set('error', 'Authentication failed');
             res.redirect(redirectUrl.toString());
         }
