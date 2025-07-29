@@ -72,8 +72,15 @@ https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/
 
 ```bash
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+WEB_REDIRECT_URI=https://myquestspace.com/api/v1/auth/google/callback
 NODE_ENV=production
 ```
+
+**推荐设置 `WEB_REDIRECT_URI` 环境变量的优势：**
+- ✅ 更灵活的域名配置
+- ✅ 不需要修改代码就能切换域名
+- ✅ 支持多环境部署
+- ✅ 安全地隔离配置信息
 
 ### 5. 验证配置
 保存Google Cloud Console的更改后，等待几分钟让配置生效，然后测试：
@@ -102,19 +109,33 @@ NODE_ENV=production
 
 ## 🧪 测试步骤
 
-### 步骤1: 部署代码到Vercel
+### 步骤1: 设置Vercel环境变量
+1. 访问 [Vercel Dashboard](https://vercel.com/dashboard)
+2. 选择您的 `quest-web` 项目
+3. 进入 "Settings" → "Environment Variables"
+4. 添加以下环境变量：
+
+| Name | Value | Environment |
+|------|-------|-------------|
+| `GOOGLE_CLIENT_SECRET` | your_google_client_secret | Production |
+| `WEB_REDIRECT_URI` | `https://myquestspace.com/api/v1/auth/google/callback` | Production |
+| `NODE_ENV` | `production` | Production |
+
+5. 点击 "Save" 保存所有环境变量
+
+### 步骤2: 部署代码到Vercel
 ```bash
 git add .
-git commit -m "fix: 修复Google OAuth redirect_uri_mismatch错误"
+git commit -m "fix: 支持WEB_REDIRECT_URI环境变量配置"
 git push origin main
 ```
 
-### 步骤2: 验证生产部署
+### 步骤3: 验证生产部署
 1. 访问：`https://myquestspace.com`
 2. 确保网站正常加载
 3. 检查部署日志没有错误
 
-### 步骤3: 配置Google Cloud Console
+### 步骤4: 配置Google Cloud Console
 1. 前往 [Google Cloud Console](https://console.cloud.google.com/)
 2. 选择您的项目 → APIs & Services → Credentials
 3. 找到OAuth 2.0客户端ID，点击编辑
@@ -124,13 +145,13 @@ git push origin main
    ```
 5. 点击"保存"并等待2-3分钟生效
 
-### 步骤4: 测试Google登录
+### 步骤5: 测试Google登录
 1. 打开 `https://myquestspace.com/login`
 2. 点击"Continue with Google"按钮
 3. 应该正常跳转到Google授权页面
 4. 授权后应该成功返回并登录
 
-### 步骤5: 验证注册页面
+### 步骤6: 验证注册页面
 1. 访问 `https://myquestspace.com/signup`
 2. 测试"Continue with Google"按钮
 3. 确保流程一致

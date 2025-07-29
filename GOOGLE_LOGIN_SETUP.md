@@ -112,12 +112,18 @@ const GOOGLE_SCOPES = [
 ```bash
 # Google OAuth配置
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+WEB_REDIRECT_URI=https://myquestspace.com/api/v1/auth/google/callback
 
 # Supabase配置
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
+
+**环境变量说明：**
+- `WEB_REDIRECT_URI`: 生产环境的OAuth回调地址
+- 本地开发会自动使用 `http://localhost:3001/api/v1/auth/google/callback`
+- 生产环境建议设置为 `https://myquestspace.com/api/v1/auth/google/callback`
 
 ### Google Cloud Console配置
 
