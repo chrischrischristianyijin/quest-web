@@ -47,6 +47,15 @@ app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/user-tags', userTagsRoutes);
 app.use('/', metadataRoutes);
 
+// Public health check endpoint
+app.get('/api/v1/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
 // Set root path
 app.get('/', (req, res) => {
     try {

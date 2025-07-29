@@ -1,289 +1,260 @@
-document.addEventListener("DOMContentLoaded", function () {
-  const form = document.getElementById("signupForm");
-  const messageDiv = document.getElementById("message");
-  const emailInput = document.getElementById("email");
-  const nicknameInput = document.getElementById("nickname");
-  const passwordInput = document.getElementById("password");
-  const confirmPasswordInput = document.getElementById("confirmPassword");
-  const signupButton = form.querySelector(".signup-button");
-  
-  let isPasswordValid = false;
-  let isPasswordMatch = false;
-  let isNicknameValid = false;
-
-  function showMessage(message, isError = false) {
-    messageDiv.textContent = message;
-    messageDiv.className = `message ${isError ? "error" : "success"}`;
-    messageDiv.style.display = "block";
+// Quest Web Signup - Google OAuth Integration
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 Quest Web Signup loaded');
     
-    if (isError) {
-      messageDiv.style.animation = 'none';
-      messageDiv.offsetHeight; // Trigger reflow
-      messageDiv.style.animation = 'shake 0.5s';
-    }
-  }
-
-  function validateEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
-
-  function validatePassword(password) {
-    const minLength = 8;
-    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+    // API Configuration
+    const API_BASE = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1';
     
-    if (password.length < minLength) {
-      return "Password must be at least 8 characters long";
-    }
+    // Google OAuth Configuration
+    const GOOGLE_CLIENT_ID = '103202343935-h0smcligdrp2pp77n0pb39h804hd6ktl.apps.googleusercontent.com';
+    const GOOGLE_SCOPES = [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ];
     
-    if (!specialCharRegex.test(password)) {
-      return "Password must contain at least one special character";
-    }
+    // DOM Elements
+    const signupForm = document.getElementById('signupForm');
+    const googleSignupBtn = document.getElementById('googleSignupBtn');
+    const messageDiv = document.getElementById('message');
     
-    return null; // Password is valid
-  }
-
-  async function checkEmailAvailability(email) {
-    try {
-      console.log('Checking email availability for:', email);
-      const checkResponse = await fetch("/api/v1/auth/check-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      console.log('Response status:', checkResponse.status);
-      console.log('Response headers:', Object.fromEntries(checkResponse.headers.entries()));
-
-      // Check if response is JSON
-      const contentType = checkResponse.headers.get("content-type");
-      console.log('Content-Type:', contentType);
-      
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error('Invalid content type:', contentType);
-        throw new Error('Server error: Expected JSON response but got HTML. Please check if the server is running.');
-      }
-
-      if (!checkResponse.ok) {
-        throw new Error('Failed to check email availability');
-      }
-
-      const checkResult = await checkResponse.json();
-      console.log('Email check result:', checkResult);
-      
-      if (checkResult.exists) {
-        showMessage("This email is already registered", true);
-      } else {
-        messageDiv.style.display = "none";
-      }
-      
-      updateButtonState();
-    } catch (error) {
-      console.error("Email check failed:", error);
-      console.error("Full error details:", {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      });
-      showMessage("Unable to verify email availability. Please try again later.", true);
-      updateButtonState();
-    }
-  }
-
-  function updateButtonState() {
-    const email = emailInput.value.trim();
-    const nickname = nicknameInput.value.trim();
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
+    // Form inputs
+    const emailInput = document.getElementById('email');
+    const nicknameInput = document.getElementById('nickname');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const signupButton = document.querySelector('.signup-button');
     
-    // Update password validation state
-    const passwordError = validatePassword(password);
-    isPasswordValid = !passwordError;
-    
-    // Update password match state
-    isPasswordMatch = password && confirmPassword && password === confirmPassword;
-    
-    // Check if email is valid format (separate from availability)
-    const isEmailFormatValid = email && validateEmail(email);
-    
-    // Check if nickname is valid (not empty)
-    isNicknameValid = nickname.length > 0;
-    
-    // Update button appearance if all validations pass
-    // Note: Email availability is now checked only on form submission
-    const isFormValid = isEmailFormatValid && isPasswordValid && isPasswordMatch && isNicknameValid;
-    
-    if (isFormValid) {
-      signupButton.classList.add("active");
-    } else {
-      signupButton.classList.remove("active");
-    }
-  }
-
-  // Email validation - only check format, not availability
-  emailInput.addEventListener("input", function() {
-    const email = this.value.trim();
-    messageDiv.style.display = "none";
-    
-    // Only check email format, not availability
-    if (email && !validateEmail(email)) {
-      showMessage("Please enter a valid email address", true);
-    } else if (email && validateEmail(email)) {
-      messageDiv.style.display = "none";
-    }
-    
-    updateButtonState();
-  });
-
-  // Password validation
-  passwordInput.addEventListener("input", function() {
-    const error = validatePassword(this.value);
-    isPasswordValid = !error;
-    
-    if (error) {
-      showMessage(error, true);
-    } else {
-      messageDiv.style.display = "none";
-    }
-    
-    // Check password match if confirm password is not empty
-    if (confirmPasswordInput.value) {
-      isPasswordMatch = this.value === confirmPasswordInput.value;
-      if (!isPasswordMatch) {
-        showMessage("Passwords do not match", true);
-      }
-    }
-    
-    updateButtonState();
-  });
-
-  // Confirm password validation
-  confirmPasswordInput.addEventListener("input", function() {
-    if (this.value) {
-      isPasswordMatch = this.value === passwordInput.value;
-      if (!isPasswordMatch) {
-        showMessage("Passwords do not match", true);
-      } else {
-        messageDiv.style.display = "none";
-      }
-    }
-    updateButtonState();
-  });
-
-  // Form submission
-  form.addEventListener("submit", async function(e) {
-    e.preventDefault();
-
-    const email = emailInput.value.trim();
-    const nickname = nicknameInput.value.trim();
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
-
-    // Final validation before submit
-    if (!validateEmail(email)) {
-      showMessage("Please enter a valid email address", true);
-      return;
-    }
-
-    if (!nickname) {
-      showMessage("Please enter a nickname", true);
-      return;
-    }
-
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      showMessage(passwordError, true);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      showMessage("Passwords do not match", true);
-      return;
-    }
-
-    try {
-      signupButton.textContent = "Checking email...";
-      
-      // Check email availability before creating account
-      const checkResponse = await fetch("/api/v1/auth/check-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!checkResponse.ok) {
-        throw new Error('Failed to check email availability');
-      }
-
-      const checkResult = await checkResponse.json();
-      
-      if (checkResult.exists) {
-        showMessage("This email is already registered", true);
-        signupButton.innerHTML = `
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Sign Up
-        `;
-        return;
-      }
-
-      signupButton.textContent = "Creating account...";
-
-      const signupResponse = await fetch("/api/v1/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          nickname: nickname,
-          password: password
-        }),
-      });
-
-      // Check if response is JSON
-      const contentType = signupResponse.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error('Server error: Expected JSON response but got HTML. Please check if the server is running.');
-      }
-
-      const data = await signupResponse.json();
-
-      if (signupResponse.ok) {
-        showMessage("Account created successfully! Redirecting to My Space...", false);
+    // Update button state based on form completion
+    function updateButtonState() {
+        const email = emailInput.value.trim();
+        const nickname = nicknameInput.value.trim();
+        const password = passwordInput.value.trim();
+        const confirmPassword = confirmPasswordInput.value.trim();
         
-        // Store user session information
-        if (data && data.user) {
-          localStorage.setItem('quest_user_session', JSON.stringify({
-            user: data.user,
-            timestamp: Date.now()
-          }));
+        if (email && nickname && password && confirmPassword && password === confirmPassword) {
+            signupButton.classList.add('active');
+        } else {
+            signupButton.classList.remove('active');
         }
+    }
+    
+    // Show message
+    function showMessage(message, isError = false) {
+        messageDiv.textContent = message;
+        messageDiv.className = isError ? 'error' : 'success';
+        messageDiv.style.display = 'block';
         
         setTimeout(() => {
-          // Redirect to my-space with email parameter after successful signup
-          document.location.href = `/spaces/my-space.html?email=${encodeURIComponent(email)}`;
-        }, 1500);
-      } else {
-        throw new Error(data.message || "Error creating account");
-      }
-    } catch (error) {
-      console.error("Signup error:", error);
-      showMessage(error.message || "An error occurred during signup. Please try again.", true);
-      signupButton.innerHTML = `
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Sign Up
-      `;
+            messageDiv.style.display = 'none';
+        }, 5000);
     }
-  });
-
-  // Initial button state
-  updateButtonState();
+    
+    // Handle Google OAuth for web
+    async function handleGoogleAuth() {
+        console.log('🔐 Starting Google OAuth flow for web...');
+        try {
+            // Generate state parameter for security
+            const state = Math.random().toString(36).substring(7);
+            
+            // Store state in sessionStorage for verification
+            sessionStorage.setItem('google_oauth_state', state);
+            
+            // Construct OAuth URL
+            const redirectUri = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1/auth/google/callback';
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${GOOGLE_CLIENT_ID}&` +
+                `response_type=code&` +
+                `scope=${encodeURIComponent(GOOGLE_SCOPES.join(' '))}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `state=${state}`;
+            
+            console.log('📡 Redirecting to Google OAuth...');
+            console.log('🔗 Auth URL:', authUrl);
+            
+            // Redirect to Google OAuth
+            window.location.href = authUrl;
+            
+        } catch (error) {
+            console.error('❌ Google auth error:', error);
+            showMessage('Google authentication failed', true);
+        }
+    }
+    
+    // Handle regular signup
+    async function handleSignup(event) {
+        event.preventDefault();
+        
+        const email = emailInput.value.trim();
+        const nickname = nicknameInput.value.trim();
+        const password = passwordInput.value.trim();
+        const confirmPassword = confirmPasswordInput.value.trim();
+        
+        if (!email || !nickname || !password || !confirmPassword) {
+            showMessage('Please fill in all fields', true);
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            showMessage('Passwords do not match', true);
+            return;
+        }
+        
+        // Password validation
+        if (password.length < 8) {
+            showMessage('Password must be at least 8 characters long', true);
+            return;
+        }
+        
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            showMessage('Password must contain at least one special character', true);
+            return;
+        }
+        
+        try {
+            console.log('📤 Sending signup request...');
+            const response = await fetch(`${API_BASE}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    nickname
+                })
+            });
+            
+            console.log('📥 Signup response status:', response.status);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                showMessage(errorData.message || 'Registration failed', true);
+                return;
+            }
+            
+            const result = await response.json();
+            console.log('✅ Signup successful:', result);
+            
+            // Store user session
+            localStorage.setItem('quest_user_session', JSON.stringify({
+                user: result.user,
+                timestamp: Date.now()
+            }));
+            
+            showMessage('Account created successfully! Redirecting...');
+            
+            // Redirect to dashboard or home page
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Signup error:', error);
+            showMessage('Registration failed, please try again', true);
+        }
+    }
+    
+    // Check for OAuth callback
+    function checkForOAuthCallback() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        
+        if (error) {
+            console.error('❌ OAuth error:', error);
+            showMessage('Google authentication failed', true);
+            return;
+        }
+        
+        if (code && state) {
+            console.log('🔄 OAuth callback detected');
+            console.log('📋 Code:', code ? 'Present' : 'Missing');
+            console.log('📋 State:', state);
+            
+            // Verify state parameter
+            const storedState = sessionStorage.getItem('google_oauth_state');
+            if (state !== storedState) {
+                console.error('❌ State mismatch');
+                showMessage('Authentication failed: Invalid state', true);
+                return;
+            }
+            
+            // Clear stored state
+            sessionStorage.removeItem('google_oauth_state');
+            
+            // Exchange code for tokens
+            exchangeCodeForUserInfo(code);
+        }
+    }
+    
+    // Exchange authorization code for user info
+    async function exchangeCodeForUserInfo(code) {
+        console.log('🔄 Starting token exchange...');
+        try {
+            const redirectUri = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1/auth/google/callback';
+            console.log('📡 Redirect URI:', redirectUri);
+            
+            // Send the authorization code to our backend for secure token exchange
+            console.log('📤 Sending authorization code to backend...');
+            const response = await fetch(`${API_BASE}/auth/google/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    code: code,
+                    redirect_uri: redirectUri
+                })
+            });
+            
+            console.log('📥 Backend token response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Token exchange failed:', errorText);
+                throw new Error('Failed to exchange code for token');
+            }
+            
+            const result = await response.json();
+            console.log('✅ Token exchange successful, user info received');
+            
+            // Store user session
+            localStorage.setItem('quest_user_session', JSON.stringify({
+                user: result.user,
+                timestamp: Date.now()
+            }));
+            
+            showMessage('Successfully signed up with Google! Redirecting...');
+            
+            // Redirect to dashboard or home page
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Token exchange error:', error);
+            showMessage('Authentication failed', true);
+        }
+    }
+    
+    // Event listeners
+    signupForm.addEventListener('submit', handleSignup);
+    googleSignupBtn.addEventListener('click', handleGoogleAuth);
+    
+    // Form validation
+    emailInput.addEventListener('input', updateButtonState);
+    nicknameInput.addEventListener('input', updateButtonState);
+    passwordInput.addEventListener('input', updateButtonState);
+    confirmPasswordInput.addEventListener('input', updateButtonState);
+    
+    // Initialize
+    console.log('🚀 Initializing Quest Web Signup...');
+    console.log('🌐 API Base:', API_BASE);
+    
+    // Check for OAuth callback on page load
+    checkForOAuthCallback();
+    
+    // Initial button state
+    updateButtonState();
 });

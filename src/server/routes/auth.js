@@ -6,9 +6,33 @@ import { config } from '../../config.js';
 const router = express.Router();
 
 // Google OAuth configuration
-const GOOGLE_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || config.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
+const EXTENSION_CLIENT_ID = '103202343935-5dkesvf5dp06af09o0d2373ji2ccd0rc.apps.googleusercontent.com';
+const WEB_CLIENT_ID = '103202343935-h0smcligdrp2pp77n0pb39h804hd6ktl.apps.googleusercontent.com';
+const EXTENSION_CLIENT_SECRET = process.env.EXTENSION_GOOGLE_CLIENT_SECRET || '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';
+const WEB_CLIENT_SECRET = process.env.WEB_GOOGLE_CLIENT_SECRET || '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';
+const EXTENSION_REDIRECT_URI = 'https://jcjpicpelibofggpbbmajafjipppnojo.chromiumapp.org/';
+const WEB_REDIRECT_URI = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1/auth/google/callback';
+
+// Helper function to get the appropriate Client ID and Secret based on redirect URI
+function getClientConfigForRedirectUri(redirectUri) {
+    if (redirectUri === EXTENSION_REDIRECT_URI) {
+        return {
+            clientId: EXTENSION_CLIENT_ID,
+            clientSecret: EXTENSION_CLIENT_SECRET
+        };
+    } else if (redirectUri === WEB_REDIRECT_URI) {
+        return {
+            clientId: WEB_CLIENT_ID,
+            clientSecret: WEB_CLIENT_SECRET
+        };
+    } else {
+        // Default to web client config for unknown redirect URIs
+        return {
+            clientId: WEB_CLIENT_ID,
+            clientSecret: WEB_CLIENT_SECRET
+        };
+    }
+}
 
 // Google OAuth login page
 router.get('/google/login', (req, res) => {
@@ -71,10 +95,10 @@ router.get('/google/login', (req, res) => {
                     console.log('🔄 Redirecting to Google OAuth...');
                     // Redirect to Google OAuth
                     const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
-                        'client_id=${GOOGLE_CLIENT_ID}&' +
+                        'client_id=${EXTENSION_CLIENT_ID}&' +
                         'response_type=code&' +
                         'scope=email profile&' +
-                        'redirect_uri=${encodeURIComponent(REDIRECT_URI)}&' +
+                        'redirect_uri=${encodeURIComponent(EXTENSION_REDIRECT_URI)}&' +
                         'state=extension';
                     
                     console.log('📡 Auth URL:', authUrl);
@@ -99,15 +123,24 @@ router.get('/google/callback', async (req, res) => {
     
     try {
         console.log('🔄 Starting token exchange...');
+        
+        // Determine the redirect URI and Client ID based on the state
+        const isExtension = state === 'extension';
+        const redirectUri = isExtension ? EXTENSION_REDIRECT_URI : WEB_REDIRECT_URI;
+        const clientConfig = getClientConfigForRedirectUri(redirectUri);
+        
+        console.log('🔍 Using Client ID:', clientConfig.clientId);
+        console.log('🔍 Using Redirect URI:', redirectUri);
+        
         // Exchange code for access token
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 code,
-                client_id: GOOGLE_CLIENT_ID,
-                client_secret: GOOGLE_CLIENT_SECRET,
-                redirect_uri: REDIRECT_URI,
+                client_id: clientConfig.clientId,
+                client_secret: clientConfig.clientSecret,
+                redirect_uri: redirectUri,
                 grant_type: 'authorization_code'
             })
         });
@@ -197,57 +230,68 @@ router.get('/google/callback', async (req, res) => {
                 </html>
             `);
         } else {
-            // Regular web flow
-            console.log('🌐 Redirecting to dashboard');
-            res.redirect('/dashboard');
+            // Web flow - redirect back to login/signup page with success
+            console.log('🌐 Redirecting to web login/signup with success');
+            const redirectUrl = new URL('/login', 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app');
+            redirectUrl.searchParams.set('code', code);
+            redirectUrl.searchParams.set('state', state);
+            res.redirect(redirectUrl.toString());
         }
         
     } catch (error) {
         console.error('❌ OAuth error:', error);
-        res.send(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Authentication Failed</title>
-                <style>
-                    body { 
-                        font-family: Arial, sans-serif; 
-                        display: flex; 
-                        justify-content: center; 
-                        align-items: center; 
-                        height: 100vh; 
-                        margin: 0; 
-                        background: #f5f5f5;
-                    }
-                    .container {
-                        text-align: center;
-                        background: white;
-                        padding: 40px;
-                        border-radius: 10px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    }
-                    .error {
-                        color: #f44336;
-                        margin-bottom: 20px;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="error">✗ Authentication failed</div>
-                    <div>Please try again.</div>
-                </div>
-                <script>
-                    console.log('❌ Sending error message to extension');
-                    window.opener.postMessage({
-                        type: 'GOOGLE_AUTH_ERROR',
-                        error: 'Authentication failed: ${error.message}'
-                    }, '*');
-                    setTimeout(() => window.close(), 2000);
-                </script>
-            </body>
-            </html>
-        `);
+        if (state === 'extension') {
+            res.send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Authentication Failed</title>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            display: flex; 
+                            justify-content: center; 
+                            align-items: center; 
+                            height: 100vh; 
+                            margin: 0; 
+                            background: #f5f5f5;
+                        }
+                        .container {
+                            text-align: center;
+                            background: white;
+                            padding: 40px;
+                            border-radius: 10px;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        .error {
+                            color: #f44336;
+                            margin-bottom: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="error">✗ Authentication failed</div>
+                        <div>Please try again.</div>
+                    </div>
+                    <script>
+                        console.log('❌ Sending error message to extension');
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_ERROR',
+                            error: 'Authentication failed: ${error.message}'
+                        }, '*');
+                        setTimeout(() => window.close(), 2000);
+                    </script>
+                </body>
+                </html>
+            `);
+        } else {
+            // Web flow - redirect back to login/signup page with error
+            console.log('🌐 Redirecting to web login/signup with error');
+            const redirectUrl = new URL('/login', 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app');
+            redirectUrl.searchParams.set('error', 'Authentication failed');
+            res.redirect(redirectUrl.toString());
+        }
     }
 });
 
@@ -303,14 +347,19 @@ router.post('/google/token', async (req, res) => {
         
         console.log('🔄 Exchanging authorization code for token...');
         
+        // Determine the appropriate Client ID based on redirect URI
+        const clientConfig = getClientConfigForRedirectUri(redirect_uri);
+        console.log('🔍 Using Client ID:', clientConfig.clientId);
+        console.log('🔍 Using Redirect URI:', redirect_uri);
+        
         // Exchange code for access token
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 code,
-                client_id: GOOGLE_CLIENT_ID,
-                client_secret: GOOGLE_CLIENT_SECRET,
+                client_id: clientConfig.clientId,
+                client_secret: clientConfig.clientSecret,
                 redirect_uri: redirect_uri,
                 grant_type: 'authorization_code'
             })

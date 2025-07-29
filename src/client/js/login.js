@@ -1,236 +1,326 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("loginForm");
-    const messageDiv = document.getElementById("message");
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
-    const loginButton = form.querySelector(".login-button");
+// Quest Web Login - Google OAuth Integration
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 Quest Web Login loaded');
     
-    // Forgot Password Modal Elements
-    const forgotPasswordLink = document.getElementById("forgotPasswordLink");
-    const forgotPasswordModal = document.getElementById("forgotPasswordModal");
-    const closeModal = document.getElementById("closeModal");
-    const forgotPasswordForm = document.getElementById("forgotPasswordForm");
-    const resetEmailInput = document.getElementById("resetEmail");
-    const resetPasswordButton = document.getElementById("resetPasswordButton");
-    const modalMessage = document.getElementById("modalMessage");
-
-    function showMessage(message, isError = false) {
-        messageDiv.textContent = message;
-        messageDiv.className = isError ? "error" : "success";
-        messageDiv.style.display = "block";
-        
-        if (isError) {
-            messageDiv.style.animation = 'none';
-            messageDiv.offsetHeight; // Trigger reflow
-            messageDiv.style.animation = 'shake 0.5s';
-        }
-    }
-
-    function validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    function validatePassword(password) {
-        // For login, we only check if password is not empty
-        // Password strength validation is only for signup
-        if (!password || password.trim().length === 0) {
-            return "Password is required";
-        }
-        
-        return null; // Password is valid
-    }
-
+    // API Configuration
+    const API_BASE = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1';
+    
+    // Google OAuth Configuration
+    const GOOGLE_CLIENT_ID = '103202343935-h0smcligdrp2pp77n0pb39h804hd6ktl.apps.googleusercontent.com';
+    const GOOGLE_SCOPES = [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ];
+    
+    // DOM Elements
+    const loginForm = document.getElementById('loginForm');
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    const messageDiv = document.getElementById('message');
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+    const closeModal = document.getElementById('closeModal');
+    const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+    const resetEmail = document.getElementById('resetEmail');
+    const resetPasswordButton = document.getElementById('resetPasswordButton');
+    const modalMessage = document.getElementById('modalMessage');
+    
+    // Form validation
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const loginButton = document.querySelector('.login-button');
+    
+    // Update button state based on form completion
     function updateButtonState() {
         const email = emailInput.value.trim();
-        const password = passwordInput.value;
+        const password = passwordInput.value.trim();
         
         if (email && password) {
-            loginButton.classList.add("active");
+            loginButton.classList.add('active');
         } else {
-            loginButton.classList.remove("active");
+            loginButton.classList.remove('active');
         }
     }
-
-    form.addEventListener("submit", async function(e) {
-        e.preventDefault();
-
-        if (!loginButton.classList.contains("active")) {
-            return;
-        }
-
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        // Basic validation
-        if (!email || !password) {
-            showMessage("Please fill in all fields", true);
-            return;
-        }
-
-        if (!validateEmail(email)) {
-            showMessage("Please enter a valid email address", true);
-            return;
-        }
-
-        const passwordError = validatePassword(password);
-        if (passwordError) {
-            showMessage(passwordError, true);
-            return;
-        }
-
-        try {
-            loginButton.textContent = "Logging in...";
-            const loginResponse = await fetch("/api/v1/auth/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email: email,
-                    password: password,
-                }),
-            });
-
-            if (loginResponse.ok) {
-                const result = await loginResponse.json();
-                showMessage("Login successful! Redirecting...", false);
-                
-                // Store user session information
-                if (result && result.user) {
-                    localStorage.setItem('quest_user_session', JSON.stringify({
-                        user: result.user,
-                        timestamp: Date.now()
-                    }));
-                }
-                
-                setTimeout(() => {
-                    // Redirect to my-space with email parameter
-                    window.location.href = `/spaces/my-space.html?email=${encodeURIComponent(email)}`;
-                }, 1000);
-            } else {
-                const errorData = await loginResponse.json();
-                const errorMessage = errorData.message || "Invalid email or password";
-                showMessage(errorMessage, true);
-                loginButton.innerHTML = `
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Log in
-                `;
-            }
-        } catch (error) {
-            console.error("Login error:", error);
-            let errorMessage = "An error occurred during login. Please try again.";
-            if (error.message && typeof error.message === 'string') {
-                // Remove any JSON-like wrapping if present
-                errorMessage = error.message.replace(/^\{"message":\s*"|"\}$/g, '');
-            }
-            showMessage(errorMessage, true);
-        }
-    });
-
-    // Update button state and clear message when user types
-    emailInput.addEventListener("input", () => {
-        messageDiv.style.display = "none";
-        updateButtonState();
-    });
-
-    passwordInput.addEventListener("input", () => {
-        messageDiv.style.display = "none";
-        updateButtonState();
-    });
-
-    // Initial button state
-    updateButtonState();
-
-    // Forgot Password Modal Functions
-    function showModal() {
-        forgotPasswordModal.classList.add("show");
-        resetEmailInput.focus();
-    }
-
-    function hideModal() {
-        forgotPasswordModal.classList.remove("show");
-        resetEmailInput.value = "";
-        modalMessage.style.display = "none";
-        modalMessage.className = "modal-message";
-    }
-
-    function showModalMessage(message, isError = false) {
-        modalMessage.textContent = message;
-        modalMessage.className = `modal-message ${isError ? "error" : "success"}`;
-        modalMessage.style.display = "block";
-    }
-
-    // Modal Event Listeners
-    forgotPasswordLink.addEventListener("click", function(e) {
-        e.preventDefault();
-        showModal();
-    });
-
-    closeModal.addEventListener("click", function() {
-        hideModal();
-    });
-
-    // Close modal when clicking outside
-    forgotPasswordModal.addEventListener("click", function(e) {
-        if (e.target === forgotPasswordModal) {
-            hideModal();
-        }
-    });
-
-    // Close modal with Escape key
-    document.addEventListener("keydown", function(e) {
-        if (e.key === "Escape" && forgotPasswordModal.classList.contains("show")) {
-            hideModal();
-        }
-    });
-
-    // Forgot Password Form Submission
-    forgotPasswordForm.addEventListener("submit", async function(e) {
-        e.preventDefault();
+    
+    // Show message
+    function showMessage(message, isError = false) {
+        messageDiv.textContent = message;
+        messageDiv.className = isError ? 'error' : 'success';
+        messageDiv.style.display = 'block';
         
-        const email = resetEmailInput.value.trim();
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Handle Google OAuth for web
+    async function handleGoogleAuth() {
+        console.log('🔐 Starting Google OAuth flow for web...');
+        try {
+            // Generate state parameter for security
+            const state = Math.random().toString(36).substring(7);
+            
+            // Store state in sessionStorage for verification
+            sessionStorage.setItem('google_oauth_state', state);
+            
+            // Construct OAuth URL
+            const redirectUri = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1/auth/google/callback';
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${GOOGLE_CLIENT_ID}&` +
+                `response_type=code&` +
+                `scope=${encodeURIComponent(GOOGLE_SCOPES.join(' '))}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `state=${state}`;
+            
+            console.log('📡 Redirecting to Google OAuth...');
+            console.log('🔗 Auth URL:', authUrl);
+            
+            // Redirect to Google OAuth
+            window.location.href = authUrl;
+            
+        } catch (error) {
+            console.error('❌ Google auth error:', error);
+            showMessage('Google authentication failed', true);
+        }
+    }
+    
+    // Handle regular login
+    async function handleLogin(event) {
+        event.preventDefault();
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+        
+        if (!email || !password) {
+            showMessage('Please fill in all fields', true);
+            return;
+        }
+        
+        try {
+            console.log('📤 Sending login request...');
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
+            });
+            
+            console.log('📥 Login response status:', response.status);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                showMessage(errorData.message || 'Login failed', true);
+                return;
+            }
+            
+            const result = await response.json();
+            console.log('✅ Login successful:', result);
+            
+            // Store user session
+            localStorage.setItem('quest_user_session', JSON.stringify({
+                user: result.user,
+                timestamp: Date.now()
+            }));
+            
+            showMessage('Login successful! Redirecting...');
+            
+            // Redirect to dashboard or home page
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Login error:', error);
+            showMessage('Login failed, please try again', true);
+        }
+    }
+    
+    // Handle forgot password
+    async function handleForgotPassword(event) {
+        event.preventDefault();
+        
+        const email = resetEmail.value.trim();
         
         if (!email) {
-            showModalMessage("Please enter your email address", true);
+            showMessage('Please enter your email address', true);
             return;
         }
-
-        if (!validateEmail(email)) {
-            showModalMessage("Please enter a valid email address", true);
-            return;
-        }
-
+        
+        resetPasswordButton.disabled = true;
+        resetPasswordButton.textContent = 'Sending...';
+        
         try {
-            resetPasswordButton.disabled = true;
-            resetPasswordButton.textContent = "Sending...";
-
-            const response = await fetch("/api/v1/auth/forgot-password", {
-                method: "POST",
+            console.log('📤 Sending password reset request...');
+            const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+                method: 'POST',
                 headers: {
-                    "Content-Type": "application/json",
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email })
             });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showModalMessage("Password reset link sent to your email!", false);
-                setTimeout(() => {
-                    hideModal();
-                }, 2000);
-            } else {
-                throw new Error(data.message || "Failed to send reset link");
+            
+            console.log('📥 Password reset response status:', response.status);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                showModalMessage(errorData.message || 'Password reset failed', true);
+                return;
             }
+            
+            const result = await response.json();
+            console.log('✅ Password reset successful:', result);
+            
+            showModalMessage('Password reset link sent to your email!', false);
+            resetEmail.value = '';
+            
         } catch (error) {
-            console.error("Forgot password error:", error);
-            showModalMessage(error.message || "An error occurred. Please try again.", true);
+            console.error('❌ Password reset error:', error);
+            showModalMessage('Password reset failed, please try again', true);
         } finally {
             resetPasswordButton.disabled = false;
-            resetPasswordButton.textContent = "Send Reset Link";
+            resetPasswordButton.textContent = 'Send Reset Link';
+        }
+    }
+    
+    // Show modal message
+    function showModalMessage(message, isError = false) {
+        modalMessage.textContent = message;
+        modalMessage.className = isError ? 'error' : 'success';
+        modalMessage.style.display = 'block';
+        
+        setTimeout(() => {
+            modalMessage.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Modal controls
+    function openForgotPasswordModal() {
+        forgotPasswordModal.classList.add('show');
+        resetEmail.focus();
+    }
+    
+    function closeForgotPasswordModal() {
+        forgotPasswordModal.classList.remove('show');
+        resetEmail.value = '';
+        modalMessage.style.display = 'none';
+    }
+    
+    // Event listeners
+    loginForm.addEventListener('submit', handleLogin);
+    googleLoginBtn.addEventListener('click', handleGoogleAuth);
+    
+    // Form validation
+    emailInput.addEventListener('input', updateButtonState);
+    passwordInput.addEventListener('input', updateButtonState);
+    
+    // Modal controls
+    forgotPasswordLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        openForgotPasswordModal();
+    });
+    
+    closeModal.addEventListener('click', closeForgotPasswordModal);
+    
+    // Close modal when clicking outside
+    forgotPasswordModal.addEventListener('click', (e) => {
+        if (e.target === forgotPasswordModal) {
+            closeForgotPasswordModal();
         }
     });
+    
+    forgotPasswordForm.addEventListener('submit', handleForgotPassword);
+    
+    // Check for OAuth callback
+    function checkForOAuthCallback() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        
+        if (error) {
+            console.error('❌ OAuth error:', error);
+            showMessage('Google authentication failed', true);
+            return;
+        }
+        
+        if (code && state) {
+            console.log('🔄 OAuth callback detected');
+            console.log('📋 Code:', code ? 'Present' : 'Missing');
+            console.log('📋 State:', state);
+            
+            // Verify state parameter
+            const storedState = sessionStorage.getItem('google_oauth_state');
+            if (state !== storedState) {
+                console.error('❌ State mismatch');
+                showMessage('Authentication failed: Invalid state', true);
+                return;
+            }
+            
+            // Clear stored state
+            sessionStorage.removeItem('google_oauth_state');
+            
+            // Exchange code for tokens
+            exchangeCodeForUserInfo(code);
+        }
+    }
+    
+    // Exchange authorization code for user info
+    async function exchangeCodeForUserInfo(code) {
+        console.log('🔄 Starting token exchange...');
+        try {
+            const redirectUri = 'https://quest-jmzuj65mw-chris-jins-projects.vercel.app/api/v1/auth/google/callback';
+            console.log('📡 Redirect URI:', redirectUri);
+            
+            // Send the authorization code to our backend for secure token exchange
+            console.log('📤 Sending authorization code to backend...');
+            const response = await fetch(`${API_BASE}/auth/google/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    code: code,
+                    redirect_uri: redirectUri
+                })
+            });
+            
+            console.log('📥 Backend token response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Token exchange failed:', errorText);
+                throw new Error('Failed to exchange code for token');
+            }
+            
+            const result = await response.json();
+            console.log('✅ Token exchange successful, user info received');
+            
+            // Store user session
+            localStorage.setItem('quest_user_session', JSON.stringify({
+                user: result.user,
+                timestamp: Date.now()
+            }));
+            
+            showMessage('Successfully logged in with Google! Redirecting...');
+            
+            // Redirect to dashboard or home page
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Token exchange error:', error);
+            showMessage('Authentication failed', true);
+        }
+    }
+    
+    // Initialize
+    console.log('🚀 Initializing Quest Web Login...');
+    console.log('🌐 API Base:', API_BASE);
+    
+    // Check for OAuth callback on page load
+    checkForOAuthCallback();
+    
+    // Initial button state
+    updateButtonState();
 }); 
