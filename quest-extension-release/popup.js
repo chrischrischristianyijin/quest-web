@@ -192,6 +192,9 @@ document.addEventListener('DOMContentLoaded', function() {
         insightsForm.style.display = 'block';
         userInfo.style.display = 'block';
         
+        // Hide "Visit My Space" button initially
+        document.getElementById('visitMySpaceBtn').style.display = 'none';
+        
         if (currentUser) {
             // Show user avatar
             const userAvatar = document.getElementById('userAvatar');
@@ -420,9 +423,22 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedTags = [];
             updateSelectedTagsDisplay();
             
+            // Show "Visit My Space" button after successful save
+            const visitMySpaceBtn = document.getElementById('visitMySpaceBtn');
+            visitMySpaceBtn.style.display = 'block';
+            
         } catch (error) {
             console.error('Save insight error:', error);
             showMessage('Save failed, please try again', true);
+        }
+    }
+    
+    // Handle "Visit My Space" button click
+    function handleVisitMySpace() {
+        if (currentUser && currentUser.email) {
+            const encodedEmail = encodeURIComponent(currentUser.email);
+            const mySpaceUrl = `https://myquestspace.com/spaces/my-space.html?email=${encodedEmail}`;
+            chrome.tabs.create({ url: mySpaceUrl });
         }
     }
     
@@ -434,6 +450,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Google OAuth button event listeners
     document.getElementById('googleLoginBtn').addEventListener('click', handleGoogleAuth);
     document.getElementById('googleSignupBtn').addEventListener('click', handleGoogleAuth);
+    
+    // Visit My Space button event listener
+    document.getElementById('visitMySpaceBtn').addEventListener('click', handleVisitMySpace);
 
     // Tag选择事件
     document.addEventListener('click', function(event) {
