@@ -6,7 +6,7 @@ export const getUserTags = async (email) => {
         console.log('Getting user tags for email:', email);
         
         // 获取用户ID
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -18,7 +18,7 @@ export const getUserTags = async (email) => {
         }
         
         // 获取用户的标签
-        const { data: tags, error: tagsError } = await supabase
+        const { data: tags, error: tagsError } = await supabaseService
             .from('user_tags')
             .select('*')
             .eq('user_id', user.id)
@@ -49,7 +49,7 @@ export const createUserTag = async (email, tagData) => {
         }
         
         // 获取用户ID
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -60,7 +60,7 @@ export const createUserTag = async (email, tagData) => {
         }
         
         // 检查标签是否已存在
-        const { data: existingTag } = await supabase
+        const { data: existingTag } = await supabaseService
             .from('user_tags')
             .select('id')
             .eq('user_id', user.id)
@@ -72,7 +72,7 @@ export const createUserTag = async (email, tagData) => {
         }
         
         // 创建新标签
-        const { data: newTag, error: createError } = await supabase
+        const { data: newTag, error: createError } = await supabaseService
             .from('user_tags')
             .insert([{
                 user_id: user.id,
@@ -103,7 +103,7 @@ export const updateUserTag = async (email, tagId, tagData) => {
         const { name, color } = tagData;
         
         // 获取用户ID
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -114,7 +114,7 @@ export const updateUserTag = async (email, tagId, tagData) => {
         }
         
         // 检查标签是否属于该用户
-        const { data: existingTag, error: checkError } = await supabase
+        const { data: existingTag, error: checkError } = await supabaseService
             .from('user_tags')
             .select('id')
             .eq('id', tagId)
@@ -130,7 +130,7 @@ export const updateUserTag = async (email, tagId, tagData) => {
         if (name) updateData.name = name.trim().toLowerCase();
         if (color) updateData.color = color;
         
-        const { data: updatedTag, error: updateError } = await supabase
+        const { data: updatedTag, error: updateError } = await supabaseService
             .from('user_tags')
             .update(updateData)
             .eq('id', tagId)
@@ -156,7 +156,7 @@ export const deleteUserTag = async (email, tagId) => {
         console.log('Deleting user tag:', { email, tagId });
         
         // 获取用户ID
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -167,7 +167,7 @@ export const deleteUserTag = async (email, tagId) => {
         }
         
         // 检查标签是否属于该用户
-        const { data: existingTag, error: checkError } = await supabase
+        const { data: existingTag, error: checkError } = await supabaseService
             .from('user_tags')
             .select('id')
             .eq('id', tagId)
@@ -179,7 +179,7 @@ export const deleteUserTag = async (email, tagId) => {
         }
         
         // 删除标签
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await supabaseService
             .from('user_tags')
             .delete()
             .eq('id', tagId);
@@ -203,7 +203,7 @@ export const getTagUsageStats = async (email) => {
         console.log('Getting tag usage stats for email:', email);
         
         // 获取用户ID
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -215,7 +215,7 @@ export const getTagUsageStats = async (email) => {
         }
         
         // 获取用户的标签
-        const { data: tags, error: tagsError } = await supabase
+        const { data: tags, error: tagsError } = await supabaseService
             .from('user_tags')
             .select('id, name, color')
             .eq('user_id', user.id);
@@ -227,7 +227,7 @@ export const getTagUsageStats = async (email) => {
         
         // 获取每个标签的使用次数
         const stats = await Promise.all(tags.map(async (tag) => {
-            const { count, error: countError } = await supabase
+            const { count, error: countError } = await supabaseService
                 .from('insights')
                 .select('id', { count: 'exact' })
                 .eq('user_id', user.id)

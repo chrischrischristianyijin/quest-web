@@ -8,7 +8,7 @@ export const getUserInsights = async (email) => {
         console.log('Getting user insights for email:', email);
         
         // Get user ID from email
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -28,7 +28,7 @@ export const getUserInsights = async (email) => {
         console.log('Found user ID:', user.id);
         
         // Get insights
-        const { data: insights, error: insightsError } = await supabase
+        const { data: insights, error: insightsError } = await supabaseService
             .from('insights')
             .select('id, url, title, description, image_url, tags, created_at')
             .eq('user_id', user.id)
@@ -56,7 +56,7 @@ export const getInsightById = async (id) => {
     try {
         console.log('Getting insight by ID:', id);
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseService
             .from('insights')
             .select('*')
             .eq('id', id)
@@ -226,7 +226,7 @@ export const createInsight = async (insightData) => {
     
     try {
         // Get user ID from email
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -238,7 +238,7 @@ export const createInsight = async (insightData) => {
         }
 
         // Check if URL already exists for this user
-        const { data: existingInsight } = await supabase
+        const { data: existingInsight } = await supabaseService
             .from('insights')
             .select('id')
             .eq('user_id', user.id)
@@ -270,7 +270,7 @@ export const createInsight = async (insightData) => {
         }
 
         // Create new insight with metadata
-        const { data: newInsight, error: insightError } = await supabase
+        const { data: newInsight, error: insightError } = await supabaseService
             .from('insights')
             .insert([{
                 user_id: user.id,
@@ -297,7 +297,7 @@ export const createInsight = async (insightData) => {
 };
 
 export const updateInsight = async (id, insightData) => {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseService
         .from('insights')
         .update(insightData)
         .eq('id', id)
@@ -313,7 +313,7 @@ export const deleteInsight = async (id, email) => {
         console.log('Deleting insight:', id, 'for email:', email);
         
         // Get user ID from email
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseService
             .from('users')
             .select('id')
             .eq('email', email)
@@ -327,7 +327,7 @@ export const deleteInsight = async (id, email) => {
         console.log('Found user ID for deletion:', user.id);
         
         // Delete the insight
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await supabaseService
         .from('insights')
         .delete()
         .eq('id', id)
