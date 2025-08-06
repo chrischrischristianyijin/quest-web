@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Switch Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .language-switcher {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+        .lang-btn {
+            padding: 10px 20px;
+            border: 2px solid #4B264F;
+            background: white;
+            color: #4B264F;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .lang-btn:hover {
+            background: #4B264F;
+            color: white;
+        }
+        .lang-btn.active {
+            background: #4B264F;
+            color: white;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #4B264F;
+            margin-bottom: 10px;
+        }
+        .feature-highlight {
+            color: #D76E13;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Language Switch Test</h1>
+        
+        <div class="language-switcher">
+            <button class="lang-btn active" data-lang="en">English</button>
+            <button class="lang-btn" data-lang="zh">中文</button>
+        </div>
+        
+        <div class="test-section">
+            <h2 id="heroTitle">Welcome to Quest</h2>
+            <p id="heroSubtitle">MULTIMEDIA INSIGHT STACK</p>
+            <button id="heroCta">Start Your Journey</button>
+        </div>
+        
+        <div class="test-section">
+            <h2 id="showcaseTitle">Click Less. Remember More.</h2>
+            <p id="showcaseDescription">With <span class="feature-highlight">Insight Collector</span>, saving articles, tweets, and ideas takes just one click. Everything goes straight into your <span class="feature-highlight">Personal Knowledge Vault.</span></p>
+            <button id="showcaseCta">Get the Extension - It's Free!</button>
+        </div>
+        
+        <div class="test-section">
+            <h2 id="featuresTitle">DISCOVER. ORGANIZE. CONNECT.</h2>
+            <p id="featuresDescription">In a world overflowing with information, we empower you to cut through the noise and focus on what truly matters.</p>
+        </div>
+        
+        <div class="test-section">
+            <h3 id="feature1Title">YOUR PERSONAL KNOWLEDGE MAP</h3>
+            <p id="feature1Text">Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span> No more fragmentation; just a seamless, unified library that grows with your interests.</p>
+        </div>
+        
+        <div class="test-section">
+            <h3 id="feature2Title">LEARN FROM THE BEST MINDS AROUND YOU</h3>
+            <p id="feature2Text">Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? Explore Others' Spaces and turn that wish into reality. <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span> Here, your profile isn't just a page—it's a living archive of your intellectual growth.</p>
+        </div>
+        
+        <div class="test-section">
+            <h2 id="ctaTitle">Ready to Transform Your Learning?</h2>
+            <p id="ctaDescription">Transform scattered content into a cohesive intellectual journey. Curate your world, connect through knowledge.</p>
+            <button id="ctaButton">Get Started for Free</button>
+        </div>
+    </div>
+
+    <script>
+        // 翻译数据
+        const translations = {
+            en: {
+                'heroTitle': 'Welcome to Quest',
+                'heroSubtitle': 'MULTIMEDIA INSIGHT STACK',
+                'heroCta': 'Start Your Journey',
+                'showcaseTitle': 'Click Less. Remember More.',
+                'showcaseDescription': 'With <span class="feature-highlight">Insight Collector</span>, saving articles, tweets, and ideas takes just one click. Everything goes straight into your <span class="feature-highlight">Personal Knowledge Vault.</span>',
+                'showcaseCta': 'Get the Extension - It\'s Free!',
+                'featuresTitle': 'DISCOVER. ORGANIZE. CONNECT.',
+                'featuresDescription': 'In a world overflowing with information, we empower you to cut through the noise and focus on what truly matters.',
+                'feature1Title': 'YOUR PERSONAL KNOWLEDGE MAP',
+                'feature1Text': 'Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span> No more fragmentation; just a seamless, unified library that grows with your interests.',
+                'feature2Title': 'LEARN FROM THE BEST MINDS AROUND YOU',
+                'feature2Text': 'Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? Explore Others\' Spaces and turn that wish into reality. <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span> Here, your profile isn\'t just a page—it\'s a living archive of your intellectual growth.',
+                'ctaTitle': 'Ready to Transform Your Learning?',
+                'ctaDescription': 'Transform scattered content into a cohesive intellectual journey. Curate your world, connect through knowledge.',
+                'ctaButton': 'Get Started for Free'
+            },
+            zh: {
+                'heroTitle': '欢迎来到 Quest',
+                'heroSubtitle': '多媒体洞察平台',
+                'heroCta': '开始你的旅程',
+                'showcaseTitle': '点击更少，记住更多。',
+                'showcaseDescription': '通过<span class="feature-highlight">洞察收集器</span>，保存文章、推文和想法只需一键点击。所有内容直接进入你的<span class="feature-highlight">个人知识库。</span>',
+                'showcaseCta': '获取扩展 - 完全免费！',
+                'featuresTitle': '发现。整理。连接。',
+                'featuresDescription': '在信息泛滥的世界中，我们帮助你过滤噪音，专注于真正重要的事物。',
+                'feature1Title': '你的个人知识地图',
+                'feature1Text': '厌倦了在无数标签页和应用之间切换来跟踪你喜爱的内容？有了 Quest，你的数字生活找到了归宿。<span class="feature-highlight">管理你的空间 — 一个直观的可视化中心，整理你在各个平台上阅读、保存和思考的一切内容。</span>不再碎片化；只有一个无缝的统一图书馆，随着你的兴趣而成长。',
+                'feature2Title': '向周围最优秀的人学习',
+                'feature2Text': '是否曾希望窥探专家、创作者或激励人心的同行的阅读清单？探索他人的空间，将这个愿望变为现实。<span class="feature-highlight">关注思想领袖，深入策划的收藏，让他们的知识激发你的下一个"顿悟"时刻。</span>在这里，你的个人资料不仅仅是一个页面 — 它是你智力成长的活档案。',
+                'ctaTitle': '准备好改变你的学习方式了吗？',
+                'ctaDescription': '将分散的内容转化为连贯的智力旅程。策划你的世界，通过知识连接。',
+                'ctaButton': '免费开始使用'
+            }
+        };
+
+        let currentLanguage = 'en';
+
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            
+            // 更新所有文本内容
+            Object.keys(translations[lang]).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.innerHTML = translations[lang][key];
+                }
+            });
+            
+            console.log('Language updated to:', lang);
+        }
+
+        // 添加事件监听
+        document.querySelector('.language-switcher').addEventListener('click', (e) => {
+            if (e.target.classList.contains('lang-btn')) {
+                const lang = e.target.dataset.lang;
+                updateLanguage(lang);
+            }
+        });
+
+        // 初始化
+        console.log('Language test page loaded');
+    </script>
+</body>
+</html> 

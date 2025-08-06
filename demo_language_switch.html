@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest Language Switch Demo</title>
+    <style>
+        :root {
+            --quest-purple: #4B264F;
+            --quest-light-purple: #8E4F9D;
+            --quest-orange: #D76E13;
+            --quest-gradient: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(24px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(75, 38, 79, 0.08);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.02);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 72px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--quest-purple);
+            text-decoration: none;
+        }
+
+        .language-switcher {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 20px;
+        }
+
+        .lang-btn {
+            padding: 6px 12px;
+            border: 1px solid rgba(75, 38, 79, 0.3);
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--quest-purple);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .lang-btn:hover {
+            background: rgba(75, 38, 79, 0.1);
+            border-color: rgba(75, 38, 79, 0.5);
+        }
+
+        .lang-btn.active {
+            background: var(--quest-purple);
+            color: white;
+            border-color: var(--quest-purple);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 32px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 44px;
+            min-width: 100px;
+            justify-content: center;
+        }
+
+        .btn-outline {
+            border: 2px solid rgba(75, 38, 79, 0.4);
+            color: var(--quest-purple);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-primary {
+            background: var(--quest-gradient);
+            color: white;
+            border: none;
+        }
+
+        .main-content {
+            padding-top: 72px;
+            min-height: 100vh;
+        }
+
+        .hero-section {
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(248, 246, 250, 0.8) 0%, rgba(240, 235, 245, 0.9) 100%);
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 6vw, 5rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--quest-purple) 0%, var(--quest-light-purple) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            color: var(--quest-orange);
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        .hero-description {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: var(--quest-purple);
+            margin-bottom: 3rem;
+            line-height: 1.7;
+        }
+
+        .hero-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            background: var(--quest-gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(75, 38, 79, 0.2);
+        }
+
+        .hero-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(75, 38, 79, 0.3);
+        }
+
+        .features-section {
+            padding: 80px 2rem;
+            background: white;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: var(--quest-purple);
+            margin-bottom: 3rem;
+            font-weight: 700;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .feature {
+            padding: 30px;
+            border-radius: 16px;
+            background: rgba(248, 246, 250, 0.5);
+            border: 1px solid rgba(75, 38, 79, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(75, 38, 79, 0.1);
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--quest-purple);
+            margin-bottom: 1rem;
+        }
+
+        .feature-text {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .feature-highlight {
+            color: var(--quest-orange);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0 1rem;
+            }
+            
+            .language-switcher {
+                margin-right: 12px;
+            }
+            
+            .lang-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            
+            .hero-section {
+                padding: 1rem;
+            }
+            
+            .features-section {
+                padding: 60px 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">Quest</a>
+            <div class="language-switcher">
+                <button class="lang-btn active" data-lang="en">English</button>
+                <button class="lang-btn" data-lang="zh">中文</button>
+            </div>
+            <div class="auth-buttons">
+                <a href="#" class="btn btn-outline" id="nav-signup">Sign Up</a>
+                <a href="#" class="btn btn-primary" id="nav-login">Log In</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- 英雄区域 -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title" id="hero-title">Welcome to Quest</h1>
+                <p class="hero-subtitle" id="hero-subtitle">MULTIMEDIA INSIGHT STACK</p>
+                <p class="hero-description" id="hero-description">
+                    Transform your digital life with our intelligent content curation platform. 
+                    Discover, organize, and connect with meaningful insights from across the web.
+                </p>
+                <a href="#" class="hero-cta" id="hero-cta">
+                    Start Your Journey
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+
+        <!-- 特性区域 -->
+        <section class="features-section">
+            <div class="features-container">
+                <h2 class="section-title" id="section-title">DISCOVER. ORGANIZE. CONNECT.</h2>
+                <div class="features-grid">
+                    <div class="feature">
+                        <h3 class="feature-title" id="feature1-title">YOUR PERSONAL KNOWLEDGE MAP</h3>
+                        <p class="feature-text" id="feature1-text">
+                            Tired of juggling endless tabs and apps? With Quest, your digital life finds its home. 
+                            <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span>
+                        </p>
+                    </div>
+                    <div class="feature">
+                        <h3 class="feature-title" id="feature2-title">LEARN FROM THE BEST MINDS</h3>
+                        <p class="feature-text" id="feature2-text">
+                            Ever wished you could peek into the reading lists of experts and creators? 
+                            <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span>
+                        </p>
+                    </div>
+                    <div class="feature">
+                        <h3 class="feature-title" id="feature3-title">CLICK LESS. REMEMBER MORE.</h3>
+                        <p class="feature-text" id="feature3-text">
+                            With our browser extension, saving articles, tweets, and ideas takes just one click. 
+                            <span class="feature-highlight">Everything goes straight into your Personal Knowledge Vault.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 翻译数据
+        const translations = {
+            en: {
+                'hero-title': 'Welcome to Quest',
+                'hero-subtitle': 'MULTIMEDIA INSIGHT STACK',
+                'hero-description': 'Transform your digital life with our intelligent content curation platform. Discover, organize, and connect with meaningful insights from across the web.',
+                'hero-cta': 'Start Your Journey',
+                'section-title': 'DISCOVER. ORGANIZE. CONNECT.',
+                'feature1-title': 'YOUR PERSONAL KNOWLEDGE MAP',
+                'feature1-text': 'Tired of juggling endless tabs and apps? With Quest, your digital life finds its home. <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span>',
+                'feature2-title': 'LEARN FROM THE BEST MINDS',
+                'feature2-text': 'Ever wished you could peek into the reading lists of experts and creators? <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span>',
+                'feature3-title': 'CLICK LESS. REMEMBER MORE.',
+                'feature3-text': 'With our browser extension, saving articles, tweets, and ideas takes just one click. <span class="feature-highlight">Everything goes straight into your Personal Knowledge Vault.</span>',
+                'nav-signup': 'Sign Up',
+                'nav-login': 'Log In'
+            },
+            zh: {
+                'hero-title': '欢迎来到 Quest',
+                'hero-subtitle': '多媒体洞察平台',
+                'hero-description': '通过我们的智能内容策划平台改变你的数字生活。发现、整理并与网络上有意义的洞察建立连接。',
+                'hero-cta': '开始你的旅程',
+                'section-title': '发现。整理。连接。',
+                'feature1-title': '你的个人知识地图',
+                'feature1-text': '厌倦了在无数标签页和应用之间切换？有了 Quest，你的数字生活找到了归宿。<span class="feature-highlight">管理你的空间 — 一个直观的可视化中心，整理你在各个平台上阅读、保存和思考的一切内容。</span>',
+                'feature2-title': '向最优秀的人学习',
+                'feature2-text': '是否曾希望窥探专家和创作者的阅读清单？<span class="feature-highlight">关注思想领袖，深入策划的收藏，让他们的知识激发你的下一个"顿悟"时刻。</span>',
+                'feature3-title': '点击更少，记住更多',
+                'feature3-text': '通过我们的浏览器扩展，保存文章、推文和想法只需一键点击。<span class="feature-highlight">所有内容直接进入你的个人知识库。</span>',
+                'nav-signup': '注册',
+                'nav-login': '登录'
+            }
+        };
+
+        let currentLanguage = localStorage.getItem('quest_language') || 'en';
+
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('quest_language', lang);
+            
+            // 更新按钮状态
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            
+            // 更新页面内容
+            Object.keys(translations[lang]).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.innerHTML = translations[lang][key];
+                }
+            });
+            
+            console.log('Language updated to:', lang);
+        }
+
+        // 初始化页面
+        function initPage() {
+            // 应用当前语言
+            updateLanguage(currentLanguage);
+            
+            // 添加语言切换事件
+            document.querySelector('.language-switcher').addEventListener('click', (e) => {
+                if (e.target.classList.contains('lang-btn')) {
+                    const lang = e.target.dataset.lang;
+                    updateLanguage(lang);
+                }
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html> 

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .language-switcher {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .lang-btn {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .lang-btn.active {
+            background: #4B264F;
+            color: white;
+        }
+        .test-content {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Language Test Page</h1>
+    
+    <div class="language-switcher">
+        <button class="lang-btn active" data-lang="en">English</button>
+        <button class="lang-btn" data-lang="zh">中文</button>
+    </div>
+    
+    <div class="test-content">
+        <h2 id="testTitle">Welcome to Quest</h2>
+        <p id="testDescription">This is a test page for language switching functionality.</p>
+        <button id="testButton">Get Started</button>
+    </div>
+
+    <script>
+        // 简化的翻译数据
+        const translations = {
+            en: {
+                'testTitle': 'Welcome to Quest',
+                'testDescription': 'This is a test page for language switching functionality.',
+                'testButton': 'Get Started'
+            },
+            zh: {
+                'testTitle': '欢迎来到 Quest',
+                'testDescription': '这是语言切换功能的测试页面。',
+                'testButton': '开始使用'
+            }
+        };
+
+        let currentLanguage = 'en';
+
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            
+            // 更新内容
+            document.getElementById('testTitle').textContent = translations[lang]['testTitle'];
+            document.getElementById('testDescription').textContent = translations[lang]['testDescription'];
+            document.getElementById('testButton').textContent = translations[lang]['testButton'];
+        }
+
+        // 添加事件监听
+        document.querySelector('.language-switcher').addEventListener('click', (e) => {
+            if (e.target.classList.contains('lang-btn')) {
+                const lang = e.target.dataset.lang;
+                updateLanguage(lang);
+            }
+        });
+    </script>
+</body>
+</html> 
