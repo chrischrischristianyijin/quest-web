@@ -4,11 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quest - Curate your world</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --quest-purple: #4B264F;
@@ -16,6 +12,40 @@
             --quest-orange: #D76E13;
             --quest-gradient: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
             --quest-bg-gradient: linear-gradient(180deg, rgba(209, 193, 230, 0.15) 0%, rgba(233, 225, 243, 0.1) 25%, rgba(245, 240, 250, 0.05) 50%, rgba(255, 255, 255, 0) 100%);
+            
+            /* ===== FONT WEIGHT CUSTOMIZATION ===== */
+            /* 
+            To adjust the thickness of text for each group, simply change the values below.
+            Available font weights: 100 (thin), 200 (extra-light), 300 (light), 400 (normal), 
+            500 (medium), 600 (semi-bold), 700 (bold), 800 (extra-bold), 900 (black)
+            
+            Examples:
+            - For thinner navigation: change --font-weight-header-nav: 200;
+            - For bolder buttons: change --font-weight-header-buttons: 800;
+            - For lighter titles: change --font-weight-home-title: 300;
+            */
+            
+            
+            
+            /* Home Section */
+            --font-weight-home-title: 800;       /* Main home title */
+            --font-weight-home-subtitle: 600;    /* Home subtitle */
+            
+            /* Content Sections */
+            --font-weight-section-titles: 600;   /* Section titles (DISCOVER. ORGANIZE. CONNECT.) */
+            --font-weight-section-descriptions: 400; /* Section descriptions */
+            --font-weight-feature-titles: 600;   /* Feature titles */
+            --font-weight-feature-text: 400;     /* Feature text content */
+            
+            /* Call-to-Action Elements */
+            --font-weight-cta-buttons: 600;      /* CTA buttons */
+            --font-weight-showcase-title: 700;   /* Showcase title */
+            --font-weight-showcase-description: 500; /* Showcase description */
+            --font-weight-showcase-cta: 600;     /* Showcase CTA button */
+            
+            /* General Text */
+            --font-weight-body-text: 400;        /* General body text */
+            --font-weight-footer: 500;           /* Footer text */
         }
 
         * {
@@ -26,7 +56,7 @@
 
         body {
             background: white;
-            font-family: 'Inter', 'Roboto', sans-serif;
+            font-family: 'Rubik', sans-serif;
             line-height: 1.6;
             color: #333;
             overflow-x: hidden;
@@ -65,94 +95,277 @@
             border-radius: 50%;
         }
 
-        /* 导航栏 */
-        .navbar {
+        /* 新头部样式 */
+        .header {
+            width: 100%;
+            height: clamp(70px, 10vh, 100px);
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(24px);
             z-index: 1000;
-            border-bottom: 1px solid rgba(75, 38, 79, 0.08);
+            background: rgba(234.48, 234.48, 234.48, 0.30);
+            backdrop-filter: blur(7.50px);
             transition: all 0.3s ease;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.02);
         }
 
-        .nav-container {
+        .header-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 clamp(15px, 3vw, 30px);
+            position: relative;
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 72px;
+            gap: 20px;
         }
 
-        .logo {
+        .header-logo {
+            width: clamp(120px, 15vw, 200px);
+            height: clamp(40px, 8vh, 66px);
             display: flex;
             align-items: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .header-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: clamp(20px, 3vw, 40px);
+            flex-shrink: 0;
+            justify-content: center;
+            flex: 1;
+            margin: 0 auto;
+        }
+
+        .header-nav-item {
+            color: black;
+            font-size: clamp(16px, 2.5vw, 30px);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 200;
+            line-height: 1.2;
             text-decoration: none;
-            transition: transform 0.3s ease;
-        }
-
-        .logo:hover {
-            transform: scale(1.05);
-        }
-
-        .logo img {
-            height: 42px;
-            width: auto;
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-        }
-
-        .nav-link {
-            color: var(--quest-purple);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 16px;
             transition: all 0.3s ease;
-            padding: 8px 16px;
-            border-radius: 8px;
+            position: relative;
+            white-space: nowrap;
         }
 
-        .nav-link:hover {
-            background: rgba(75, 38, 79, 0.1);
+        .header-nav-item:hover {
+            color: #54497D;
         }
 
-        .auth-buttons {
+        .header-nav-item.active {
+            color: #54497D;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .header-nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 3px;
+            background: #54497D;
+            border-radius: 2px;
+        }
+
+        .header-auth {
             display: flex;
-            gap: 12px;
+            align-items: center;
+            gap: clamp(15px, 2.5vw, 25px);
+            flex-shrink: 0;
+        }
+
+        .header-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-btn {
+            width: clamp(80px, 12vw, 120px);
+            height: clamp(36px, 6vh, 48px);
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-family: 'Rubik', sans-serif;
+            font-weight: 500;
+            font-size: clamp(14px, 1.8vw, 20px);
+            line-height: 1.2;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-btn-signup {
+            background: white;
+            border: 3px #54497D solid;
+            color: #54497D;
+        }
+
+        .header-btn-signup::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .header-btn-signup:hover::before {
+            left: 100%;
+        }
+
+        .header-btn-signup:hover {
+            background: #54497D;
+            color: white;
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 32px rgba(75, 38, 79, 0.4), 0 6px 16px rgba(75, 38, 79, 0.2);
+        }
+
+        .header-btn-login {
+            background: #54497D;
+            border: 3px white solid;
+            color: white;
+        }
+
+        .header-btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .header-btn-login:hover::before {
+            left: 100%;
+        }
+
+        .header-btn-login:hover {
+            background: white;
+            color: #54497D;
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 32px rgba(75, 38, 79, 0.4), 0 6px 16px rgba(75, 38, 79, 0.2);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .header-nav {
+                gap: clamp(15px, 2.5vw, 30px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                height: clamp(60px, 8vh, 80px);
+            }
+            
+            .header-content {
+                padding: 0 clamp(10px, 2vw, 15px);
+            }
+            
+            .header-nav {
+                gap: clamp(12px, 2vw, 20px);
+            }
+            
+            .header-auth {
+                gap: clamp(12px, 2vw, 20px);
+            }
+            
+            .btn {
+                width: 350px;
+                height: 80px;
+            }
+            
+            .btn span {
+                width: 320px;
+                height: 40px;
+                font-size: 32px;
+                line-height: 32px;
+            }
+            
+            .main-content {
+                padding-top: clamp(60px, 8vh, 80px);
+            }
+        }
+
+                @media (max-width: 480px) {
+            .header {
+                height: clamp(50px, 7vh, 70px);
+            }
+            
+            .header-content {
+                padding: 0 clamp(8px, 1.5vw, 12px);
+            }
+            
+            .header-nav {
+                gap: clamp(8px, 1.5vw, 15px);
+            }
+            
+            .header-auth {
+                gap: clamp(10px, 1.5vw, 18px);
+            }
+            
+            .header-right {
+                gap: clamp(8px, 1.5vw, 15px);
+            }
+            
+            .btn {
+                width: 280px;
+                height: 70px;
+            }
+            
+            .btn span {
+                width: 250px;
+                height: 35px;
+                font-size: 28px;
+                line-height: 28px;
+            }
         }
 
         .btn {
-            padding: 10px 32px;
-            border-radius: 50px;
-            font-size: 14px;
-            font-weight: 500;
+            width: 450px;
+            height: 100px;
+            background: #54497D;
+            border-radius: 100px;
+            border: 5px white solid;
             text-decoration: none;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: none;
             cursor: pointer;
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 8px;
-            height: 44px;
-            min-width: 100px;
             justify-content: center;
+            gap: 8px;
             position: relative;
             overflow: hidden;
         }
 
         .btn-outline {
-            border: 2px solid rgba(75, 38, 79, 0.4);
-            color: var(--quest-purple);
-            background: rgba(255, 255, 255, 0.8);
+            border: 5px solid white;
+            color: white;
+            background: #54497D;
             backdrop-filter: blur(10px);
             box-shadow: 0 4px 16px rgba(75, 38, 79, 0.1), 0 1px 4px rgba(75, 38, 79, 0.05);
             animation: outlineGlow 4s ease-in-out infinite;
@@ -174,9 +387,9 @@
         }
 
         .btn-outline:hover {
-            background: var(--quest-purple);
-            color: white;
-            border-color: var(--quest-purple);
+            background: rgba(255, 255, 255, 0.9);
+            color: #54497D;
+            border: 5px solid #54497D;
             transform: translateY(-3px) scale(1.02);
             box-shadow: 0 12px 32px rgba(75, 38, 79, 0.3), 0 6px 16px rgba(75, 38, 79, 0.15);
         }
@@ -191,9 +404,9 @@
         }
 
         .btn-primary {
-            background: var(--quest-gradient);
+            background: #54497D;
             color: white;
-            border: none;
+            border: 5px solid white;
             box-shadow: 0 4px 16px rgba(75, 38, 79, 0.2), 0 1px 4px rgba(75, 38, 79, 0.1);
             animation: primaryGlow 4s ease-in-out infinite;
         }
@@ -209,14 +422,29 @@
             transition: left 0.5s;
         }
 
+        .btn span {
+            width: 433.12px;
+            height: 50px;
+            text-align: center;
+            justify-content: center;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            font-size: 40px;
+            font-family: Rubik;
+            font-weight: 700;
+            line-height: 40px;
+            word-wrap: break-word;
+        }
+
         .btn-primary:hover::before {
             left: 100%;
         }
 
         .btn-primary:hover {
             background: rgba(255, 255, 255, 0.9);
-            color: var(--quest-purple);
-            border: 2px solid var(--quest-purple);
+            color: #54497D;
+            border: 5px solid #54497D;
             transform: translateY(-3px) scale(1.02);
             box-shadow: 0 12px 32px rgba(75, 38, 79, 0.4), 0 6px 16px rgba(75, 38, 79, 0.2);
         }
@@ -232,11 +460,16 @@
 
         /* 主要内容 */
         .main-content {
-            padding-top: 72px;
+            padding-top: clamp(70px, 10vh, 100px);
         }
 
-        /* Hero 区域 */
-        .hero-section {
+        /* Section scroll offset for fixed header */
+        section[id] {
+            scroll-margin-top: 120px;
+        }
+
+        /* Home 区域 */
+        .home-section {
             min-height: 80vh;
             display: flex;
             align-items: center;
@@ -251,7 +484,7 @@
             width: 100%;
         }
 
-        .hero-section::before {
+        .home-section::before {
             content: '';
             position: absolute;
             top: 0;
@@ -269,7 +502,7 @@
             pointer-events: none;
         }
 
-        .hero-content {
+        .home-content {
             max-width: 1200px;
             margin: 0 auto;
             position: relative;
@@ -285,9 +518,10 @@
             backdrop-filter: blur(20px);
         }
 
-        .hero-title {
+        .home-title {
             font-size: clamp(3.5rem, 7vw, 6.5rem);
-            font-family: 'Pacifico', cursive;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-home-title);
             background: linear-gradient(135deg, var(--quest-purple) 0%, var(--quest-light-purple) 100%);
             background-clip: text;
             -webkit-background-clip: text;
@@ -317,11 +551,11 @@
             }
         }
 
-        .hero-subtitle {
+        .home-subtitle {
             font-size: clamp(1.1rem, 2.8vw, 1.8rem);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-home-subtitle);
             color: var(--quest-orange);
-            font-weight: 600;
             margin-bottom: 0;
             letter-spacing: 1.2px;
             text-shadow: 0 2px 12px rgba(215, 110, 19, 0.4);
@@ -356,21 +590,22 @@
             font-weight: 400;
         }
 
-        .hero-cta {
+        .home-cta {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             padding: 14px 28px;
-            background: var(--quest-gradient);
+            background: #54497D;
             color: white;
             text-decoration: none;
             border-radius: 40px;
-            font-weight: 500;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-cta-buttons);
             font-size: clamp(0.9rem, 1.8vw, 1.1rem);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 4px 16px rgba(75, 38, 79, 0.2), 0 1px 4px rgba(75, 38, 79, 0.1);
-            border: none;
+            border: 5px solid white;
             position: relative;
             overflow: hidden;
             animation: ctaGlow 4s ease-in-out infinite;
@@ -379,7 +614,7 @@
             z-index: 20;
         }
 
-        .hero-cta::before {
+        .home-cta::before {
             content: '';
             position: absolute;
             top: 0;
@@ -390,11 +625,11 @@
             transition: left 0.5s;
         }
 
-        .hero-cta:hover::before {
+        .home-cta:hover::before {
             left: 100%;
         }
 
-        .hero-cta:hover {
+        .home-cta:hover {
             transform: translateY(-5px) scale(1.05);
             box-shadow: 0 16px 48px rgba(75, 38, 79, 0.5), 0 8px 24px rgba(75, 38, 79, 0.3);
         }
@@ -410,32 +645,32 @@
 
         /* 响应式设计 */
         @media (max-width: 1200px) {
-            .hero-title {
+            .home-title {
                 font-size: clamp(3rem, 6vw, 5.5rem);
             }
         }
 
         @media (max-width: 900px) {
-            .hero-title {
+            .home-title {
                 font-size: clamp(2.8rem, 7.5vw, 4.5rem);
                 white-space: normal;
             }
         }
 
         @media (max-width: 768px) {
-            .hero-section {
+            .home-section {
                 padding: 1.5rem 1.5rem 2.5rem;
                 min-height: 70vh;
             }
             
-            .hero-content {
+            .home-content {
                 max-width: 100%;
                 gap: 1rem;
                 padding: 1rem 2rem;
                 background: transparent;
             }
             
-            .hero-title {
+            .home-title {
                 font-size: clamp(2.2rem, 8vw, 3.5rem);
                 line-height: 1.5;
                 padding: 0.3em 0.4em 0.4em 0.4em;
@@ -443,12 +678,12 @@
                 white-space: normal;
             }
             
-            .hero-subtitle {
+            .home-subtitle {
                 font-size: clamp(0.9rem, 3.8vw, 1.4rem);
                 letter-spacing: 0.8px;
             }
             
-            .hero-cta {
+            .home-cta {
                 padding: 12px 24px;
                 font-size: clamp(0.8rem, 3vw, 1rem);
                 min-width: 160px;
@@ -458,29 +693,55 @@
                 font-size: clamp(1rem, 2.8vw, 1.3rem);
                 letter-spacing: 0.6px;
             }
+            
+            .extension-showcase {
+                padding: 40px 1rem 80px 1rem;
+                min-height: 60vh;
+            }
+            
+            .showcase-container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                min-height: 50vh;
+            }
+            
+            .showcase-title {
+                font-size: clamp(2.5rem, 6vw, 3.5rem);
+                margin-bottom: 2rem;
+            }
+            
+            .showcase-description {
+                font-size: clamp(1.2rem, 4vw, 1.8rem);
+            }
+            
+            .showcase-cta {
+                padding: 12px 24px;
+                font-size: clamp(0.8rem, 3vw, 1rem);
+                min-width: 160px;
+            }
         }
 
         @media (max-width: 480px) {
-            .hero-section {
+            .home-section {
                 padding: 1.5rem 1rem 2rem;
                 min-height: 60vh;
             }
             
-            .hero-content {
+            .home-content {
                 padding: 1rem 1.5rem;
                 border-radius: 20px;
                 background: transparent;
                 gap: 0.8rem;
             }
             
-            .hero-title {
+            .home-title {
                 font-size: clamp(2rem, 12vw, 3rem);
                 line-height: 1.6;
                 padding: 0.4em 0.5em 0.5em 0.5em;
                 letter-spacing: 0.04em;
             }
             
-            .hero-subtitle {
+            .home-subtitle {
                 font-size: clamp(0.8rem, 5vw, 1.1rem);
             }
             
@@ -488,11 +749,56 @@
                 font-size: clamp(0.9rem, 3vw, 1.2rem);
                 letter-spacing: 0.5px;
             }
+            
+            .extension-showcase {
+                padding: 30px 1rem 60px 1rem;
+                min-height: 50vh;
+            }
+            
+            .showcase-title {
+                font-size: clamp(2rem, 8vw, 2.8rem);
+                margin-bottom: 1.5rem;
+            }
+            
+            .showcase-description {
+                font-size: clamp(1rem, 5vw, 1.5rem);
+            }
+            
+
         }
 
-        /* 特性区域 */
-        .features-section {
-            padding: 40px 2rem 120px 2rem;
+        /* Header Responsive Design */
+        @media (max-width: 768px) {
+            .header-content {
+                gap: 15px;
+            }
+            
+            .header-nav {
+                gap: clamp(10px, 1.5vw, 18px);
+            }
+            
+            .header-auth {
+                gap: clamp(10px, 1.5vw, 18px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                gap: 12px;
+            }
+            
+            .header-nav {
+                gap: clamp(8px, 1.2vw, 15px);
+            }
+            
+            .header-auth {
+                gap: clamp(8px, 1.2vw, 15px);
+            }
+        }
+
+        /* 探索区域 */
+        .explore-section {
+            padding: clamp(30px, 4vh, 40px) clamp(1rem, 4vw, 2rem) clamp(80px, 12vh, 120px) clamp(1rem, 4vw, 2rem);
             background: rgba(248, 246, 250, 0.5);
             width: 100%;
             position: relative;
@@ -500,38 +806,35 @@
         }
 
         .features-container {
-            max-width: 1400px;
+            max-width: min(1400px, 95vw);
             margin: 0 auto;
+            padding: 0 clamp(10px, 2vw, 20px);
         }
 
         .section-header {
             text-align: center;
-            margin-bottom: 50px;
+            margin-bottom: clamp(30px, 5vh, 50px);
             position: relative;
-            padding: 50px 30px;
+            padding: clamp(30px, 5vh, 50px) clamp(20px, 3vw, 30px);
             background: linear-gradient(135deg, rgba(248, 246, 250, 0.85) 0%, rgba(240, 235, 245, 0.95) 50%, rgba(235, 230, 240, 0.9) 100%);
-            border-radius: 32px;
+            border-radius: clamp(20px, 4vw, 32px);
             box-shadow: 0 8px 32px rgba(75, 38, 79, 0.12), 0 2px 8px rgba(75, 38, 79, 0.08);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(248, 246, 250, 0.6);
             overflow: hidden;
-            margin-top: 20px;
+            margin-top: clamp(15px, 3vh, 20px);
         }
-
-
-
-
 
         .section-title {
             font-size: clamp(2.4rem, 5vw, 3.8rem);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-section-titles);
             background: linear-gradient(135deg, var(--quest-light-purple) 0%, var(--quest-purple) 50%, var(--quest-orange) 100%);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-size: 200% 200%;
             animation: gradientShift 4s ease-in-out infinite;
-            font-weight: 700;
             margin-bottom: 2rem;
             letter-spacing: 2px;
             text-shadow: 0 4px 16px rgba(75, 38, 79, 0.2);
@@ -576,11 +879,12 @@
 
         .section-description {
             font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-section-descriptions);
             color: var(--quest-purple);
             max-width: 700px;
             margin: 0 auto;
             line-height: 1.8;
-            font-weight: 400;
             position: relative;
             z-index: 2;
             text-align: center;
@@ -589,15 +893,15 @@
 
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 100px;
+            grid-template-columns: repeat(auto-fit, minmax(min(400px, 90vw), 1fr));
+            gap: clamp(40px, 8vh, 100px);
             align-items: start;
         }
 
         .feature {
             display: flex;
             flex-direction: column;
-            gap: 50px;
+            gap: clamp(30px, 5vh, 50px);
         }
 
         .feature-content {
@@ -606,9 +910,9 @@
 
         .feature-title {
             font-size: clamp(1.1rem, 2.5vw, 1.5rem);
-            font-family: 'Inter', sans-serif;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-feature-titles);
             color: var(--quest-purple);
-            font-weight: 700;
             margin-bottom: 1.5rem;
             line-height: 1.3;
             text-transform: uppercase;
@@ -617,10 +921,10 @@
 
         .feature-text {
             font-size: clamp(1rem, 2vw, 1.1rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-feature-text);
             color: var(--quest-purple);
             line-height: 1.8;
-            font-family: 'Inter', sans-serif;
-            font-weight: 400;
             opacity: 0.9;
         }
 
@@ -652,8 +956,8 @@
             box-shadow: 0 20px 60px rgba(75, 38, 79, 0.2);
         }
 
-        /* CTA 区域 */
-        .cta-section {
+        /* 注册区域 */
+        .signup-section {
             background: var(--quest-gradient);
             color: white;
             padding: 100px 2rem;
@@ -668,20 +972,22 @@
 
         .cta-title {
             font-size: clamp(2rem, 4vw, 3rem);
-            font-family: 'Pacifico', cursive;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-section-titles);
             margin-bottom: 2rem;
             line-height: 1.2;
         }
 
         .cta-description {
             font-size: 1.1rem;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-section-descriptions);
             margin-bottom: 3rem;
             opacity: 0.9;
             line-height: 1.7;
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
-            margin-bottom: 3rem;
         }
 
         .cta-button {
@@ -693,7 +999,8 @@
             color: var(--quest-purple);
             text-decoration: none;
             border-radius: 50px;
-            font-weight: 600;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-cta-buttons);
             font-size: 18px;
             transition: all 0.3s ease;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -704,35 +1011,222 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
         }
 
+        /* Sign Up Section */
+        .signup-section {
+            padding: clamp(60px, 8vh, 80px) clamp(1rem, 4vw, 2rem) clamp(80px, 12vh, 120px) clamp(1rem, 4vw, 2rem);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 246, 250, 0.9) 100%);
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        .signup-container {
+            max-width: min(1400px, 95vw);
+            margin: 0 auto;
+            padding: 0 clamp(10px, 2vw, 20px);
+        }
+
+        .signup-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            margin-top: 60px;
+        }
+
+        .signup-text h3 {
+            font-size: clamp(1.8rem, 3vw, 2.2rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 600;
+            color: var(--quest-purple);
+            margin-bottom: 1.5rem;
+        }
+
+        .signup-text ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .signup-text li {
+            font-size: clamp(1rem, 2vw, 1.1rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 400;
+            color: var(--quest-purple);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .signup-text li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--quest-orange);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .signup-form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .signup-cta {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(75, 38, 79, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(75, 38, 79, 0.1);
+        }
+
+        .signup-cta h3 {
+            font-size: clamp(1.5rem, 3vw, 1.8rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 600;
+            color: var(--quest-purple);
+            margin-bottom: 1rem;
+        }
+
+        .signup-cta p {
+            font-size: clamp(1rem, 2vw, 1.1rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 400;
+            color: var(--quest-purple);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+
+        .signup-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 32px;
+            background: var(--quest-gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-family: 'Rubik', sans-serif;
+            font-weight: 600;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(75, 38, 79, 0.2);
+        }
+
+        .signup-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(75, 38, 79, 0.3);
+        }
+
+        /* More Section */
+        .more-section {
+            padding: clamp(60px, 8vh, 80px) clamp(1rem, 4vw, 2rem) clamp(80px, 12vh, 120px) clamp(1rem, 4vw, 2rem);
+            background: rgba(248, 246, 250, 0.5);
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        .more-container {
+            max-width: min(1400px, 95vw);
+            margin: 0 auto;
+            padding: 0 clamp(10px, 2vw, 20px);
+        }
+
+        .more-content {
+            margin-top: 60px;
+        }
+
+        .more-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 40px;
+        }
+
+        .more-item {
+            text-align: center;
+            padding: 40px 30px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(75, 38, 79, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(75, 38, 79, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .more-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 48px rgba(75, 38, 79, 0.15);
+        }
+
+        .more-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, rgba(75, 38, 79, 0.1) 0%, rgba(142, 79, 157, 0.1) 100%);
+            border-radius: 50%;
+            color: var(--quest-purple);
+        }
+
+        .more-item h3 {
+            font-size: clamp(1.2rem, 2.5vw, 1.4rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 600;
+            color: var(--quest-purple);
+            margin-bottom: 1rem;
+        }
+
+        .more-item p {
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 400;
+            color: var(--quest-purple);
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
         /* Footer */
         .footer {
             background: #F8F6FA;
-            padding: 80px 2rem 30px;
+            padding: clamp(60px, 8vh, 80px) clamp(1rem, 4vw, 2rem) clamp(20px, 3vh, 30px);
         }
 
         .footer-content {
-            max-width: 1400px;
+            max-width: min(1400px, 95vw);
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(min(250px, 90vw), 1fr));
+            gap: clamp(20px, 4vh, 40px);
+            padding: 0 clamp(10px, 2vw, 20px);
         }
 
         .footer-section h3 {
             color: var(--quest-purple);
+            font-family: 'Rubik', sans-serif;
             font-size: 1.25rem;
-            font-weight: 600;
+            font-weight: var(--font-weight-footer);
             margin-bottom: 1rem;
         }
 
         .footer-text {
             color: #666;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-body-text);
             line-height: 1.6;
         }
 
         .footer-links a {
             display: block;
             color: #666;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-body-text);
             text-decoration: none;
             margin-bottom: 0.5rem;
             transition: color 0.3s ease;
@@ -748,37 +1242,12 @@
             border-top: 1px solid rgba(75, 38, 79, 0.1);
             text-align: center;
             color: #666;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-body-text);
         }
 
         /* 响应式设计 */
         @media (max-width: 768px) {
-            .nav-container {
-                padding: 0 1rem;
-                height: 64px;
-            }
-
-            .logo img {
-                height: 36px;
-            }
-
-            .nav-links {
-                gap: 1rem;
-            }
-
-            .auth-buttons {
-                gap: 8px;
-            }
-
-            .btn {
-                padding: 8px 24px;
-                font-size: 13px;
-                height: 40px;
-                min-width: 80px;
-            }
-
-            .main-content {
-                padding-top: 70px;
-            }
 
             .hero-section {
                 margin-top: 70px;
@@ -833,18 +1302,18 @@
                 margin-bottom: 1.5rem !important;
             }
 
-            .hero-subtitle {
+            .home-subtitle {
                 font-size: clamp(1rem, 5vw, 1.6rem) !important;
                 letter-spacing: 1px !important;
                 line-height: 1.2 !important;
             }
 
-            .hero-cta {
+            .home-cta {
                 padding: 18px 35px;
                 font-size: 1.1rem !important;
             }
 
-            .cta-section {
+            .signup-section {
                 padding: 80px 1rem;
                 margin: 80px 0 0 0;
             }
@@ -857,49 +1326,166 @@
                 grid-template-columns: 1fr;
                 gap: 30px;
             }
+
+
         }
 
-        /* 语言切换器样式 */
-        .language-switcher {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-right: 20px;
-        }
 
-        .lang-btn {
-            padding: 6px 12px;
-            border: 1px solid rgba(75, 38, 79, 0.3);
-            background: rgba(255, 255, 255, 0.8);
-            color: var(--quest-purple);
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
+
+        /* 语言切换开关样式 */
+        .language-toggle {
+            width: 70px;
+            height: 48px;
+            position: relative;
             cursor: pointer;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
         }
 
-        .lang-btn:hover {
-            background: rgba(75, 38, 79, 0.1);
-            border-color: rgba(75, 38, 79, 0.5);
+        .language-toggle:hover {
+            transform: scale(1.05);
         }
 
-        .lang-btn.active {
-            background: var(--quest-purple);
+        .language-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .language-toggle .toggle-background {
+            width: 70px;
+            height: 48px;
+            left: 0px;
+            top: 0px;
+            position: absolute;
+            background: #54497D;
+            border-radius: 15px;
+            border: 3px white solid;
+            transition: all 0.3s ease;
+        }
+
+        .language-toggle .toggle-text {
+            position: absolute;
+            text-align: center;
+            justify-content: center;
+            display: flex;
+            flex-direction: column;
             color: white;
-            border-color: var(--quest-purple);
+            font-size: 20px;
+            font-family: Rubik;
+            font-weight: 700;
+            line-height: 20px;
+            word-wrap: break-word;
+            transition: all 0.3s ease;
         }
 
-        /* 响应式设计 */
+        .language-toggle.english .toggle-text {
+            left: 31px;
+            top: 14px;
+        }
+
+        .language-toggle.chinese .toggle-text {
+            left: 10px;
+            top: 14px;
+        }
+
+        .language-toggle .toggle-slider {
+            width: 17px;
+            height: 36px;
+            position: absolute;
+            background: white;
+            border-radius: 30px;
+            top: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .language-toggle.english .toggle-slider {
+            left: 6px;
+        }
+
+        .language-toggle.chinese .toggle-slider {
+            left: 47px;
+        }
+
+        /* 移动端语言切换开关适配 */
         @media (max-width: 768px) {
-            .language-switcher {
-                margin-right: 12px;
+            .language-toggle {
+                width: 60px;
+                height: 40px;
+                margin-left: 15px;
             }
             
-            .lang-btn {
-                padding: 4px 8px;
-                font-size: 11px;
+            .language-toggle .toggle-background {
+                width: 60px;
+                height: 40px;
+            }
+            
+            .language-toggle .toggle-text {
+                font-size: 16px;
+                line-height: 16px;
+            }
+            
+            .language-toggle.english .toggle-text {
+                left: 26px;
+                top: 12px;
+            }
+            
+            .language-toggle.chinese .toggle-text {
+                left: 8px;
+                top: 12px;
+            }
+            
+            .language-toggle .toggle-slider {
+                width: 14px;
+                height: 30px;
+                top: 5px;
+            }
+            
+            .language-toggle.english .toggle-slider {
+                left: 5px;
+            }
+            
+            .language-toggle.chinese .toggle-slider {
+                left: 41px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .language-toggle {
+                width: 55px;
+                height: 36px;
+                margin-left: 10px;
+            }
+            
+            .language-toggle .toggle-background {
+                width: 55px;
+                height: 36px;
+            }
+            
+            .language-toggle .toggle-text {
+                font-size: 14px;
+                line-height: 14px;
+            }
+            
+            .language-toggle.english .toggle-text {
+                left: 24px;
+                top: 11px;
+            }
+            
+            .language-toggle.chinese .toggle-text {
+                left: 7px;
+                top: 11px;
+            }
+            
+            .language-toggle .toggle-slider {
+                width: 12px;
+                height: 26px;
+                top: 5px;
+            }
+            
+            .language-toggle.english .toggle-slider {
+                left: 4px;
+            }
+            
+            .language-toggle.chinese .toggle-slider {
+                left: 37px;
             }
         }
 
@@ -915,16 +1501,16 @@
             }
         }
 
-        .hero-content > * {
+        .home-content > * {
             animation: fadeInUp 1s ease forwards;
             opacity: 0;
         }
 
-        .hero-title {
+        .home-title {
             animation-delay: 0.2s;
         }
 
-        .hero-subtitle {
+        .home-subtitle {
             animation-delay: 0.4s;
         }
 
@@ -967,25 +1553,27 @@
             }
         }
 
-        /* Extension Showcase Section */
+        /* Extension Showcase Subsection */
         .extension-showcase {
-            min-height: 120vh;
-            padding: 80px 2rem 200px 2rem;
-            background: linear-gradient(135deg, rgba(248, 246, 250, 0.8) 0%, rgba(240, 235, 245, 0.9) 100%);
+            min-height: clamp(60vh, 70vh, 80vh);
+            padding: clamp(40px, 6vh, 60px) clamp(1rem, 4vw, 2rem) clamp(80px, 12vh, 120px) clamp(1rem, 4vw, 2rem);
+            background: linear-gradient(135deg, rgba(248, 246, 250, 0.6) 0%, rgba(240, 235, 245, 0.7) 100%);
             position: relative;
             overflow: hidden;
             display: flex;
             align-items: center;
-            margin-top: -50px;
+            margin: clamp(20px, 3vh, 40px) 0;
+            border-radius: clamp(20px, 4vw, 32px);
+            box-shadow: 0 8px 32px rgba(75, 38, 79, 0.08);
         }
 
         .extension-showcase::before {
             content: '';
             position: absolute;
-            width: 800px;
-            height: 350px;
-            left: 150px;
-            top: 100px;
+            width: clamp(400px, 60vw, 800px);
+            height: clamp(200px, 30vh, 350px);
+            left: clamp(50px, 10vw, 150px);
+            top: clamp(50px, 8vh, 100px);
             background: rgba(98, 71, 193, 0.23);
             filter: blur(50px);
             z-index: 1;
@@ -994,43 +1582,44 @@
         }
 
         .showcase-container {
-            max-width: 1400px;
+            max-width: min(1400px, 95vw);
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 80px;
+            grid-template-columns: repeat(auto-fit, minmax(min(400px, 90vw), 1fr));
+            gap: clamp(30px, 5vh, 60px);
             align-items: center;
             width: 100%;
-            min-height: 100vh;
+            min-height: clamp(40vh, 50vh, 60vh);
+            padding: 0 clamp(10px, 2vw, 20px);
         }
 
         .showcase-content {
-            padding-right: 40px;
+            padding-right: clamp(15px, 3vw, 30px);
             padding-top: 0;
-            margin-top: -40px;
+            margin-top: 0;
             position: relative;
         }
 
         .showcase-title {
-            font-size: 64px;
+            font-size: clamp(2rem, 5vw, 48px);
             font-family: 'Rubik', sans-serif;
-            font-weight: 700;
+            font-weight: var(--font-weight-showcase-title);
             font-style: normal;
             color: #332564;
-            margin-bottom: 4rem;
+            margin-bottom: clamp(2rem, 4vh, 3rem);
             line-height: 125%;
             text-shadow: 0 4px 12px rgba(75, 38, 79, 0.3);
-            margin-top: -60px;
+            margin-top: 0;
         }
 
         .showcase-description {
-            font-size: 28px;
+            font-size: clamp(1.2rem, 3vw, 28px);
             font-family: 'Rubik', sans-serif;
-            font-weight: 500;
+            font-weight: var(--font-weight-showcase-description);
             font-style: normal;
             color: #6E3FB5;
             line-height: 1.7;
-            margin-bottom: 2.5rem;
+            margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
             opacity: 0.9;
         }
 
@@ -1045,15 +1634,16 @@
             justify-content: center;
             gap: 12px;
             padding: 18px 36px;
-            background: var(--quest-gradient);
+            background: #54497D;
             color: white;
             text-decoration: none;
             border-radius: 40px;
-            font-weight: 600;
+            font-family: 'Rubik', sans-serif;
+            font-weight: var(--font-weight-showcase-cta);
             font-size: 20px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 4px 16px rgba(75, 38, 79, 0.2), 0 1px 4px rgba(75, 38, 79, 0.1);
-            border: none;
+            border: 5px solid white;
             position: relative;
             overflow: hidden;
             animation: showcaseGlow 4s ease-in-out infinite;
@@ -1305,146 +1895,525 @@
                 opacity: 1;
             }
         }
+
+        .cta-button {
+            min-width: 180px;
+            padding: 14px 28px;
+            font-size: 16px;
+        }
+
+        .cta-button.secondary {
+            min-width: 160px;
+            font-size: 14px;
+        }
+
+        /* Sign Up Section Responsive */
+        .signup-section {
+            padding: 60px 1rem 80px 1rem;
+        }
+
+        .signup-content {
+            grid-template-columns: 1fr;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .signup-text h3 {
+            font-size: clamp(1.5rem, 4vw, 1.8rem) !important;
+            margin-bottom: 1.2rem !important;
+        }
+
+        .signup-text li {
+            font-size: clamp(0.9rem, 3vw, 1rem) !important;
+            margin-bottom: 0.8rem !important;
+        }
+
+        .signup-cta {
+            padding: 30px 20px;
+        }
+
+        .signup-cta h3 {
+            font-size: clamp(1.3rem, 4vw, 1.6rem) !important;
+        }
+
+        .signup-cta p {
+            font-size: clamp(0.9rem, 3vw, 1rem) !important;
+        }
+
+        .signup-button {
+            padding: 14px 28px;
+            font-size: 16px;
+        }
+
+        /* More Section Responsive */
+        .more-section {
+            padding: 60px 1rem 80px 1rem;
+        }
+
+        .more-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .more-item {
+            padding: 30px 20px;
+        }
+
+        .more-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+        }
+
+        .more-item h3 {
+            font-size: clamp(1.1rem, 3vw, 1.3rem) !important;
+        }
+
+        .more-item p {
+            font-size: clamp(0.8rem, 2.5vw, 0.9rem) !important;
+        }
+
+        /* More Section */
+        .more-section {
+            padding: 80px 2rem 120px 2rem;
+            background: rgba(248, 246, 250, 0.5);
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* About Us Section */
+        .about-us-section {
+            padding: clamp(60px, 8vh, 80px) clamp(1rem, 4vw, 2rem) clamp(80px, 12vh, 120px) clamp(1rem, 4vw, 2rem);
+            background: rgba(248, 246, 250, 0.3);
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Extension Section */
+        .extension-section {
+            padding: clamp(60px, 8vh, 80px) clamp(1rem, 4vw, 2rem) clamp(80px, 12vh, 120px) clamp(1rem, 4vw, 2rem);
+            background: rgba(248, 246, 250, 0.5);
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        .more-container {
+            max-width: min(1400px, 95vw);
+            margin: 0 auto;
+            padding: 0 clamp(10px, 2vw, 20px);
+        }
+
+        /* ===== COMPREHENSIVE RESPONSIVE DESIGN ===== */
+        
+        /* Large Desktop (1400px+) */
+        @media (min-width: 1400px) {
+            .features-container,
+            .signup-container,
+            .more-container,
+            .showcase-container {
+                max-width: 1400px;
+            }
+        }
+
+        /* Medium Desktop (1200px - 1399px) */
+        @media (max-width: 1399px) and (min-width: 1200px) {
+            .features-container,
+            .signup-container,
+            .more-container,
+            .showcase-container {
+                max-width: 95vw;
+            }
+        }
+
+        /* Small Desktop (900px - 1199px) */
+        @media (max-width: 1199px) and (min-width: 900px) {
+            .features-grid {
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                gap: clamp(30px, 6vh, 60px);
+            }
+            
+            .showcase-container {
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                gap: clamp(25px, 4vh, 50px);
+            }
+        }
+
+        /* Tablet Landscape (768px - 899px) */
+        @media (max-width: 899px) and (min-width: 768px) {
+            .features-grid {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: clamp(25px, 5vh, 50px);
+            }
+            
+            .showcase-container {
+                grid-template-columns: 1fr;
+                gap: clamp(20px, 4vh, 40px);
+            }
+            
+            .section-header {
+                padding: clamp(25px, 4vh, 40px) clamp(15px, 3vw, 25px);
+            }
+            
+            .feature {
+                gap: clamp(20px, 4vh, 40px);
+            }
+        }
+
+        /* Tablet Portrait (600px - 767px) */
+        @media (max-width: 767px) and (min-width: 600px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: clamp(20px, 4vh, 40px);
+            }
+            
+            .showcase-container {
+                grid-template-columns: 1fr;
+                gap: clamp(15px, 3vh, 30px);
+            }
+            
+            .section-header {
+                padding: clamp(20px, 3vh, 30px) clamp(12px, 2.5vw, 20px);
+                margin-bottom: clamp(20px, 4vh, 30px);
+            }
+            
+            .feature {
+                gap: clamp(15px, 3vh, 30px);
+            }
+            
+            .extension-showcase {
+                min-height: clamp(50vh, 60vh, 70vh);
+                padding: clamp(30px, 5vh, 50px) clamp(0.8rem, 3vw, 1.5rem) clamp(60px, 10vh, 100px) clamp(0.8rem, 3vw, 1.5rem);
+            }
+        }
+
+        /* Mobile Large (480px - 599px) */
+        @media (max-width: 599px) and (min-width: 480px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: clamp(15px, 3vh, 25px);
+            }
+            
+            .showcase-container {
+                grid-template-columns: 1fr;
+                gap: clamp(12px, 2.5vh, 25px);
+            }
+            
+            .section-header {
+                padding: clamp(15px, 2.5vh, 25px) clamp(10px, 2vw, 15px);
+                margin-bottom: clamp(15px, 3vh, 25px);
+                border-radius: clamp(15px, 3vw, 25px);
+            }
+            
+            .feature {
+                gap: clamp(12px, 2.5vh, 25px);
+            }
+            
+            .extension-showcase {
+                min-height: clamp(45vh, 55vh, 65vh);
+                padding: clamp(25px, 4vh, 40px) clamp(0.6rem, 2.5vw, 1.2rem) clamp(50px, 8vh, 80px) clamp(0.6rem, 2.5vw, 1.2rem);
+                border-radius: clamp(15px, 3vw, 25px);
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: clamp(15px, 3vh, 25px);
+            }
+        }
+
+        /* Mobile Small (320px - 479px) */
+        @media (max-width: 479px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: clamp(12px, 2vh, 20px);
+            }
+            
+            .showcase-container {
+                grid-template-columns: 1fr;
+                gap: clamp(10px, 2vh, 20px);
+            }
+            
+            .section-header {
+                padding: clamp(12px, 2vh, 20px) clamp(8px, 1.5vw, 12px);
+                margin-bottom: clamp(12px, 2.5vh, 20px);
+                border-radius: clamp(12px, 2.5vw, 20px);
+            }
+            
+            .feature {
+                gap: clamp(10px, 2vh, 20px);
+            }
+            
+            .extension-showcase {
+                min-height: clamp(40vh, 50vh, 60vh);
+                padding: clamp(20px, 3vh, 30px) clamp(0.5rem, 2vw, 1rem) clamp(40px, 6vh, 60px) clamp(0.5rem, 2vw, 1rem);
+                border-radius: clamp(12px, 2.5vw, 20px);
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: clamp(12px, 2.5vh, 20px);
+            }
+            
+            .features-container,
+            .signup-container,
+            .more-container,
+            .showcase-container {
+                padding: 0 clamp(8px, 1.5vw, 15px);
+            }
+        }
+
+        /* Ultra Small Mobile (below 320px) */
+        @media (max-width: 319px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: clamp(8px, 1.5vh, 15px);
+            }
+            
+            .showcase-container {
+                grid-template-columns: 1fr;
+                gap: clamp(8px, 1.5vh, 15px);
+            }
+            
+            .section-header {
+                padding: clamp(10px, 1.5vh, 15px) clamp(6px, 1vw, 10px);
+                margin-bottom: clamp(10px, 2vh, 15px);
+                border-radius: clamp(10px, 2vw, 15px);
+            }
+            
+            .feature {
+                gap: clamp(8px, 1.5vh, 15px);
+            }
+            
+            .extension-showcase {
+                min-height: clamp(35vh, 45vh, 55vh);
+                padding: clamp(15px, 2.5vh, 25px) clamp(0.4rem, 1.5vw, 0.8rem) clamp(30px, 5vh, 50px) clamp(0.4rem, 1.5vw, 0.8rem);
+                border-radius: clamp(10px, 2vw, 15px);
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: clamp(10px, 2vh, 15px);
+            }
+            
+            .features-container,
+            .signup-container,
+            .more-container,
+            .showcase-container {
+                padding: 0 clamp(6px, 1vw, 12px);
+            }
+        }
+
+        /* Landscape Orientation Adjustments */
+        @media (orientation: landscape) and (max-height: 600px) {
+            .home-section {
+                min-height: 90vh;
+            }
+            
+            .extension-showcase {
+                min-height: 90vh;
+            }
+            
+            .section-header {
+                padding: clamp(20px, 3vh, 30px) clamp(15px, 3vw, 25px);
+            }
+        }
+
+        /* High DPI Displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .header-logo img,
+            .feature-image img {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .header,
+            .bg-decoration,
+            .home-cta,
+            .showcase-cta {
+                display: none;
+            }
+            
+            .main-content {
+                padding-top: 0;
+            }
+            
+            .section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+
     </style>
 </head>
 <body>
     <div class="bg-decoration"></div>
     
-    <!-- 导航栏 -->
-    <nav class="navbar">
-        <div class="nav-container">
-                         <a href="/" class="logo">
-                 <img src="/public/logo.png" alt="Quest">
-             </a>
-            <div class="nav-links" id="navLinks">
-                <!-- Navigation links will be dynamically updated -->
+    <!-- 新头部 -->
+    <header class="header">
+                    <div class="header-content">
+                <div class="header-logo">
+                    <img src="/public/logo.png" alt="Quest">
+                </div>
+                <div class="header-center">
+                    <div class="language-toggle english" id="languageToggle">
+                        <div class="toggle-background"></div>
+                        <div class="toggle-text">EN</div>
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="header-nav">
+                    <a href="#home-section" class="header-nav-item home">HOME</a>
+                    <a href="#about-us-section" class="header-nav-item">EXTENSION</a>
+                    <a href="#explore-section" class="header-nav-item">EXPLORE</a>
+                    <a href="#signup-section" class="header-nav-item">JOIN</a>
+                    <a href="#more-section" class="header-nav-item">MORE</a>
+                </div>
+                <div class="header-auth">
+                    <a href="/signup" class="header-btn header-btn-signup">Sign Up</a>
+                    <a href="/login" class="header-btn header-btn-login">Log In</a>
+                </div>
             </div>
-            <div class="auth-buttons" id="authButtons">
-                <!-- Auth buttons will be dynamically updated -->
-            </div>
-        </div>
-    </nav>
+    </header>
 
     <main class="main-content">
-        <!-- Extension Showcase Section -->
-        <section class="extension-showcase">
-            <div class="showcase-container">
-                <div class="showcase-content">
-                    <h2 class="showcase-title">Click Less. Remember More.</h2>
-                    <p class="showcase-description">
-                        With <span class="showcase-highlight">Insight Collector</span>, saving articles, tweets, and ideas takes just one click.<br>
-                        Everything goes straight into your <span class="showcase-highlight">Personal Knowledge Vault.</span>
+
+
+        <!-- Home Section -->
+        <section id="home-section" class="home-section">
+            <div class="home-content">
+                <h1 class="home-title" id="welcomeTitle" data-i18n="hero.title">Welcome To Quest</h1>
+                <p class="home-subtitle" data-i18n="hero.subtitle">YOUR SECOND BRAIN</p>
+
+                <a href="/signup" class="home-cta" id="tryButton">
+                    <span data-i18n="hero.cta">Start Your Journey</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+
+        <!-- Extension Section (replacing About Us) -->
+        <section id="about-us-section" class="extension-section">
+            <div class="extension-showcase">
+                <div class="showcase-container">
+                    <div class="showcase-content">
+                        <h2 class="showcase-title">Click Less. Remember More.</h2>
+                        <p class="showcase-description">
+                            With <span class="showcase-highlight">Insight Collector</span>, saving articles, tweets, and ideas takes just one click.<br>
+                            Everything goes straight into your <span class="showcase-highlight">Personal Knowledge Vault.</span>
+                        </p>
+                        <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac" class="showcase-cta">
+                            Get the Extension - It's Free!
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </a>
+                </div>
+                    <div class="showcase-visual">
+                        <div class="extension-carousel">
+                            <div class="carousel-slide active">
+                                <img src="/public/extension1.jpg" alt="Quest Extension 1">
+                            </div>
+                            <div class="carousel-slide">
+                                <img src="/public/extension2.jpg" alt="Quest Extension 2">
+                            </div>
+                            <div class="carousel-slide">
+                                <img src="/public/extension3.jpg" alt="Quest Extension 3">
+                            </div>
+                            <div class="carousel-slide">
+                                <img src="/public/extension4.jpg" alt="Quest Extension 4">
+                            </div>
+                            <div class="carousel-slide">
+                                <img src="/public/extension5.jpg" alt="Quest Extension 5">
+                            </div>
+                        </div>
+                        <div class="carousel-indicators">
+                            <span class="carousel-indicator active"></span>
+                            <span class="carousel-indicator"></span>
+                            <span class="carousel-indicator"></span>
+                            <span class="carousel-indicator"></span>
+                            <span class="carousel-indicator"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Explore Section -->
+        <section id="explore-section" class="explore-section">
+            <div class="features-container">
+                <div class="section-header">
+                    <h2 class="section-title" data-i18n="features.title">EXPLORE</h2>
+                    <p class="section-description" data-i18n="features.description">
+                        In a world overflowing with information, we empower you to cut through the noise 
+                        and focus on what truly matters.
                     </p>
-                    <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac" class="showcase-cta">
-                        Get the Extension - It's Free!
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </a>
                 </div>
-                <div class="showcase-visual">
-                    <div class="extension-carousel">
-                        <div class="carousel-slide active">
-                            <img src="/public/extension1.jpg" alt="Quest Extension 1">
-                        </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension2.jpg" alt="Quest Extension 2">
-                        </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension3.jpg" alt="Quest Extension 3">
-                        </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension4.jpg" alt="Quest Extension 4">
-                        </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension5.jpg" alt="Quest Extension 5">
-                        </div>
-                    </div>
-                    <div class="carousel-indicators">
-                        <span class="carousel-indicator active"></span>
-                        <span class="carousel-indicator"></span>
-                        <span class="carousel-indicator"></span>
-                        <span class="carousel-indicator"></span>
-                        <span class="carousel-indicator"></span>
-                    </div>
+                
+                <div class="features-grid">
+            <div class="feature">
+                <div class="feature-content">
+                    <h3 class="feature-title" data-i18n="features.knowledgeMap.title">YOUR PERSONAL KNOWLEDGE MAP</h3>
+                    <p class="feature-text" data-i18n="features.knowledgeMap.text">
+                        Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. 
+                        <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span>
+                        No more fragmentation; just a seamless, unified library that grows with your interests.
+                    </p>
+                </div>
+                <div class="feature-image">
+                    <img src="/public/picture1.jpg" alt="Quest dashboard showing organized content">
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-image">
+                    <img src="/public/picture2.png" alt="Connect with other users">
+                </div>
+                <div class="feature-content">
+                    <h3 class="feature-title" data-i18n="features.learn.title">LEARN FROM THE BEST MINDS AROUND YOU</h3>
+                    <p class="feature-text" data-i18n="features.learn.text">
+                        Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? 
+                        Explore Others' Spaces and turn that wish into reality. 
+                        <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span>
+                        Here, your profile isn't just a page—it's a living archive of your intellectual growth.
+                    </p>
+                </div>
+            </div>
                 </div>
             </div>
         </section>
 
-        <!-- Hero Section -->
-        <section class="hero-section">
-            <div class="hero-content">
-                <h1 class="hero-title" id="welcomeTitle">Welcome to Quest</h1>
-                <p class="hero-subtitle">MULTIMEDIA INSIGHT STACK</p>
-
-                <a href="/signup" class="hero-cta" id="tryButton">
-                    Start Your Journey
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </a>
-            </div>
-        </section>
-
-                 <!-- Features Section -->
-         <section class="features-section">
-             <div class="features-container">
-                 <div class="section-header">
-                     <h2 class="section-title">DISCOVER. ORGANIZE. CONNECT.</h2>
-                     <p class="section-description">
-                         In a world overflowing with information, we empower you to cut through the noise 
-                         and focus on what truly matters.
-                     </p>
-                 </div>
-
-                 <div class="features-grid">
-                <div class="feature">
-                    <div class="feature-content">
-                        <h3 class="feature-title">YOUR PERSONAL KNOWLEDGE MAP</h3>
-                        <p class="feature-text">
-                            Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. 
-                            <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span>
-                            No more fragmentation; just a seamless, unified library that grows with your interests.
-                        </p>
-                    </div>
-                    <div class="feature-image">
-                        <img src="/public/picture1.jpg" alt="Quest dashboard showing organized content">
-                    </div>
+        <!-- Join Us Section -->
+        <section id="signup-section" class="signup-section">
+            <div class="signup-container">
+                <div class="section-header">
+                    <h2 class="section-title">JOIN US</h2>
+                    <p class="section-description">
+                        Join thousands of learners who are already transforming their digital knowledge management with Quest.
+                    </p>
                 </div>
+            </div>
+        </section>
 
-                <div class="feature">
-                    <div class="feature-image">
-                        <img src="/public/picture2.png" alt="Connect with other users">
-                    </div>
-                    <div class="feature-content">
-                        <h3 class="feature-title">LEARN FROM THE BEST MINDS AROUND YOU</h3>
-                        <p class="feature-text">
-                            Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? 
-                            Explore Others' Spaces and turn that wish into reality. 
-                            <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span>
-                            Here, your profile isn't just a page—it's a living archive of your intellectual growth.
-                        </p>
-                    </div>
+        <!-- More Section -->
+        <section id="more-section" class="more-section">
+            <div class="more-container">
+                <div class="section-header">
+                    <h2 class="section-title">MORE</h2>
+                    <p class="section-description">
+                        Discover additional features, resources, and ways to enhance your Quest experience.
+                    </p>
                 </div>
-                        </div>
             </div>
         </section>
 
-        <!-- CTA Section -->
-        <section class="cta-section">
-            <div class="cta-content">
-                <h2 class="cta-title">Ready to Transform Your Learning?</h2>
-                <p class="cta-description">
-                    Transform scattered content into a cohesive intellectual journey. Curate your world, connect through knowledge.
-                </p>
-                <a href="/signup" class="cta-button" id="ctaButton">
-                    Get Started for Free
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </a>
-            </div>
-        </section>
+
     </main>
 
     <!-- Footer -->
@@ -1475,77 +2444,108 @@
     <!-- 引入国际化脚本 -->
     <script src="/js/i18n.js"></script>
     <script>
-        // 初始化语言切换器
+        // 确保默认语言设置
+        function ensureDefaultLanguage() {
+            // 强制设置为英文作为默认语言
+            localStorage.setItem('quest_language', 'en');
+            
+            // 获取当前语言（现在总是英文）
+            const currentLanguage = 'en';
+            
+            // 确保语言切换开关状态正确
+            updateLanguageToggle(currentLanguage);
+            
+            return currentLanguage;
+        }
+        
+        // 初始化语言切换开关
         function initLanguageSwitcher() {
-            const navbar = document.querySelector('.nav-container');
-            if (!navbar) {
-                console.warn('Navbar container not found');
-                return;
+            // 确保默认语言是英文
+            const currentLanguage = ensureDefaultLanguage();
+            
+            // 更新开关状态
+            updateLanguageToggle(currentLanguage);
+            
+            // 使用事件委托，监听整个document的点击事件
+            // 这样即使开关被重新创建，事件监听器仍然有效
+            document.addEventListener('click', handleLanguageToggleClick);
+        }
+        
+        // 处理语言切换开关点击事件
+        function handleLanguageToggleClick(e) {
+            if (e.target.closest('#languageToggle')) {
+                const toggle = e.target.closest('#languageToggle');
+                const currentLang = localStorage.getItem('quest_language') || 'en';
+                const newLang = currentLang === 'en' ? 'zh' : 'en';
+                changeLanguage(newLang);
             }
-            
-            // 检查是否已存在语言切换器
-            if (document.querySelector('.language-switcher')) {
-                return;
+        }
+        
+        // 更新语言切换开关状态
+        function updateLanguageToggle(lang) {
+            const toggle = document.getElementById('languageToggle');
+            if (toggle) {
+                const textDiv = toggle.querySelector('.toggle-text');
+                const isEnglish = lang === 'en';
+                
+                if (isEnglish) {
+                    // 切换到英文
+                    textDiv.textContent = 'EN';
+                    toggle.classList.remove('chinese');
+                    toggle.classList.add('english');
+                } else {
+                    // 切换到中文
+                    textDiv.textContent = 'CH';
+                    toggle.classList.remove('english');
+                    toggle.classList.add('chinese');
+                }
             }
-            
-            const currentLanguage = localStorage.getItem('quest_language') || 'en';
-            
-            const languageSwitcher = document.createElement('div');
-            languageSwitcher.className = 'language-switcher';
-            languageSwitcher.innerHTML = `
-                <button class="lang-btn ${currentLanguage === 'en' ? 'active' : ''}" data-lang="en">
-                    English
-                </button>
-                <button class="lang-btn ${currentLanguage === 'zh' ? 'active' : ''}" data-lang="zh">
-                    中文
-                </button>
-            `;
-            
-            // 插入到导航栏
-            const authButtons = navbar.querySelector('.auth-buttons');
-            if (authButtons) {
-                navbar.insertBefore(languageSwitcher, authButtons);
-            } else {
-                navbar.appendChild(languageSwitcher);
-            }
-            
-            // 添加事件监听
-            languageSwitcher.addEventListener('click', (e) => {
-                if (e.target.classList.contains('lang-btn')) {
-                    const lang = e.target.dataset.lang;
+        }
+        
+        // 切换语言
+        function changeLanguage(lang) {
+            // 保存语言设置
                     localStorage.setItem('quest_language', lang);
                     
-                    // 更新按钮状态
-                    languageSwitcher.querySelectorAll('.lang-btn').forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.lang === lang);
-                    });
-                    
-                    // 重新加载页面以应用新语言
-                    window.location.reload();
-                }
-            });
+            // 更新开关状态
+            updateLanguageToggle(lang);
+            
+            // 应用翻译
+            if (lang === 'zh') {
+                applyChineseTranslation();
+            } else {
+                applyEnglishTranslation();
+            }
+            
+            // 更新页面标题
+            document.title = lang === 'zh' ? 'Quest - 策划你的世界' : 'Quest - Curate your world';
         }
 
         // Function to update UI based on login status
         function updateUIForLoginStatus(isLoggedIn, userEmail = null) {
-            const navLinks = document.getElementById('navLinks');
-            const authButtons = document.getElementById('authButtons');
+            const headerNav = document.querySelector('.header-nav');
+            const headerAuth = document.querySelector('.header-auth');
             const welcomeTitle = document.getElementById('welcomeTitle');
             const tryButton = document.getElementById('tryButton');
-            const ctaButton = document.getElementById('ctaButton');
 
             if (isLoggedIn && userEmail) {
-                navLinks.innerHTML = `
-                    <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="nav-link">My Space</a>
+                // Update navigation to show My Space
+                headerNav.innerHTML = `
+                    <a href="#home-section" class="header-nav-item home">HOME</a>
+                    <a href="#about-us-section" class="header-nav-item">ABOUT</a>
+                    <a href="#explore-section" class="header-nav-item">EXPLORE</a>
+                    <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="header-nav-item">MY SPACE</a>
+                    <a href="#more-section" class="header-nav-item">MORE</a>
                 `;
-                authButtons.innerHTML = `
-                    <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="btn btn-outline">My Space</a>
-                    <button class="btn btn-primary" id="logoutBtn">Log out</button>
+                
+                // Update auth buttons
+                headerAuth.innerHTML = `
+                    <a href="/spaces/my-space.html?email=${encodeURIComponent(userEmail)}" class="header-btn header-btn-signup">My Space</a>
+                    <button class="header-btn header-btn-login" id="logoutBtn">Log out</button>
                 `;
+                
                 tryButton.textContent = 'Go to My Space';
                 tryButton.href = `/spaces/my-space.html?email=${encodeURIComponent(userEmail)}`;
-                ctaButton.textContent = 'Go to My Space';
-                ctaButton.href = `/spaces/my-space.html?email=${encodeURIComponent(userEmail)}`;
 
                 // Get and display nickname
                 getUserNickname(userEmail).then(nickname => {
@@ -1564,93 +2564,525 @@
                         handleLogout();
                     };
                 }
+                
+                // Re-initialize language switcher for logged-in state
+                initLanguageSwitcher();
             } else {
-                navLinks.innerHTML = '';
-                authButtons.innerHTML = `
-                    <a href="/signup" class="btn btn-outline">Sign Up</a>
-                    <a href="/login" class="btn btn-primary">Log In</a>
+                // Reset to default navigation
+                headerNav.innerHTML = `
+                    <a href="#home-section" class="header-nav-item home">HOME</a>
+                    <a href="#about-us-section" class="header-nav-item">EXTENSION</a>
+                    <a href="#explore-section" class="header-nav-item">EXPLORE</a>
+                    <a href="#signup-section" class="header-nav-item">JOIN</a>
+                    <a href="#more-section" class="header-nav-item">MORE</a>
                 `;
+                
+                // Reset to default auth buttons
+                headerAuth.innerHTML = `
+                    <a href="/signup" class="header-btn header-btn-signup">Sign Up</a>
+                    <a href="/login" class="header-btn header-btn-login">Log In</a>
+                `;
+                
                 welcomeTitle.textContent = 'Welcome to Quest';
                 tryButton.innerHTML = `
                     Start Your Journey
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
                 `;
                 tryButton.href = '/signup';
-                ctaButton.innerHTML = `
-                    Get Started for Free
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                `;
-                ctaButton.href = '/signup';
+                
+                // Re-initialize language switcher for logged-out state
+                initLanguageSwitcher();
             }
         }
 
         // Function to get user nickname
-        async function getUserNickname(email) {
+        async function getUserNickname(userEmail) {
             try {
-                const response = await fetch(`/api/v1/users?email=${encodeURIComponent(email)}`);
+                const response = await fetch(`/api/v1/users?email=${encodeURIComponent(userEmail)}`);
                 if (response.ok) {
                     const data = await response.json();
                     return data.user?.nickname || null;
                 }
                 return null;
             } catch (error) {
-                console.error('Error fetching user nickname:', error);
+                console.error('Error fetching nickname:', error);
                 return null;
             }
         }
 
-        // Handle logout
-        async function handleLogout() {
-            try {
-                const response = await fetch('/api/v1/auth/signout', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
+        // Function to handle logout
+        function handleLogout() {
+            localStorage.removeItem('quest_user_email');
+            localStorage.removeItem('quest_user_token');
+            window.location.reload();
+        }
+
+        // Initialize smooth scrolling
+        function initSmoothScrolling() {
+            const links = document.querySelectorAll('a[href^="#"]');
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetSection = document.querySelector(targetId);
+                    
+                    if (targetSection) {
+                        const headerHeight = document.querySelector('.header').offsetHeight;
+                        const targetPosition = targetSection.offsetTop - headerHeight - 20;
+                        
+                        window.scrollTo({
+                            top: targetPosition,
+                            behavior: 'smooth'
+                        });
                     }
                 });
+            });
+        }
 
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('quest_user_session');
-                
-                updateUIForLoginStatus(false);
-                window.location.href = '/';
-                
-            } catch (error) {
-                console.error('Logout error:', error);
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('quest_user_session');
-                updateUIForLoginStatus(false);
-                window.location.href = '/';
+        // Function to set default active tab (HOME)
+        function setDefaultActiveTab() {
+            const navItems = document.querySelectorAll('.header-nav-item');
+            
+            // Remove active class from all nav items
+            navItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find and activate the HOME tab by href attribute
+            const homeTab = document.querySelector('.header-nav-item[href="#home-section"]');
+            if (homeTab) {
+                homeTab.classList.add('active');
+                console.log('HOME tab activated by default');
+            } else {
+                // Fallback: activate first nav item
+                if (navItems.length > 0) {
+                    navItems[0].classList.add('active');
+                    console.log('Fallback: First nav item activated');
+                }
             }
         }
 
-        // Check login status on page load
-        document.addEventListener('DOMContentLoaded', async function() {
-            // 初始化语言切换器
-            initLanguageSwitcher();
+        // Function to update active navigation based on visible section
+        function updateActiveNavigation() {
+            const sections = document.querySelectorAll('section[id]');
+            const navItems = document.querySelectorAll('.header-nav-item');
+            const headerHeight = document.querySelector('.header').offsetHeight;
             
-            // 应用当前语言
-            const currentLanguage = localStorage.getItem('quest_language') || 'en';
-            if (currentLanguage === 'zh') {
-                applyChineseTranslation();
+            let currentSection = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - headerHeight - 100;
+                const sectionBottom = sectionTop + section.offsetHeight;
+                const scrollPosition = window.scrollY;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                    currentSection = section.getAttribute('id');
+                }
+            });
+            
+            // If no section is detected or at the very top, default to home
+            if (!currentSection || window.scrollY < 100) {
+                currentSection = 'home-section';
             }
             
+            // Update navigation items
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                const href = item.getAttribute('href');
+                if (href === `#${currentSection}`) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Initialize extension carousel
+        function initExtensionCarousel() {
+            const slides = document.querySelectorAll('.carousel-slide');
+            const indicators = document.querySelectorAll('.carousel-indicator');
+            let currentSlide = 0;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+                indicators.forEach((indicator, i) => {
+                    indicator.classList.toggle('active', i === index);
+                });
+            }
+
+            function nextSlide() {
+                currentSlide = (currentSlide + 1) % slides.length;
+                showSlide(currentSlide);
+            }
+
+            // Auto-advance slides every 3 seconds
+            setInterval(nextSlide, 3000);
+
+            // Click indicators to navigate
+            indicators.forEach((indicator, index) => {
+                indicator.addEventListener('click', () => {
+                    currentSlide = index;
+                    showSlide(currentSlide);
+                });
+            });
+        }
+
+        // Initialize language switcher
+
+
+        // Update About Us links
+        function updateAboutUsLinks() {
+            const email = localStorage.getItem('quest_user_email') || (new URLSearchParams(window.location.search)).get('email');
+            document.querySelectorAll('a[href*="about"], a[href*="AboutUs"]').forEach(link => {
+                if (email) {
+                    link.href = `/AboutUs.html?email=${encodeURIComponent(email)}`;
+                } else {
+                    link.href = '/AboutUs.html';
+                }
+            });
+        }
+
+        // Apply Chinese translation
+        function applyChineseTranslation() {
+            const translations = {
+                // Hero Section
+                'hero.title': '欢迎来到 Quest',
+                'hero.subtitle': '你的第二大脑',
+                'hero.cta': '开始你的旅程',
+                'hero.cta.mySpace': '进入我的空间',
+                
+                // Navigation
+                'nav.home': '首页',
+                'nav.extension': '扩展',
+                'nav.explore': '探索',
+                'nav.join': '加入',
+                'nav.more': '更多',
+                'nav.signUp': '注册',
+                'nav.logIn': '登录',
+                'nav.logOut': '退出登录',
+                'nav.mySpace': '我的空间',
+                
+                // About Section
+                'about.title': '关于我们',
+                'about.description': 'Quest 不仅仅是一个平台——它是你通往有组织知识和有意义连接的个人门户。',
+                
+                // Features Section
+                'features.title': '发现。整理。连接。',
+                'features.description': '在信息泛滥的世界中，我们帮助你过滤噪音，专注于真正重要的事物。',
+                'features.knowledgeMap.title': '你的个人知识地图',
+                'features.knowledgeMap.text': '厌倦了在无数标签页和应用之间切换来跟踪你喜爱的内容？有了 Quest，你的数字生活找到了归宿。<span class="feature-highlight">管理你的空间 — 一个直观的可视化中心，整理你在各个平台上阅读、保存和思考的一切内容。</span>不再碎片化；只有一个无缝的统一图书馆，随着你的兴趣而成长。',
+                'features.learn.title': '向周围最优秀的人学习',
+                'features.learn.text': '是否曾希望窥探专家、创作者或激励人心的同行的阅读清单？探索他人的空间，将这个愿望变为现实。<span class="feature-highlight">关注思想领袖，深入策划的收藏，让他们的知识激发你的下一个"顿悟"时刻。</span>在这里，你的个人资料不仅仅是一个页面 — 它是你智力成长的活档案。',
+                
+                // Extension Showcase
+                'showcase.title': '点击更少，记住更多。',
+                'showcase.description': '通过<span class="showcase-highlight">洞察收集器</span>，保存文章、推文和想法只需一键点击。所有内容直接进入你的<span class="showcase-highlight">个人知识库。</span>',
+                'showcase.cta': '获取扩展 - 完全免费！',
+                
+                        // Join Section
+        'join.title': '加入我们',
+        'join.description': '加入数千名已经在使用 Quest 改变其数字知识管理的学习者。',
+                
+                // More Section
+                'more.title': '更多',
+                'more.description': '发现其他功能、资源和增强 Quest 体验的方法。',
+                
+                // Footer
+                'footer.quest': 'Quest',
+                'footer.description': '你的个人知识中心，用于发现和分享网络上有意义的内容。',
+                'footer.quickLinks': '快速链接',
+                'footer.contact': '联系我们',
+                'footer.copyright': '© 2024 Quest。保留所有权利。',
+                'footer.email': '邮箱：contact@myquestspace.com'
+            };
+            
+            // 更新页面内容
+            updatePageContent(translations);
+        }
+        
+        // Apply English translation
+        function applyEnglishTranslation() {
+            const translations = {
+                // Hero Section
+                'hero.title': 'Welcome to Quest',
+                'hero.subtitle': 'YOUR SECOND BRAIN',
+                'hero.cta': 'Start Your Journey',
+                'hero.cta.mySpace': 'Go to My Space',
+                
+                // Navigation
+                'nav.home': 'HOME',
+                'nav.extension': 'EXTENSION',
+                'nav.explore': 'EXPLORE',
+                'nav.join': 'JOIN',
+                'nav.more': 'MORE',
+                'nav.signUp': 'Sign Up',
+                'nav.logIn': 'Log In',
+                'nav.logOut': 'Log out',
+                'nav.mySpace': 'My Space',
+                
+                // About Section
+                'about.title': 'ABOUT',
+                'about.description': 'Quest is more than just a platform—it\'s your personal gateway to organized knowledge and meaningful connections.',
+                
+                // Features Section
+                'features.title': 'DISCOVER. ORGANIZE. CONNECT.',
+                'features.description': 'In a world overflowing with information, we empower you to cut through the noise and focus on what truly matters.',
+                'features.knowledgeMap.title': 'YOUR PERSONAL KNOWLEDGE MAP',
+                'features.knowledgeMap.text': 'Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span> No more fragmentation; just a seamless, unified library that grows with your interests.',
+                'features.learn.title': 'LEARN FROM THE BEST MINDS AROUND YOU',
+                'features.learn.text': 'Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? Explore Others\' Spaces and turn that wish into reality. <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span> Here, your profile isn\'t just a page—it\'s a living archive of your intellectual growth.',
+                
+                // Extension Showcase
+                'showcase.title': 'Click Less. Remember More.',
+                'showcase.description': 'With <span class="showcase-highlight">Insight Collector</span>, saving articles, tweets, and ideas takes just one click. Everything goes straight into your <span class="showcase-highlight">Personal Knowledge Vault.</span>',
+                'showcase.cta': 'Get the Extension - It\'s Free!',
+                
+                        // Join Section
+        'join.title': 'JOIN US',
+        'join.description': 'Join thousands of learners who are already transforming their digital knowledge management with Quest.',
+                
+                // More Section
+                'more.title': 'MORE',
+                'more.description': 'Discover additional features, resources, and ways to enhance your Quest experience.',
+                
+                // Footer
+                'footer.quest': 'Quest',
+                'footer.description': 'Your personal knowledge hub for discovering and sharing meaningful content across the web.',
+                'footer.quickLinks': 'Quick Links',
+                'footer.contact': 'Contact',
+                'footer.copyright': '© 2024 Quest. All rights reserved.',
+                'footer.email': 'Email: contact@myquestspace.com'
+            };
+            
+            // 更新页面内容
+            updatePageContent(translations);
+        }
+        
+        // Update page content with translations
+        function updatePageContent(translations) {
+            // Update hero section
+            const welcomeTitle = document.getElementById('welcomeTitle');
+            if (welcomeTitle) {
+                welcomeTitle.innerHTML = translations['hero.title'];
+            }
+            
+            const homeSubtitle = document.querySelector('.home-subtitle');
+            if (homeSubtitle) {
+                homeSubtitle.innerHTML = translations['hero.subtitle'];
+            }
+            
+            const tryButton = document.getElementById('tryButton');
+            if (tryButton) {
+                tryButton.innerHTML = `
+                    ${translations['hero.cta']}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+            }
+            
+            // Update navigation
+            const navItems = document.querySelectorAll('.header-nav-item');
+            if (navItems.length >= 5) {
+                navItems[0].textContent = translations['nav.home'];
+                navItems[1].textContent = translations['nav.extension'];
+                navItems[2].textContent = translations['nav.explore'];
+                navItems[3].textContent = translations['nav.join'];
+                navItems[4].textContent = translations['nav.more'];
+            }
+            
+            // Update auth buttons
+            const signupBtn = document.querySelector('.header-btn-signup');
+            if (signupBtn) {
+                signupBtn.textContent = translations['nav.signUp'];
+            }
+            
+            const loginBtn = document.querySelector('.header-btn-login');
+            if (loginBtn) {
+                loginBtn.textContent = translations['nav.logIn'];
+            }
+            
+            // Update About section
+            const aboutTitle = document.querySelector('#about-us-section .section-title');
+            if (aboutTitle) {
+                aboutTitle.textContent = translations['about.title'];
+            }
+            
+            const aboutDescription = document.querySelector('#about-us-section .section-description');
+            if (aboutDescription) {
+                aboutDescription.textContent = translations['about.description'];
+            }
+            
+            // Update Explore section
+            const exploreTitle = document.querySelector('#explore-section .section-title');
+            if (exploreTitle) {
+                exploreTitle.textContent = translations['features.title'];
+            }
+            
+            const exploreDescription = document.querySelector('#explore-section .section-description');
+            if (exploreDescription) {
+                exploreDescription.textContent = translations['features.description'];
+            }
+            
+            // Update feature titles and texts
+            const featureTitles = document.querySelectorAll('.feature-title');
+            if (featureTitles.length >= 2) {
+                featureTitles[0].innerHTML = translations['features.knowledgeMap.title'];
+                featureTitles[1].innerHTML = translations['features.learn.title'];
+            }
+            
+            const featureTexts = document.querySelectorAll('.feature-text');
+            if (featureTexts.length >= 2) {
+                featureTexts[0].innerHTML = translations['features.knowledgeMap.text'];
+                featureTexts[1].innerHTML = translations['features.learn.text'];
+            }
+            
+            // Update Join section
+            const joinTitle = document.querySelector('#signup-section .section-title');
+            if (joinTitle) {
+                joinTitle.textContent = translations['join.title'];
+            }
+            
+            const joinDescription = document.querySelector('#signup-section .section-description');
+            if (joinDescription) {
+                joinDescription.textContent = translations['join.description'];
+            }
+            
+            // Update More section
+            const moreTitle = document.querySelector('#more-section .section-title');
+            if (moreTitle) {
+                moreTitle.textContent = translations['more.title'];
+            }
+            
+            const moreDescription = document.querySelector('#more-section .section-description');
+            if (moreDescription) {
+                moreDescription.textContent = translations['more.description'];
+            }
+            
+            // Update showcase section
+            const showcaseTitle = document.querySelector('.showcase-title');
+            if (showcaseTitle) {
+                showcaseTitle.innerHTML = translations['showcase.title'];
+            }
+            
+            const showcaseDescription = document.querySelector('.showcase-description');
+            if (showcaseDescription) {
+                showcaseDescription.innerHTML = translations['showcase.description'];
+            }
+            
+            const showcaseCta = document.querySelector('.showcase-cta');
+            if (showcaseCta) {
+                showcaseCta.innerHTML = `
+                    ${translations['showcase.cta']}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+            }
+            
+            // Update footer
+            const footerSections = document.querySelectorAll('.footer-section h3');
+            if (footerSections.length >= 3) {
+                footerSections[0].textContent = translations['footer.quest'];
+                footerSections[1].textContent = translations['footer.quickLinks'];
+                footerSections[2].textContent = translations['footer.contact'];
+            }
+            
+            const footerTexts = document.querySelectorAll('.footer-text');
+            if (footerTexts.length >= 2) {
+                footerTexts[0].textContent = translations['footer.description'];
+                footerTexts[1].textContent = translations['footer.email'];
+            }
+            
+            const footerBottom = document.querySelector('.footer-bottom p');
+            if (footerBottom) {
+                footerBottom.textContent = translations['footer.copyright'];
+            }
+        }
+
+        // Apply translations using i18n system
+        function applyTranslations() {
+            const currentLanguage = localStorage.getItem('quest_language') || 'en';
+            const elements = document.querySelectorAll('[data-i18n]');
+            
+            elements.forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (key && window.i18n) {
+                    const translatedText = window.i18n.get(key);
+                    if (translatedText !== key) {
+                        element.innerHTML = translatedText;
+                    }
+                }
+            });
+        }
+
+
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check login status
+            const userEmail = localStorage.getItem('quest_user_email');
+            const userToken = localStorage.getItem('quest_user_token');
+            
+            if (userEmail && userToken) {
+                updateUIForLoginStatus(true, userEmail);
+            } else {
+                updateUIForLoginStatus(false);
+            }
+
+            // Initialize features
+            initSmoothScrolling();
+            initExtensionCarousel();
+            initLanguageSwitcher();
+            updateAboutUsLinks();
+            
+            // Initialize active navigation
+            updateActiveNavigation();
+            
+            // Set HOME as default active tab
+            setDefaultActiveTab();
+            
+            // 确保默认语言是英文
+            const currentLanguage = ensureDefaultLanguage();
+            
+            // 总是应用英文作为默认语言
+            applyEnglishTranslation();
+            
+            // Check login status on page load
+            checkLoginStatus();
+        });
+
+        // Add scroll event listener for header effects
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('.header');
+            if (header) {
+                if (window.scrollY > 100) {
+                    header.style.background = 'rgba(234.48, 234.48, 234.48, 0.40)';
+                    header.style.backdropFilter = 'blur(10px)';
+                } else {
+                    header.style.background = 'rgba(234.48, 234.48, 234.48, 0.30)';
+                    header.style.backdropFilter = 'blur(7.50px)';
+                }
+            }
+            
+            // Update active navigation based on scroll position
+            updateActiveNavigation();
+        });
+
+        // Check login status on page load
+        async function checkLoginStatus() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const emailFromUrl = urlParams.get('email');
                 
                 if (emailFromUrl) {
-                    localStorage.setItem('userEmail', emailFromUrl);
+                    localStorage.setItem('quest_user_email', emailFromUrl);
                     updateUIForLoginStatus(true, emailFromUrl);
                     return;
                 }
                 
-                const cachedEmail = localStorage.getItem('userEmail');
+                const cachedEmail = localStorage.getItem('quest_user_email');
                 if (cachedEmail) {
                     updateUIForLoginStatus(true, cachedEmail);
                     return;
@@ -1666,10 +3098,10 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.user) {
-                        localStorage.setItem('userEmail', data.user.email);
+                        localStorage.setItem('quest_user_email', data.user.email);
                         updateUIForLoginStatus(true, data.user.email);
                     } else {
-                        localStorage.removeItem('userEmail');
+                        localStorage.removeItem('quest_user_email');
                         updateUIForLoginStatus(false);
                     }
                 } else {
@@ -1678,127 +3110,63 @@
 
             } catch (error) {
                 console.error('Error checking user status:', error);
-                const cachedEmail = localStorage.getItem('userEmail');
+                const cachedEmail = localStorage.getItem('quest_user_email');
                 if (cachedEmail) {
                     updateUIForLoginStatus(true, cachedEmail);
                 } else {
                     updateUIForLoginStatus(false);
                 }
             }
-            
-            updateAboutUsLinks();
-        });
-        
-        // 应用中文翻译
-        function applyChineseTranslation() {
-            const translations = {
-                // Hero Section
-                'welcomeTitle': '欢迎来到 Quest',
-                'hero-subtitle': '多媒体洞察平台',
-                'tryButton': '开始你的旅程',
-                'ctaButton': '免费开始使用',
-                
-                // Extension Showcase
-                'showcase-title': '点击更少，记住更多。',
-                'showcase-description': '通过<span class="showcase-highlight">洞察收集器</span>，保存文章、推文和想法只需一键点击。所有内容直接进入你的<span class="showcase-highlight">个人知识库。</span>',
-                'showcase-cta': '获取扩展 - 完全免费！',
-                
-                // Features Section
-                'section-title': '发现。整理。连接。',
-                'section-description': '在信息泛滥的世界中，我们帮助你过滤噪音，专注于真正重要的事物。',
-                'feature-title-1': '你的个人知识地图',
-                'feature-text-1': '厌倦了在无数标签页和应用之间切换来跟踪你喜爱的内容？有了 Quest，你的数字生活找到了归宿。<span class="feature-highlight">管理你的空间 — 一个直观的可视化中心，整理你在各个平台上阅读、保存和思考的一切内容。</span>不再碎片化；只有一个无缝的统一图书馆，随着你的兴趣而成长。',
-                'feature-title-2': '向周围最优秀的人学习',
-                'feature-text-2': '是否曾希望窥探专家、创作者或激励人心的同行的阅读清单？探索他人的空间，将这个愿望变为现实。<span class="feature-highlight">关注思想领袖，深入策划的收藏，让他们的知识激发你的下一个"顿悟"时刻。</span>在这里，你的个人资料不仅仅是一个页面 — 它是你智力成长的活档案。',
-                
-                // CTA Section
-                'cta-title': '准备好改变你的学习方式了吗？',
-                'cta-description': '将分散的内容转化为连贯的智力旅程。策划你的世界，通过知识连接。',
-                
-                // Navigation
-                'nav-mySpace': '我的空间',
-                'nav-signUp': '注册',
-                'nav-logIn': '登录',
-                'nav-logOut': '退出登录',
-                
-                // Footer
-                'footer-quest': 'Quest',
-                'footer-description': '你的个人知识中心，用于发现和分享网络上有意义的内容。',
-                'footer-quickLinks': '快速链接',
-                'footer-contact': '联系我们',
-                'footer-copyright': '© 2024 Quest。保留所有权利。',
-                'footer-email': '邮箱：contact@myquestspace.com'
-            };
-            
-            // 更新页面内容
-            Object.keys(translations).forEach(key => {
-                const element = document.getElementById(key) || document.querySelector(`[data-translate="${key}"]`);
-                if (element) {
-                    element.innerHTML = translations[key];
-                }
-            });
-            
-            // 更新导航栏
-            const navLinks = document.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                if (link.textContent === 'My Space') {
-                    link.textContent = translations['nav-mySpace'];
-                }
-            });
-            
-            const authButtons = document.querySelectorAll('.btn');
-            authButtons.forEach(btn => {
-                if (btn.textContent === 'Sign Up') {
-                    btn.textContent = translations['nav-signUp'];
-                } else if (btn.textContent === 'Log In') {
-                    btn.textContent = translations['nav-logIn'];
-                } else if (btn.textContent === 'Log out') {
-                    btn.textContent = translations['nav-logOut'];
-                }
-            });
-            
-            // 更新页脚
-            const footerSections = document.querySelectorAll('.footer-section h3');
-            if (footerSections.length >= 3) {
-                footerSections[0].textContent = translations['footer-quest'];
-                footerSections[1].textContent = translations['footer-quickLinks'];
-                footerSections[2].textContent = translations['footer-contact'];
-            }
-            
-            const footerTexts = document.querySelectorAll('.footer-text');
-            if (footerTexts.length >= 2) {
-                footerTexts[0].textContent = translations['footer-description'];
-                footerTexts[1].textContent = translations['footer-email'];
-            }
-            
-            const footerBottom = document.querySelector('.footer-bottom p');
-            if (footerBottom) {
-                footerBottom.textContent = translations['footer-copyright'];
-            }
         }
-        
-        function updateAboutUsLinks() {
-            const email = localStorage.getItem('userEmail') || (new URLSearchParams(window.location.search)).get('email');
-            document.querySelectorAll('a[href*="about"], a[href*="AboutUs"]').forEach(link => {
-                if (email) {
-                    link.href = `/AboutUs.html?email=${encodeURIComponent(email)}`;
-                } else {
-                    link.href = '/AboutUs.html';
-                }
-            });
+
+        // Handle logout
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/v1/auth/signout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                localStorage.removeItem('quest_user_email');
+                localStorage.removeItem('quest_user_token');
+                
+                updateUIForLoginStatus(false);
+                window.location.href = '/';
+                
+            } catch (error) {
+                console.error('Logout error:', error);
+                localStorage.removeItem('quest_user_email');
+                localStorage.removeItem('quest_user_token');
+                updateUIForLoginStatus(false);
+                window.location.href = '/';
+            }
         }
 
         // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
+        function initSmoothScrolling() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetSection = document.querySelector(targetId);
+                    
+                    if (targetSection) {
+                        const headerHeight = document.querySelector('.header').offsetHeight;
+                        const targetPosition = targetSection.offsetTop - headerHeight - 20;
+                        
+                        window.scrollTo({
+                            top: targetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
                 });
             });
-        });
+        }
 
-        // Extension Carousel Functionality
+        // Initialize extension carousel
         function initExtensionCarousel() {
             const slides = document.querySelectorAll('.carousel-slide');
             const indicators = document.querySelectorAll('.carousel-indicator');
@@ -1870,24 +3238,7 @@
             });
         }
 
-        // Initialize carousel when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            initExtensionCarousel();
-        });
 
-        // Navbar scroll effect
-        window.addEventListener('scroll', function() {
-            const navbar = document.querySelector('.navbar');
-            if (window.scrollY > 50) {
-                navbar.style.background = 'rgba(255, 255, 255, 0.99)';
-                navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.12)';
-                navbar.style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.06)';
-            } else {
-                navbar.style.background = 'rgba(255, 255, 255, 0.98)';
-                navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.08)';
-                navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.02)';
-            }
-        });
     </script>
 </body>
-</html>
+</html> 
