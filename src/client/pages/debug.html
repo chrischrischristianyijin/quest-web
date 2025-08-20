@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 调试 - Quest</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .config-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Quest API 调试页面</h1>
+    
+    <div class="test-section">
+        <h2>当前配置</h2>
+        <div class="config-info" id="configInfo">
+            加载中...
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>API 连接测试</h2>
+        <button onclick="testApiConnection()">测试 API 连接</button>
+        <div id="apiConnectionResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>注册端点测试</h2>
+        <button onclick="testSignupEndpoint()">测试注册端点</button>
+        <div id="signupTestResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>登录端点测试</h2>
+        <button onclick="testLoginEndpoint()">测试登录端点</button>
+        <div id="loginTestResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>手动 API 调用</h2>
+        <button onclick="manualApiCall()">手动调用注册 API</button>
+        <div id="manualApiResult" class="result"></div>
+    </div>
+
+    <script type="module">
+        import { CONFIG, API_ENDPOINTS } from '/js/config.js';
+        
+        // 显示配置信息
+        document.getElementById('configInfo').innerHTML = `
+            <strong>API 基础 URL:</strong> ${CONFIG.API_BASE_URL}<br>
+            <strong>API 版本:</strong> ${CONFIG.API_VERSION}<br>
+            <strong>注册端点:</strong> ${CONFIG.API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}<br>
+            <strong>登录端点:</strong> ${CONFIG.API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}<br>
+            <strong>登出端点:</strong> ${CONFIG.API_BASE_URL}${API_ENDPOINTS.AUTH.LOGOUT}
+        `;
+        
+        // 测试 API 连接
+        window.testApiConnection = async function() {
+            const resultDiv = document.getElementById('apiConnectionResult');
+            resultDiv.textContent = '测试中...';
+            
+            try {
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/v1/metadata`);
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `<span class="success">✅ API 连接成功!</span><br>响应: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ API 连接失败: ${response.status} ${response.statusText}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ API 连接错误: ${error.message}</span>`;
+            }
+        };
+        
+        // 测试注册端点
+        window.testSignupEndpoint = async function() {
+            const resultDiv = document.getElementById('signupTestResult');
+            resultDiv.textContent = '测试中...';
+            
+            try {
+                const response = await fetch(`${CONFIG.API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        nickname: 'testuser',
+                        password: 'testpassword123'
+                    })
+                });
+                
+                resultDiv.innerHTML = `<span class="info">ℹ️ 注册端点响应: ${response.status} ${response.statusText}</span><br>`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML += `成功响应: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    resultDiv.innerHTML += `错误响应: ${JSON.stringify(errorData, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 注册端点测试错误: ${error.message}</span>`;
+            }
+        };
+        
+        // 测试登录端点
+        window.testLoginEndpoint = async function() {
+            const resultDiv = document.getElementById('loginTestResult');
+            resultDiv.textContent = '测试中...';
+            
+            try {
+                const response = await fetch(`${CONFIG.API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        password: 'testpassword123'
+                    })
+                });
+                
+                resultDiv.innerHTML = `<span class="info">ℹ️ 登录端点响应: ${response.status} ${response.statusText}</span><br>`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML += `成功响应: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    resultDiv.innerHTML += `错误响应: ${JSON.stringify(errorData, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 登录端点测试错误: ${error.message}</span>`;
+            }
+        };
+        
+        // 手动 API 调用
+        window.manualApiCall = async function() {
+            const resultDiv = document.getElementById('manualApiResult');
+            resultDiv.textContent = '手动调用中...';
+            
+            try {
+                // 直接使用 fetch 调用
+                const url = `${CONFIG.API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}`;
+                console.log('调用 URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'debug@example.com',
+                        nickname: 'debuguser',
+                        password: 'debugpass123'
+                    })
+                });
+                
+                resultDiv.innerHTML = `
+                    <span class="info">ℹ️ 手动 API 调用结果:</span><br>
+                    <strong>URL:</strong> ${url}<br>
+                    <strong>状态:</strong> ${response.status} ${response.statusText}<br>
+                    <strong>响应头:</strong> ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}
+                `;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML += `<br><strong>响应数据:</strong> ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    resultDiv.innerHTML += `<br><strong>错误数据:</strong> ${JSON.stringify(errorData, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 手动 API 调用错误: ${error.message}</span><br>错误详情: ${error.stack}`;
+            }
+        };
+    </script>
+</body>
+</html>

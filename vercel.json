@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/client/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/js/(.*)",
+      "dest": "/src/client/js/$1"
+    },
+    {
+      "src": "/styles/(.*)",
+      "dest": "/src/client/styles/$1"
+    },
+    {
+      "src": "/public/(.*)",
+      "dest": "/src/client/public/$1"
+    },
+    {
+      "src": "/debug",
+      "dest": "/src/client/pages/debug.html"
+    },
+    {
+      "src": "/test-simple",
+      "dest": "/src/client/pages/test-simple.html"
+    },
+    {
+      "src": "/check-docs",
+      "dest": "/src/client/pages/check-docs.html"
+    },
+    {
+      "src": "/cors-test",
+      "dest": "/src/client/pages/cors-test.html"
+    },
+    {
+      "src": "/test-login",
+      "dest": "/src/client/pages/test-login.html"
+    },
+    {
+      "src": "/login",
+      "dest": "/src/client/pages/login.html"
+    },
+    {
+      "src": "/signup",
+      "dest": "/src/client/pages/signup.html"
+    },
+    {
+      "src": "/my-space",
+      "dest": "/src/client/pages/my-space.html"
+    },
+    {
+      "src": "/",
+      "dest": "/src/client/pages/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/src/client/pages/index.html"
+    }
+  ]
+} 

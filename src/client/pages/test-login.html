@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录问题诊断 - Quest</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { padding: 10px 20px; margin: 5px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+        .step { margin: 10px 0; padding: 10px; background: #e8f4fd; border-left: 4px solid #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>🔍 登录问题诊断 - API 格式修复版</h1>
+    
+    <div class="test">
+        <h3>1. 直接测试 API 端点（原始格式）</h3>
+        <button onclick="testDirectApi()">直接调用登录 API</button>
+        <div id="directApiResult" class="result"></div>
+    </div>
+    
+    <div class="test">
+        <h3>2. 测试 API 格式转换</h3>
+        <button onclick="testApiFormat()">测试 API 格式转换</button>
+        <div id="apiFormatResult" class="result"></div>
+    </div>
+    
+    <div class="test">
+        <h3>3. 测试完整登录流程</h3>
+        <button onclick="testAuthLogin()">测试 auth.login()</button>
+        <div id="authLoginResult" class="result"></div>
+    </div>
+    
+    <div class="test">
+        <h3>4. 检查控制台日志</h3>
+        <p>请打开浏览器开发者工具的控制台，查看详细的调试信息</p>
+        <div class="step">
+            <strong>调试步骤：</strong><br>
+            1. 按 F12 打开开发者工具<br>
+            2. 切换到 Console 标签<br>
+            3. 运行上面的测试<br>
+            4. 查看详细的日志输出
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from '/js/auth.js';
+        import { api } from '/js/api.js';
+        
+        window.testDirectApi = async function() {
+            const result = document.getElementById('directApiResult');
+            result.textContent = '测试中...';
+            
+            try {
+                const url = 'https://quest-api-edz1.onrender.com/api/v1/auth/login';
+                console.log('🔍 直接测试 API:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        password: 'testpass123'
+                    })
+                });
+                
+                console.log('📡 响应状态:', response.status);
+                console.log('📡 响应头:', Object.fromEntries(response.headers.entries()));
+                
+                const data = await response.text();
+                console.log('📡 响应数据:', data);
+                
+                result.innerHTML = `
+✅ 直接 API 调用成功!
+状态: ${response.status} ${response.statusText}
+数据: ${data}
+                `;
+            } catch (error) {
+                console.error('❌ 直接 API 调用失败:', error);
+                result.innerHTML = `
+❌ 直接 API 调用失败!
+错误: ${error.message}
+类型: ${error.name}
+                `;
+            }
+        };
+        
+        window.testApiFormat = async function() {
+            const result = document.getElementById('apiFormatResult');
+            result.textContent = '测试中...';
+            
+            try {
+                console.log('🔍 测试 API 格式转换...');
+                
+                // 模拟后端返回的格式
+                const mockBackendResponse = {
+                    success: true,
+                    data: {
+                        access_token: "mock_token_123",
+                        user_id: "user_456"
+                    }
+                };
+                
+                console.log('📡 模拟后端响应:', mockBackendResponse);
+                
+                // 测试转换逻辑
+                if (mockBackendResponse && mockBackendResponse.success && mockBackendResponse.data) {
+                    const converted = {
+                        user: {
+                            id: mockBackendResponse.data.user_id,
+                            email: 'test@example.com'
+                        },
+                        token: mockBackendResponse.data.access_token
+                    };
+                    
+                    console.log('✅ 转换后的格式:', converted);
+                    
+                    result.innerHTML = `
+✅ API 格式转换测试成功!
+原始格式: ${JSON.stringify(mockBackendResponse, null, 2)}
+转换后: ${JSON.stringify(converted, null, 2)}
+                    `;
+                } else {
+                    throw new Error('模拟响应格式不正确');
+                }
+            } catch (error) {
+                console.error('❌ API 格式转换测试失败:', error);
+                result.innerHTML = `
+❌ API 格式转换测试失败!
+错误: ${error.message}
+                `;
+            }
+        };
+        
+        window.testAuthLogin = async function() {
+            const result = document.getElementById('authLoginResult');
+            result.textContent = '测试中...';
+            
+            try {
+                console.log('🔍 开始测试完整登录流程...');
+                const loginResult = await auth.login('test@example.com', 'testpass123');
+                console.log('📡 auth.login() 结果:', loginResult);
+                
+                if (loginResult && loginResult.success) {
+                    result.innerHTML = `
+✅ 完整登录流程成功!
+结果: ${JSON.stringify(loginResult, null, 2)}
+用户认证状态: ${auth.checkAuth()}
+当前用户: ${JSON.stringify(auth.getCurrentUser(), null, 2)}
+                    `;
+                } else {
+                    result.innerHTML = `
+❌ 完整登录流程失败!
+结果: ${JSON.stringify(loginResult, null, 2)}
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ 完整登录流程异常:', error);
+                result.innerHTML = `
+🚨 完整登录流程抛出异常!
+错误: ${error.message}
+类型: ${error.name}
+堆栈: ${error.stack}
+                `;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# 忽略不需要的文件
+.DS_Store
+*.log
+node_modules/
+.git/
+.gitignore
+README.md
+
+# 确保包含这些目录
+!src/client/
+!vercel.json
+!package.json
