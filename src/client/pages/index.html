@@ -4,195 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quest - Curate your world</title>
-    <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
-            color: white;
-        }
-        
-        .hero-container {
-            text-align: center;
-            max-width: 800px;
-            padding: 0 20px;
-        }
-        
-        .logo {
-            font-size: 64px;
-            font-weight: 700;
-            margin-bottom: 24px;
-            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        .subtitle {
-            font-size: 24px;
-            opacity: 0.9;
-            margin-bottom: 40px;
-            line-height: 1.4;
-        }
-        
-        .description {
-            font-size: 18px;
-            opacity: 0.8;
-            margin-bottom: 48px;
-            line-height: 1.6;
-        }
-        
-        .cta-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 40px;
-        }
-        
-        .btn {
-            display: inline-block;
-            padding: 16px 32px;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary {
-            background: white;
-            color: #4B264F;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .btn-outline {
-            background: transparent;
-            color: white;
-            border: 2px solid white;
-        }
-        
-        .btn-outline:hover {
-            background: white;
-            color: #4B264F;
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            font-size: 14px;
-            padding: 12px 24px;
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-        
-
-        
-        .auto-redirect {
-            margin-top: 40px;
-            opacity: 0.7;
-            font-size: 14px;
-        }
-        
-        .countdown {
-            font-weight: 600;
-            color: #FFD700;
-        }
-        
-        @media (max-width: 768px) {
-            .logo {
-                font-size: 48px;
-            }
-            
-            .subtitle {
-                font-size: 20px;
-            }
-            
-            .description {
-                font-size: 16px;
-            }
-            
-            .cta-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .btn {
-                width: 200px;
-            }
-            
-
-            
-            .btn-secondary {
-                width: 180px;
-            }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/common.css">
 </head>
 <body>
-    <div class="hero-container">
-        <div class="logo">Quest</div>
-        <div class="subtitle">Curate your world</div>
-        <div class="description">
-            发现、收集和分享你喜爱的媒体内容。<br>
-            与朋友分享你的发现，探索新的精彩内容。
+    <div class="bg-decoration"></div>
+    
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <img src="/public/logo.png" alt="Quest">
+            </a>
+            <div class="nav-links" id="navLinks">
+                <!-- Navigation links will be dynamically updated -->
+            </div>
+            <div class="auth-buttons" id="authButtons">
+                <!-- Auth buttons will be dynamically updated -->
+            </div>
         </div>
-        
-        <div class="cta-buttons">
-            <a href="/login" class="btn btn-primary">立即登录</a>
-            <a href="/signup" class="btn btn-outline">创建账户</a>
-        </div>
-        
+    </nav>
 
-        
-        <div class="auto-redirect">
-            <span class="countdown" id="countdown">5</span> 秒后自动跳转...
-        </div>
-    </div>
+    <main class="main-content">
+        <!-- Extension Showcase Section -->
+        <section class="extension-showcase">
+            <div class="showcase-container">
+                <div class="showcase-content">
+                    <h2 class="showcase-title">Click Less. Remember More.</h2>
+                    <p class="showcase-description">
+                        With <span class="showcase-highlight">Insight Collector</span>, saving articles, tweets, and ideas takes just one click.<br>
+                        Everything goes straight into your <span class="showcase-highlight">Personal Knowledge Vault.</span>
+                    </p>
+                    <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac" class="showcase-cta">
+                        Get the Extension - It's Free!
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="showcase-visual">
+                    <div class="extension-carousel">
+                        <div class="carousel-slide active">
+                            <img src="/public/extension1.jpg" alt="Quest Extension 1">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="/public/extension2.jpg" alt="Quest Extension 2">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="/public/extension3.jpg" alt="Quest Extension 3">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="/public/extension4.jpg" alt="Quest Extension 4">
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="/public/extension5.jpg" alt="Quest Extension 5">
+                        </div>
+                    </div>
+                    <div class="carousel-indicators">
+                        <span class="carousel-indicator active"></span>
+                        <span class="carousel-indicator"></span>
+                        <span class="carousel-indicator"></span>
+                        <span class="carousel-indicator"></span>
+                        <span class="carousel-indicator"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <script>
-        // 自动重定向逻辑
-        let countdown = 5;
-        const countdownElement = document.getElementById('countdown');
-        
-        // 检查用户是否已登录
-        const authToken = localStorage.getItem('authToken');
-        const userSession = localStorage.getItem('quest_user_session');
-        
-        if (authToken && userSession) {
-            // 已登录，倒计时后跳转到个人空间
-            const timer = setInterval(() => {
-                countdown--;
-                countdownElement.textContent = countdown;
-                
-                if (countdown <= 0) {
-                    clearInterval(timer);
-                    window.location.href = '/my-space';
-                }
-            }, 1000);
-        } else {
-            // 未登录，倒计时后跳转到登录页面
-            const timer = setInterval(() => {
-                countdown--;
-                countdownElement.textContent = countdown;
-                
-                if (countdown <= 0) {
-                    clearInterval(timer);
-                    window.location.href = '/login';
-                }
-            }, 1000);
-        }
-    </script>
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title" id="welcomeTitle">Welcome to Quest</h1>
+                <p class="hero-subtitle">MULTIMEDIA INSIGHT STACK</p>
+                <p class="hero-description">
+                    发现、收集和分享你喜爱的媒体内容。<br>
+                    与朋友分享你的发现，探索新的精彩内容。
+                </p>
+                <a href="/signup" class="hero-cta" id="tryButton">
+                    Start Your Journey
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section">
+            <div class="features-container">
+                <div class="section-header">
+                    <h2 class="section-title">DISCOVER. ORGANIZE. CONNECT.</h2>
+                    <p class="section-description">
+                        In a world overflowing with information, we empower you to cut through the noise 
+                        and focus on what truly matters.
+                    </p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature">
+                        <div class="feature-content">
+                            <h3 class="feature-title">YOUR PERSONAL KNOWLEDGE MAP</h3>
+                            <p class="feature-text">
+                                Tired of juggling endless tabs and apps to track your favorite content? With Quest, your digital life finds its home. 
+                                <span class="feature-highlight">Manage your Space — a visual, intuitive hub that organizes everything you read, save, and ponder across platforms.</span>
+                                No more fragmentation; just a seamless, unified library that grows with your interests.
+                            </p>
+                        </div>
+                        <div class="feature-image">
+                            <img src="/public/picture1.jpg" alt="Quest dashboard showing organized content">
+                        </div>
+                    </div>
+
+                    <div class="feature">
+                        <div class="feature-image">
+                            <img src="/public/picture2.png" alt="Connect with other users">
+                        </div>
+                        <div class="feature-content">
+                            <h3 class="feature-title">LEARN FROM THE BEST MINDS AROUND YOU</h3>
+                            <p class="feature-text">
+                                Ever wished you could peek into the reading lists of experts, creators, or inspiring peers? 
+                                Explore Others' Spaces and turn that wish into reality. 
+                                <span class="feature-highlight">Follow thought leaders, dive into curated collections, and let their knowledge spark your next "aha" moment.</span>
+                                Here, your profile isn't just a page—it's a living archive of your intellectual growth.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <div class="cta-content">
+                <h2 class="cta-title">Ready to Transform Your Learning?</h2>
+                <p class="cta-description">
+                    Transform scattered content into a cohesive intellectual journey. Curate your world, connect through knowledge.
+                </p>
+                <a href="/signup" class="cta-button" id="ctaButton">
+                    Get Started for Free
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Quest</h3>
+                <p class="footer-text">Your personal knowledge hub for discovering and sharing meaningful content across the web.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <div class="footer-links">
+                    <a href="/">Home</a>
+                    <a href="/signup">Sign Up</a>
+                    <a href="/login">Log In</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <p class="footer-text">Email: contact@myquestspace.com</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Quest. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- 引入核心脚本 -->
+    <script type="module" src="/js/index.js"></script>
 </body>
 </html>
