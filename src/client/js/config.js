@@ -22,10 +22,10 @@ export const API_ENDPOINTS = {
         REGISTER: '/api/v1/auth/register',
         LOGIN: '/api/v1/auth/login',
         LOGOUT: '/api/v1/auth/logout',
-        GOOGLE: '/api/v1/auth/google/login'
+        GOOGLE: '/api/v1/auth/google/login',
+        PROFILE: '/api/v1/auth/profile'
     },
     USER: {
-        PROFILE: '/api/v1/user/profile',
         FOLLOW: '/api/v1/user/follow'
     },
     INSIGHTS: {

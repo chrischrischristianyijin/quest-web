@@ -153,7 +153,7 @@ class ApiService {
 
     // 用户相关
     async getUserProfile() {
-        return this.request(API_ENDPOINTS.USER.PROFILE);
+        return this.request(API_ENDPOINTS.AUTH.PROFILE);
     }
 
     // 见解相关
