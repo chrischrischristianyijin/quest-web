@@ -20,26 +20,6 @@
       "dest": "/src/client/public/$1"
     },
     {
-      "src": "/debug",
-      "dest": "/src/client/pages/debug.html"
-    },
-    {
-      "src": "/test-simple",
-      "dest": "/src/client/pages/test-simple.html"
-    },
-    {
-      "src": "/check-docs",
-      "dest": "/src/client/pages/check-docs.html"
-    },
-    {
-      "src": "/cors-test",
-      "dest": "/src/client/pages/cors-test.html"
-    },
-    {
-      "src": "/test-login",
-      "dest": "/src/client/pages/test-login.html"
-    },
-    {
       "src": "/login",
       "dest": "/src/client/pages/login.html"
     },
