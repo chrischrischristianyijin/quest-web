@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的空间 - Quest</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/common.css">
+    <style>
+        .welcome-section {
+            background: var(--quest-bg-gradient);
+            padding: var(--spacing-xxl) 0;
+            text-align: center;
+        }
+        
+        .welcome-title {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--quest-purple);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .welcome-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .content-section {
+            padding: var(--spacing-xxl) 0;
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+            margin-top: var(--spacing-xl);
+        }
+        
+        .content-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-light);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .content-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .content-image {
+            width: 100%;
+            height: 200px;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-light);
+            font-size: 48px;
+        }
+        
+        .content-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .content-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .content-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .content-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xxl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: var(--spacing-lg);
+            opacity: 0.5;
+        }
+        
+        .add-content-btn {
+            margin-top: var(--spacing-lg);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">Quest</a>
+            <div class="nav-menu">
+                <a href="/my-space" class="nav-link active">我的空间</a>
+                <button class="btn btn-outline" id="logoutBtn">登出</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 欢迎区域 -->
+    <section class="welcome-section">
+        <div class="container">
+            <h1 class="welcome-title" id="welcomeTitle">欢迎回来！</h1>
+            <p class="welcome-subtitle">管理你的收藏，分享你的发现</p>
+        </div>
+    </section>
+
+    <!-- 内容区域 -->
+    <section class="content-section">
+        <div class="container">
+            <div class="content-grid" id="contentGrid">
+                <!-- 内容卡片将通过 JavaScript 动态生成 -->
+            </div>
+            
+            <!-- 空状态 -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state-icon">📚</div>
+                <h3>还没有收藏任何内容</h3>
+                <p>开始添加你喜欢的媒体内容到你的收藏中</p>
+                <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
+                    添加内容
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 添加内容模态框 -->
+    <div id="addContentModal" style="display: none;" class="modal">
+        <div class="modal-content">
+            <h3>添加新内容</h3>
+            <form id="addContentForm">
+                <div class="form-group">
+                    <label class="form-label" for="contentUrl">内容链接</label>
+                    <input type="url" id="contentUrl" class="form-input" required placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="contentTags">标签（可选）</label>
+                    <input type="text" id="contentTags" class="form-input" placeholder="用逗号分隔多个标签">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideAddContentModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="/js/my-space.js"></script>
+    
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            margin-top: var(--spacing-xl);
+        }
+    </style>
+    
+    <script>
+        // 简单的模态框控制
+        function showAddContentModal() {
+            document.getElementById('addContentModal').style.display = 'flex';
+        }
+        
+        function hideAddContentModal() {
+            document.getElementById('addContentModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
