@@ -204,7 +204,10 @@ class ApiService {
         }
         
         try {
-            const response = await this.request('/api/v1/metadata/create-insight', {
+            console.log('🌐 完整API URL:', `${this.baseUrl}/api/v1/metadata/create-insight`);
+            console.log('🔑 当前token:', this.getAuthToken() ? '存在' : '不存在');
+            
+            const response = await this.request(`${this.baseUrl}/api/v1/metadata/create-insight`, {
                 method: 'POST',
                 body: formData
             });
@@ -213,6 +216,17 @@ class ApiService {
             return response;
         } catch (error) {
             console.error('❌ createInsightFromUrl 失败:', error);
+            
+            // 添加更详细的错误信息
+            if (error.message.includes('422')) {
+                console.error('📋 422错误详情 - 请求格式问题');
+                console.error('📤 发送的数据:', {
+                    url: data.url,
+                    tags: data.tags,
+                    formDataEntries: Array.from(formData.entries())
+                });
+            }
+            
             throw error;
         }
     }

@@ -560,16 +560,26 @@ function bindEvents() {
 // 加载用户标签
 async function loadUserTags() {
     try {
+        console.log('🏷️ 开始加载用户标签...');
         const response = await api.getUserTags();
         
         if (response.success && response.data) {
+            console.log('✅ 标签加载成功:', response.data);
             renderTagSelector(response.data);
         } else {
-            // 如果没有标签，显示默认选项
+            console.log('⚠️ 标签响应格式异常，使用默认标签');
             renderTagSelector([]);
         }
     } catch (error) {
-        console.error('加载标签失败:', error);
+        console.error('❌ 加载标签失败:', error);
+        
+        // 如果是500错误（后端问题），显示友好提示
+        if (error.message.includes('500')) {
+            console.log('🔄 后端服务暂时不可用，使用默认标签');
+            showErrorMessage('标签服务暂时不可用，但您仍可以添加内容');
+        }
+        
+        // 使用默认标签，确保功能可用
         renderTagSelector([]);
     }
 }
@@ -577,18 +587,25 @@ async function loadUserTags() {
 // 渲染标签选择器
 function renderTagSelector(tags) {
     const tagSelector = document.getElementById('tagSelector');
-    if (!tagSelector) return;
+    if (!tagSelector) {
+        console.warn('⚠️ 找不到标签选择器元素');
+        return;
+    }
     
     tagSelector.innerHTML = '';
     
     // 添加现有标签
-    tags.forEach(tag => {
-        const tagOption = document.createElement('div');
-        tagOption.className = 'tag-option';
-        tagOption.textContent = tag.name || tag;
-        tagOption.onclick = () => toggleTagSelection(tagOption);
-        tagSelector.appendChild(tagOption);
-    });
+    if (tags && tags.length > 0) {
+        tags.forEach(tag => {
+            const tagOption = document.createElement('div');
+            tagOption.className = 'tag-option';
+            tagOption.textContent = tag.name || tag;
+            tagOption.onclick = () => toggleTagSelection(tagOption);
+            tagSelector.appendChild(tagOption);
+        });
+    } else {
+        console.log('📝 没有现有标签，显示默认选项');
+    }
     
     // 添加"创建新标签"选项
     const createTagOption = document.createElement('div');
@@ -596,6 +613,8 @@ function renderTagSelector(tags) {
     createTagOption.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> 创建新标签';
     createTagOption.onclick = () => showCreateTagModal();
     tagSelector.appendChild(createTagOption);
+    
+    console.log('✅ 标签选择器渲染完成');
 }
 
 // 切换标签选择状态
