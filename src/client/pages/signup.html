@@ -5,152 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>注册 - Quest</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/common.css">
-    <style>
-        .auth-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--quest-bg-gradient);
-            padding: var(--spacing-md);
-        }
-        
-        .auth-card {
-            background: white;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-medium);
-            padding: var(--spacing-xxl);
-            width: 100%;
-            max-width: 400px;
-        }
-        
-        .auth-header {
-            text-align: center;
-            margin-bottom: var(--spacing-xxl);
-        }
-        
-        .auth-logo {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--quest-purple);
-            margin-bottom: var(--spacing-sm);
-        }
-        
-        .auth-subtitle {
-            color: var(--text-secondary);
-            font-size: 16px;
-        }
-        
-        .auth-form {
-            margin-bottom: var(--spacing-xl);
-        }
-        
-        .auth-footer {
-            text-align: center;
-            color: var(--text-secondary);
-        }
-        
-        .auth-link {
-            color: var(--quest-purple);
-            text-decoration: none;
-            font-weight: 500;
-        }
-        
-        .auth-link:hover {
-            text-decoration: underline;
-        }
-        
-        .error-message {
-            background: #fee;
-            color: #c33;
-            padding: var(--spacing-md);
-            border-radius: var(--radius-md);
-            margin-bottom: var(--spacing-lg);
-            display: none;
-        }
-        
-        .success-message {
-            background: #efe;
-            color: #363;
-            padding: var(--spacing-md);
-            border-radius: var(--radius-md);
-            margin-bottom: var(--spacing-lg);
-            display: none;
-        }
-        
-        .google-btn {
-            width: 100%;
-            background: white;
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            margin-top: var(--spacing-lg);
-        }
-        
-        .google-btn:hover {
-            background: var(--bg-secondary);
-        }
-        
-        .divider {
-            text-align: center;
-            margin: var(--spacing-lg) 0;
-            position: relative;
-        }
-        
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: var(--border-color);
-        }
-        
-        .divider span {
-            background: white;
-            padding: 0 var(--spacing-md);
-            color: var(--text-light);
-        }
-    </style>
+    <link rel="stylesheet" href="/styles/signup.css">
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <div class="auth-header">
-                <div class="auth-logo">Quest</div>
-                <div class="auth-subtitle">创建你的账户</div>
+    <section class="signup-section">
+        <div class="signup-container">
+            <div class="signup-header">
+                <h1 class="signup-title">创建你的账户</h1>
+                <p class="signup-subtitle">加入 Quest，开始你的知识之旅</p>
             </div>
             
             <div class="error-message" id="errorMessage"></div>
             <div class="success-message" id="successMessage"></div>
             
-            <form class="auth-form" id="signupForm">
+            <form class="signup-form" id="signupForm">
                 <div class="form-group">
                     <label class="form-label" for="email">邮箱</label>
-                    <input type="email" id="email" class="form-input" required>
+                    <input type="email" id="email" class="form-input" placeholder="请输入邮箱地址" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="nickname">昵称</label>
-                    <input type="text" id="nickname" class="form-input" required>
+                    <input type="text" id="nickname" class="form-input" placeholder="请输入昵称" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="password">密码</label>
-                    <input type="password" id="password" class="form-input" required>
-                    <small style="color: var(--text-light); margin-top: var(--spacing-xs); display: block;">
-                        密码至少需要8个字符
-                    </small>
+                    <input type="password" id="password" class="form-input" placeholder="请输入密码" required>
+                    <div class="password-requirements">
+                        <h4>密码要求：</h4>
+                        <ul>
+                            <li>至少8个字符</li>
+                            <li>包含字母和数字</li>
+                            <li>建议包含特殊字符</li>
+                        </ul>
+                    </div>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="confirmPassword">确认密码</label>
-                    <input type="password" id="confirmPassword" class="form-input" required>
+                    <input type="password" id="confirmPassword" class="form-input" placeholder="请再次输入密码" required>
                 </div>
                 
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    注册
+                <div class="terms-checkbox">
+                    <input type="checkbox" id="agreeTerms" required>
+                    <div class="terms-text">
+                        我同意 <a href="/terms" target="_blank">服务条款</a> 和 <a href="/privacy" target="_blank">隐私政策</a>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    创建账户
                 </button>
             </form>
             
@@ -158,7 +66,7 @@
                 <span>或</span>
             </div>
             
-            <button class="btn google-btn" id="googleSignupBtn">
+            <button class="btn btn-google" id="googleSignupBtn">
                 <svg width="20" height="20" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -168,11 +76,12 @@
                 使用 Google 注册
             </button>
             
-            <div class="auth-footer">
-                已有账户？ <a href="/login" class="auth-link">立即登录</a>
+            <div class="login-section">
+                <p class="login-text">已有账户？</p>
+                <a href="/login" class="btn btn-secondary">立即登录</a>
             </div>
         </div>
-    </div>
+    </section>
 
     <script type="module" src="/js/signup.js"></script>
 </body>
