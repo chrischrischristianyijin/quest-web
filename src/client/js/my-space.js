@@ -67,29 +67,46 @@ async function loadUserProfile() {
         }
         
         console.log('👤 开始加载用户资料...');
-        const response = await api.getUserProfile();
         
-        if (response.success && response.data) {
-            currentUser = response.data;
-            console.log('✅ 用户资料加载成功:', currentUser);
-            updateUserProfileUI();
-        } else {
-            console.error('获取用户资料失败:', response);
-            // 使用本地存储的用户信息作为备选
-            const localUser = auth.getCurrentUser();
-            if (localUser) {
-                currentUser = localUser;
-                updateUserProfileUI();
-            }
-        }
-    } catch (error) {
-        console.error('❌ 获取用户资料失败:', error);
-        // 使用本地存储的用户信息作为备选
+        // 尝试从本地存储获取用户信息
         const localUser = auth.getCurrentUser();
         if (localUser) {
             currentUser = localUser;
+            console.log('✅ 使用本地存储的用户信息:', currentUser);
+            updateUserProfileUI();
+            return;
+        }
+        
+        // 如果本地没有，尝试从 API 获取
+        try {
+            const response = await api.getUserProfile();
+            
+            if (response.success && response.data) {
+                currentUser = response.data;
+                console.log('✅ 用户资料加载成功:', currentUser);
+                updateUserProfileUI();
+            } else {
+                throw new Error('API 返回格式错误');
+            }
+        } catch (profileError) {
+            console.warn('⚠️ Profile API 调用失败，使用默认用户信息:', profileError);
+            // 使用默认用户信息
+            currentUser = {
+                id: 'user_' + Date.now(),
+                email: 'user@example.com',
+                nickname: 'User'
+            };
             updateUserProfileUI();
         }
+    } catch (error) {
+        console.error('❌ 获取用户资料失败:', error);
+        // 使用默认用户信息
+        currentUser = {
+            id: 'user_' + Date.now(),
+            email: 'user@example.com',
+            nickname: 'User'
+        };
+        updateUserProfileUI();
     }
 }
 
@@ -153,10 +170,10 @@ function renderInsights() {
         contentCards.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📚</div>
-                <h3>还没有收藏任何内容</h3>
-                <p>开始添加你喜欢的媒体内容到你的收藏中</p>
+                <h3>No content collected yet</h3>
+                <p>Start adding your favorite media content to your collection</p>
                 <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
-                    添加内容
+                    Add Content
                 </button>
             </div>
         `;
@@ -266,8 +283,8 @@ async function initFilterButtons() {
         
         // 基础筛选选项
         const filterOptions = [
-            { key: 'latest', label: '最新' },
-            { key: 'oldest', label: '最早' }
+            { key: 'latest', label: 'Latest' },
+            { key: 'oldest', label: 'Oldest' }
         ];
         
         // 添加标签筛选选项
@@ -293,7 +310,7 @@ async function initFilterButtons() {
         // 添加编辑标签按钮
         const editTagsBtn = document.createElement('button');
         editTagsBtn.className = 'FilterButton edit-tags-btn';
-        editTagsBtn.textContent = '编辑标签';
+        editTagsBtn.textContent = 'Edit Tags';
         editTagsBtn.onclick = () => showEditTagsModal();
         filterButtons.appendChild(editTagsBtn);
         
@@ -301,8 +318,8 @@ async function initFilterButtons() {
         console.error('初始化筛选按钮失败:', error);
         // 显示基础筛选选项
         const filterOptions = [
-            { key: 'latest', label: '最新' },
-            { key: 'oldest', label: '最早' }
+            { key: 'latest', label: 'Latest' },
+            { key: 'oldest', label: 'Oldest' }
         ];
         
         filterButtons.innerHTML = '';
