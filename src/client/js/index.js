@@ -7,11 +7,11 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
     const welcomeTitle = document.getElementById('welcomeTitle');
     const tryButton = document.getElementById('tryButton');
     const ctaButton = document.getElementById('ctaButton');
+    const welcomeBackSection = document.getElementById('welcomeBackSection');
+    const welcomeBackTitle = document.getElementById('welcomeBackTitle');
 
     if (isLoggedIn && user) {
-        navLinks.innerHTML = `
-            <a href="/my-space" class="nav-link">My Space</a>
-        `;
+        navLinks.innerHTML = '';
         authButtons.innerHTML = `
             <a href="/my-space" class="btn btn-outline">My Space</a>
             <button class="btn btn-primary" id="logoutBtn">Log out</button>
@@ -21,11 +21,23 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
         ctaButton.textContent = 'Go to My Space';
         ctaButton.href = '/my-space';
 
-        // Display nickname
-        if (user.nickname) {
-            welcomeTitle.textContent = `Welcome back, ${user.nickname}!`;
-        } else {
-            welcomeTitle.textContent = 'Welcome back to Quest!';
+        // 显示欢迎回来区域
+        if (welcomeBackSection) {
+            welcomeBackSection.style.display = 'block';
+        }
+        
+        // 更新欢迎回来标题
+        if (welcomeBackTitle) {
+            if (user.nickname) {
+                welcomeBackTitle.textContent = `欢迎回来，${user.nickname}！`;
+            } else {
+                welcomeBackTitle.textContent = '欢迎回来，Quest！';
+            }
+        }
+        
+        // 隐藏 Hero Section 的欢迎信息
+        if (welcomeTitle) {
+            welcomeTitle.style.display = 'none';
         }
 
         // Bind logout event
@@ -42,7 +54,18 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
             <a href="/signup" class="btn btn-outline">Sign Up</a>
             <a href="/login" class="btn btn-primary">Log In</a>
         `;
-        welcomeTitle.textContent = 'Welcome to Quest';
+        
+        // 隐藏欢迎回来区域
+        if (welcomeBackSection) {
+            welcomeBackSection.style.display = 'none';
+        }
+        
+        // 显示 Hero Section 的欢迎信息
+        if (welcomeTitle) {
+            welcomeTitle.style.display = 'block';
+            welcomeTitle.textContent = 'Welcome to Quest';
+        }
+        
         tryButton.innerHTML = `
             Start Your Journey
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

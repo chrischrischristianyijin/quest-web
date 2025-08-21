@@ -133,8 +133,11 @@ class AuthManager {
         
         localStorage.setItem('quest_user_session', JSON.stringify({
             user,
+            token: token, // 确保 token 也被保存
             timestamp: Date.now()
         }));
+        
+        console.log('💾 会话已保存:', { user: user.email || user.username, hasToken: !!token });
     }
 
     // 清除用户会话
@@ -178,6 +181,41 @@ class AuthManager {
                 console.error('状态监听器错误:', error);
             }
         });
+    }
+    
+    // 恢复会话状态
+    restoreSession() {
+        try {
+            const sessionData = localStorage.getItem('quest_user_session');
+            if (sessionData) {
+                const session = JSON.parse(sessionData);
+                const now = Date.now();
+                const sessionAge = now - session.timestamp;
+                
+                // 检查会话是否过期（24小时）
+                if (sessionAge < 24 * 60 * 60 * 1000) {
+                    console.log('🔄 恢复会话状态...');
+                    this.user = session.user;
+                    this.isAuthenticated = true;
+                    
+                    // 恢复 token
+                    if (session.token) {
+                        api.setAuthToken(session.token);
+                    }
+                    
+                    console.log('✅ 会话状态已恢复:', this.user);
+                    this.notifyListeners();
+                } else {
+                    console.log('⏰ 会话已过期，清除数据');
+                    this.clearSession();
+                }
+            } else {
+                console.log('📭 没有找到会话数据');
+            }
+        } catch (error) {
+            console.error('❌ 恢复会话状态失败:', error);
+            this.clearSession();
+        }
     }
 }
 

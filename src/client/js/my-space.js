@@ -22,11 +22,19 @@ let currentSearch = '';
 // 页面初始化
 async function initPage() {
     try {
+        console.log('🚀 开始初始化页面...');
+        
+        // 等待认证状态恢复
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // 检查认证状态
         if (!auth.checkAuth()) {
+            console.log('❌ 用户未认证，跳转到登录页');
             window.location.href = '/login';
             return;
         }
+        
+        console.log('✅ 用户已认证，开始加载数据...');
         
         // 加载用户资料
         await loadUserProfile();
@@ -41,9 +49,10 @@ async function initPage() {
         initFilterButtons();
         
     } catch (error) {
-        console.error('页面初始化失败:', error);
+        console.error('❌ 页面初始化失败:', error);
         if (error.message.includes('401') || error.message.includes('unauthorized')) {
             // 认证失败，跳转到登录页
+            console.log('🔒 认证失败，跳转到登录页');
             window.location.href = '/login';
         }
     }
@@ -52,10 +61,17 @@ async function initPage() {
 // 加载用户资料
 async function loadUserProfile() {
     try {
+        // 再次检查认证状态
+        if (!auth.checkAuth()) {
+            throw new Error('用户未认证');
+        }
+        
+        console.log('👤 开始加载用户资料...');
         const response = await api.getUserProfile();
         
         if (response.success && response.data) {
             currentUser = response.data;
+            console.log('✅ 用户资料加载成功:', currentUser);
             updateUserProfileUI();
         } else {
             console.error('获取用户资料失败:', response);
@@ -67,7 +83,7 @@ async function loadUserProfile() {
             }
         }
     } catch (error) {
-        console.error('获取用户资料失败:', error);
+        console.error('❌ 获取用户资料失败:', error);
         // 使用本地存储的用户信息作为备选
         const localUser = auth.getCurrentUser();
         if (localUser) {
@@ -105,17 +121,23 @@ async function loadUserInsights() {
             params.search = currentSearch;
         }
         
+        console.log('🔍 加载用户见解，参数:', params);
+        console.log('👤 当前用户:', currentUser);
+        
         const response = await api.getInsights(params);
+        console.log('📡 API 响应:', response);
         
         if (response.success && response.data) {
-            currentInsights = response.data.insights || [];
+            currentInsights = response.data.insights || response.data || [];
+            console.log('✅ 解析后的见解数据:', currentInsights);
             renderInsights();
         } else {
+            console.warn('⚠️ API 响应格式不正确:', response);
             currentInsights = [];
             renderInsights();
         }
     } catch (error) {
-        console.error('加载见解失败:', error);
+        console.error('❌ 加载见解失败:', error);
         currentInsights = [];
         renderInsights();
     }
@@ -445,8 +467,11 @@ function bindEvents() {
                 const result = await api.createInsight(insightData);
                 console.log('✅ 创建见解成功:', result);
                 
-                // 重新加载内容
-                await loadUserInsights();
+                // 等待一下再重新加载内容，确保后端处理完成
+                setTimeout(async () => {
+                    console.log('🔄 开始重新加载内容...');
+                    await loadUserInsights();
+                }, 1000);
                 
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
