@@ -1,37 +1,15 @@
 {
-  "name": "quest",
+  "name": "quest-web",
   "version": "1.0.0",
   "type": "module",
-  "description": "A platform for collecting and sharing insights",
-  "main": "src/server/index.js",
+  "description": "Quest Web Frontend - A platform for collecting and sharing insights",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --experimental-specifier-resolution=node src/server/index.js",
-    "dev": "nodemon --experimental-specifier-resolution=node src/server/index.js",
-    "deploy": "./deploy.sh",
-    "vercel-build": "echo 'Build completed'"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.49.4",
-    "axios": "^1.8.4",
-    "bcrypt": "^5.1.1",
-    "bcryptjs": "^3.0.2",
-    "body-parser": "^2.2.0",
-    "cheerio": "^1.0.0-rc.12",
-    "dotenv": "^16.3.1",
-    "express": "^4.21.2",
-    "express-validator": "^7.0.1",
-    "jsdom": "^22.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2",
-    "mysql2": "^3.14.0",
-    "node-fetch": "^3.3.2",
-    "puppeteer": "^24.4.0",
-    "request": "^2.88.2",
-    "uuid": "^11.1.0",
-    "winston": "^3.17.0"
+    "start": "http-server src/client -p 8080 -c-1",
+    "dev": "http-server src/client -p 8080 -c-1 -o",
+    "vercel-build": "echo 'Frontend build completed'"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "http-server": "^14.1.1"
   }
 }

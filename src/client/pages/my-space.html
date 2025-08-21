@@ -5,204 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的空间 - Quest</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/common.css">
-    <style>
-        .welcome-section {
-            background: var(--quest-bg-gradient);
-            padding: var(--spacing-xxl) 0;
-            text-align: center;
-        }
-        
-        .welcome-title {
-            font-size: 48px;
-            font-weight: 700;
-            color: var(--quest-purple);
-            margin-bottom: var(--spacing-md);
-        }
-        
-        .welcome-subtitle {
-            font-size: 20px;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-xl);
-        }
-        
-        .content-section {
-            padding: var(--spacing-xxl) 0;
-        }
-        
-        .content-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: var(--spacing-xl);
-            margin-top: var(--spacing-xl);
-        }
-        
-        .content-card {
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-light);
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .content-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-medium);
-        }
-        
-        .content-image {
-            width: 100%;
-            height: 200px;
-            background: var(--bg-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-light);
-            font-size: 48px;
-        }
-        
-        .content-body {
-            padding: var(--spacing-lg);
-        }
-        
-        .content-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-sm);
-        }
-        
-        .content-description {
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-md);
-        }
-        
-        .content-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            color: var(--text-light);
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: var(--spacing-xxl);
-            color: var(--text-secondary);
-        }
-        
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: var(--spacing-lg);
-            opacity: 0.5;
-        }
-        
-        .add-content-btn {
-            margin-top: var(--spacing-lg);
-        }
-    </style>
+    <link rel="stylesheet" href="/styles/my-space.css">
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="nav-logo">Quest</a>
-            <div class="nav-menu">
-                <a href="/my-space" class="nav-link active">我的空间</a>
-                <button class="btn btn-outline" id="logoutBtn">登出</button>
+    <div class="MySpace">
+        <!-- Header Section -->
+        <div class="header-section">
+            <div class="left">
+                <a href="/" class="Quest">
+                    <img src="/public/logo.png" alt="Quest">
+                </a>
+                <div class="WelcomeToYourPersonalSpacePlaceholder">Welcome to your personal space</div>
             </div>
-        </div>
-    </nav>
-
-    <!-- 欢迎区域 -->
-    <section class="welcome-section">
-        <div class="container">
-            <h1 class="welcome-title" id="welcomeTitle">欢迎回来！</h1>
-            <p class="welcome-subtitle">管理你的收藏，分享你的发现</p>
-        </div>
-    </section>
-
-    <!-- 内容区域 -->
-    <section class="content-section">
-        <div class="container">
-            <div class="content-grid" id="contentGrid">
-                <!-- 内容卡片将通过 JavaScript 动态生成 -->
-            </div>
-            
-            <!-- 空状态 -->
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <div class="empty-state-icon">📚</div>
-                <h3>还没有收藏任何内容</h3>
-                <p>开始添加你喜欢的媒体内容到你的收藏中</p>
-                <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
-                    添加内容
+            <div class="right">
+                <button class="header-logout-btn" id="logoutBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17L21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Logout
                 </button>
             </div>
         </div>
-    </section>
 
-    <!-- 添加内容模态框 -->
-    <div id="addContentModal" style="display: none;" class="modal">
-        <div class="modal-content">
-            <h3>添加新内容</h3>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="content-area">
+                <!-- Profile Section -->
+                <div class="profile-section">
+                    <div class="profile-container">
+                        <div class="profile-avatar" id="profileAvatar">
+                            <img src="/public/3d_avatar_12.png" alt="User Avatar">
+                        </div>
+                        <div class="UsernamePlaceholder" id="usernamePlaceholder">Username</div>
+                    </div>
+                </div>
+
+                <!-- Controls Section -->
+                <div class="controls-section">
+                    <div class="left">
+                        <div class="FilterButtons" id="filterButtons">
+                            <button class="FilterButton active" data-filter="latest">Latest</button>
+                            <!-- Tag filter buttons will be dynamically generated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="right">
+                        <div class="search-container">
+                            <div class="Rectangle10">
+                                <div class="Search" id="searchButton">
+                                    <svg width="23" height="24" viewBox="0 0 23 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M20 20.2424L15.9136 16.156M18.1212 10.0606C18.1212 14.5384 14.5384 18.1212 10.0606 18.1212C5.58283 18.1212 2 14.5384 2 10.0606C2 5.58283 5.58283 2 10.0606 2C14.5384 2 18.1212 5.58283 18.1212 10.0606Z" stroke="#747474" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <input type="text" class="SearchMySpace" id="searchInput" placeholder="Search My Space">
+                            </div>
+                        </div>
+                        
+                        <button class="add-content-btn" id="addContentBtnHeader">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Add Content
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content Cards -->
+                <div class="ContentCards" id="contentCards">
+                    <!-- Content cards will be dynamically generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Content Modal -->
+    <div class="add-content-modal" id="addContentModal">
+        <div class="add-content-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Content</h2>
+                <button class="modal-close" id="closeAddModal">&times;</button>
+            </div>
             <form id="addContentForm">
                 <div class="form-group">
-                    <label class="form-label" for="contentUrl">内容链接</label>
+                    <label class="form-label" for="contentUrl">Content URL</label>
                     <input type="url" id="contentUrl" class="form-input" required placeholder="https://...">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="contentTags">标签（可选）</label>
-                    <input type="text" id="contentTags" class="form-input" placeholder="用逗号分隔多个标签">
+                    <label class="form-label" for="tagSelector">Tags (Optional)</label>
+                    <div class="tag-selector" id="tagSelector">
+                        <!-- Tag options will be dynamically generated -->
+                    </div>
                 </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="hideAddContentModal()">取消</button>
-                    <button type="submit" class="btn btn-primary">添加</button>
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn modal-btn-secondary" id="cancelAddBtn">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary" id="addContentBtn">
+                        <span id="addContentBtnText">Add Content</span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <script type="module" src="/js/my-space.js"></script>
-    
-    <style>
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        
-        .modal-content {
-            background: white;
-            padding: var(--spacing-xl);
-            border-radius: var(--radius-lg);
-            width: 90%;
-            max-width: 500px;
-        }
-        
-        .form-actions {
-            display: flex;
-            gap: var(--spacing-md);
-            justify-content: flex-end;
-            margin-top: var(--spacing-xl);
-        }
-    </style>
-    
-    <script>
-        // 简单的模态框控制
-        function showAddContentModal() {
-            document.getElementById('addContentModal').style.display = 'flex';
-        }
-        
-        function hideAddContentModal() {
-            document.getElementById('addContentModal').style.display = 'none';
-        }
-    </script>
 </body>
 </html>
