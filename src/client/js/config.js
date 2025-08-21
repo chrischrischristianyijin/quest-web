@@ -48,3 +48,11 @@ export const API_ENDPOINTS = {
         PREVIEW: (id) => `/api/v1/metadata/preview/${id}`
     }
 };
+
+// Metadata相关API
+const METADATA = {
+    EXTRACT: '/api/v1/metadata/extract',
+    PREVIEW: '/api/v1/metadata/preview',
+    CREATE_INSIGHT: '/api/v1/metadata/create-insight',
+    BATCH_EXTRACT: '/api/v1/metadata/batch-extract'
+};

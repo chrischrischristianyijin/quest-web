@@ -176,11 +176,28 @@ class ApiService {
         });
     }
 
-    async createInsightFromUrl(insightData) {
-        return this.request(API_ENDPOINTS.METADATA.CREATE_INSIGHT, {
-            method: 'POST',
-            body: JSON.stringify(insightData)
-        });
+    // 从URL创建insight（两步合一）
+    async createInsightFromUrl(data) {
+        console.log('🔗 调用createInsightFromUrl API:', data);
+        
+        const formData = new FormData();
+        formData.append('url', data.url);
+        if (data.tags) {
+            formData.append('tags', data.tags);
+        }
+        
+        try {
+            const response = await this.request('/api/v1/metadata/create-insight', {
+                method: 'POST',
+                body: formData
+            });
+            
+            console.log('✅ createInsightFromUrl 成功:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ createInsightFromUrl 失败:', error);
+            throw error;
+        }
     }
 
     async deleteInsight(id) {
