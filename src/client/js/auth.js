@@ -186,9 +186,18 @@ class AuthManager {
     // 恢复会话状态
     restoreSession() {
         try {
+            console.log('🔄 开始恢复会话状态...');
             const sessionData = localStorage.getItem('quest_user_session');
+            console.log('📦 会话数据:', sessionData ? '存在' : '不存在');
+            
             if (sessionData) {
                 const session = JSON.parse(sessionData);
+                console.log('🔍 解析的会话数据:', {
+                    hasUser: !!session.user,
+                    hasToken: !!session.token,
+                    timestamp: session.timestamp
+                });
+                
                 const now = Date.now();
                 const sessionAge = now - session.timestamp;
                 
@@ -200,7 +209,10 @@ class AuthManager {
                     
                     // 恢复 token
                     if (session.token) {
+                        console.log('🔑 恢复 token...');
                         api.setAuthToken(session.token);
+                    } else {
+                        console.log('⚠️ 会话中没有 token');
                     }
                     
                     console.log('✅ 会话状态已恢复:', this.user);

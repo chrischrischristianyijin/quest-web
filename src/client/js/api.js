@@ -35,8 +35,14 @@ class ApiService {
 
         // 添加认证头
         const token = this.getAuthToken();
+        console.log('🔑 当前认证 token:', token ? `${token.substring(0, 20)}...` : '无');
+        console.log('🔑 Token 长度:', token ? token.length : 0);
+        
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
+            console.log('✅ Authorization 头已设置');
+        } else {
+            console.log('❌ 没有 token，无法设置 Authorization 头');
         }
 
         try {
