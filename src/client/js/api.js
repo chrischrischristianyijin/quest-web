@@ -23,23 +23,28 @@ class ApiService {
     }
 
     // 通用请求方法
-    async request(endpoint, options = {}) {
-        const url = `${this.baseUrl}${endpoint}`;
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
-        };
-
-        // 添加认证头
+    async request(url, config = {}) {
         const token = this.getAuthToken();
-        console.log('🔑 当前认证 token:', token ? `${token.substring(0, 20)}...` : '无');
-        console.log('🔑 Token 长度:', token ? token.length : 0);
         
+        // 设置默认配置
+        const defaultConfig = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+        
+        // 合并配置
+        const finalConfig = { ...defaultConfig, ...config };
+        
+        // 如果是FormData，不设置Content-Type，让浏览器自动处理
+        if (config.body instanceof FormData) {
+            delete finalConfig.headers['Content-Type'];
+            console.log('📤 检测到FormData，移除Content-Type头');
+        }
+        
+        // 添加认证头
         if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+            finalConfig.headers['Authorization'] = `Bearer ${token}`;
             console.log('✅ Authorization 头已设置');
         } else {
             console.log('❌ 没有 token，无法设置 Authorization 头');
@@ -51,11 +56,11 @@ class ApiService {
             if (this.useCorsProxy) {
                 // 使用 CORS 代理
                 console.log('🔄 使用 CORS 代理发送请求...');
-                response = await corsProxy.smartRequest(url, config);
+                response = await corsProxy.smartRequest(url, finalConfig);
             } else {
                 // 尝试直接请求
                 console.log('🔄 尝试直接发送请求...');
-                response = await fetch(url, config);
+                response = await fetch(url, finalConfig);
             }
             
             if (!response.ok) {
@@ -73,7 +78,7 @@ class ApiService {
                 this.useCorsProxy = true;
                 
                 try {
-                    const response = await corsProxy.smartRequest(url, config);
+                    const response = await corsProxy.smartRequest(url, finalConfig);
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
                         throw new Error(errorData.message || `HTTP ${response.status}`);
@@ -182,8 +187,20 @@ class ApiService {
         
         const formData = new FormData();
         formData.append('url', data.url);
+        
+        // 根据API文档，使用正确的字段名
         if (data.tags) {
-            formData.append('tags', data.tags);
+            // 将标签转换为数组格式
+            const tagArray = data.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            if (tagArray.length > 0) {
+                formData.append('custom_tags', JSON.stringify(tagArray));
+            }
+        }
+        
+        // 添加调试信息
+        console.log('📤 发送的FormData内容:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}:`, value);
         }
         
         try {
