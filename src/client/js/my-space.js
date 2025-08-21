@@ -471,7 +471,25 @@ function bindEvents() {
                 submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Adding...';
                 submitBtn.disabled = true;
                 
-                const insightData = { url };
+                console.log('🔍 开始提取网页元数据...');
+                
+                // 第一步：提取网页元数据
+                const metadataResult = await api.extractMetadata(url);
+                console.log('📊 元数据提取结果:', metadataResult);
+                
+                if (!metadataResult.success) {
+                    throw new Error('Failed to extract metadata from URL');
+                }
+                
+                const metadata = metadataResult.data;
+                
+                // 第二步：创建 insight
+                const insightData = {
+                    url: url,
+                    title: metadata.title || new URL(url).hostname,
+                    description: metadata.description || `Content from ${new URL(url).hostname}`,
+                    image_url: metadata.image_url || ''
+                };
                 
                 // 获取选中的标签
                 const selectedTags = tagSelector.querySelectorAll('.tag-option.selected');
@@ -481,6 +499,7 @@ function bindEvents() {
                 
                 console.log('📝 创建见解，数据:', insightData);
                 
+                // 使用新的 API 端点创建 insight
                 const result = await api.createInsight(insightData);
                 console.log('✅ 创建见解成功:', result);
                 

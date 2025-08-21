@@ -19,9 +19,9 @@ export const CONFIG = {
 // API 端点
 export const API_ENDPOINTS = {
     AUTH: {
-        REGISTER: '/api/v1/auth/register',
+        REGISTER: '/api/v1/auth/signup',
         LOGIN: '/api/v1/auth/login',
-        LOGOUT: '/api/v1/auth/logout',
+        LOGOUT: '/api/v1/auth/signout',
         GOOGLE: '/api/v1/auth/google/login',
         PROFILE: '/api/v1/auth/profile'
     },
@@ -41,5 +41,10 @@ export const API_ENDPOINTS = {
         UPDATE: (id) => `/api/v1/user-tags/${id}`,
         DELETE: (id) => `/api/v1/user-tags/${id}`
     },
-    METADATA: '/api/v1/metadata'
+    METADATA: {
+        EXTRACT: '/api/v1/metadata/extract',
+        BATCH_EXTRACT: '/api/v1/metadata/batch-extract',
+        CREATE_INSIGHT: '/api/v1/metadata/create-insight',
+        PREVIEW: (id) => `/api/v1/metadata/preview/${id}`
+    }
 };

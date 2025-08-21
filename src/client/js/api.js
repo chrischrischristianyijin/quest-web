@@ -176,6 +176,13 @@ class ApiService {
         });
     }
 
+    async createInsightFromUrl(insightData) {
+        return this.request(API_ENDPOINTS.METADATA.CREATE_INSIGHT, {
+            method: 'POST',
+            body: JSON.stringify(insightData)
+        });
+    }
+
     async deleteInsight(id) {
         return this.request(API_ENDPOINTS.INSIGHTS.DELETE(id), {
             method: 'DELETE'
@@ -207,18 +214,41 @@ class ApiService {
         });
     }
 
-    // 元数据
-    async getMetadata(url) {
+    // 元数据相关
+    async extractMetadata(url) {
         try {
-            return await this.request(`${API_ENDPOINTS.METADATA}?url=${encodeURIComponent(url)}`);
+            const formData = new URLSearchParams();
+            formData.append('url', url);
+            
+            return await this.request(API_ENDPOINTS.METADATA.EXTRACT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            });
         } catch (error) {
             // 返回默认元数据
             return {
-                title: new URL(url).hostname,
-                description: `Content from ${new URL(url).hostname}`,
-                image_url: ''
+                success: true,
+                data: {
+                    title: new URL(url).hostname,
+                    description: `Content from ${new URL(url).hostname}`,
+                    image_url: ''
+                }
             };
         }
+    }
+
+    async batchExtractMetadata(urls) {
+        return this.request(API_ENDPOINTS.METADATA.BATCH_EXTRACT, {
+            method: 'POST',
+            body: JSON.stringify({ urls })
+        });
+    }
+
+    async previewInsight(insightId) {
+        return this.request(API_ENDPOINTS.METADATA.PREVIEW(insightId));
     }
 }
 
