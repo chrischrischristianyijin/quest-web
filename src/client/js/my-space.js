@@ -471,36 +471,25 @@ function bindEvents() {
                 submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Adding...';
                 submitBtn.disabled = true;
                 
-                console.log('🔍 开始提取网页元数据...');
-                
-                // 第一步：提取网页元数据
-                const metadataResult = await api.extractMetadata(url);
-                console.log('📊 元数据提取结果:', metadataResult);
-                
-                if (!metadataResult.success) {
-                    throw new Error('Failed to extract metadata from URL');
-                }
-                
-                const metadata = metadataResult.data;
-                
-                // 第二步：创建 insight
-                const insightData = {
-                    url: url,
-                    title: metadata.title || new URL(url).hostname,
-                    description: metadata.description || `Content from ${new URL(url).hostname}`,
-                    image_url: metadata.image_url || ''
-                };
+                console.log('🔍 开始从URL创建insight...');
                 
                 // 获取选中的标签
                 const selectedTags = tagSelector.querySelectorAll('.tag-option.selected');
+                let tags = '';
                 if (selectedTags.length > 0) {
-                    insightData.tags = Array.from(selectedTags).map(tag => tag.textContent);
+                    tags = Array.from(selectedTags).map(tag => tag.textContent).join(',');
                 }
                 
-                console.log('📝 创建见解，数据:', insightData);
+                // 使用新的 create-insight API 端点（两步合一）
+                const insightData = {
+                    url: url,
+                    tags: tags
+                };
+                
+                console.log('📝 创建insight，数据:', insightData);
                 
                 // 使用新的 API 端点创建 insight
-                const result = await api.createInsight(insightData);
+                const result = await api.createInsightFromUrl(insightData);
                 console.log('✅ 创建见解成功:', result);
                 
                 // 等待一下再重新加载内容，确保后端处理完成
@@ -536,8 +525,10 @@ function bindEvents() {
             } finally {
                 // 恢复按钮状态
                 const submitBtn = document.getElementById('addContentBtn');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
+                if (submitBtn) {
+                    submitBtn.innerHTML = submitBtn.innerHTML.includes('Adding...') ? 'Add Content' : submitBtn.innerHTML;
+                    submitBtn.disabled = false;
+                }
             }
         });
     }
