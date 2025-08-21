@@ -1246,6 +1246,129 @@
             font-weight: var(--font-weight-body-text);
         }
 
+        /* Scrolling Logo Banner */
+        .logo-banner {
+            background: linear-gradient(135deg, rgba(75, 38, 79, 0.05) 0%, rgba(142, 79, 157, 0.05) 100%);
+            padding: 40px 0;
+            overflow: hidden;
+            position: relative;
+            border-top: 1px solid rgba(75, 38, 79, 0.1);
+            border-bottom: 1px solid rgba(75, 38, 79, 0.1);
+        }
+
+        .logo-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0.8) 0%, 
+                transparent 20%, 
+                transparent 80%, 
+                rgba(255, 255, 255, 0.8) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .logo-scroll-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: max-content;
+        }
+
+        .logo-row {
+            display: flex;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .logo-row:first-child {
+            animation: scroll-left 25s linear infinite;
+        }
+
+        .logo-row:last-child {
+            animation: scroll-right 35s linear infinite;
+        }
+
+        .logo-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .logo-item:hover {
+            opacity: 1;
+        }
+
+        .logo-banner::after {
+            content: 'QUEST';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 120px;
+            font-weight: 900;
+            color: rgba(75, 38, 79, 0.03);
+            z-index: 1;
+            white-space: nowrap;
+            pointer-events: none;
+            font-family: 'Rubik', sans-serif;
+        }
+
+        .logo-placeholder {
+            width: 120px;
+            height: 40px;
+            background: var(--quest-gradient);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 20px rgba(75, 38, 79, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo-placeholder span {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--quest-purple);
+        }
+
+        @keyframes scroll-left {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        @keyframes scroll-right {
+            0% {
+                transform: translateX(-50%);
+            }
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        /* Pause animation on hover */
+        .logo-banner:hover .logo-row {
+            animation-play-state: paused;
+        }
+
         /* 响应式设计 */
         @media (max-width: 768px) {
 
@@ -1311,6 +1434,29 @@
             .home-cta {
                 padding: 18px 35px;
                 font-size: 1.1rem !important;
+            }
+
+            .logo-banner {
+                padding: 30px 0;
+            }
+            
+            .logo-item {
+                min-width: 60px;
+            }
+            
+            .logo-placeholder {
+                width: 100px;
+                height: 35px;
+                font-size: 14px;
+            }
+            
+            .logo-banner::after {
+                font-size: 80px;
+            }
+            
+            .logo-placeholder span {
+                font-size: 12px;
+                padding: 1px 6px;
             }
 
             .signup-section {
@@ -2297,6 +2443,207 @@
                 </a>
             </div>
         </section>
+
+        <!-- Scrolling Logo Banner -->
+        <div class="logo-banner">
+            <div class="logo-scroll-container">
+                <!-- First row -->
+                <div class="logo-row">
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>Q</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>I</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>C</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>D</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>E</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>F</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>G</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>H</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>J</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>K</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>L</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>M</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>N</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>O</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>P</span></div>
+                    </div>
+                    <!-- Duplicate for seamless loop -->
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>Q</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>I</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>C</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>D</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>E</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>F</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>G</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>H</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>J</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>K</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>L</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>M</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>N</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>O</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>P</span></div>
+                    </div>
+                </div>
+                
+                <!-- Second row -->
+                <div class="logo-row">
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>A</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>B</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>C</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>D</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>E</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>F</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>G</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>H</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>I</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>J</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>K</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>L</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>M</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>N</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>O</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>P</span></div>
+                    </div>
+                    <!-- Duplicate for seamless loop -->
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>A</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>B</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>C</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>D</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>E</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>F</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>G</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>H</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>I</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>J</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>K</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>L</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>M</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>P</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>O</span></div>
+                    </div>
+                    <div class="logo-item">
+                        <div class="logo-placeholder"><span>P</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Extension Section (replacing About Us) -->
         <section id="about-us-section" class="extension-section">

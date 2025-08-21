@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest - Scrolling Logo Banner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --quest-purple: #4B264F;
+            --quest-light-purple: #8E4F9D;
+            --quest-orange: #D76E13;
+            --quest-gradient: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rubik', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Section Content */
+        .section {
+            padding: 80px 2rem;
+            text-align: center;
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .section:nth-child(odd) {
+            background: white;
+        }
+
+        .section:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--quest-purple);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        .section-description {
+            font-size: 1.2rem;
+            color: var(--quest-light-purple);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Scrolling Logo Banner */
+        .logo-banner {
+            background: linear-gradient(135deg, rgba(75, 38, 79, 0.05) 0%, rgba(142, 79, 157, 0.05) 100%);
+            padding: 40px 0;
+            overflow: hidden;
+            position: relative;
+            border-top: 1px solid rgba(75, 38, 79, 0.1);
+            border-bottom: 1px solid rgba(75, 38, 79, 0.1);
+        }
+
+        .logo-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0.8) 0%, 
+                transparent 20%, 
+                transparent 80%, 
+                rgba(255, 255, 255, 0.8) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .logo-scroll-container {
+            display: flex;
+            align-items: center;
+            gap: 60px;
+            animation: scroll-logos 30s linear infinite;
+            width: max-content;
+        }
+
+        .logo-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            min-width: 120px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .logo-item:hover {
+            opacity: 1;
+        }
+
+        .logo-placeholder {
+            width: 80px;
+            height: 80px;
+            background: var(--quest-gradient);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 24px;
+            box-shadow: 0 4px 20px rgba(75, 38, 79, 0.2);
+        }
+
+        .logo-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--quest-purple);
+            text-align: center;
+            max-width: 100px;
+        }
+
+        /* Duplicate logos for seamless scrolling */
+        .logo-scroll-container::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 1px;
+        }
+
+        @keyframes scroll-logos {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        /* Pause animation on hover */
+        .logo-banner:hover .logo-scroll-container {
+            animation-play-state: paused;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .section {
+                padding: 60px 1rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .logo-banner {
+                padding: 30px 0;
+            }
+            
+            .logo-item {
+                min-width: 100px;
+            }
+            
+            .logo-placeholder {
+                width: 60px;
+                height: 60px;
+                font-size: 18px;
+            }
+            
+            .logo-text {
+                font-size: 12px;
+            }
+        }
+
+        /* Add some sample content sections */
+        .hero-section {
+            background: var(--quest-gradient);
+            color: white;
+            min-height: 80vh;
+        }
+
+        .hero-section .section-title {
+            color: white;
+            font-size: 4rem;
+            margin-bottom: 2rem;
+        }
+
+        .hero-section .section-description {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.4rem;
+        }
+
+        .cta-section {
+            background: var(--quest-orange);
+            color: white;
+        }
+
+        .cta-section .section-title {
+            color: white;
+        }
+
+        .cta-section .section-description {
+            color: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="section hero-section">
+        <h1 class="section-title">Welcome to Quest</h1>
+        <p class="section-description">Curate your world with our innovative platform</p>
+    </section>
+
+    <!-- Logo Banner -->
+    <div class="logo-banner">
+        <div class="logo-scroll-container">
+            <!-- First set of logos -->
+            <div class="logo-item">
+                <div class="logo-placeholder">Q</div>
+                <div class="logo-text">Quest</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">I</div>
+                <div class="logo-text">Innovate</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">C</div>
+                <div class="logo-text">Create</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">D</div>
+                <div class="logo-text">Discover</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">E</div>
+                <div class="logo-text">Explore</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">F</div>
+                <div class="logo-text">Future</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">G</div>
+                <div class="logo-text">Grow</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">H</div>
+                <div class="logo-text">Help</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">J</div>
+                <div class="logo-text">Join</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">K</div>
+                <div class="logo-text">Knowledge</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">L</div>
+                <div class="logo-text">Learn</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">M</div>
+                <div class="logo-text">Master</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">N</div>
+                <div class="logo-text">Navigate</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">O</div>
+                <div class="logo-text">Organize</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">P</div>
+                <div class="logo-text">Progress</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">Q</div>
+                <div class="logo-text">Quest</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">I</div>
+                <div class="logo-text">Innovate</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">C</div>
+                <div class="logo-text">Create</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">D</div>
+                <div class="logo-text">Discover</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">E</div>
+                <div class="logo-text">Explore</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">F</div>
+                <div class="logo-text">Future</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">G</div>
+                <div class="logo-text">Grow</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">H</div>
+                <div class="logo-text">Help</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">J</div>
+                <div class="logo-text">Join</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">K</div>
+                <div class="logo-text">Knowledge</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">L</div>
+                <div class="logo-text">Learn</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">M</div>
+                <div class="logo-text">Master</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">N</div>
+                <div class="logo-text">Navigate</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">O</div>
+                <div class="logo-text">Organize</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder">P</div>
+                <div class="logo-text">Progress</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Section -->
+    <section class="section">
+        <h2 class="section-title">Features</h2>
+        <p class="section-description">Discover what makes Quest the perfect platform for curating your digital world</p>
+    </section>
+
+    <!-- Another Logo Banner -->
+    <div class="logo-banner">
+        <div class="logo-scroll-container" style="animation-direction: reverse; animation-duration: 25s;">
+            <!-- Second set of logos with different content -->
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">1</div>
+                <div class="logo-text">First</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">2</div>
+                <div class="logo-text">Second</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">3</div>
+                <div class="logo-text">Third</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">4</div>
+                <div class="logo-text">Fourth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">5</div>
+                <div class="logo-text">Fifth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">6</div>
+                <div class="logo-text">Sixth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">7</div>
+                <div class="logo-text">Seventh</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">8</div>
+                <div class="logo-text">Eighth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">9</div>
+                <div class="logo-text">Ninth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">10</div>
+                <div class="logo-text">Tenth</div>
+            </div>
+            <!-- Duplicate for seamless loop -->
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">1</div>
+                <div class="logo-text">First</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">2</div>
+                <div class="logo-text">Second</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">3</div>
+                <div class="logo-text">Third</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">4</div>
+                <div class="logo-text">Fourth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">5</div>
+                <div class="logo-text">Fifth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">6</div>
+                <div class="logo-text">Sixth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">7</div>
+                <div class="logo-text">Seventh</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">8</div>
+                <div class="logo-text">Eighth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">9</div>
+                <div class="logo-text">Ninth</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-orange);">10</div>
+                <div class="logo-text">Tenth</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Another Content Section -->
+    <section class="section">
+        <h2 class="section-title">Benefits</h2>
+        <p class="section-description">Experience the advantages of using Quest for your content curation needs</p>
+    </section>
+
+    <!-- Final Logo Banner -->
+    <div class="logo-banner">
+        <div class="logo-scroll-container" style="animation-duration: 35s;">
+            <!-- Third set of logos -->
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">A</div>
+                <div class="logo-text">Amazing</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">B</div>
+                <div class="logo-text">Brilliant</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">C</div>
+                <div class="logo-text">Creative</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">D</div>
+                <div class="logo-text">Dynamic</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">E</div>
+                <div class="logo-text">Excellent</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">F</div>
+                <div class="logo-text">Fantastic</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">G</div>
+                <div class="logo-text">Great</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">H</div>
+                <div class="logo-text">Helpful</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">I</div>
+                <div class="logo-text">Innovative</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">J</div>
+                <div class="logo-text">Joyful</div>
+            </div>
+            <!-- Duplicate for seamless loop -->
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">A</div>
+                <div class="logo-text">Amazing</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">B</div>
+                <div class="logo-text">Brilliant</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">C</div>
+                <div class="logo-text">Creative</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">D</div>
+                <div class="logo-text">Dynamic</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">E</div>
+                <div class="logo-text">Excellent</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">F</div>
+                <div class="logo-text">Fantastic</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">G</div>
+                <div class="logo-text">Great</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">H</div>
+                <div class="logo-text">Helpful</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">I</div>
+                <div class="logo-text">Innovative</div>
+            </div>
+            <div class="logo-item">
+                <div class="logo-placeholder" style="background: var(--quest-light-purple);">J</div>
+                <div class="logo-text">Joyful</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <section class="section cta-section">
+        <h2 class="section-title">Get Started</h2>
+        <p class="section-description">Join thousands of users who are already curating their world with Quest</p>
+    </section>
+
+    <script>
+        // Optional: Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Pause animation when user is not actively viewing
+            let isVisible = true;
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        isVisible = true;
+                        entry.target.style.animationPlayState = 'running';
+                    } else {
+                        isVisible = false;
+                        entry.target.style.animationPlayState = 'paused';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            // Observe all logo containers
+            document.querySelectorAll('.logo-scroll-container').forEach(container => {
+                observer.observe(container);
+            });
+        });
+    </script>
+</body>
+</html>
