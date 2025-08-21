@@ -37,6 +37,8 @@ export const API_ENDPOINTS = {
     TAGS: {
         LIST: '/api/v1/user-tags',
         CREATE: '/api/v1/user-tags',
+        GET: (id) => `/api/v1/user-tags/${id}`,
+        UPDATE: (id) => `/api/v1/user-tags/${id}`,
         DELETE: (id) => `/api/v1/user-tags/${id}`
     },
     METADATA: '/api/v1/metadata'
