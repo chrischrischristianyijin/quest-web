@@ -157,8 +157,10 @@ class ApiService {
     }
 
     // 见解相关
-    async getInsights() {
-        return this.request(API_ENDPOINTS.INSIGHTS.LIST);
+    async getInsights(params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        const endpoint = queryString ? `${API_ENDPOINTS.INSIGHTS.LIST}?${queryString}` : API_ENDPOINTS.INSIGHTS.LIST;
+        return this.request(endpoint);
     }
 
     async createInsight(insightData) {
@@ -182,6 +184,13 @@ class ApiService {
     async createTag(tagData) {
         return this.request(API_ENDPOINTS.TAGS.CREATE, {
             method: 'POST',
+            body: JSON.stringify(tagData)
+        });
+    }
+
+    async updateTag(id, tagData) {
+        return this.request(API_ENDPOINTS.TAGS.UPDATE(id), {
+            method: 'PUT',
             body: JSON.stringify(tagData)
         });
     }
