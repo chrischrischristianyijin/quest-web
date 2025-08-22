@@ -83,26 +83,37 @@ class ApiService {
     async login(credentials) {
         try {
             console.log('🔐 发送登录请求:', credentials);
-            const response = await this.request(API_ENDPOINTS.AUTH.LOGIN, {
+            
+            // 登录请求不需要检查token过期，直接发送
+            const response = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(credentials)
             });
             
-            console.log('📡 登录 API 原始响应:', response);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('📡 登录 API 原始响应:', result);
             
             // 转换后端格式到前端期望格式
-            if (response && response.success && response.data) {
+            if (result && result.success && result.data) {
                 return {
                     user: {
-                        id: response.data.user_id,
+                        id: result.data.user_id,
                         email: credentials.email,
                         // 注意：后端没有返回完整的用户信息，只有 user_id
                         // 需要后续调用 profile API 获取完整信息
                     },
-                    token: response.data.access_token
+                    token: result.data.access_token
                 };
             } else {
-                throw new Error(response?.message || '登录失败');
+                throw new Error(result?.message || '登录失败');
             }
         } catch (error) {
             console.error('❌ 登录 API 调用失败:', error);
@@ -114,21 +125,32 @@ class ApiService {
     async signup(userData) {
         try {
             console.log('📝 发送注册请求:', userData);
-            const response = await this.request(API_ENDPOINTS.AUTH.REGISTER, {
+            
+            // 注册请求不需要检查token过期，直接发送
+            const response = await fetch(`${this.baseUrl}/api/v1/auth/signup`, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(userData)
             });
             
-            console.log('📡 注册 API 原始响应:', response);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('📡 注册 API 原始响应:', result);
             
             // 转换后端格式到前端期望格式
-            if (response && response.success && response.data) {
+            if (result && result.success && result.data) {
                 return {
-                    user: response.data,
-                    token: response.data.access_token || null
+                    user: result.data,
+                    token: result.data.access_token || null
                 };
             } else {
-                throw new Error(response?.message || '注册失败');
+                throw new Error(result?.message || '注册失败');
             }
         } catch (error) {
             console.error('❌ 注册 API 调用失败:', error);
