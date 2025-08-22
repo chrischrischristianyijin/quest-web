@@ -29,8 +29,8 @@ export const API_ENDPOINTS = {
         FOLLOW: '/api/v1/user/follow'
     },
     INSIGHTS: {
-        LIST: '/api/v1/insights',
-        CREATE: '/api/v1/insights',
+        LIST: '/api/v1/insights/all',
+        CREATE: '/api/v1/metadata/create-insight',
         UPDATE: (id) => `/api/v1/insights/${id}`,
         DELETE: (id) => `/api/v1/insights/${id}`
     },
