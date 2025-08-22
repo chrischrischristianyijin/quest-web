@@ -178,7 +178,9 @@ class ApiService {
     async getInsights(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         const endpoint = queryString ? `${API_ENDPOINTS.INSIGHTS.LIST}?${queryString}` : API_ENDPOINTS.INSIGHTS.LIST;
-        return this.request(endpoint);
+        const fullUrl = `${this.baseUrl}${endpoint}`;
+        console.log('🔍 getInsights 完整URL:', fullUrl);
+        return this.request(fullUrl);
     }
 
     async createInsight(insightData) {
