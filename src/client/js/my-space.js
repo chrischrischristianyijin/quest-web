@@ -502,7 +502,7 @@ async function initFilterButtons() {
         filterButtons.innerHTML = '';
         filterOptions.forEach(option => {
             const button = document.createElement('button');
-            button.className = 'FilterButton ${option.key === currentFilter ? 'active' : ''}';
+            button.className = `FilterButton ${option.key === currentFilter ? 'active' : ''}`;
             button.textContent = option.label;
             button.dataset.filter = option.key;
             button.onclick = () => setFilter(option.key);
