@@ -24,6 +24,9 @@ async function initPage() {
     try {
         console.log('🚀 初始化My Space页面...');
         
+        // 恢复会话状态
+        auth.restoreSession();
+        
         // 检查认证状态
         if (!auth.checkAuth()) {
             console.log('❌ 用户未认证，重定向到登录页面');
@@ -360,19 +363,30 @@ function setFilter(filter) {
 function getFilteredInsights() {
     let filteredInsights = [...currentInsights];
     
+    console.log('🔍 当前筛选条件:', currentFilter);
+    console.log('📚 当前文章数据:', currentInsights);
+    
     // 根据筛选条件过滤
     if (currentFilter && currentFilter.startsWith('tag_')) {
         // 标签筛选
         const tagData = currentFilter.replace('tag_', '');
+        console.log('🏷️ 筛选标签ID:', tagData);
+        
         filteredInsights = currentInsights.filter(insight => {
+            console.log('📖 检查文章:', insight.title, '标签:', insight.tags);
             if (insight.tags && insight.tags.length > 0) {
-                return insight.tags.some(tag => {
+                const hasTag = insight.tags.some(tag => {
                     const tagId = typeof tag === 'string' ? tag : (tag.id || tag.name);
+                    console.log('🏷️ 文章标签:', tag, '标签ID:', tagId, '匹配:', tagId === tagData);
                     return tagId === tagData;
                 });
+                console.log('✅ 文章是否包含标签:', hasTag);
+                return hasTag;
             }
             return false;
         });
+        
+        console.log('🎯 筛选后的文章数量:', filteredInsights.length);
     } else if (currentFilter === 'latest') {
         // 最新排序
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
