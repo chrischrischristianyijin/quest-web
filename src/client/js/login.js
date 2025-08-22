@@ -73,7 +73,7 @@ async function handleLogin(email, password) {
             setTimeout(() => {
                 // 登录成功，重定向到My Space页面
                 console.log('✅ 登录成功，重定向到My Space页面');
-                window.location.href = '/pages/my-space.html';
+                window.location.href = '/my-space';
             }, 1000);
         } else {
             // 登录失败，显示错误消息
@@ -134,7 +134,7 @@ passwordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // 如果用户已经登录，直接跳转
     if (auth.checkAuth()) {
-        window.location.href = '/pages/my-space.html';
+                        window.location.href = '/my-space';
     }
     
     // 聚焦到邮箱输入框

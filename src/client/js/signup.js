@@ -162,7 +162,7 @@ async function handleSignup(email, nickname, password) {
             // 注册成功，重定向到My Space页面
             console.log('✅ 注册成功，重定向到My Space页面');
             setTimeout(() => {
-                window.location.href = '/pages/my-space.html';
+                window.location.href = '/my-space';
             }, 1000);
         }
     } catch (error) {
@@ -242,7 +242,7 @@ confirmPasswordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // 如果用户已经登录，直接跳转
     if (auth.checkAuth()) {
-        window.location.href = '/pages/my-space.html';
+                        window.location.href = '/my-space';
     }
     
     // 聚焦到邮箱输入框

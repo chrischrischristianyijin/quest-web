@@ -30,14 +30,14 @@ async function initPage() {
         // 检查认证状态
         if (!auth.checkAuth()) {
             console.log('❌ 用户未认证，重定向到登录页面');
-            window.location.href = '/pages/login.html';
+            window.location.href = '/login';
             return;
         }
         
         // 检查token是否过期
         if (!(await auth.checkAndHandleTokenExpiration())) {
             console.log('⏰ Token已过期，重定向到登录页面');
-            window.location.href = '/pages/login.html';
+            window.location.href = '/login';
             return;
         }
         
@@ -64,7 +64,7 @@ async function initPage() {
         
         // 如果是认证错误，重定向到登录页面
         if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
-            window.location.href = '/pages/login.html';
+            window.location.href = '/login';
             return;
         }
         
@@ -166,7 +166,7 @@ async function loadUserInsights() {
             showErrorMessage('Authentication failed. Please log in again.');
             // 重定向到登录页面
             setTimeout(() => {
-                window.location.href = '/pages/login.html';
+                window.location.href = '/login';
             }, 2000);
         } else {
             showErrorMessage('Failed to load insights. Please refresh and try again.');
@@ -490,7 +490,7 @@ function bindEvents() {
             auth.clearSession();
             
             // 立即跳转到登录页面
-            window.location.href = '/pages/login.html';
+            window.location.href = '/login';
         });
     }
     
@@ -697,7 +697,7 @@ async function loadUserTags() {
             showErrorMessage('Authentication failed. Please log in again.');
             // 重定向到登录页面
             setTimeout(() => {
-                window.location.href = '/pages/login.html';
+                window.location.href = '/login';
             }, 2000);
         } else {
             showErrorMessage('Failed to load tags. Please refresh and try again.');
