@@ -8,8 +8,16 @@
   ],
   "routes": [
     {
-      "src": "/",
-      "dest": "/src/client/pages/index.html"
+      "src": "/styles/(.*)",
+      "dest": "/src/client/styles/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/src/client/js/$1"
+    },
+    {
+      "src": "/public/(.*)",
+      "dest": "/src/client/public/$1"
     },
     {
       "src": "/login",
@@ -24,20 +32,8 @@
       "dest": "/src/client/pages/my-space.html"
     },
     {
-      "src": "/styles/(.*)",
-      "dest": "/src/client/styles/$1"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "/src/client/js/$1"
-    },
-    {
-      "src": "/public/(.*)",
-      "dest": "/src/client/public/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/src/client/pages/$1"
+      "src": "/",
+      "dest": "/src/client/pages/index.html"
     }
   ]
 } 
