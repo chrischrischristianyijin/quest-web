@@ -316,14 +316,7 @@ function createInsightCard(insight) {
             
             tagElement.textContent = tagText;
             
-            // 处理标签颜色
-            let tagColor = '#667eea'; // 默认颜色
-            if (tag && typeof tag === 'object' && tag.color) {
-                tagColor = tag.color;
-            }
-            
-            tagElement.style.backgroundColor = tagColor;
-            tagElement.style.color = 'white';
+            // 不再设置标签颜色，使用CSS默认样式
             
             console.log(`🏷️ 创建标签元素:`, { text: tagText, color: tagColor });
             
@@ -335,8 +328,6 @@ function createInsightCard(insight) {
         const noTagElement = document.createElement('span');
         noTagElement.className = 'content-card-tag no-tag';
         noTagElement.textContent = '无标签';
-        noTagElement.style.backgroundColor = '#e0e0e0';
-        noTagElement.style.color = '#666';
         tags.appendChild(noTagElement);
     }
     
@@ -382,67 +373,112 @@ async function initFilterButtons() {
         
         console.log('🏷️ 获取到用户标签:', userTags);
         
-        // 基础筛选选项
-        const filterOptions = [
-            { key: 'all', label: 'All' },
-            { key: 'latest', label: 'Latest' },
-            { key: 'oldest', label: 'Oldest' }
-        ];
-        
-        // 添加标签筛选选项
-        userTags.forEach(tag => {
-            console.log('🏷️ 处理用户标签:', tag);
-            
-            // 确保标签有有效的ID和名称
-            if (tag && tag.id && tag.name) {
-                const tagKey = `tag_${tag.id}`;
-                filterOptions.push({
-                    key: tagKey,
-                    label: tag.name,
-                    tag: tag
-                });
-                console.log('✅ 添加标签筛选选项:', tagKey, tag.name);
-            } else {
-                console.warn('⚠️ 跳过无效标签:', tag);
-            }
-        });
-        
         // 清空现有按钮
         filterButtons.innerHTML = '';
         
-        // 创建筛选按钮
-        filterOptions.forEach(option => {
-            const button = document.createElement('button');
-            button.className = `FilterButton ${option.key === currentFilter ? 'active' : ''}`;
-            button.textContent = option.label;
-            button.dataset.filter = option.key;
-            
-            // 为标签按钮添加颜色标识
-            if (option.key.startsWith('tag_') && option.tag) {
-                button.style.borderLeft = `4px solid ${option.tag.color || '#667eea'}`;
-                button.style.paddingLeft = '12px';
+        // 创建三个主要筛选按钮
+        const mainFilterButtons = [
+            {
+                key: 'latest',
+                label: 'Latest',
+                icon: '📅',
+                type: 'dropdown',
+                options: [
+                    { key: 'latest', label: 'Latest First' },
+                    { key: 'oldest', label: 'Oldest First' }
+                ]
+            },
+            {
+                key: 'tags',
+                label: 'Tags',
+                icon: '🏷️',
+                type: 'dropdown',
+                options: userTags.map(tag => ({
+                    key: `tag_${tag.id}`,
+                    label: tag.name,
+                    color: tag.color,
+                    tag: tag
+                }))
+            },
+            {
+                key: 'type',
+                label: 'Type',
+                icon: '📚',
+                type: 'dropdown',
+                options: [
+                    { key: 'all', label: 'All Content' },
+                    { key: 'articles', label: 'Articles' },
+                    { key: 'videos', label: 'Videos' },
+                    { key: 'images', label: 'Images' }
+                ]
             }
+        ];
+        
+        // 创建筛选按钮
+        mainFilterButtons.forEach(filterConfig => {
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'filter-button-container';
             
-            button.onclick = () => {
-                console.log('🔍 用户点击筛选按钮:', option.key);
-                setFilter(option.key);
-            };
+            const button = document.createElement('button');
+            button.className = 'FilterButton main-filter-btn';
+            button.dataset.filter = filterConfig.key;
+            button.innerHTML = `
+                <span class="filter-icon">${filterConfig.icon}</span>
+                <span class="filter-label">${filterConfig.label}</span>
+                <svg class="filter-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
             
-            filterButtons.appendChild(button);
-            console.log('✅ 创建筛选按钮:', option.key, option.label);
+            // 创建下拉选项
+            const dropdownOptions = document.createElement('div');
+            dropdownOptions.className = 'filter-dropdown-options';
+            dropdownOptions.innerHTML = filterConfig.options.map(option => `
+                <div class="filter-option" data-filter="${option.key}">
+                    <span class="filter-option-label">${option.label}</span>
+                </div>
+            `).join('');
+            
+            // 绑定点击事件
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                buttonContainer.classList.toggle('open');
+                
+                // 更新箭头方向
+                const arrow = button.querySelector('.filter-arrow');
+                if (arrow) {
+                    arrow.style.transform = buttonContainer.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+                }
+            });
+            
+                    // 绑定选项点击事件
+        dropdownOptions.addEventListener('click', (e) => {
+            const option = e.target.closest('.filter-option');
+            if (option) {
+                const filterKey = option.dataset.filter;
+                console.log('🔍 用户选择筛选选项:', filterKey);
+                setFilter(filterKey);
+                
+                // 关闭所有下拉框
+                document.querySelectorAll('.filter-button-container').forEach(container => {
+                    container.classList.remove('open');
+                    const arrow = container.querySelector('.filter-arrow');
+                    if (arrow) arrow.style.transform = 'rotate(0deg)';
+                });
+            }
         });
         
-        // 添加清除筛选按钮（当有筛选条件时显示）
-        if (currentFilter && currentFilter !== 'all') {
-            const clearFilterBtn = document.createElement('button');
-            clearFilterBtn.className = 'FilterButton clear-filter-btn';
-            clearFilterBtn.textContent = 'Clear Filter';
-            clearFilterBtn.onclick = () => {
-                console.log('🧹 清除筛选条件');
-                setFilter('all');
-            };
-            filterButtons.appendChild(clearFilterBtn);
-        }
+        // 阻止下拉选项点击事件冒泡
+        dropdownOptions.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+            
+            buttonContainer.appendChild(button);
+            buttonContainer.appendChild(dropdownOptions);
+            filterButtons.appendChild(buttonContainer);
+            
+            console.log('✅ 创建筛选按钮:', filterConfig.key, filterConfig.label);
+        });
         
         // 添加编辑标签按钮
         const editTagsBtn = document.createElement('button');
@@ -451,7 +487,7 @@ async function initFilterButtons() {
         editTagsBtn.onclick = () => showEditTagsModal();
         filterButtons.appendChild(editTagsBtn);
         
-        console.log('✅ 筛选按钮初始化完成，共', filterOptions.length, '个选项');
+        console.log('✅ 筛选按钮初始化完成，共', mainFilterButtons.length, '个主要按钮');
         
     } catch (error) {
         console.error('❌ 初始化筛选按钮失败:', error);
@@ -466,7 +502,7 @@ async function initFilterButtons() {
         filterButtons.innerHTML = '';
         filterOptions.forEach(option => {
             const button = document.createElement('button');
-            button.className = `FilterButton ${option.key === currentFilter ? 'active' : ''}`;
+            button.className = 'FilterButton ${option.key === currentFilter ? 'active' : ''}';
             button.textContent = option.label;
             button.dataset.filter = option.key;
             button.onclick = () => setFilter(option.key);
@@ -849,8 +885,11 @@ function bindEvents() {
     // 绑定标签相关事件
     bindTagEvents();
     
-    // 绑定标签选择器下拉事件
-    bindTagSelectorEvents();
+            // 绑定标签选择器下拉事件
+        bindTagSelectorEvents();
+        
+        // 绑定筛选按钮点击外部关闭事件
+        bindFilterButtonOutsideClick();
 }
 
 // 加载用户标签
@@ -918,7 +957,6 @@ function renderTagSelector(tags) {
         
         tagOption.innerHTML = `
             <div class="tag-option-content">
-                <span class="tag-color-dot" style="background-color: ${tag.color || '#FF5733'}"></span>
                 <span class="tag-name">${tag.name}</span>
                 <input type="checkbox" id="tag_${tag.id}" value="${tag.id}" class="tag-checkbox">
             </div>
@@ -964,7 +1002,6 @@ function updateSelectedTagsDisplay() {
     selectedTags.forEach(tag => {
         const tagElement = document.createElement('span');
         tagElement.className = 'selected-tag';
-        tagElement.style.backgroundColor = tag.color || '#667eea';
         tagElement.innerHTML = `
             ${tag.name}
             <button class="remove-tag-btn" onclick="removeSelectedTag('${tag.id}')">&times;</button>
@@ -988,6 +1025,20 @@ function removeSelectedTag(tagId) {
 
 // 将移除标签函数暴露到全局
 window.removeSelectedTag = removeSelectedTag;
+
+// 绑定筛选按钮点击外部关闭事件
+function bindFilterButtonOutsideClick() {
+    document.addEventListener('click', (e) => {
+        // 如果点击的不是筛选按钮容器，关闭所有下拉框
+        if (!e.target.closest('.filter-button-container')) {
+            document.querySelectorAll('.filter-button-container').forEach(container => {
+                container.classList.remove('open');
+                const arrow = container.querySelector('.filter-arrow');
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            });
+        }
+    });
+}
 
 // 绑定标签选择器事件
 function bindTagSelectorEvents() {
@@ -1060,18 +1111,26 @@ function updateFilterButtons(tags) {
 // 获取选中的标签
 function getSelectedTags() {
     const selectedTags = [];
-    const checkboxes = document.querySelectorAll('#tagSelector .tag-checkbox:checked');
+    const checkboxes = document.querySelectorAll('#tagSelectorOptions .tag-checkbox:checked');
     
     console.log('🔍 查找选中的标签，找到复选框数量:', checkboxes.length);
     
     checkboxes.forEach((checkbox, index) => {
         const tagId = checkbox.value;
-        const tagLabel = checkbox.nextElementSibling;
-        const tagName = tagLabel.textContent.trim();
+        const tagOption = checkbox.closest('.tag-option');
         
-        console.log(`🔍 标签 ${index + 1}:`, { id: tagId, name: tagName, label: tagLabel });
-        
-        selectedTags.push({ id: tagId, name: tagName });
+        if (tagOption) {
+            const tagName = tagOption.dataset.tagName || 'Unknown Tag';
+            const tagColor = tagOption.dataset.tagColor || '#667eea';
+            
+            console.log(`🔍 标签 ${index + 1}:`, { id: tagId, name: tagName, color: tagColor });
+            
+            selectedTags.push({ 
+                id: tagId, 
+                name: tagName, 
+                color: tagColor 
+            });
+        }
     });
     
     console.log('✅ 最终选中的标签:', selectedTags);
@@ -1786,3 +1845,66 @@ function analyzeTagStructure() {
 
 // 将分析函数暴露到全局
 window.analyzeTagStructure = analyzeTagStructure;
+
+// 测试收缩框功能
+function testTagSelector() {
+    console.log('🧪 测试标签选择器收缩框功能...');
+    
+    const tagSelectorTrigger = document.getElementById('tagSelectorTrigger');
+    const tagSelectorDropdown = document.getElementById('tagSelectorDropdown');
+    const tagSelectorOptions = document.getElementById('tagSelectorOptions');
+    
+    console.log('🔍 标签选择器元素检查:');
+    console.log('- 触发器:', tagSelectorTrigger ? '✅ 存在' : '❌ 不存在');
+    console.log('- 下拉框:', tagSelectorDropdown ? '✅ 存在' : '❌ 不存在');
+    console.log('- 选项容器:', tagSelectorOptions ? '✅ 存在' : '❌ 不存在');
+    
+    if (tagSelectorTrigger && tagSelectorDropdown) {
+        console.log('🔍 当前状态:', tagSelectorDropdown.classList.contains('open') ? '展开' : '收缩');
+        
+        // 测试点击事件
+        console.log('🖱️ 测试点击事件绑定...');
+        const clickEvent = new Event('click');
+        tagSelectorTrigger.dispatchEvent(clickEvent);
+        
+        setTimeout(() => {
+            console.log('🔍 点击后状态:', tagSelectorDropdown.classList.contains('open') ? '展开' : '收缩');
+            
+            // 再次点击关闭
+            tagSelectorTrigger.dispatchEvent(clickEvent);
+            setTimeout(() => {
+                console.log('🔍 再次点击后状态:', tagSelectorDropdown.classList.contains('open') ? '展开' : '收缩');
+            }, 100);
+        }, 100);
+    }
+    
+    // 检查标签选项
+    if (tagSelectorOptions) {
+        const tagOptions = tagSelectorOptions.querySelectorAll('.tag-option');
+        console.log('🏷️ 标签选项数量:', tagOptions.length);
+        
+        tagOptions.forEach((option, index) => {
+            const checkbox = option.querySelector('.tag-checkbox');
+            const tagName = option.dataset.tagName;
+            const tagColor = option.dataset.tagColor;
+            
+            console.log(`   标签${index + 1}:`, {
+                name: tagName,
+                color: tagColor,
+                hasCheckbox: !!checkbox,
+                checkboxChecked: checkbox ? checkbox.checked : 'N/A'
+            });
+        });
+    }
+    
+    return {
+        triggerExists: !!tagSelectorTrigger,
+        dropdownExists: !!tagSelectorDropdown,
+        optionsExist: !!tagSelectorOptions,
+        isOpen: tagSelectorDropdown ? tagSelectorDropdown.classList.contains('open') : false,
+        tagOptionsCount: tagSelectorOptions ? tagSelectorOptions.querySelectorAll('.tag-option').length : 0
+    };
+}
+
+// 将测试函数暴露到全局
+window.testTagSelector = testTagSelector;
