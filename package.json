@@ -2,17 +2,12 @@
   "name": "quest-web",
   "version": "1.0.0",
   "description": "Quest Web Application",
-  "main": "proxy-server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node proxy-server.js",
-    "dev": "node proxy-server.js",
-    "dev:frontend": "http-server src/client -p 8080 -c-1 -o",
-    "install:proxy": "npm install express http-proxy-middleware cors"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "http-proxy-middleware": "^2.0.9"
+    "start": "http-server src/client -p 8080 -c-1 -o",
+    "dev": "http-server src/client -p 8080 -c-1 -o",
+    "build": "echo 'Frontend build completed'",
+    "vercel-build": "echo 'Frontend build completed'"
   },
   "devDependencies": {
     "http-server": "^14.1.1"

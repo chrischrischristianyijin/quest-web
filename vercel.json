@@ -8,16 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/js/(.*)",
-      "dest": "/src/client/js/$1"
-    },
-    {
-      "src": "/styles/(.*)",
-      "dest": "/src/client/styles/$1"
-    },
-    {
-      "src": "/public/(.*)",
-      "dest": "/src/client/public/$1"
+      "src": "/",
+      "dest": "/src/client/pages/index.html"
     },
     {
       "src": "/login",
@@ -32,12 +24,24 @@
       "dest": "/src/client/pages/my-space.html"
     },
     {
-      "src": "/",
-      "dest": "/src/client/pages/index.html"
+      "src": "/styles/(.*)",
+      "dest": "/src/client/styles/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/src/client/js/$1"
+    },
+    {
+      "src": "/public/(.*)",
+      "dest": "/src/client/public/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/src/client/pages/index.html"
+      "dest": "/src/client/pages/$1"
     }
-  ]
+  ],
+  "functions": {},
+  "env": {
+    "NODE_ENV": "production"
+  }
 } 

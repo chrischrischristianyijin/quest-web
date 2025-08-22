@@ -5,26 +5,32 @@ const loginForm = document.getElementById('loginForm');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const googleLoginBtn = document.getElementById('googleLoginBtn');
-const errorMessage = document.getElementById('errorMessage');
-const successMessage = document.getElementById('successMessage');
+const messageDiv = document.getElementById('message');
 
 // 显示消息
 function showMessage(message, type = 'error') {
+    if (!messageDiv) {
+        console.error('❌ 找不到消息显示元素');
+        return;
+    }
+    
+    messageDiv.textContent = message;
+    messageDiv.className = `message ${type}`;
+    messageDiv.style.display = 'block';
+    
+    // 自动隐藏错误消息
     if (type === 'error') {
-        errorMessage.textContent = message;
-        errorMessage.style.display = 'block';
-        successMessage.style.display = 'none';
-    } else {
-        successMessage.textContent = message;
-        successMessage.style.display = 'block';
-        errorMessage.style.display = 'none';
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
     }
 }
 
 // 隐藏消息
 function hideMessages() {
-    errorMessage.style.display = 'none';
-    successMessage.style.display = 'none';
+    if (messageDiv) {
+        messageDiv.style.display = 'none';
+    }
 }
 
 // 表单验证
