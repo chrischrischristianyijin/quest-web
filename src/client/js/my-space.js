@@ -224,7 +224,7 @@ function createInsightCard(insight) {
     const shareBtn = document.createElement('button');
     shareBtn.className = 'action-btn';
     shareBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    shareBtn.title = '分享';
+    shareBtn.title = 'Share';
     shareBtn.onclick = () => shareInsight(insight);
     
     const deleteBtn = document.createElement('button');
@@ -366,27 +366,34 @@ function performSearch() {
 }
 
 // 分享见解
-function shareInsight(insight) {
-    if (navigator.share) {
-        navigator.share({
-            title: insight.title || '分享的内容',
-            text: insight.description || '来自 Quest 的精彩内容',
+async function shareInsight(insight) {
+    try {
+        const shareData = {
+            title: insight.title || 'Shared content',
+            text: insight.description || 'Amazing content from Quest',
             url: insight.url
-        });
-    } else {
-        // 复制链接到剪贴板
-        navigator.clipboard.writeText(insight.url).then(() => {
-            alert('链接已复制到剪贴板！');
-        }).catch(() => {
-            // 降级方案
-            const textArea = document.createElement('textarea');
-            textArea.value = insight.url;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            alert('链接已复制到剪贴板！');
-        });
+        };
+        if (navigator.share) {
+            await navigator.share(shareData);
+            alert('Content shared successfully!');
+        } else {
+            // 复制链接到剪贴板
+            navigator.clipboard.writeText(insight.url).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(() => {
+                // 降级方案
+                const textArea = document.createElement('textarea');
+                textArea.value = insight.url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Link copied to clipboard!');
+            });
+        }
+    } catch (error) {
+        console.error('Share failed:', error);
+        alert('Share failed, please try again later.');
     }
 }
 
@@ -558,6 +565,12 @@ function bindEvents() {
                 hideAddContentModal();
             }
         });
+    }
+
+    // 左上角添加内容按钮
+    const addContentBtnLeft = document.getElementById('addContentBtnLeft');
+    if (addContentBtnLeft) {
+        addContentBtnLeft.addEventListener('click', showAddContentModal);
     }
 }
 
