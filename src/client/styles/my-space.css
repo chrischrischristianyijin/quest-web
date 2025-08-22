@@ -250,6 +250,17 @@ body {
     border-color: #4a6fd8;
 }
 
+.FilterButton.clear-filter-btn {
+    background: var(--quest-orange, #ff6b35);
+    color: white;
+    border-color: var(--quest-orange, #ff6b35);
+}
+
+.FilterButton.clear-filter-btn:hover {
+    background: #e55a2b;
+    border-color: #e55a2b;
+}
+
 .search-container {
     position: relative;
 }
@@ -373,12 +384,81 @@ body {
 .content-card {
     background: var(--bg-primary);
     border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
     box-shadow: var(--shadow-light);
     border: 1px solid var(--border-light);
     transition: var(--transition-normal);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-card-image-container {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.content-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.content-card:hover .content-card-image {
+    transform: scale(1.05);
+}
+
+.content-card-image-container.no-image {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content-card-image-container.no-image::after {
+    content: '📷';
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* 图片加载状态 */
+.content-card-image-container.loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* 响应式图片设计 */
+@media (max-width: 768px) {
+    .content-card-image-container {
+        height: 150px;
+    }
+    
+    .content-card-content {
+        padding: var(--spacing-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .content-card-image-container {
+        height: 120px;
+    }
+}
+
+.content-card-content {
+    padding: var(--spacing-lg);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .content-card::before {

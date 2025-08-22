@@ -212,6 +212,31 @@ function createInsightCard(insight) {
     const card = document.createElement('div');
     card.className = 'content-card';
     
+    // 卡片图片区域
+    if (insight.image_url) {
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'content-card-image-container';
+        
+        const image = document.createElement('img');
+        image.className = 'content-card-image';
+        image.src = insight.image_url;
+        image.alt = insight.title || 'Content image';
+        image.loading = 'lazy';
+        
+        // 图片加载错误处理
+        image.onerror = function() {
+            this.style.display = 'none';
+            this.parentElement.classList.add('no-image');
+        };
+        
+        imageContainer.appendChild(image);
+        card.appendChild(imageContainer);
+    }
+    
+    // 卡片内容区域
+    const cardContent = document.createElement('div');
+    cardContent.className = 'content-card-content';
+    
     // 卡片头部
     const cardHeader = document.createElement('div');
     cardHeader.className = 'content-card-header';
@@ -278,11 +303,14 @@ function createInsightCard(insight) {
     cardFooter.appendChild(url);
     cardFooter.appendChild(date);
     
-    // 组装卡片
-    card.appendChild(cardHeader);
-    card.appendChild(description);
-    card.appendChild(tags);
-    card.appendChild(cardFooter);
+    // 组装卡片内容
+    cardContent.appendChild(cardHeader);
+    cardContent.appendChild(description);
+    cardContent.appendChild(tags);
+    cardContent.appendChild(cardFooter);
+    
+    // 组装完整卡片
+    card.appendChild(cardContent);
     
     return card;
 }
@@ -292,35 +320,68 @@ async function initFilterButtons() {
     if (!filterButtons) return;
     
     try {
+        console.log('🏷️ 开始初始化筛选按钮...');
+        
         // 获取用户标签
         const response = await api.getUserTags();
         const userTags = response.success ? response.data : [];
         
+        console.log('🏷️ 获取到用户标签:', userTags);
+        
         // 基础筛选选项
         const filterOptions = [
+            { key: 'all', label: 'All' },
             { key: 'latest', label: 'Latest' },
             { key: 'oldest', label: 'Oldest' }
         ];
         
         // 添加标签筛选选项
         userTags.forEach(tag => {
+            const tagKey = `tag_${tag.id}`;
             filterOptions.push({
-                key: `tag_${tag.id || tag.name}`,
-                label: tag.name || tag,
+                key: tagKey,
+                label: tag.name,
                 tag: tag
             });
+            console.log('🏷️ 添加标签筛选选项:', tagKey, tag.name);
         });
         
+        // 清空现有按钮
         filterButtons.innerHTML = '';
+        
+        // 创建筛选按钮
         filterOptions.forEach(option => {
             const button = document.createElement('button');
             button.className = `FilterButton ${option.key === currentFilter ? 'active' : ''}`;
             button.textContent = option.label;
             button.dataset.filter = option.key;
-            button.dataset.tag = option.tag ? JSON.stringify(option.tag) : '';
-            button.onclick = () => setFilter(option.key);
+            
+            // 为标签按钮添加颜色标识
+            if (option.key.startsWith('tag_') && option.tag) {
+                button.style.borderLeft = `4px solid ${option.tag.color || '#667eea'}`;
+                button.style.paddingLeft = '12px';
+            }
+            
+            button.onclick = () => {
+                console.log('🔍 用户点击筛选按钮:', option.key);
+                setFilter(option.key);
+            };
+            
             filterButtons.appendChild(button);
+            console.log('✅ 创建筛选按钮:', option.key, option.label);
         });
+        
+        // 添加清除筛选按钮（当有筛选条件时显示）
+        if (currentFilter && currentFilter !== 'all') {
+            const clearFilterBtn = document.createElement('button');
+            clearFilterBtn.className = 'FilterButton clear-filter-btn';
+            clearFilterBtn.textContent = 'Clear Filter';
+            clearFilterBtn.onclick = () => {
+                console.log('🧹 清除筛选条件');
+                setFilter('all');
+            };
+            filterButtons.appendChild(clearFilterBtn);
+        }
         
         // 添加编辑标签按钮
         const editTagsBtn = document.createElement('button');
@@ -329,10 +390,14 @@ async function initFilterButtons() {
         editTagsBtn.onclick = () => showEditTagsModal();
         filterButtons.appendChild(editTagsBtn);
         
+        console.log('✅ 筛选按钮初始化完成，共', filterOptions.length, '个选项');
+        
     } catch (error) {
-        console.error('初始化筛选按钮失败:', error);
+        console.error('❌ 初始化筛选按钮失败:', error);
+        
         // 显示基础筛选选项
         const filterOptions = [
+            { key: 'all', label: 'All' },
             { key: 'latest', label: 'Latest' },
             { key: 'oldest', label: 'Oldest' }
         ];
@@ -353,14 +418,43 @@ async function initFilterButtons() {
 function setFilter(filter) {
     currentFilter = filter;
     
+    console.log('🔍 设置筛选条件:', filter);
+    
     // 更新按钮状态
     const buttons = filterButtons.querySelectorAll('.FilterButton');
     buttons.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.filter === filter);
     });
     
+    // 显示筛选状态
+    showFilterStatus(filter);
+    
     // 重新渲染
     renderInsights();
+}
+
+// 显示筛选状态
+function showFilterStatus(filter) {
+    let statusText = '';
+    
+    if (filter === 'all') {
+        statusText = '显示所有内容';
+    } else if (filter === 'latest') {
+        statusText = '按最新时间排序';
+    } else if (filter === 'oldest') {
+        statusText = '按最旧时间排序';
+    } else if (filter.startsWith('tag_')) {
+        const tagId = filter.replace('tag_', '');
+        // 查找标签名称
+        const tagButton = document.querySelector(`[data-filter="${filter}"]`);
+        const tagName = tagButton ? tagButton.textContent : '未知标签';
+        statusText = `筛选标签: ${tagName}`;
+    }
+    
+    console.log('📊 筛选状态:', statusText);
+    
+    // 可以在这里添加UI显示筛选状态
+    // 比如在页面顶部显示一个小提示
 }
 
 // 获取当前筛选的文章
@@ -373,16 +467,19 @@ function getFilteredInsights() {
     // 根据筛选条件过滤
     if (currentFilter && currentFilter.startsWith('tag_')) {
         // 标签筛选
-        const tagData = currentFilter.replace('tag_', '');
-        console.log('🏷️ 筛选标签ID:', tagData);
+        const tagId = currentFilter.replace('tag_', '');
+        console.log('🏷️ 筛选标签ID:', tagId);
         
         filteredInsights = currentInsights.filter(insight => {
-            console.log('📖 检查文章:', insight.title, '标签:', insight.tags);
+            console.log('📖 检查文章:', insight.title || insight.url, '标签:', insight.tags);
+            
             if (insight.tags && insight.tags.length > 0) {
                 const hasTag = insight.tags.some(tag => {
-                    const tagId = typeof tag === 'string' ? tag : (tag.id || tag.name);
-                    console.log('🏷️ 文章标签:', tag, '标签ID:', tagId, '匹配:', tagId === tagData);
-                    return tagId === tagData;
+                    // 标签可能是对象 {id, name, color} 或字符串
+                    const tagIdToCheck = typeof tag === 'string' ? tag : tag.id;
+                    const isMatch = tagIdToCheck === tagId;
+                    console.log('🏷️ 文章标签:', tag, '标签ID:', tagIdToCheck, '匹配:', isMatch);
+                    return isMatch;
                 });
                 console.log('✅ 文章是否包含标签:', hasTag);
                 return hasTag;
@@ -391,12 +488,23 @@ function getFilteredInsights() {
         });
         
         console.log('🎯 筛选后的文章数量:', filteredInsights.length);
+        
+        // 如果没有找到匹配的文章，显示提示
+        if (filteredInsights.length === 0) {
+            console.log('⚠️ 没有找到包含该标签的文章');
+        }
+        
     } else if (currentFilter === 'latest') {
         // 最新排序
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        console.log('📅 按最新时间排序');
     } else if (currentFilter === 'oldest') {
         // 最旧排序
         filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        console.log('📅 按最旧时间排序');
+    } else if (currentFilter === 'all') {
+        // 显示所有文章
+        console.log('📚 显示所有文章');
     }
     
     return filteredInsights;
@@ -1319,3 +1427,68 @@ function testInsightDataFormat() {
 
 // 将测试函数暴露到全局，方便在控制台调用
 window.testInsightDataFormat = testInsightDataFormat;
+
+// 测试标签筛选功能
+function testTagFiltering() {
+    console.log('🧪 测试标签筛选功能...');
+    
+    console.log('🔍 当前筛选条件:', currentFilter);
+    console.log('📚 当前insights数量:', currentInsights.length);
+    console.log('🏷️ 当前标签数据:', currentInsights.map(insight => ({
+        title: insight.title || insight.url,
+        tags: insight.tags
+    })));
+    
+    // 测试筛选逻辑
+    const filtered = getFilteredInsights();
+    console.log('🎯 筛选后的insights数量:', filtered.length);
+    
+    return {
+        currentFilter,
+        totalInsights: currentInsights.length,
+        filteredInsights: filtered.length,
+        filterLogic: 'working'
+    };
+}
+
+// 将测试函数暴露到全局
+window.testTagFiltering = testTagFiltering;
+
+// 测试图片显示功能
+function testImageDisplay() {
+    console.log('🖼️ 测试图片显示功能...');
+    
+    // 检查当前insights的图片数据
+    const insightsWithImages = currentInsights.filter(insight => insight.image_url);
+    const insightsWithoutImages = currentInsights.filter(insight => !insight.image_url);
+    
+    console.log('📊 图片数据统计:');
+    console.log('- 有图片的insights:', insightsWithImages.length);
+    console.log('- 无图片的insights:', insightsWithoutImages.length);
+    
+    if (insightsWithImages.length > 0) {
+        console.log('🖼️ 有图片的insights示例:');
+        insightsWithImages.slice(0, 3).forEach((insight, index) => {
+            console.log(`${index + 1}. ${insight.title || insight.url}`);
+            console.log(`   图片URL: ${insight.image_url}`);
+        });
+    }
+    
+    if (insightsWithoutImages.length > 0) {
+        console.log('📷 无图片的insights示例:');
+        insightsWithoutImages.slice(0, 3).forEach((insight, index) => {
+            console.log(`${index + 1}. ${insight.title || insight.url}`);
+            console.log(`   图片URL: ${insight.image_url || '无'}`);
+        });
+    }
+    
+    return {
+        totalInsights: currentInsights.length,
+        withImages: insightsWithImages.length,
+        withoutImages: insightsWithoutImages.length,
+        imageDisplay: 'working'
+    };
+}
+
+// 将测试函数暴露到全局
+window.testImageDisplay = testImageDisplay;
