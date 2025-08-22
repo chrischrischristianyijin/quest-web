@@ -250,27 +250,9 @@ body {
     border-color: #4a6fd8;
 }
 
-.FilterButton.clear-filter-btn {
-    background: var(--quest-orange, #ff6b35);
-    color: white;
-    border-color: var(--quest-orange, #ff6b35);
-}
 
-.FilterButton.clear-filter-btn:hover {
-    background: #e55a2b;
-    border-color: #e55a2b;
-}
 
-.FilterButton.clear-all-filters-btn {
-    background: var(--quest-orange, #ff6b35);
-    color: white;
-    border-color: var(--quest-orange, #ff6b35);
-}
 
-.FilterButton.clear-all-filters-btn:hover {
-    background: #e55a2b;
-    border-color: #e55a2b;
-}
 
 /* 新的下拉式筛选按钮样式 */
 .filter-button-container {
@@ -350,48 +332,7 @@ body {
     flex-shrink: 0;
 }
 
-.search-container {
-    position: relative;
-}
 
-.Rectangle10 {
-    display: flex;
-    align-items: center;
-    background: var(--bg-primary);
-    border: 2px solid var(--quest-light-purple);
-    border-radius: 25px;
-    padding: 8px 16px;
-    transition: var(--transition-normal);
-    box-shadow: var(--shadow-light);
-}
-
-.Rectangle10:focus-within {
-    border-color: var(--quest-purple);
-    box-shadow: 0 0 0 4px rgba(75, 38, 79, 0.1);
-    transform: translateY(-1px);
-}
-
-.Search {
-    display: flex;
-    align-items: center;
-    margin-right: 12px;
-    cursor: pointer;
-}
-
-.SearchMySpace {
-    border: none;
-    outline: none;
-    background: transparent;
-    font-size: 1rem;
-    color: var(--text-primary);
-    width: 250px;
-    padding: 8px 0;
-}
-
-.SearchMySpace::placeholder {
-    color: var(--text-light);
-    opacity: 0.7;
-}
 
 .add-content-btn {
     background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
@@ -1118,9 +1059,7 @@ body {
         flex-direction: column;
     }
     
-    .SearchMySpace {
-        width: 200px;
-    }
+
 }
 
 @media (max-width: 480px) {
@@ -1146,9 +1085,7 @@ body {
         font-size: 0.8125rem;
     }
     
-    .SearchMySpace {
-        width: 150px;
-    }
+
 }
 
 /* 空状态样式 */
