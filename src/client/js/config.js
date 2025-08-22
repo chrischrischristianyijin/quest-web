@@ -11,7 +11,7 @@ export const CONFIG = {
     // 功能开关
     FEATURES: {
         GOOGLE_AUTH: true,
-        TAGS: true,
+        USER_TAGS: true,
         SHARING: true
     }
 };
@@ -56,8 +56,9 @@ export const API_CONFIG = {
     },
     
     // 标签管理接口
-    TAGS: {
+    USER_TAGS: {
         LIST: '/api/v1/user-tags',
+        GET: '/api/v1/user-tags',
         CREATE: '/api/v1/user-tags',
         UPDATE: '/api/v1/user-tags',
         DELETE: '/api/v1/user-tags',
