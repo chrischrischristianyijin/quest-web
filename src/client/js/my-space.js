@@ -158,7 +158,20 @@ async function loadUserInsights() {
         }
     } catch (error) {
         console.error('❌ 加载用户insights失败:', error);
-        showErrorMessage('加载insights失败，请刷新重试');
+        
+        // 检查是否是后端服务问题
+        if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+            showErrorMessage('Backend service temporarily unavailable. Please try again later.');
+        } else if (error.message.includes('401') || error.message.includes('403')) {
+            showErrorMessage('Authentication failed. Please log in again.');
+            // 重定向到登录页面
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+        } else {
+            showErrorMessage('Failed to load insights. Please refresh and try again.');
+        }
+        
         currentInsights = [];
         renderInsights();
     }
@@ -629,6 +642,20 @@ async function loadUserTags() {
         }
     } catch (error) {
         console.error('❌ 加载用户标签失败:', error);
+        
+        // 检查是否是后端服务问题
+        if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+            showErrorMessage('Backend service temporarily unavailable. Please try again later.');
+        } else if (error.message.includes('401') || error.message.includes('403')) {
+            showErrorMessage('Authentication failed. Please log in again.');
+            // 重定向到登录页面
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+        } else {
+            showErrorMessage('Failed to load tags. Please refresh and try again.');
+        }
+        
         renderTagSelector([]);
     }
 }
@@ -786,7 +813,7 @@ async function loadTagsForManagement() {
         
         // 显示标签统计
         try {
-            const statsResponse = await api.getTagStats();
+            const statsResponse = await api.getUserTagStats();
             if (statsResponse.success && statsResponse.data) {
                 const stats = statsResponse.data;
                 tagsStats.innerHTML = `
@@ -834,12 +861,12 @@ async function loadTagsForManagement() {
 }
 
 // 在管理界面中编辑标签
-async function editTagInManagement(tagId, currentName, currentColor) {
+async function editTagInManagement(userTagId, currentName, currentColor) {
     const newName = prompt('Enter new tag name:', currentName);
     if (!newName || newName.trim() === currentName) return;
     
     try {
-        const response = await api.updateTag(tagId, { 
+        const response = await api.updateUserTag(userTagId, { 
             name: newName.trim(),
             color: currentColor 
         });
@@ -862,15 +889,15 @@ async function editTagInManagement(tagId, currentName, currentColor) {
 }
 
 // 在管理界面中删除标签
-async function deleteTagInManagement(tagId) {
+async function deleteTagInManagement(userTagId) {
     if (!confirm('Are you sure you want to delete this tag? This action cannot be undone.')) {
         return;
     }
     
     try {
-        console.log('🗑️ 删除标签:', tagId);
+        console.log('🗑️ 删除标签:', userTagId);
         
-        const response = await api.deleteTag(tagId);
+        const response = await api.deleteUserTag(userTagId);
         
         if (response.success) {
             console.log('✅ 标签删除成功');
@@ -977,7 +1004,7 @@ async function createNewTag() {
         console.log('🏷️ 创建新标签:', { name: tagName, color: tagColor });
         
         // 使用新的API方法创建标签
-        const response = await api.createTag({
+        const response = await api.createUserTag({
             name: tagName,
             color: tagColor
         });
@@ -1071,13 +1098,13 @@ async function loadTagsForEditing() {
             tagItem.innerHTML = `
                 <span class="tag-name">${tag.name || tag}</span>
                 <div class="tag-actions">
-                    <button class="action-btn edit-tag-btn" onclick="editTag('${tag.id || tag.name}')">
+                    <button class="action-btn edit-tag-btn" onclick="editUserTag('${tag.id || tag.name}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
-                    <button class="action-btn delete-tag-btn" onclick="deleteTag('${tag.id || tag.name}')">
+                    <button class="action-btn delete-tag-btn" onclick="deleteUserTag('${tag.id || tag.name}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                             <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -1097,17 +1124,17 @@ async function loadTagsForEditing() {
 }
 
 // 编辑标签
-async function editTag(tagId) {
+async function editUserTag(userTagId) {
     const newName = prompt('Please enter new tag name:');
     if (newName && newName.trim()) {
-        updateTag(tagId, newName.trim());
+        updateUserTag(userTagId, newName.trim());
     }
 }
 
 // 更新标签
-async function updateTag(tagId, newName) {
+async function updateUserTag(userTagId, newName) {
     try {
-        const response = await api.updateTag(tagId, { name: newName });
+        const response = await api.updateUserTag(userTagId, { name: newName });
         
         if (response.success) {
             // 重新加载标签
@@ -1125,16 +1152,16 @@ async function updateTag(tagId, newName) {
 }
 
 // 删除标签
-async function deleteTag(tagId) {
+async function deleteUserTag(userTagId) {
     if (!confirm('Are you sure you want to delete this tag?')) {
         return;
     }
     
     try {
-        console.log('🗑️ 删除标签:', tagId);
+        console.log('🗑️ 删除标签:', userTagId);
         
         // 使用新的API方法删除标签
-        const response = await api.deleteTag(tagId);
+        const response = await api.deleteUserTag(userTagId);
         
         if (response.success) {
             console.log('✅ 标签删除成功');
@@ -1209,8 +1236,8 @@ window.deleteInsight = deleteInsight;
 window.shareInsight = shareInsight;
 window.showAddContentModal = showAddContentModal;
 window.hideAddContentModal = hideAddContentModal;
-window.editTag = editTag;
-window.updateTag = updateTag;
-window.deleteTag = deleteTag;
+window.editUserTag = editUserTag;
+window.updateUserTag = updateUserTag;
+window.deleteUserTag = deleteUserTag;
 window.editTagInManagement = editTagInManagement;
 window.deleteTagInManagement = deleteTagInManagement;

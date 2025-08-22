@@ -263,7 +263,7 @@ class ApiService {
 
     // 获取用户标签
     async getUserTags(userId = null, page = 1, limit = 10) {
-        let endpoint = API_CONFIG.TAGS.LIST;
+        let endpoint = API_CONFIG.USER_TAGS.LIST;
         const params = new URLSearchParams();
         
         if (userId) params.append('user_id', userId);
@@ -275,41 +275,41 @@ class ApiService {
     }
 
     // 获取标签详情
-    async getTag(tagId) {
-        return await this.request(`${API_CONFIG.TAGS.GET}/${tagId}`);
+    async getUserTag(userTagId) {
+        return await this.request(`${API_CONFIG.USER_TAGS.GET}/${userTagId}`);
     }
 
     // 创建标签
-    async createTag(tagData) {
-        return await this.request(API_CONFIG.TAGS.CREATE, {
+    async createUserTag(userTagData) {
+        return await this.request(API_CONFIG.USER_TAGS.CREATE, {
             method: 'POST',
-            body: JSON.stringify(tagData)
+            body: JSON.stringify(userTagData)
         });
     }
 
     // 更新标签
-    async updateTag(tagId, tagData) {
-        return await this.request(`${API_CONFIG.TAGS.UPDATE}/${tagId}`, {
+    async updateUserTag(userTagId, userTagData) {
+        return await this.request(`${API_CONFIG.USER_TAGS.UPDATE}/${userTagId}`, {
             method: 'PUT',
-            body: JSON.stringify(tagData)
+            body: JSON.stringify(userTagData)
         });
     }
 
     // 删除标签
-    async deleteTag(tagId) {
-        return await this.request(`${API_CONFIG.TAGS.DELETE}/${tagId}`, {
+    async deleteUserTag(userTagId) {
+        return await this.request(`${API_CONFIG.USER_TAGS.DELETE}/${userTagId}`, {
             method: 'DELETE'
         });
     }
 
     // 获取标签统计
-    async getTagStats() {
-        return await this.request(API_CONFIG.TAGS.STATS);
+    async getUserTagStats() {
+        return await this.request(API_CONFIG.USER_TAGS.STATS);
     }
 
     // 搜索标签
-    async searchTags(query, userId = null) {
-        let endpoint = API_CONFIG.TAGS.SEARCH;
+    async searchUserTags(query, userId = null) {
+        let endpoint = API_CONFIG.USER_TAGS.SEARCH;
         const params = new URLSearchParams();
         
         params.append('q', query);
