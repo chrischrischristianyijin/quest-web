@@ -1,4 +1,5 @@
 import { auth } from './auth.js';
+import { PATHS, navigateTo } from './paths.js';
 
 // Function to update UI based on login status
 function updateUIForLoginStatus(isLoggedIn, user = null) {
@@ -13,13 +14,13 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
     if (isLoggedIn && user) {
         navLinks.innerHTML = '';
         authButtons.innerHTML = `
-            <a href="/pages/my-space.html" class="btn btn-outline">My Space</a>
+            <a href="${PATHS.MY_SPACE}" class="btn btn-outline">My Space</a>
             <button class="btn btn-primary" id="logoutBtn">Log out</button>
         `;
         tryButton.textContent = 'Go to My Space';
-        tryButton.href = '/pages/my-space.html';
+        tryButton.href = PATHS.MY_SPACE;
         ctaButton.textContent = 'Go to My Space';
-        ctaButton.href = '/pages/my-space.html';
+        ctaButton.href = PATHS.MY_SPACE;
 
         // 显示欢迎回来区域
         if (welcomeBackSection) {
@@ -51,8 +52,8 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
     } else {
         navLinks.innerHTML = '';
         authButtons.innerHTML = `
-            <a href="/pages/signup.html" class="btn btn-outline">Sign Up</a>
-            <a href="/pages/login.html" class="btn btn-primary">Log In</a>
+            <a href="${PATHS.SIGNUP}" class="btn btn-outline">Sign Up</a>
+            <a href="${PATHS.LOGIN}" class="btn btn-primary">Log In</a>
         `;
         
         // 隐藏欢迎回来区域
@@ -72,14 +73,14 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
-        tryButton.href = '/signup';
+        tryButton.href = PATHS.SIGNUP;
         ctaButton.innerHTML = `
             Get Started for Free
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
-        ctaButton.href = '/signup';
+        ctaButton.href = PATHS.SIGNUP;
     }
 }
 
@@ -95,14 +96,14 @@ async function handleLogout() {
         updateUIForLoginStatus(false);
         
         // 立即跳转到首页
-        window.location.href = '/';
+        window.location.href = PATHS.HOME;
         
     } catch (error) {
         console.error('❌ 登出失败:', error);
         
         // 即使出错，也清除本地状态并跳转
         updateUIForLoginStatus(false);
-        window.location.href = '/';
+        window.location.href = PATHS.HOME;
     }
 }
 

@@ -1,4 +1,5 @@
 import { auth } from './auth.js';
+import { PATHS, navigateTo } from './paths.js';
 
 // DOM 元素
 const loginForm = document.getElementById('loginForm');
@@ -73,7 +74,7 @@ async function handleLogin(email, password) {
             setTimeout(() => {
                 // 登录成功，重定向到My Space页面
                 console.log('✅ 登录成功，重定向到My Space页面');
-                window.location.href = '/my-space';
+                navigateTo(PATHS.MY_SPACE);
             }, 1000);
         } else {
             // 登录失败，显示错误消息
@@ -134,7 +135,7 @@ passwordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // 如果用户已经登录，直接跳转
     if (auth.checkAuth()) {
-                        window.location.href = '/my-space';
+        navigateTo(PATHS.MY_SPACE);
     }
     
     // 聚焦到邮箱输入框

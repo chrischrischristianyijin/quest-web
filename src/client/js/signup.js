@@ -1,4 +1,5 @@
 import { auth } from './auth.js';
+import { PATHS, navigateTo } from './paths.js';
 import { api } from './api.js'; // Added import for api
 
 // DOM 元素
@@ -162,7 +163,7 @@ async function handleSignup(email, nickname, password) {
             // 注册成功，重定向到My Space页面
             console.log('✅ 注册成功，重定向到My Space页面');
             setTimeout(() => {
-                window.location.href = '/my-space';
+                navigateTo(PATHS.MY_SPACE);
             }, 1000);
         }
     } catch (error) {
@@ -192,7 +193,7 @@ async function handleSignup(email, nickname, password) {
 function handleGoogleSignup() {
     try {
         // 跳转到 Google OAuth 端点
-        const authUrl = `https://quest-api-edz1.onrender.com/api/v1/auth/google/login`;
+        const authUrl = `${PATHS.AUTH_GOOGLE_LOGIN}`;
         window.location.href = authUrl;
     } catch (error) {
         console.error('Google 注册失败:', error);
@@ -242,7 +243,7 @@ confirmPasswordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // 如果用户已经登录，直接跳转
     if (auth.checkAuth()) {
-                        window.location.href = '/my-space';
+        navigateTo(PATHS.MY_SPACE);
     }
     
     // 聚焦到邮箱输入框
