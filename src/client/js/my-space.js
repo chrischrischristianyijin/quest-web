@@ -384,20 +384,22 @@ async function initFilterButtons() {
                 options: [
                     { key: 'latest', label: 'Latest First' },
                     { key: 'oldest', label: 'Oldest First' },
-                    { key: 'alphabetical', label: 'A-Z' },
-                    { key: 'reverse_alphabetical', label: 'Z-A' }
+                    { key: 'alphabetical', label: 'Alphabetical Order' }
                 ]
             },
             {
                 key: 'tags',
                 label: 'Tags',
                 type: 'dropdown',
-                options: userTags.map(tag => ({
-                    key: `tag_${tag.id}`,
-                    label: tag.name,
-                    color: tag.color,
-                    tag: tag
-                }))
+                options: [
+                    { key: 'all', label: 'All Tags' },
+                    ...userTags.map(tag => ({
+                        key: `tag_${tag.id}`,
+                        label: tag.name,
+                        color: tag.color,
+                        tag: tag
+                    }))
+                ]
             },
             {
                 key: 'type',
@@ -405,6 +407,7 @@ async function initFilterButtons() {
                 type: 'dropdown',
                 options: [
                     { key: 'all', label: 'All Content' },
+                    { key: 'none', label: 'No Type' },
                     { key: 'articles', label: 'Articles' },
                     { key: 'videos', label: 'Videos' },
                     { key: 'images', label: 'Images' }
@@ -543,11 +546,9 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
         if (filterValue === 'latest') {
             button.textContent = 'Latest';
         } else if (filterValue === 'oldest') {
-            button.textContent = 'Oldest First';
+            button.textContent = 'Oldest';
         } else if (filterValue === 'alphabetical') {
-            button.textContent = 'A-Z';
-        } else if (filterValue === 'reverse_alphabetical') {
-            button.textContent = 'Z-A';
+            button.textContent = 'Alphabetical';
         }
     } else if (filterType === 'type') {
         // 内容类型：显示选中的类型
@@ -582,21 +583,22 @@ function showFilterStatus() {
     } else if (currentFilters.latest === 'oldest') {
         statusParts.push('最旧优先');
     } else if (currentFilters.latest === 'alphabetical') {
-        statusParts.push('按标题A-Z排序');
-    } else if (currentFilters.latest === 'reverse_alphabetical') {
-        statusParts.push('按标题Z-A排序');
+        statusParts.push('按标题字母排序');
     }
     
     // 标签筛选状态
-    if (currentFilters.tags && currentFilters.tags.startsWith('tag_')) {
-        const tagId = currentFilters.tags.replace('tag_', '');
-        const tagButton = document.querySelector(`[data-filter="tags"]`);
-        if (tagButton) {
-            const tagOption = tagButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.tags}"]`);
-            if (tagOption) {
-                statusParts.push(`标签: ${tagOption.textContent.trim()}`);
+    if (currentFilters.tags && currentFilters.tags !== 'all') {
+        if (currentFilters.tags.startsWith('tag_')) {
+            const tagButton = document.querySelector(`[data-filter="tags"]`);
+            if (tagButton) {
+                const tagOption = tagButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.tags}"]`);
+                if (tagOption) {
+                    statusParts.push(`标签: ${tagOption.textContent.trim()}`);
+                }
             }
         }
+    } else if (currentFilters.tags === 'all') {
+        statusParts.push('所有标签');
     }
     
     // 内容类型状态
@@ -605,9 +607,15 @@ function showFilterStatus() {
         if (typeButton) {
             const typeOption = typeButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.type}"]`);
             if (typeOption) {
-                statusParts.push(`类型: ${typeOption.textContent.trim()}`);
+                if (currentFilters.type === 'none') {
+                    statusParts.push('无类型内容');
+                } else {
+                    statusParts.push(`类型: ${typeOption.textContent.trim()}`);
+                }
             }
         }
+    } else if (currentFilters.type === 'all') {
+        statusParts.push('所有类型');
     }
     
     const statusText = statusParts.length > 0 ? statusParts.join(' | ') : '显示所有内容';
@@ -641,14 +649,6 @@ function getFilteredInsights() {
             return titleA.localeCompare(titleB);
         });
         console.log('🔤 按标题首字母A-Z排序');
-    } else if (currentFilters.latest === 'reverse_alphabetical') {
-        // 按标题首字母Z-A排序
-        filteredInsights.sort((a, b) => {
-            const titleA = (a.title || a.url || '').toLowerCase();
-            const titleB = (b.title || b.url || '').toLowerCase();
-            return titleB.localeCompare(titleA);
-        });
-        console.log('🔤 按标题首字母Z-A排序');
     } else {
         // 默认按最新时间排序
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -656,42 +656,58 @@ function getFilteredInsights() {
     }
     
     // 2. 标签筛选
-    if (currentFilters.tags && currentFilters.tags.startsWith('tag_')) {
-        const tagId = currentFilters.tags.replace('tag_', '');
-        console.log('🏷️ 筛选标签ID:', tagId);
-        
-        filteredInsights = filteredInsights.filter(insight => {
-            if (insight.tags && insight.tags.length > 0) {
-                const hasTag = insight.tags.some(tag => {
-                    let tagIdToCheck = null;
-                    
-                    if (typeof tag === 'string') {
-                        tagIdToCheck = tag;
-                    } else if (tag && typeof tag === 'object') {
-                        tagIdToCheck = tag.id || tag.tag_id || tag.user_tag_id;
-                    }
-                    
-                    return tagIdToCheck === tagId;
-                });
-                return hasTag;
-            }
-            return false;
-        });
-        
-        console.log('🎯 标签筛选后的文章数量:', filteredInsights.length);
+    if (currentFilters.tags && currentFilters.tags !== 'all') {
+        if (currentFilters.tags.startsWith('tag_')) {
+            const tagId = currentFilters.tags.replace('tag_', '');
+            console.log('🏷️ 筛选标签ID:', tagId);
+            
+            filteredInsights = filteredInsights.filter(insight => {
+                if (insight.tags && insight.tags.length > 0) {
+                    const hasTag = insight.tags.some(tag => {
+                        let tagIdToCheck = null;
+                        
+                        if (typeof tag === 'string') {
+                            tagIdToCheck = tag;
+                        } else if (tag && typeof tag === 'object') {
+                            tagIdToCheck = tag.id || tag.tag_id || tag.user_tag_id;
+                        }
+                        
+                        return tagIdToCheck === tagId;
+                    });
+                    return hasTag;
+                }
+                return false;
+            });
+            
+            console.log('🎯 标签筛选后的文章数量:', filteredInsights.length);
+        }
+    } else {
+        console.log('🏷️ 显示所有标签的内容');
     }
     
     // 3. 内容类型筛选
     if (currentFilters.type && currentFilters.type !== 'all') {
         console.log('📚 筛选内容类型:', currentFilters.type);
         
-        filteredInsights = filteredInsights.filter(insight => {
-            // 这里可以根据实际的数据结构来判断内容类型
-            // 暂时先返回true，等有具体需求再实现
-            return true;
-        });
-        
-        console.log('🎯 类型筛选后的文章数量:', filteredInsights.length);
+        if (currentFilters.type === 'none') {
+            // 筛选没有类型的内容
+            filteredInsights = filteredInsights.filter(insight => {
+                // 这里可以根据实际的数据结构来判断内容类型
+                // 暂时先返回true，等有具体需求再实现
+                return true;
+            });
+            console.log('🎯 筛选无类型内容后的文章数量:', filteredInsights.length);
+        } else {
+            // 筛选特定类型的内容
+            filteredInsights = filteredInsights.filter(insight => {
+                // 这里可以根据实际的数据结构来判断内容类型
+                // 暂时先返回true，等有具体需求再实现
+                return true;
+            });
+            console.log('🎯 类型筛选后的文章数量:', filteredInsights.length);
+        }
+    } else {
+        console.log('📚 显示所有类型的内容');
     }
     
     console.log('🎯 最终筛选后的文章数量:', filteredInsights.length);
@@ -2057,23 +2073,28 @@ function testFiltering() {
     // 测试各种排序方式
     console.log('测试排序功能...');
     
-    // 测试A-Z排序
-    setFilter('latest', 'alphabetical', 'A-Z');
-    
-    setTimeout(() => {
-        console.log('测试Z-A排序...');
-        setFilter('latest', 'reverse_alphabetical', 'Z-A');
-    }, 1000);
+    // 测试字母排序
+    setFilter('latest', 'alphabetical', 'Alphabetical');
     
     setTimeout(() => {
         console.log('测试最旧优先...');
-        setFilter('latest', 'oldest', 'Oldest First');
-    }, 2000);
+        setFilter('latest', 'oldest', 'Oldest');
+    }, 1000);
     
     setTimeout(() => {
         console.log('测试最新优先...');
         setFilter('latest', 'latest', 'Latest');
+    }, 2000);
+    
+    setTimeout(() => {
+        console.log('测试所有标签...');
+        setFilter('tags', 'all', 'All Tags');
     }, 3000);
+    
+    setTimeout(() => {
+        console.log('测试所有类型...');
+        setFilter('type', 'all', 'All Content');
+    }, 4000);
 }
 
 // 测试排序功能
@@ -2084,21 +2105,13 @@ function testSorting() {
     const insights = [...currentInsights];
     console.log('原始文章顺序:', insights.map(i => i.title || i.url).slice(0, 5));
     
-    // 测试A-Z排序
+    // 测试字母排序
     const alphabetical = [...insights].sort((a, b) => {
         const titleA = (a.title || a.url || '').toLowerCase();
         const titleB = (b.title || b.url || '').toLowerCase();
         return titleA.localeCompare(titleB);
     });
-    console.log('A-Z排序后:', alphabetical.map(i => i.title || i.url).slice(0, 5));
-    
-    // 测试Z-A排序
-    const reverseAlphabetical = [...insights].sort((a, b) => {
-        const titleA = (a.title || a.url || '').toLowerCase();
-        const titleB = (b.title || b.url || '').toLowerCase();
-        return titleB.localeCompare(titleA);
-    });
-    console.log('Z-A排序后:', reverseAlphabetical.map(i => i.title || i.url).slice(0, 5));
+    console.log('字母排序后:', alphabetical.map(i => i.title || i.url).slice(0, 5));
 }
 
 // 将测试函数暴露到全局

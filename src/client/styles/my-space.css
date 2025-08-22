@@ -348,7 +348,10 @@ body {
     gap: 10px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-    position: relative;
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    z-index: 100;
     overflow: hidden;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -859,11 +862,11 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     z-index: 1000;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(8px);
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .add-content-modal.show {
@@ -875,14 +878,17 @@ body {
 
 .add-content-modal-content {
     background: var(--bg-primary);
-    border-radius: var(--radius-xl);
-    padding: var(--spacing-xl);
+    border-radius: 24px;
+    padding: 32px;
     width: 90%;
-    max-width: 500px;
-    box-shadow: var(--shadow-heavy);
+    max-width: 550px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     position: relative;
-    animation: modalSlideIn 0.3s ease-out;
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(139, 92, 246, 0.1);
 }
+
+
 
 @keyframes modalSlideIn {
     from {
@@ -899,15 +905,16 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-md);
-    border-bottom: 2px solid var(--bg-secondary);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid rgba(139, 92, 246, 0.1);
 }
 
 .modal-title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     color: var(--quest-purple);
+    letter-spacing: -0.5px;
 }
 
 .modal-close {
@@ -916,9 +923,9 @@ body {
     font-size: 1.75rem;
     color: var(--text-light);
     cursor: pointer;
-    padding: var(--spacing-sm);
+    padding: 8px;
     border-radius: 50%;
-    transition: var(--transition-normal);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     width: 40px;
     height: 40px;
     display: flex;
@@ -927,19 +934,26 @@ body {
 }
 
 .modal-close:hover {
-    background: var(--bg-light);
+    background: rgba(139, 92, 246, 0.1);
     color: var(--quest-purple);
+    transform: scale(1.1);
 }
 
 .tag-selector {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-sm);
+    gap: 8px;
     min-height: 40px;
-    padding: var(--spacing-sm);
-    border: 2px solid var(--quest-light-purple);
-    border-radius: var(--radius-lg);
+    padding: 12px;
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-radius: 16px;
     background: var(--bg-primary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tag-selector:focus-within {
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
 }
 
 .tag-option {
@@ -974,33 +988,35 @@ body {
 
 .modal-actions {
     display: flex;
-    gap: var(--spacing-md);
+    gap: 16px;
     justify-content: flex-end;
-    margin-top: var(--spacing-xl);
-    padding-top: var(--spacing-lg);
-    border-top: 2px solid var(--bg-secondary);
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 2px solid rgba(139, 92, 246, 0.1);
 }
 
 .modal-btn {
-    padding: 12px 24px;
+    padding: 14px 28px;
     border: none;
-    border-radius: var(--radius-lg);
+    border-radius: 16px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transition-normal);
-    min-width: 100px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 120px;
+    letter-spacing: 0.3px;
 }
 
 .modal-btn-primary {
-    background: var(--quest-purple);
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
 }
 
 .modal-btn-primary:hover {
-    background: var(--quest-dark-purple);
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-medium);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
 }
 
 .modal-btn-secondary {
@@ -1010,9 +1026,10 @@ body {
 }
 
 .modal-btn-secondary:hover {
-    background: var(--quest-light-purple);
-    color: white;
-    border-color: var(--quest-light-purple);
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--quest-purple);
+    border-color: var(--quest-purple);
+    transform: translateY(-1px);
 }
 
 /* 响应式设计 */
