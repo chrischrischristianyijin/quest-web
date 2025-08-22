@@ -848,6 +848,9 @@ function bindEvents() {
     
     // 绑定标签相关事件
     bindTagEvents();
+    
+    // 绑定标签选择器下拉事件
+    bindTagSelectorEvents();
 }
 
 // 加载用户标签
@@ -893,33 +896,136 @@ async function loadUserTags() {
 
 // 渲染标签选择器
 function renderTagSelector(tags) {
-    const tagSelector = document.getElementById('tagSelector');
-    if (!tagSelector) return;
+    const tagSelectorOptions = document.getElementById('tagSelectorOptions');
+    if (!tagSelectorOptions) return;
     
-    tagSelector.innerHTML = '';
+    tagSelectorOptions.innerHTML = '';
     
     if (tags.length === 0) {
-        tagSelector.innerHTML = '<p class="no-tags">No tags available. Create some tags first!</p>';
+        tagSelectorOptions.innerHTML = '<div class="no-tags">No tags available. Create some tags first!</div>';
         return;
     }
     
     console.log('🏷️ 渲染标签选择器，标签数量:', tags.length);
     
-    // 创建标签选择器
+    // 创建标签选项
     tags.forEach(tag => {
         const tagOption = document.createElement('div');
         tagOption.className = 'tag-option';
+        tagOption.dataset.tagId = tag.id;
+        tagOption.dataset.tagName = tag.name;
+        tagOption.dataset.tagColor = tag.color || '#FF5733';
+        
         tagOption.innerHTML = `
-            <input type="checkbox" id="tag_${tag.id}" value="${tag.id}" class="tag-checkbox">
-            <label for="tag_${tag.id}" class="tag-label" style="--tag-color: ${tag.color || '#FF5733'}">
+            <div class="tag-option-content">
                 <span class="tag-color-dot" style="background-color: ${tag.color || '#FF5733'}"></span>
-                ${tag.name}
-            </label>
+                <span class="tag-name">${tag.name}</span>
+                <input type="checkbox" id="tag_${tag.id}" value="${tag.id}" class="tag-checkbox">
+            </div>
         `;
-        tagSelector.appendChild(tagOption);
+        
+        // 绑定点击事件
+        tagOption.addEventListener('click', (e) => {
+            // 防止点击checkbox时触发两次
+            if (e.target.type === 'checkbox') return;
+            
+            const checkbox = tagOption.querySelector('.tag-checkbox');
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                tagOption.classList.add('selected');
+            } else {
+                tagOption.classList.remove('selected');
+            }
+            
+            updateSelectedTagsDisplay();
+        });
+        
+        tagSelectorOptions.appendChild(tagOption);
     });
     
-    console.log('🏷️ 标签选择器渲染完成，DOM元素:', tagSelector.innerHTML);
+    console.log('🏷️ 标签选择器渲染完成');
+}
+
+// 更新已选标签显示
+function updateSelectedTagsDisplay() {
+    const selectedTagsDisplay = document.getElementById('selectedTagsDisplay');
+    const selectedTags = getSelectedTags();
+    
+    if (!selectedTagsDisplay) return;
+    
+    selectedTagsDisplay.innerHTML = '';
+    
+    if (selectedTags.length === 0) {
+        selectedTagsDisplay.innerHTML = '<span class="no-selected-tags">No tags selected</span>';
+        return;
+    }
+    
+    selectedTags.forEach(tag => {
+        const tagElement = document.createElement('span');
+        tagElement.className = 'selected-tag';
+        tagElement.style.backgroundColor = tag.color || '#667eea';
+        tagElement.innerHTML = `
+            ${tag.name}
+            <button class="remove-tag-btn" onclick="removeSelectedTag('${tag.id}')">&times;</button>
+        `;
+        selectedTagsDisplay.appendChild(tagElement);
+    });
+}
+
+// 移除已选标签
+function removeSelectedTag(tagId) {
+    const checkbox = document.getElementById(`tag_${tagId}`);
+    if (checkbox) {
+        checkbox.checked = false;
+        const tagOption = checkbox.closest('.tag-option');
+        if (tagOption) {
+            tagOption.classList.remove('selected');
+        }
+    }
+    updateSelectedTagsDisplay();
+}
+
+// 将移除标签函数暴露到全局
+window.removeSelectedTag = removeSelectedTag;
+
+// 绑定标签选择器事件
+function bindTagSelectorEvents() {
+    const tagSelectorTrigger = document.getElementById('tagSelectorTrigger');
+    const tagSelectorDropdown = document.getElementById('tagSelectorDropdown');
+    
+    if (!tagSelectorTrigger || !tagSelectorDropdown) return;
+    
+    // 点击触发器显示/隐藏下拉选项
+    tagSelectorTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tagSelectorDropdown.classList.toggle('open');
+        
+        // 更新箭头方向
+        const arrow = tagSelectorTrigger.querySelector('.tag-selector-arrow');
+        if (arrow) {
+            arrow.style.transform = tagSelectorDropdown.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+    });
+    
+    // 点击外部关闭下拉选项
+    document.addEventListener('click', (e) => {
+        if (!tagSelectorDropdown.contains(e.target)) {
+            tagSelectorDropdown.classList.remove('open');
+            const arrow = tagSelectorTrigger.querySelector('.tag-selector-arrow');
+            if (arrow) {
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+    });
+    
+    // 阻止下拉选项内部点击事件冒泡
+    const tagSelectorOptions = document.getElementById('tagSelectorOptions');
+    if (tagSelectorOptions) {
+        tagSelectorOptions.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
 }
 
 // 更新过滤器按钮

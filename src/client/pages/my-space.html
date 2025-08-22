@@ -102,8 +102,21 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="tagSelector">Tags (Optional)</label>
-                    <div class="tag-selector" id="tagSelector">
-                        <!-- Tag options will be dynamically generated -->
+                    <div class="tag-selector-container">
+                        <div class="tag-selector-dropdown" id="tagSelectorDropdown">
+                            <div class="tag-selector-trigger" id="tagSelectorTrigger">
+                                <span class="tag-selector-text">Select tags...</span>
+                                <svg class="tag-selector-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="tag-selector-options" id="tagSelectorOptions">
+                                <!-- Tag options will be dynamically generated -->
+                            </div>
+                        </div>
+                        <div class="selected-tags-display" id="selectedTagsDisplay">
+                            <!-- Selected tags will be shown here -->
+                        </div>
                     </div>
                     <div class="tag-actions">
                         <button type="button" class="tag-action-btn" id="createTagBtn">
