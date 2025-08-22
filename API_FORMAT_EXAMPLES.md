@@ -88,7 +88,6 @@ const result = await api.createInsight(insightData);
     
     <!-- 可选自定义字段 -->
     <input type="text" id="customTitle" placeholder="自定义标题">
-    <textarea id="customDescription" placeholder="自定义描述"></textarea>
     <textarea id="customThought" placeholder="你的想法"></textarea>
     
     <!-- 标签选择 -->
@@ -103,7 +102,6 @@ const result = await api.createInsight(insightData);
 // 获取表单数据
 const url = document.getElementById('contentUrl').value.trim();
 const customTitle = document.getElementById('customTitle').value.trim();
-const customDescription = document.getElementById('customDescription').value.trim();
 const customThought = document.getElementById('customThought').value.trim();
 
 // 获取选中的标签
@@ -120,7 +118,6 @@ const insightData = {
 
 // 添加自定义字段（如果用户输入了的话）
 if (customTitle) insightData.title = customTitle;
-if (customDescription) insightData.description = customDescription;
 if (customThought) insightData.thought = customThought;
 
 // 调用API
@@ -201,9 +198,9 @@ const result = await api.login(credentials);
 
 #### Insight字段限制
 - **title**: 1-200字符（可选，不提供则使用网页标题）
-- **description**: 最大3000字符（可选，不提供则使用网页描述）
+- **description**: 最大3000字符（自动从网页提取，不可自定义）
 - **url**: 最大500字符（必需）
-- **image_url**: 最大500字符（可选）
+- **image_url**: 最大500字符（自动从网页提取，不可自定义）
 - **thought**: 最大2000字符（可选，用户的想法/备注）
 - **tag_names**: 标签名称数组（可选）
 

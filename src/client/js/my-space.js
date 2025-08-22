@@ -548,7 +548,7 @@ function bindEvents() {
                 console.log('🔍 开始从URL创建insight...');
                 
                 // 获取选中的标签
-                const selectedTags = tagSelector.querySelectorAll('.tag-option.selected');
+                const selectedTags = getSelectedTags();
                 console.log('🏷️ 选中的标签:', selectedTags);
                 
                 // 构建insight数据
@@ -558,15 +558,11 @@ function bindEvents() {
                 
                 // 获取自定义字段
                 const customTitle = document.getElementById('customTitle')?.value?.trim();
-                const customDescription = document.getElementById('customDescription')?.value?.trim();
                 const customThought = document.getElementById('customThought')?.value?.trim();
                 
                 // 只有当有选中的标签时才添加tag_names
                 if (selectedTags.length > 0) {
-                    const tagNames = Array.from(selectedTags)
-                        .map(tag => tag.textContent.trim())
-                        .filter(tag => tag.length > 0); // 过滤空字符串
-                    
+                    const tagNames = selectedTags.map(tag => tag.name);
                     if (tagNames.length > 0) {
                         insightData.tag_names = tagNames;
                     }
@@ -574,7 +570,6 @@ function bindEvents() {
                 
                 // 添加自定义字段（如果用户输入了的话）
                 if (customTitle) insightData.title = customTitle;
-                if (customDescription) insightData.description = customDescription;
                 if (customThought) insightData.thought = customThought;
                 
                 console.log('📝 创建insight，数据:', insightData);
@@ -594,7 +589,6 @@ function bindEvents() {
                 addContentForm.reset();
                 // 手动清空自定义字段
                 document.getElementById('customTitle').value = '';
-                document.getElementById('customDescription').value = '';
                 document.getElementById('customThought').value = '';
                 hideAddContentModal();
                 
@@ -720,6 +714,8 @@ function renderTagSelector(tags) {
         return;
     }
     
+    console.log('🏷️ 渲染标签选择器，标签数量:', tags.length);
+    
     // 创建标签选择器
     tags.forEach(tag => {
         const tagOption = document.createElement('div');
@@ -733,6 +729,8 @@ function renderTagSelector(tags) {
         `;
         tagSelector.appendChild(tagOption);
     });
+    
+    console.log('🏷️ 标签选择器渲染完成，DOM元素:', tagSelector.innerHTML);
 }
 
 // 更新过滤器按钮
@@ -769,13 +767,19 @@ function getSelectedTags() {
     const selectedTags = [];
     const checkboxes = document.querySelectorAll('#tagSelector .tag-checkbox:checked');
     
-    checkboxes.forEach(checkbox => {
+    console.log('🔍 查找选中的标签，找到复选框数量:', checkboxes.length);
+    
+    checkboxes.forEach((checkbox, index) => {
         const tagId = checkbox.value;
         const tagLabel = checkbox.nextElementSibling;
         const tagName = tagLabel.textContent.trim();
+        
+        console.log(`🔍 标签 ${index + 1}:`, { id: tagId, name: tagName, label: tagLabel });
+        
         selectedTags.push({ id: tagId, name: tagName });
     });
     
+    console.log('✅ 最终选中的标签:', selectedTags);
     return selectedTags;
 }
 
