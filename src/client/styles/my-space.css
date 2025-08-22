@@ -456,20 +456,29 @@ body {
     overflow: hidden;
 }
 
+/* 文章卡片标签样式 */
 .content-card-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    gap: 8px;
+    margin: 12px 0;
 }
 
 .content-card-tag {
-    background: rgba(101, 85, 143, 0.1);
-    color: var(--quest-purple);
-    padding: 4px 12px;
-    border-radius: 16px;
-    font-size: 0.75rem;
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
     font-weight: 500;
+    background-color: #667eea;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.content-card-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .content-card-footer {
