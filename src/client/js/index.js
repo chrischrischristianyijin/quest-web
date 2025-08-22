@@ -85,15 +85,139 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
 
 // Handle logout
 async function handleLogout() {
+    // 显示确认对话框
+    if (!confirm('确定要退出登录吗？退出后需要重新登录。')) {
+        return;
+    }
+    
     try {
-        await auth.logout();
-        updateUIForLoginStatus(false);
-        window.location.href = '/';
+        console.log('🚪 用户点击登出...');
+        
+        // 获取logout按钮并显示加载状态
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            const originalText = logoutBtn.innerHTML;
+            logoutBtn.innerHTML = '<svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> 退出中...';
+            logoutBtn.disabled = true;
+            
+            // 调用登出API
+            await auth.logout();
+            console.log('✅ 登出成功，准备跳转...');
+            
+            // 更新UI状态
+            updateUIForLoginStatus(false);
+            
+            // 显示成功消息
+            showLogoutMessage('已成功退出登录', 'success');
+            
+            // 延迟跳转，让用户看到成功消息
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+            
+        } else {
+            // 如果没有找到按钮，直接处理
+            await auth.logout();
+            updateUIForLoginStatus(false);
+            window.location.href = '/';
+        }
+        
     } catch (error) {
-        console.error('Logout error:', error);
-        // 即使 API 调用失败，也清除本地状态
+        console.error('❌ 登出失败:', error);
+        
+        // 恢复按钮状态
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.innerHTML = 'Log out';
+            logoutBtn.disabled = false;
+        }
+        
+        // 即使API调用失败，也清除本地状态
         updateUIForLoginStatus(false);
-        window.location.href = '/';
+        
+        // 显示错误消息
+        showLogoutMessage('登出失败，但已清除本地状态', 'error');
+        
+        // 延迟跳转
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 2000);
+    }
+}
+
+// 显示登出消息
+function showLogoutMessage(message, type = 'info') {
+    // 移除现有消息
+    const existingMessage = document.querySelector('.logout-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    const messageElement = document.createElement('div');
+    messageElement.className = `logout-message logout-message-${type}`;
+    messageElement.innerHTML = `
+        <div class="message-content">
+            <svg class="message-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                ${type === 'success' ? 
+                    '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' :
+                    type === 'error' ?
+                    '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>' :
+                    '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+                }
+            </svg>
+            <span class="message-text">${message}</span>
+        </div>
+    `;
+    
+    // 添加样式
+    messageElement.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 300px;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(messageElement);
+    
+    // 自动隐藏
+    setTimeout(() => {
+        if (messageElement.parentNode) {
+            messageElement.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => {
+                if (messageElement.parentNode) {
+                    messageElement.remove();
+                }
+            }, 300);
+        }
+    }, 3000);
+    
+    // 添加CSS动画
+    if (!document.querySelector('#logout-message-styles')) {
+        const style = document.createElement('style');
+        style.id = 'logout-message-styles';
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     }
 }
 

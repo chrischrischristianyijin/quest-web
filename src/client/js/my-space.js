@@ -30,14 +30,14 @@ async function initPage() {
         // 检查认证状态
         if (!auth.checkAuth()) {
             console.log('❌ 用户未认证，重定向到登录页面');
-            window.location.href = '/pages/login.html';
+            window.location.href = '/login.html';
             return;
         }
         
         // 检查token是否过期
         if (!(await auth.checkAndHandleTokenExpiration())) {
             console.log('⏰ Token已过期，重定向到登录页面');
-            window.location.href = '/pages/login.html';
+            window.location.href = '/login.html';
             return;
         }
         
@@ -64,7 +64,7 @@ async function initPage() {
         
         // 如果是认证错误，重定向到登录页面
         if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
-            window.location.href = '/pages/login.html';
+            window.location.href = '/login.html';
             return;
         }
         
@@ -484,14 +484,48 @@ function bindEvents() {
     // 登出按钮
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
+            // 显示确认对话框
+            if (!confirm('确定要退出登录吗？退出后需要重新登录。')) {
+                return;
+            }
+            
             try {
+                console.log('🚪 用户点击登出...');
+                
+                // 保存原始按钮文本
+                const originalText = logoutBtn.innerHTML;
+                
+                // 显示加载状态
+                logoutBtn.innerHTML = '<svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> 退出中...';
+                logoutBtn.disabled = true;
+                
+                // 调用登出API
                 await auth.logout();
-                window.location.href = '/pages/login.html';
+                console.log('✅ 登出成功，准备跳转...');
+                
+                // 显示成功消息
+                showSuccessMessage('已成功退出登录');
+                
+                // 延迟跳转，让用户看到成功消息
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 1000);
+                
             } catch (error) {
-                console.error('登出失败:', error);
+                console.error('❌ 登出失败:', error);
+                
+                // 恢复按钮状态
+                logoutBtn.innerHTML = originalText;
+                logoutBtn.disabled = false;
+                
                 // 即使API调用失败，也要清除本地状态并跳转
                 auth.clearSession();
-                window.location.href = '/pages/login.html';
+                showErrorMessage('登出失败，但已清除本地状态');
+                
+                // 延迟跳转
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 2000);
             }
         });
     }
@@ -518,6 +552,28 @@ function bindEvents() {
             }
             
             try {
+                // 检查用户认证状态
+                if (!auth.checkAuth()) {
+                    showErrorMessage('Please log in to add content.');
+                    return;
+                }
+                
+                // 调试token状态
+                console.log('🔍 当前认证状态:', {
+                    isAuthenticated: auth.checkAuth(),
+                    hasUser: !!auth.getCurrentUser(),
+                    sessionToken: !!localStorage.getItem('quest_user_session')
+                });
+                
+                // 验证token是否有效
+                const tokenValid = await auth.validateToken();
+                if (!tokenValid) {
+                    showErrorMessage('Your session has expired. Please log in again.');
+                    return;
+                }
+                
+                console.log('✅ Token验证通过，开始添加内容...');
+                
                 // 显示加载状态
                 const submitBtn = document.getElementById('addContentBtn');
                 const originalText = submitBtn.innerHTML;
@@ -528,18 +584,16 @@ function bindEvents() {
                 
                 // 获取选中的标签
                 const selectedTags = tagSelector.querySelectorAll('.tag-option.selected');
-                let tags = '';
-                if (selectedTags.length > 0) {
-                    tags = Array.from(selectedTags).map(tag => tag.textContent).join(',');
-                }
+                console.log('🏷️ 选中的标签:', selectedTags);
                 
-                // 使用新的 create-insight API 端点（两步合一）
+                // 构建insight数据
                 const insightData = {
                     url: url,
-                    tag_names: Array.from(selectedTags).map(tag => tag.textContent) // 使用新的字段名
+                    tag_names: Array.from(selectedTags).map(tag => tag.textContent.trim()) // 确保是数组格式，并去除空格
                 };
                 
                 console.log('📝 创建insight，数据:', insightData);
+                console.log('🔍 tag_names类型:', typeof insightData.tag_names, '长度:', insightData.tag_names.length);
                 
                 // 使用新的 API 端点创建 insight
                 const result = await api.createInsightFromUrl(url, insightData);
@@ -567,6 +621,8 @@ function bindEvents() {
                         errorMessage = 'Please log in again to add content.';
                     } else if (error.message.includes('400') || error.message.includes('bad request')) {
                         errorMessage = 'Invalid URL or content format.';
+                    } else if (error.message.includes('422')) {
+                        errorMessage = 'Data validation failed. Please check your input and try again.';
                     } else if (error.message.includes('500') || error.message.includes('server error')) {
                         errorMessage = 'Server error. Please try again later.';
                     } else {
