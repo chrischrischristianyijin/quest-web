@@ -346,7 +346,7 @@ function createInsightCard(insight) {
     // 组装卡片内容
     cardContent.appendChild(cardHeader);
     cardContent.appendChild(description);
-    cardContent.appendChild(tags);
+    // 标签区域只在有标签时才添加
     cardContent.appendChild(cardFooter);
     
     // 组装完整卡片
@@ -1938,3 +1938,45 @@ function testInsightCardRendering() {
 
 // 将测试函数暴露到全局
 window.testInsightCardRendering = testInsightCardRendering;
+
+// 测试insight卡片标签渲染
+function testInsightCardTags() {
+    console.log('🧪 测试insight卡片标签渲染...');
+    
+    if (currentInsights.length === 0) {
+        console.log('⚠️ 没有insights数据可测试');
+        return;
+    }
+    
+    // 检查每个insight的标签状态
+    currentInsights.forEach((insight, index) => {
+        console.log(`📖 Insight ${index + 1}:`, insight.title || insight.url);
+        console.log(`🏷️ 标签数据:`, insight.tags);
+        console.log(`🔍 是否有标签:`, insight.tags && insight.tags.length > 0 ? '是' : '否');
+        
+        try {
+            // 尝试创建卡片
+            const card = createInsightCard(insight);
+            const tagsContainer = card.querySelector('.content-card-tags');
+            
+            if (tagsContainer) {
+                console.log(`✅ 标签容器存在，标签数量:`, tagsContainer.querySelectorAll('.content-card-tag').length);
+            } else {
+                console.log(`✅ 无标签容器（正确，因为没有标签）`);
+            }
+            
+            console.log('---');
+        } catch (error) {
+            console.error(`❌ Insight ${index + 1} 卡片创建失败:`, error);
+        }
+    });
+    
+    return {
+        totalInsights: currentInsights.length,
+        withTags: currentInsights.filter(i => i.tags && i.tags.length > 0).length,
+        withoutTags: currentInsights.filter(i => !i.tags || i.tags.length === 0).length
+    };
+}
+
+// 将测试函数暴露到全局
+window.testInsightCardTags = testInsightCardTags;
