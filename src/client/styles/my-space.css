@@ -336,6 +336,32 @@ body {
     height: 18px;
 }
 
+/* 左上角添加内容按钮 */
+.add-content-btn-left {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    margin-left: 15px;
+}
+
+.add-content-btn-left:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.add-content-btn-left svg {
+    width: 16px;
+    height: 16px;
+}
+
 /* 内容卡片区域 */
 .ContentCards {
     display: grid;
