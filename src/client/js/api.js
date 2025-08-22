@@ -1,11 +1,9 @@
 import { CONFIG, API_ENDPOINTS } from './config.js';
-import { corsProxy } from './cors-proxy.js';
 
 // API 服务类
 class ApiService {
     constructor() {
         this.baseUrl = CONFIG.API_BASE_URL;
-        this.useCorsProxy = false; // 默认不使用代理
     }
 
     // 获取认证 token
@@ -24,44 +22,36 @@ class ApiService {
 
     // 通用请求方法
     async request(url, config = {}) {
-        const token = this.getAuthToken();
-        
-        // 设置默认配置
-        const defaultConfig = {
+        const finalConfig = {
             headers: {
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                ...config.headers
+            },
+            ...config
         };
-        
-        // 合并配置
-        const finalConfig = { ...defaultConfig, ...config };
-        
+
         // 如果是FormData，不设置Content-Type，让浏览器自动处理
         if (config.body instanceof FormData) {
             delete finalConfig.headers['Content-Type'];
             console.log('📤 检测到FormData，移除Content-Type头');
         }
-        
+
         // 添加认证头
+        const token = this.getAuthToken();
         if (token) {
             finalConfig.headers['Authorization'] = `Bearer ${token}`;
-            console.log('✅ Authorization 头已设置');
-        } else {
-            console.log('❌ 没有 token，无法设置 Authorization 头');
+            console.log('🔐 添加认证头');
         }
 
+        console.log('📡 发送请求:', {
+            url,
+            method: finalConfig.method || 'GET',
+            headers: finalConfig.headers,
+            body: config.body instanceof FormData ? 'FormData' : config.body
+        });
+
         try {
-            let response;
-            
-            if (this.useCorsProxy) {
-                // 使用 CORS 代理
-                console.log('🔄 使用 CORS 代理发送请求...');
-                response = await corsProxy.smartRequest(url, finalConfig);
-            } else {
-                // 尝试直接请求
-                console.log('🔄 尝试直接发送请求...');
-                response = await fetch(url, finalConfig);
-            }
+            const response = await fetch(url, finalConfig);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -71,25 +61,6 @@ class ApiService {
             return await response.json();
         } catch (error) {
             console.error('API 请求错误:', error);
-            
-            // 如果是 CORS 错误，自动启用代理
-            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                console.log('🔄 检测到 CORS 错误，自动启用代理...');
-                this.useCorsProxy = true;
-                
-                try {
-                    const response = await corsProxy.smartRequest(url, finalConfig);
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.message || `HTTP ${response.status}`);
-                    }
-                    return await response.json();
-                } catch (proxyError) {
-                    console.error('CORS 代理也失败了:', proxyError);
-                    throw proxyError;
-                }
-            }
-            
             throw error;
         }
     }

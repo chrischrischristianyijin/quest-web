@@ -1,15 +1,27 @@
 {
   "name": "quest-web",
   "version": "1.0.0",
-  "type": "module",
-  "description": "Quest Web Frontend - A platform for collecting and sharing insights",
-  "private": true,
+  "description": "Quest Web Application",
+  "main": "proxy-server.js",
   "scripts": {
-    "start": "http-server src/client -p 8080 -c-1",
-    "dev": "http-server src/client -p 8080 -c-1 -o",
-    "vercel-build": "echo 'Frontend build completed'"
+    "start": "node proxy-server.js",
+    "dev": "node proxy-server.js",
+    "dev:frontend": "http-server src/client -p 8080 -c-1 -o",
+    "install:proxy": "npm install express http-proxy-middleware cors"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^2.0.9"
   },
   "devDependencies": {
     "http-server": "^14.1.1"
-  }
+  },
+  "keywords": [
+    "quest",
+    "web",
+    "application"
+  ],
+  "author": "Quest Team",
+  "license": "MIT"
 }
