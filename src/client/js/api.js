@@ -57,7 +57,14 @@ class ApiService {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(`HTTP ${response.status}: ${errorData.detail || response.statusText}`);
+                const errorMessage = errorData.detail || errorData.message || response.statusText;
+                console.error('❌ API错误响应:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorData: errorData,
+                    errorMessage: errorMessage
+                });
+                throw new Error(`HTTP ${response.status}: ${errorMessage}`);
             }
 
             const data = await response.json();
