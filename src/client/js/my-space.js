@@ -11,7 +11,7 @@ const addContentForm = document.getElementById('addContentForm');
 const addContentModal = document.getElementById('addContentModal');
 const closeAddModal = document.getElementById('closeAddModal');
 const cancelAddBtn = document.getElementById('cancelAddBtn');
-const searchInput = document.getElementById('searchInput');
+
 const filterButtons = document.getElementById('filterButtons');
 
 // 页面状态
@@ -22,7 +22,7 @@ let currentFilters = {
     tags: null,        // 标签筛选
     type: 'all'        // 内容类型
 };
-let currentSearch = '';
+
 
 // 页面初始化
 async function initPage() {
@@ -383,7 +383,9 @@ async function initFilterButtons() {
                 type: 'dropdown',
                 options: [
                     { key: 'latest', label: 'Latest First' },
-                    { key: 'oldest', label: 'Oldest First' }
+                    { key: 'oldest', label: 'Oldest First' },
+                    { key: 'alphabetical', label: 'A-Z' },
+                    { key: 'reverse_alphabetical', label: 'Z-A' }
                 ]
             },
             {
@@ -446,28 +448,29 @@ async function initFilterButtons() {
                 }
             });
             
-                    // 绑定选项点击事件
-        dropdownOptions.addEventListener('click', (e) => {
-            const option = e.target.closest('.filter-option');
-            if (option) {
-                const filterKey = option.dataset.filter;
-                const filterType = filterConfig.key; // latest, tags, type
-                console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType);
-                setFilter(filterType, filterKey);
-                
-                // 关闭所有下拉框
-                document.querySelectorAll('.filter-button-container').forEach(container => {
-                    container.classList.remove('open');
-                    const arrow = container.querySelector('.filter-arrow');
-                    if (arrow) arrow.style.transform = 'rotate(0deg)';
-                });
-            }
-        });
-        
-        // 阻止下拉选项点击事件冒泡
-        dropdownOptions.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+            // 绑定选项点击事件
+            dropdownOptions.addEventListener('click', (e) => {
+                const option = e.target.closest('.filter-option');
+                if (option) {
+                    const filterKey = option.dataset.filter;
+                    const filterType = filterConfig.key; // latest, tags, type
+                    const optionLabel = option.querySelector('.filter-option-label').textContent;
+                    console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
+                    setFilter(filterType, filterKey, optionLabel);
+                    
+                    // 关闭所有下拉框
+                    document.querySelectorAll('.filter-button-container').forEach(container => {
+                        container.classList.remove('open');
+                        const arrow = container.querySelector('.filter-arrow');
+                        if (arrow) arrow.style.transform = 'rotate(0deg)';
+                    });
+                }
+            });
+            
+            // 阻止下拉选项点击事件冒泡
+            dropdownOptions.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
             
             buttonContainer.appendChild(button);
             buttonContainer.appendChild(dropdownOptions);
@@ -478,12 +481,7 @@ async function initFilterButtons() {
         
         // Edit Tags按钮已移到标签选择器旁边，不再需要在这里添加
         
-        // 添加清除所有筛选按钮
-        const clearAllFiltersBtn = document.createElement('button');
-        clearAllFiltersBtn.className = 'FilterButton clear-all-filters-btn';
-        clearAllFiltersBtn.textContent = 'Clear All';
-        clearAllFiltersBtn.onclick = () => clearAllFilters();
-        filterButtons.appendChild(clearAllFiltersBtn);
+
         
         console.log('✅ 筛选按钮初始化完成，共', mainFilterButtons.length, '个主要按钮');
         
@@ -510,12 +508,15 @@ async function initFilterButtons() {
 }
 
 // 设置筛选条件
-function setFilter(filterType, filterValue) {
+function setFilter(filterType, filterValue, optionLabel = null) {
     // 更新对应的筛选条件
     currentFilters[filterType] = filterValue;
     
-    console.log('🔍 设置筛选条件:', filterType, '=', filterValue);
+    console.log('🔍 设置筛选条件:', filterType, '=', filterValue, '标签:', optionLabel);
     console.log('🔍 当前所有筛选条件:', currentFilters);
+    
+    // 更新按钮显示文本
+    updateFilterButtonDisplay(filterType, filterValue, optionLabel);
     
     // 更新按钮状态
     updateFilterButtonStates();
@@ -525,6 +526,37 @@ function setFilter(filterType, filterValue) {
     
     // 重新渲染
     renderInsights();
+}
+
+// 更新筛选按钮显示文本
+function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
+    const buttonContainer = filterButtons.querySelector(`[data-filter="${filterType}"]`).closest('.filter-button-container');
+    const button = buttonContainer.querySelector('.filter-label');
+    
+    if (filterType === 'tags' && filterValue && filterValue.startsWith('tag_')) {
+        // 标签筛选：显示选中的标签名称
+        if (optionLabel) {
+            button.textContent = optionLabel;
+        }
+    } else if (filterType === 'latest') {
+        // 排序方式：显示排序方式
+        if (filterValue === 'latest') {
+            button.textContent = 'Latest';
+        } else if (filterValue === 'oldest') {
+            button.textContent = 'Oldest First';
+        } else if (filterValue === 'alphabetical') {
+            button.textContent = 'A-Z';
+        } else if (filterValue === 'reverse_alphabetical') {
+            button.textContent = 'Z-A';
+        }
+    } else if (filterType === 'type') {
+        // 内容类型：显示选中的类型
+        if (optionLabel && filterValue !== 'all') {
+            button.textContent = optionLabel;
+        } else {
+            button.textContent = 'Type';
+        }
+    }
 }
 
 // 更新筛选按钮状态
@@ -544,11 +576,15 @@ function updateFilterButtonStates() {
 function showFilterStatus() {
     const statusParts = [];
     
-    // 时间排序状态
+    // 排序状态
     if (currentFilters.latest === 'latest') {
         statusParts.push('最新优先');
     } else if (currentFilters.latest === 'oldest') {
         statusParts.push('最旧优先');
+    } else if (currentFilters.latest === 'alphabetical') {
+        statusParts.push('按标题A-Z排序');
+    } else if (currentFilters.latest === 'reverse_alphabetical') {
+        statusParts.push('按标题Z-A排序');
     }
     
     // 标签筛选状态
@@ -588,13 +624,35 @@ function getFilteredInsights() {
     console.log('🔍 当前筛选条件:', currentFilters);
     console.log('📚 当前文章数据:', currentInsights);
     
-    // 1. 时间排序（始终应用）
+    // 1. 排序逻辑（始终应用）
     if (currentFilters.latest === 'latest') {
+        // 按最新时间排序
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         console.log('📅 按最新时间排序');
     } else if (currentFilters.latest === 'oldest') {
+        // 按最旧时间排序
         filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         console.log('📅 按最旧时间排序');
+    } else if (currentFilters.latest === 'alphabetical') {
+        // 按标题首字母A-Z排序
+        filteredInsights.sort((a, b) => {
+            const titleA = (a.title || a.url || '').toLowerCase();
+            const titleB = (b.title || b.url || '').toLowerCase();
+            return titleA.localeCompare(titleB);
+        });
+        console.log('🔤 按标题首字母A-Z排序');
+    } else if (currentFilters.latest === 'reverse_alphabetical') {
+        // 按标题首字母Z-A排序
+        filteredInsights.sort((a, b) => {
+            const titleA = (a.title || a.url || '').toLowerCase();
+            const titleB = (b.title || b.url || '').toLowerCase();
+            return titleB.localeCompare(titleA);
+        });
+        console.log('🔤 按标题首字母Z-A排序');
+    } else {
+        // 默认按最新时间排序
+        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        console.log('📅 默认按最新时间排序');
     }
     
     // 2. 标签筛选
@@ -640,11 +698,7 @@ function getFilteredInsights() {
     return filteredInsights;
 }
 
-// 搜索功能
-function performSearch() {
-    currentSearch = searchInput.value.trim();
-    loadUserInsights();
-}
+
 
 // 分享见解
 async function shareInsight(insight) {
@@ -728,8 +782,8 @@ function bindEvents() {
             // 直接清除本地状态
             auth.clearSession();
             
-            // 立即跳转到登录页面
-            window.location.href = PATHS.LOGIN;
+            // 立即跳转到首页
+            window.location.href = PATHS.HOME;
         });
     }
     
@@ -876,10 +930,7 @@ function bindEvents() {
         cancelAddBtn.addEventListener('click', hideAddContentModal);
     }
     
-    // 搜索功能
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(performSearch, 500));
-    }
+
     
     // 点击模态框外部关闭
     if (addContentModal) {
@@ -1455,18 +1506,7 @@ async function createNewTag() {
     }
 }
 
-// 防抖函数
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initPage);
@@ -2009,26 +2049,60 @@ function testInsightCardTags() {
 // 将测试函数暴露到全局
 window.testInsightCardTags = testInsightCardTags;
 
-// 清除所有筛选条件
-function clearAllFilters() {
-    console.log('🧹 清除所有筛选条件');
+// 测试筛选功能
+function testFiltering() {
+    console.log('🧪 测试筛选功能...');
+    console.log('当前筛选条件:', currentFilters);
     
-    // 重置筛选条件
-    currentFilters = {
-        latest: 'latest',  // 默认最新优先
-        tags: null,        // 清除标签筛选
-        type: 'all'        // 默认所有类型
-    };
+    // 测试各种排序方式
+    console.log('测试排序功能...');
     
-    // 更新按钮状态
-    updateFilterButtonStates();
+    // 测试A-Z排序
+    setFilter('latest', 'alphabetical', 'A-Z');
     
-    // 显示筛选状态
-    showFilterStatus();
+    setTimeout(() => {
+        console.log('测试Z-A排序...');
+        setFilter('latest', 'reverse_alphabetical', 'Z-A');
+    }, 1000);
     
-    // 重新渲染
-    renderInsights();
+    setTimeout(() => {
+        console.log('测试最旧优先...');
+        setFilter('latest', 'oldest', 'Oldest First');
+    }, 2000);
+    
+    setTimeout(() => {
+        console.log('测试最新优先...');
+        setFilter('latest', 'latest', 'Latest');
+    }, 3000);
 }
 
-// 将清除筛选函数暴露到全局
-window.clearAllFilters = clearAllFilters;
+// 测试排序功能
+function testSorting() {
+    console.log('🔤 测试排序功能...');
+    console.log('当前排序方式:', currentFilters.latest);
+    
+    const insights = [...currentInsights];
+    console.log('原始文章顺序:', insights.map(i => i.title || i.url).slice(0, 5));
+    
+    // 测试A-Z排序
+    const alphabetical = [...insights].sort((a, b) => {
+        const titleA = (a.title || a.url || '').toLowerCase();
+        const titleB = (b.title || b.url || '').toLowerCase();
+        return titleA.localeCompare(titleB);
+    });
+    console.log('A-Z排序后:', alphabetical.map(i => i.title || i.url).slice(0, 5));
+    
+    // 测试Z-A排序
+    const reverseAlphabetical = [...insights].sort((a, b) => {
+        const titleA = (a.title || a.url || '').toLowerCase();
+        const titleB = (b.title || b.url || '').toLowerCase();
+        return titleB.localeCompare(titleA);
+    });
+    console.log('Z-A排序后:', reverseAlphabetical.map(i => i.title || i.url).slice(0, 5));
+}
+
+// 将测试函数暴露到全局
+window.testFiltering = testFiltering;
+window.testSorting = testSorting;
+
+
