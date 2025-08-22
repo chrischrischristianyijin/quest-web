@@ -39,9 +39,5 @@
       "src": "/(.*)",
       "dest": "/src/client/pages/$1"
     }
-  ],
-  "functions": {},
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 } 
