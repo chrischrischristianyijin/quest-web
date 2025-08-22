@@ -1,7 +1,7 @@
 // Quest 应用配置
 export const CONFIG = {
-    // API 配置 - 使用本地代理服务器
-    API_BASE_URL: 'http://localhost:3001',
+    // API 配置 - 使用原始后端地址
+    API_BASE_URL: 'https://quest-api-edz1.onrender.com',
     API_VERSION: 'v1',
     
     // 应用配置

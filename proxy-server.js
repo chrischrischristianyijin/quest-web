@@ -20,10 +20,13 @@ app.use('/api', createProxyMiddleware({
         '^/api': '/api' // 保持路径不变
     },
     onProxyReq: (proxyReq, req, res) => {
-        console.log(`🔄 代理请求: ${req.method} ${req.url}`);
+        console.log(`🔄 代理请求: ${req.method} ${req.url} -> ${proxyReq.path}`);
     },
     onProxyRes: (proxyRes, req, res) => {
         console.log(`✅ 代理响应: ${proxyRes.statusCode} ${req.url}`);
+        if (proxyRes.statusCode >= 400) {
+            console.error(`❌ 后端错误: ${proxyRes.statusCode} ${req.url}`);
+        }
     },
     onError: (err, req, res) => {
         console.error(`❌ 代理错误: ${err.message}`);

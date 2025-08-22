@@ -22,39 +22,50 @@ let currentSearch = '';
 // 页面初始化
 async function initPage() {
     try {
-        console.log('🚀 开始初始化页面...');
-        
-        // 等待认证状态恢复
-        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('🚀 初始化My Space页面...');
         
         // 检查认证状态
         if (!auth.checkAuth()) {
-            console.log('❌ 用户未认证，跳转到登录页');
+            console.log('❌ 用户未认证，重定向到登录页面');
             window.location.href = '/login';
             return;
         }
         
-        console.log('✅ 用户已认证，开始加载数据...');
+        // 检查token是否过期
+        if (!(await auth.checkAndHandleTokenExpiration())) {
+            console.log('⏰ Token已过期，重定向到登录页面');
+            window.location.href = '/login';
+            return;
+        }
+        
+        console.log('✅ 认证状态正常，继续初始化...');
         
         // 加载用户资料
         await loadUserProfile();
         
-        // 加载用户见解
+        // 加载用户insights
         await loadUserInsights();
+        
+        // 加载用户标签
+        await loadUserTags();
+        
+        // 初始化过滤器按钮
+        initFilterButtons();
         
         // 绑定事件
         bindEvents();
         
-        // 初始化筛选按钮
-        initFilterButtons();
-        
+        console.log('✅ My Space页面初始化完成');
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
-        if (error.message.includes('401') || error.message.includes('unauthorized')) {
-            // 认证失败，跳转到登录页
-            console.log('🔒 认证失败，跳转到登录页');
+        
+        // 如果是认证错误，重定向到登录页面
+        if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
             window.location.href = '/login';
+            return;
         }
+        
+        showErrorMessage('页面初始化失败，请刷新重试');
     }
 }
 

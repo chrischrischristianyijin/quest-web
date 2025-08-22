@@ -229,6 +229,65 @@ class AuthManager {
             this.clearSession();
         }
     }
+
+    // 检查token是否过期
+    isTokenExpired() {
+        const session = localStorage.getItem('quest_user_session');
+        if (!session) return true;
+        
+        try {
+            const parsed = JSON.parse(session);
+            if (!parsed.timestamp) return true;
+            
+            const now = Date.now();
+            const sessionAge = now - parsed.timestamp;
+            
+            // 如果超过23小时（提前1小时刷新），认为即将过期
+            return sessionAge > 23 * 60 * 60 * 1000;
+        } catch (error) {
+            console.error('检查token过期失败:', error);
+            return true;
+        }
+    }
+
+    // 刷新token（重新登录）
+    async refreshToken() {
+        console.log('🔄 检测到token即将过期，尝试刷新...');
+        
+        const session = localStorage.getItem('quest_user_session');
+        if (!session) {
+            console.log('❌ 没有会话数据，无法刷新');
+            return false;
+        }
+        
+        try {
+            const parsed = JSON.parse(session);
+            if (!parsed.user || !parsed.user.email) {
+                console.log('❌ 会话数据不完整，无法刷新');
+                return false;
+            }
+            
+            // 这里需要用户重新输入密码，或者使用refresh token
+            // 暂时清除会话，要求用户重新登录
+            console.log('⚠️ 需要用户重新登录以获取新token');
+            this.clearSession();
+            return false;
+        } catch (error) {
+            console.error('刷新token失败:', error);
+            this.clearSession();
+            return false;
+        }
+    }
+
+    // 检查并处理token过期
+    async checkAndHandleTokenExpiration() {
+        if (this.isTokenExpired()) {
+            console.log('⏰ Token已过期，清除会话');
+            this.clearSession();
+            return false;
+        }
+        return true;
+    }
 }
 
 // 创建全局认证管理器实例
