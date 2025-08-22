@@ -318,7 +318,7 @@ function createInsightCard(insight) {
             
             // 不再设置标签颜色，使用CSS默认样式
             
-            console.log(`🏷️ 创建标签元素:`, { text: tagText, color: tagColor });
+            console.log(`🏷️ 创建标签元素:`, { text: tagText });
             
             tags.appendChild(tagElement);
         });
@@ -1908,3 +1908,47 @@ function testTagSelector() {
 
 // 将测试函数暴露到全局
 window.testTagSelector = testTagSelector;
+
+// 测试insight卡片渲染
+function testInsightCardRendering() {
+    console.log('🧪 测试insight卡片渲染...');
+    
+    if (currentInsights.length === 0) {
+        console.log('⚠️ 没有insights数据可测试');
+        return;
+    }
+    
+    // 测试第一个insight的标签渲染
+    const firstInsight = currentInsights[0];
+    console.log('📖 测试insight:', firstInsight.title || firstInsight.url);
+    console.log('🏷️ 标签数据:', firstInsight.tags);
+    
+    try {
+        // 尝试创建卡片
+        const card = createInsightCard(firstInsight);
+        console.log('✅ 卡片创建成功:', card);
+        
+        // 检查标签元素
+        const tags = card.querySelector('.content-card-tags');
+        if (tags) {
+            const tagElements = tags.querySelectorAll('.content-card-tag');
+            console.log('🏷️ 渲染的标签数量:', tagElements.length);
+            
+            tagElements.forEach((tagEl, index) => {
+                console.log(`   标签${index + 1}:`, {
+                    text: tagEl.textContent,
+                    className: tagEl.className,
+                    hasColor: !!tagEl.style.backgroundColor
+                });
+            });
+        }
+        
+        return { success: true, card: card };
+    } catch (error) {
+        console.error('❌ 卡片创建失败:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// 将测试函数暴露到全局
+window.testInsightCardRendering = testInsightCardRendering;
