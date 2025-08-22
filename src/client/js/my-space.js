@@ -560,11 +560,11 @@ function bindEvents() {
                 const customTitle = document.getElementById('customTitle')?.value?.trim();
                 const customThought = document.getElementById('customThought')?.value?.trim();
                 
-                // 只有当有选中的标签时才添加tag_names
+                // 只有当有选中的标签时才添加tag_ids（使用标签ID而不是名称）
                 if (selectedTags.length > 0) {
-                    const tagNames = selectedTags.map(tag => tag.name);
-                    if (tagNames.length > 0) {
-                        insightData.tag_names = tagNames;
+                    const tagIds = selectedTags.map(tag => tag.id);
+                    if (tagIds.length > 0) {
+                        insightData.tag_ids = tagIds;
                     }
                 }
                 
@@ -573,7 +573,7 @@ function bindEvents() {
                 if (customThought) insightData.thought = customThought;
                 
                 console.log('📝 创建insight，数据:', insightData);
-                console.log('🔍 tag_names类型:', typeof insightData.tag_names, '长度:', insightData.tag_names ? insightData.tag_names.length : 0);
+                console.log('🔍 tag_ids类型:', typeof insightData.tag_ids, '长度:', insightData.tag_ids ? insightData.tag_ids.length : 0);
                 
                 // 使用正确的API端点创建insight
                 const result = await api.createInsight(insightData);
@@ -609,6 +609,7 @@ function bindEvents() {
                         console.error('🔍 422错误详情 - 错误信息:', error.message);
                         console.error('🔍 422错误详情 - URL:', url);
                         console.error('🔍 422错误详情 - 标签数量:', selectedTags ? selectedTags.length : 0);
+                        console.error('🔍 422错误详情 - 标签ID数组:', insightData.tag_ids);
                     } else if (error.message.includes('500') || error.message.includes('server error')) {
                         errorMessage = 'Server error. Please try again later.';
                     } else {
@@ -1298,21 +1299,20 @@ window.deleteTagInManagement = deleteTagInManagement;
 function testInsightDataFormat() {
     console.log('🧪 测试insight数据格式...');
     
-    // 模拟数据
+    // 模拟数据（使用新的API格式）
     const testData = {
         url: 'https://example.com/article',
-        title: '测试标题',
         thought: '测试想法',
-        tag_names: ['技术', 'AI']
+        tag_ids: ['550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002']
     };
     
     console.log('📝 测试数据:', testData);
     console.log('🔍 数据验证:');
     console.log('- URL长度:', testData.url.length, '<= 500:', testData.url.length <= 500);
-    console.log('- 标题长度:', testData.title.length, '<= 200:', testData.title.length <= 200);
     console.log('- 想法长度:', testData.thought.length, '<= 2000:', testData.thought.length <= 2000);
-    console.log('- 标签数量:', testData.tag_names.length);
-    console.log('- 标签格式:', Array.isArray(testData.tag_names) ? '正确' : '错误');
+    console.log('- 标签ID数量:', testData.tag_ids.length);
+    console.log('- 标签ID格式:', Array.isArray(testData.tag_ids) ? '正确' : '错误');
+    console.log('📝 注意: title和description由后端自动从网页提取，无需前端传递');
     
     return testData;
 }
