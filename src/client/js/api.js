@@ -1,4 +1,5 @@
 import { CONFIG, API_ENDPOINTS } from './config.js';
+import { auth } from './auth.js';
 
 // API 服务类
 class ApiService {
@@ -22,6 +23,11 @@ class ApiService {
 
     // 通用请求方法
     async request(url, config = {}) {
+        // 检查token是否过期
+        if (!(await auth.checkAndHandleTokenExpiration())) {
+            throw new Error('认证已过期，请重新登录');
+        }
+
         const finalConfig = {
             headers: {
                 'Content-Type': 'application/json',
@@ -55,6 +61,14 @@ class ApiService {
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
+                
+                // 如果是401或403错误，清除过期的认证
+                if (response.status === 401 || response.status === 403) {
+                    console.log('🔒 认证失败，清除过期token');
+                    auth.clearSession();
+                    throw new Error('认证已过期，请重新登录');
+                }
+                
                 throw new Error(errorData.message || `HTTP ${response.status}`);
             }
 
@@ -175,10 +189,11 @@ class ApiService {
         }
         
         try {
-            console.log('🌐 完整API URL:', `${this.baseUrl}/api/v1/metadata/create-insight`);
+            const apiUrl = `${this.baseUrl}/api/v1/metadata/create-insight`;
+            console.log('🌐 完整API URL:', apiUrl);
             console.log('🔑 当前token:', this.getAuthToken() ? '存在' : '不存在');
             
-            const response = await this.request(`${this.baseUrl}/api/v1/metadata/create-insight`, {
+            const response = await this.request(apiUrl, {
                 method: 'POST',
                 body: formData
             });
@@ -189,13 +204,14 @@ class ApiService {
             console.error('❌ createInsightFromUrl 失败:', error);
             
             // 添加更详细的错误信息
-            if (error.message.includes('422')) {
-                console.error('📋 422错误详情 - 请求格式问题');
+            if (error.message.includes('500')) {
+                console.error('📋 500错误详情 - 后端服务器内部错误');
                 console.error('📤 发送的数据:', {
                     url: data.url,
                     tags: data.tags,
                     formDataEntries: Array.from(formData.entries())
                 });
+                console.error('🔍 建议检查后端日志了解具体错误原因');
             }
             
             throw error;
