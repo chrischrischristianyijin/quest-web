@@ -40,7 +40,7 @@ class AuthManager {
         try {
             const result = await api.signup({ email, nickname, password });
             
-            if (result.user) {
+            if (result.success && result.user) {
                 this.user = result.user;
                 this.isAuthenticated = true;
                 
@@ -50,7 +50,6 @@ class AuthManager {
                 this.notifyListeners();
                 return { success: true, user: result.user };
             } else {
-                // 如果 API 返回了结果但没有用户信息，返回失败状态
                 return { success: false, message: '注册失败：无效的用户信息' };
             }
         } catch (error) {
@@ -66,7 +65,7 @@ class AuthManager {
             const result = await api.login({ email, password });
             console.log('📡 API 响应结果:', result);
             
-            if (result && result.user && result.token) {
+            if (result && result.success && result.user) {
                 console.log('✅ 登录成功，获取到 token:', result.token);
                 
                 // 设置认证 token
@@ -99,29 +98,31 @@ class AuthManager {
                 this.notifyListeners();
                 return { success: true, user: this.user };
             } else {
-                console.log('❌ API 返回了结果但格式不正确:', result);
-                return { success: false, message: '登录失败：响应格式错误' };
+                throw new Error(result?.message || '登录失败');
             }
         } catch (error) {
-            console.error('🚨 登录过程中发生错误:', error);
-            console.error('错误详情:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            });
-            return { success: false, message: error.message || '登录失败，请检查邮箱和密码' };
+            console.error('❌ 登录失败:', error);
+            return { success: false, message: error.message || '登录失败，请重试' };
         }
     }
 
     // 用户登出
     async logout() {
         try {
-            await api.logout();
+            const result = await api.logout();
+            if (result.success) {
+                this.clearSession();
+                this.notifyListeners();
+                return { success: true };
+            } else {
+                throw new Error(result.message || '登出失败');
+            }
         } catch (error) {
-            console.error('登出API调用失败:', error);
-        } finally {
+            console.error('登出错误:', error);
+            // 即使API调用失败，也要清除本地会话
             this.clearSession();
             this.notifyListeners();
+            return { success: false, message: error.message };
         }
     }
 
@@ -254,39 +255,30 @@ class AuthManager {
             const now = Date.now();
             const sessionAge = now - parsed.timestamp;
             
-            // 如果超过23小时（提前1小时刷新），认为即将过期
-            return sessionAge > 23 * 60 * 60 * 1000;
+            // 24小时过期
+            return sessionAge >= 24 * 60 * 60 * 1000;
         } catch (error) {
             console.error('检查token过期失败:', error);
             return true;
         }
     }
 
-    // 刷新token（重新登录）
+    // 刷新token（如果需要的话）
     async refreshToken() {
-        console.log('🔄 检测到token即将过期，尝试刷新...');
-        
-        const session = localStorage.getItem('quest_user_session');
-        if (!session) {
-            console.log('❌ 没有会话数据，无法刷新');
-            return false;
-        }
-        
         try {
-            const parsed = JSON.parse(session);
-            if (!parsed.user || !parsed.user.email) {
-                console.log('❌ 会话数据不完整，无法刷新');
-                return false;
+            console.log('🔄 尝试刷新token...');
+            
+            // 检查是否有有效的会话
+            if (!this.isAuthenticated || !this.user) {
+                throw new Error('没有有效的会话可以刷新');
             }
             
-            // 这里需要用户重新输入密码，或者使用refresh token
-            // 暂时清除会话，要求用户重新登录
-            console.log('⚠️ 需要用户重新登录以获取新token');
-            this.clearSession();
+            // 这里可以调用后端刷新token的API
+            // 目前后端没有提供刷新token的接口，所以直接返回false
+            console.log('⚠️ 后端暂不支持token刷新');
             return false;
         } catch (error) {
             console.error('刷新token失败:', error);
-            this.clearSession();
             return false;
         }
     }
@@ -294,11 +286,39 @@ class AuthManager {
     // 检查并处理token过期
     async checkAndHandleTokenExpiration() {
         if (this.isTokenExpired()) {
-            console.log('⏰ Token已过期，清除会话');
-            this.clearSession();
-            return false;
+            console.log('⏰ Token已过期，尝试刷新...');
+            
+            const refreshed = await this.refreshToken();
+            if (!refreshed) {
+                console.log('❌ Token刷新失败，清除会话');
+                this.clearSession();
+                return false;
+            }
         }
+        
         return true;
+    }
+
+    // 检查邮箱是否存在
+    async checkEmail(email) {
+        try {
+            const result = await api.checkEmail(email);
+            return result;
+        } catch (error) {
+            console.error('检查邮箱失败:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    // 忘记密码
+    async forgotPassword(email) {
+        try {
+            const result = await api.forgotPassword(email);
+            return result;
+        } catch (error) {
+            console.error('忘记密码失败:', error);
+            return { success: false, message: error.message };
+        }
     }
 }
 

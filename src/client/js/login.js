@@ -71,7 +71,8 @@ async function handleLogin(email, password) {
             
             // 延迟跳转，让用户看到成功消息
             setTimeout(() => {
-                // 使用正确的页面路径
+                // 登录成功，重定向到My Space页面
+                console.log('✅ 登录成功，重定向到My Space页面');
                 window.location.href = '/my-space';
             }, 1000);
         } else {

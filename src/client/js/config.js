@@ -16,36 +16,59 @@ export const CONFIG = {
     }
 };
 
-// API 端点
-export const API_ENDPOINTS = {
+// API配置
+export const API_CONFIG = {
+    // 基础URL
+    API_BASE_URL: 'https://quest-api-edz1.onrender.com',
+    
+    // 认证相关接口
     AUTH: {
         REGISTER: '/api/v1/auth/signup',
         LOGIN: '/api/v1/auth/login',
         LOGOUT: '/api/v1/auth/signout',
-        GOOGLE: '/api/v1/auth/google/login',
-        PROFILE: '/api/v1/auth/profile'
+        PROFILE: '/api/v1/auth/profile',
+        CHECK_EMAIL: '/api/v1/auth/check-email',
+        FORGOT_PASSWORD: '/api/v1/auth/forgot-password'
     },
+    
+    // 用户管理接口
     USER: {
-        FOLLOW: '/api/v1/user/follow'
+        PROFILE: '/api/v1/user/profile',
+        UPLOAD_AVATAR: '/api/v1/user/upload-avatar'
     },
-    INSIGHTS: {
-        LIST: '/api/v1/insights/all',
-        CREATE: '/api/v1/metadata/create-insight',
-        UPDATE: (id) => `/api/v1/insights/${id}`,
-        DELETE: (id) => `/api/v1/insights/${id}`
-    },
-    TAGS: {
-        LIST: '/api/v1/user-tags/',
-        CREATE: '/api/v1/user-tags/',
-        GET: (id) => `/api/v1/user-tags/${id}/`,
-        UPDATE: (id) => `/api/v1/user-tags/${id}/`,
-        DELETE: (id) => `/api/v1/user-tags/${id}/`
-    },
+    
+    // 元数据相关接口
     METADATA: {
+        PREVIEW: '/api/v1/metadata/preview',
         EXTRACT: '/api/v1/metadata/extract',
-        BATCH_EXTRACT: '/api/v1/metadata/batch-extract',
         CREATE_INSIGHT: '/api/v1/metadata/create-insight',
-        PREVIEW: (id) => `/api/v1/metadata/preview/${id}`
+        BATCH_EXTRACT: '/api/v1/metadata/batch-extract',
+        PREVIEW_INSIGHT: '/api/v1/metadata/preview'
+    },
+    
+    // 见解管理接口
+    INSIGHTS: {
+        LIST: '/api/v1/insights',
+        ALL: '/api/v1/insights/all',
+        CREATE: '/api/v1/insights',
+        UPDATE: '/api/v1/insights',
+        DELETE: '/api/v1/insights'
+    },
+    
+    // 标签管理接口
+    TAGS: {
+        LIST: '/api/v1/user-tags',
+        CREATE: '/api/v1/user-tags',
+        UPDATE: '/api/v1/user-tags',
+        DELETE: '/api/v1/user-tags',
+        STATS: '/api/v1/user-tags/stats/overview',
+        SEARCH: '/api/v1/user-tags/search'
+    },
+    
+    // 系统接口
+    SYSTEM: {
+        HEALTH: '/api/v1/health',
+        INFO: '/api/v1/'
     }
 };
 
