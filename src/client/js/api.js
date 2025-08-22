@@ -250,25 +250,33 @@ class ApiService {
 
     // 标签相关
     async getUserTags() {
-        return this.request(API_ENDPOINTS.TAGS.LIST);
+        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.LIST}`;
+        console.log('🏷️ getUserTags 完整URL:', fullUrl);
+        return this.request(fullUrl);
     }
 
     async createTag(tagData) {
-        return this.request(API_ENDPOINTS.TAGS.CREATE, {
+        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.CREATE}`;
+        console.log('🏷️ createTag 完整URL:', fullUrl);
+        return this.request(fullUrl, {
             method: 'POST',
             body: JSON.stringify(tagData)
         });
     }
 
     async updateTag(id, tagData) {
-        return this.request(API_ENDPOINTS.TAGS.UPDATE(id), {
+        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.UPDATE(id)}`;
+        console.log('🏷️ updateTag 完整URL:', fullUrl);
+        return this.request(fullUrl, {
             method: 'PUT',
             body: JSON.stringify(tagData)
         });
     }
 
     async deleteTag(id) {
-        return this.request(API_ENDPOINTS.TAGS.DELETE(id), {
+        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.DELETE(id)}`;
+        console.log('🏷️ deleteTag 完整URL:', fullUrl);
+        return this.request(fullUrl, {
             method: 'DELETE'
         });
     }
