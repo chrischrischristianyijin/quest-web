@@ -128,7 +128,9 @@ class AuthManager {
     // 保存用户会话
     saveSession(user, token) {
         if (token) {
+            // 同时保存到两个地方，确保一致性
             api.setAuthToken(token);
+            localStorage.setItem('authToken', token);
         }
         
         localStorage.setItem('quest_user_session', JSON.stringify({
@@ -137,15 +139,25 @@ class AuthManager {
             timestamp: Date.now()
         }));
         
-        console.log('💾 会话已保存:', { user: user.email || user.username, hasToken: !!token });
+        console.log('💾 会话已保存:', { 
+            user: user.email || user.username, 
+            hasToken: !!token,
+            authToken: !!localStorage.getItem('authToken'),
+            sessionToken: !!localStorage.getItem('quest_user_session')
+        });
     }
 
     // 清除用户会话
     clearSession() {
         this.user = null;
         this.isAuthenticated = false;
+        
+        // 清除所有token存储
         api.setAuthToken(null);
+        localStorage.removeItem('authToken');
         localStorage.removeItem('quest_user_session');
+        
+        console.log('🗑️ 会话已清除');
     }
 
     // 获取当前用户

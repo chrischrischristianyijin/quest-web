@@ -27,14 +27,14 @@ async function initPage() {
         // 检查认证状态
         if (!auth.checkAuth()) {
             console.log('❌ 用户未认证，重定向到登录页面');
-            window.location.href = '/login';
+            window.location.href = '/pages/login.html';
             return;
         }
         
         // 检查token是否过期
         if (!(await auth.checkAndHandleTokenExpiration())) {
             console.log('⏰ Token已过期，重定向到登录页面');
-            window.location.href = '/login';
+            window.location.href = '/pages/login.html';
             return;
         }
         
@@ -61,7 +61,7 @@ async function initPage() {
         
         // 如果是认证错误，重定向到登录页面
         if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
-            window.location.href = '/login';
+            window.location.href = '/pages/login.html';
             return;
         }
         
@@ -435,21 +435,14 @@ function bindEvents() {
     // 登出按钮
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
-            if (confirm('确定要登出吗？')) {
-                try {
-                    await auth.logout();
-                    // 清除页面状态
-                    currentUser = null;
-                    currentInsights = [];
-                    
-                    // 跳转到登录页
-                    window.location.href = '/login';
-                } catch (error) {
-                    console.error('登出失败:', error);
-                    // 即使API调用失败，也清除本地状态并跳转
-                    auth.clearSession();
-                    window.location.href = '/login';
-                }
+            try {
+                await auth.logout();
+                window.location.href = '/pages/login.html';
+            } catch (error) {
+                console.error('登出失败:', error);
+                // 即使API调用失败，也要清除本地状态并跳转
+                auth.clearSession();
+                window.location.href = '/pages/login.html';
             }
         });
     }
