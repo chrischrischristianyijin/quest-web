@@ -109,8 +109,10 @@ class AuthManager {
     // 用户登出
     async logout() {
         try {
+            console.log('🚪 开始用户登出流程...');
             const result = await api.logout();
             if (result.success) {
+                console.log('✅ 登出成功');
                 this.clearSession();
                 this.notifyListeners();
                 return { success: true };
@@ -118,8 +120,9 @@ class AuthManager {
                 throw new Error(result.message || '登出失败');
             }
         } catch (error) {
-            console.error('登出错误:', error);
+            console.error('❌ 登出错误:', error);
             // 即使API调用失败，也要清除本地会话
+            console.log('🔄 清理本地会话状态...');
             this.clearSession();
             this.notifyListeners();
             return { success: false, message: error.message };
@@ -129,36 +132,41 @@ class AuthManager {
     // 保存用户会话
     saveSession(user, token) {
         if (token) {
-            // 同时保存到两个地方，确保一致性
+            // 只在一个地方存储token：quest_user_session
             api.setAuthToken(token);
-            localStorage.setItem('authToken', token);
         }
         
         localStorage.setItem('quest_user_session', JSON.stringify({
             user,
-            token: token, // 确保 token 也被保存
+            token: token,
             timestamp: Date.now()
         }));
         
         console.log('💾 会话已保存:', { 
             user: user.email || user.username, 
             hasToken: !!token,
-            authToken: !!localStorage.getItem('authToken'),
             sessionToken: !!localStorage.getItem('quest_user_session')
         });
     }
 
     // 清除用户会话
     clearSession() {
+        console.log('🗑️ 开始清理用户会话...');
+        
+        // 清除用户状态
         this.user = null;
         this.isAuthenticated = false;
         
         // 清除所有token存储
         api.setAuthToken(null);
-        localStorage.removeItem('authToken');
         localStorage.removeItem('quest_user_session');
+        localStorage.removeItem('authToken'); // 清理可能存在的旧存储
         
-        console.log('🗑️ 会话已清除');
+        // 清除其他可能存在的相关存储
+        localStorage.removeItem('quest_user_profile');
+        localStorage.removeItem('quest_user_insights');
+        
+        console.log('✅ 会话已完全清除');
     }
 
     // 获取当前用户
@@ -220,27 +228,80 @@ class AuthManager {
                     this.user = session.user;
                     this.isAuthenticated = true;
                     
-                    // 恢复 token
+                    // 恢复 token - 只从 quest_user_session 恢复
                     if (session.token) {
-                        console.log('🔑 恢复 token...');
+                        console.log('🔑 从会话恢复 token...');
                         api.setAuthToken(session.token);
                     } else {
-                        console.log('⚠️ 会话中没有 token');
+                        console.log('⚠️ 会话中没有token，清除会话');
+                        this.clearSession();
+                        return false;
                     }
                     
-                    console.log('✅ 会话状态已恢复:', this.user);
                     this.notifyListeners();
+                    return true;
                 } else {
-                    console.log('⏰ 会话已过期，清除数据');
+                    console.log('⏰ 会话已过期');
                     this.clearSession();
+                    return false;
                 }
             } else {
-                console.log('📭 没有找到会话数据');
+                console.log('📦 没有找到会话数据');
+                return false;
             }
         } catch (error) {
             console.error('❌ 恢复会话状态失败:', error);
             this.clearSession();
+            return false;
         }
+    }
+
+    // 验证token是否有效
+    async validateToken() {
+        try {
+            if (!this.isAuthenticated || !this.user) {
+                console.log('⚠️ 用户未认证，无法验证token');
+                return false;
+            }
+            
+            // 尝试获取用户资料来验证token
+            const profileResult = await api.getUserProfile();
+            if (profileResult && profileResult.success) {
+                console.log('✅ Token验证成功');
+                return true;
+            } else {
+                console.log('❌ Token验证失败');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Token验证出错:', error);
+            if (error.message.includes('401') || error.message.includes('403')) {
+                console.log('🔑 Token已过期，清除会话');
+                this.clearSession();
+            }
+            return false;
+        }
+    }
+    
+    // 获取当前token
+    getCurrentToken() {
+        try {
+            const sessionData = localStorage.getItem('quest_user_session');
+            if (sessionData) {
+                const session = JSON.parse(sessionData);
+                return session.token || null;
+            }
+            return null;
+        } catch (error) {
+            console.error('获取token失败:', error);
+            return null;
+        }
+    }
+    
+    // 检查token是否存在
+    hasValidToken() {
+        const token = this.getCurrentToken();
+        return !!token;
     }
 
     // 检查token是否过期

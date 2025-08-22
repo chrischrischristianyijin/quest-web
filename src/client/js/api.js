@@ -96,7 +96,12 @@ class ApiService {
                     token: token // 保持向后兼容
                 };
             } else {
-                throw new Error(result.message || '注册失败');
+                // 改进错误处理
+                let errorMessage = result.message || '注册失败';
+                if (result.error && result.error.code === '23505') {
+                    errorMessage = '该邮箱已被注册，请直接登录或使用其他邮箱';
+                }
+                throw new Error(errorMessage);
             }
         } catch (error) {
             console.error('❌ 注册失败:', error);
@@ -145,20 +150,48 @@ class ApiService {
     // 用户登出
     async logout() {
         try {
+            console.log('🚪 开始用户登出...');
             const response = await this.request(API_CONFIG.AUTH.LOGOUT, {
                 method: 'POST'
             });
             
             if (response.success) {
+                console.log('✅ 后端登出成功');
+                // 完全清理本地状态
                 this.setAuthToken(null);
+                localStorage.removeItem('quest_user_session');
+                localStorage.removeItem('authToken'); // 清理可能存在的旧存储
                 return response;
             } else {
                 throw new Error(response.message || '登出失败');
             }
         } catch (error) {
             console.error('❌ 登出失败:', error);
-            // 即使API调用失败，也要清除本地token
+            // 即使API调用失败，也要完全清理本地状态
             this.setAuthToken(null);
+            localStorage.removeItem('quest_user_session');
+            localStorage.removeItem('authToken');
+            throw error;
+        }
+    }
+
+    // 检查邮箱是否已存在
+    async checkEmail(emailData) {
+        try {
+            console.log('📧 检查邮箱是否已存在...', emailData);
+            const response = await fetch(`${this.baseUrl}${API_CONFIG.AUTH.CHECK_EMAIL}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(emailData)
+            });
+
+            const result = await response.json();
+            console.log('📡 邮箱检查API响应:', result);
+            return result;
+        } catch (error) {
+            console.error('❌ 检查邮箱失败:', error);
             throw error;
         }
     }
@@ -185,14 +218,6 @@ class ApiService {
         return await this.request(API_CONFIG.USER.UPLOAD_AVATAR, {
             method: 'POST',
             body: formData
-        });
-    }
-
-    // 检查邮箱是否存在
-    async checkEmail(email) {
-        return await this.request(API_CONFIG.AUTH.CHECK_EMAIL, {
-            method: 'POST',
-            body: JSON.stringify({ email })
         });
     }
 
@@ -347,7 +372,8 @@ class ApiService {
             requestData.tag_names = customData.tag_names;
         }
 
-        return await this.request(API_CONFIG.METADATA.CREATE_INSIGHT, {
+        // 使用正确的insights API端点，而不是metadata/create-insight
+        return await this.request(API_CONFIG.INSIGHTS.CREATE, {
             method: 'POST',
             body: JSON.stringify(requestData)
         });
