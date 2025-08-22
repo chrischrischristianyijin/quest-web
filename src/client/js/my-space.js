@@ -17,7 +17,11 @@ const filterButtons = document.getElementById('filterButtons');
 // 页面状态
 let currentUser = null;
 let currentInsights = [];
-let currentFilter = 'latest';
+let currentFilters = {
+    latest: 'latest',  // 时间排序
+    tags: null,        // 标签筛选
+    type: 'all'        // 内容类型
+};
 let currentSearch = '';
 
 // 页面初始化
@@ -447,8 +451,9 @@ async function initFilterButtons() {
             const option = e.target.closest('.filter-option');
             if (option) {
                 const filterKey = option.dataset.filter;
-                console.log('🔍 用户选择筛选选项:', filterKey);
-                setFilter(filterKey);
+                const filterType = filterConfig.key; // latest, tags, type
+                console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType);
+                setFilter(filterType, filterKey);
                 
                 // 关闭所有下拉框
                 document.querySelectorAll('.filter-button-container').forEach(container => {
@@ -472,6 +477,13 @@ async function initFilterButtons() {
         });
         
         // Edit Tags按钮已移到标签选择器旁边，不再需要在这里添加
+        
+        // 添加清除所有筛选按钮
+        const clearAllFiltersBtn = document.createElement('button');
+        clearAllFiltersBtn.className = 'FilterButton clear-all-filters-btn';
+        clearAllFiltersBtn.textContent = 'Clear All';
+        clearAllFiltersBtn.onclick = () => clearAllFilters();
+        filterButtons.appendChild(clearAllFiltersBtn);
         
         console.log('✅ 筛选按钮初始化完成，共', mainFilterButtons.length, '个主要按钮');
         
@@ -498,42 +510,71 @@ async function initFilterButtons() {
 }
 
 // 设置筛选条件
-function setFilter(filter) {
-    currentFilter = filter;
+function setFilter(filterType, filterValue) {
+    // 更新对应的筛选条件
+    currentFilters[filterType] = filterValue;
     
-    console.log('🔍 设置筛选条件:', filter);
+    console.log('🔍 设置筛选条件:', filterType, '=', filterValue);
+    console.log('🔍 当前所有筛选条件:', currentFilters);
     
     // 更新按钮状态
-    const buttons = filterButtons.querySelectorAll('.FilterButton');
-    buttons.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.filter === filter);
-    });
+    updateFilterButtonStates();
     
     // 显示筛选状态
-    showFilterStatus(filter);
+    showFilterStatus();
     
     // 重新渲染
     renderInsights();
 }
 
+// 更新筛选按钮状态
+function updateFilterButtonStates() {
+    const buttons = filterButtons.querySelectorAll('.FilterButton');
+    buttons.forEach(btn => {
+        const filterType = btn.dataset.filter;
+        if (filterType && currentFilters[filterType]) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
 // 显示筛选状态
-function showFilterStatus(filter) {
-    let statusText = '';
+function showFilterStatus() {
+    const statusParts = [];
     
-    if (filter === 'all') {
-        statusText = '显示所有内容';
-    } else if (filter === 'latest') {
-        statusText = '按最新时间排序';
-    } else if (filter === 'oldest') {
-        statusText = '按最旧时间排序';
-    } else if (filter.startsWith('tag_')) {
-        const tagId = filter.replace('tag_', '');
-        // 查找标签名称
-        const tagButton = document.querySelector(`[data-filter="${filter}"]`);
-        const tagName = tagButton ? tagButton.textContent : '未知标签';
-        statusText = `筛选标签: ${tagName}`;
+    // 时间排序状态
+    if (currentFilters.latest === 'latest') {
+        statusParts.push('最新优先');
+    } else if (currentFilters.latest === 'oldest') {
+        statusParts.push('最旧优先');
     }
     
+    // 标签筛选状态
+    if (currentFilters.tags && currentFilters.tags.startsWith('tag_')) {
+        const tagId = currentFilters.tags.replace('tag_', '');
+        const tagButton = document.querySelector(`[data-filter="tags"]`);
+        if (tagButton) {
+            const tagOption = tagButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.tags}"]`);
+            if (tagOption) {
+                statusParts.push(`标签: ${tagOption.textContent.trim()}`);
+            }
+        }
+    }
+    
+    // 内容类型状态
+    if (currentFilters.type && currentFilters.type !== 'all') {
+        const typeButton = document.querySelector(`[data-filter="type"]`);
+        if (typeButton) {
+            const typeOption = typeButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.type}"]`);
+            if (typeOption) {
+                statusParts.push(`类型: ${typeOption.textContent.trim()}`);
+            }
+        }
+    }
+    
+    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : '显示所有内容';
     console.log('📊 筛选状态:', statusText);
     
     // 可以在这里添加UI显示筛选状态
@@ -544,71 +585,58 @@ function showFilterStatus(filter) {
 function getFilteredInsights() {
     let filteredInsights = [...currentInsights];
     
-    console.log('🔍 当前筛选条件:', currentFilter);
+    console.log('🔍 当前筛选条件:', currentFilters);
     console.log('📚 当前文章数据:', currentInsights);
     
-    // 根据筛选条件过滤
-    if (currentFilter && currentFilter.startsWith('tag_')) {
-        // 标签筛选
-        const tagId = currentFilter.replace('tag_', '');
+    // 1. 时间排序（始终应用）
+    if (currentFilters.latest === 'latest') {
+        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        console.log('📅 按最新时间排序');
+    } else if (currentFilters.latest === 'oldest') {
+        filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        console.log('📅 按最旧时间排序');
+    }
+    
+    // 2. 标签筛选
+    if (currentFilters.tags && currentFilters.tags.startsWith('tag_')) {
+        const tagId = currentFilters.tags.replace('tag_', '');
         console.log('🏷️ 筛选标签ID:', tagId);
         
-        filteredInsights = currentInsights.filter(insight => {
-            console.log('📖 检查文章:', insight.title || insight.url, '标签:', insight.tags);
-            
+        filteredInsights = filteredInsights.filter(insight => {
             if (insight.tags && insight.tags.length > 0) {
                 const hasTag = insight.tags.some(tag => {
-                    console.log('🏷️ 检查单个标签:', tag);
-                    
-                    // 处理不同的标签格式
                     let tagIdToCheck = null;
                     
                     if (typeof tag === 'string') {
-                        // 标签是字符串（可能是ID或名称）
                         tagIdToCheck = tag;
                     } else if (tag && typeof tag === 'object') {
-                        // 标签是对象，尝试获取ID
                         tagIdToCheck = tag.id || tag.tag_id || tag.user_tag_id;
-                        console.log('🏷️ 从对象中提取的ID:', tagIdToCheck);
                     }
                     
-                    if (tagIdToCheck) {
-                        const isMatch = tagIdToCheck === tagId;
-                        console.log('🏷️ 标签ID比较:', tagIdToCheck, '===', tagId, '=', isMatch);
-                        return isMatch;
-                    } else {
-                        console.log('⚠️ 无法提取标签ID:', tag);
-                        return false;
-                    }
+                    return tagIdToCheck === tagId;
                 });
-                console.log('✅ 文章是否包含标签:', hasTag);
                 return hasTag;
-            } else {
-                console.log('⚠️ 文章没有标签数据');
-                return false;
             }
+            return false;
         });
         
-        console.log('🎯 筛选后的文章数量:', filteredInsights.length);
-        
-        // 如果没有找到匹配的文章，显示提示
-        if (filteredInsights.length === 0) {
-            console.log('⚠️ 没有找到包含该标签的文章');
-        }
-        
-    } else if (currentFilter === 'latest') {
-        // 最新排序
-        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        console.log('📅 按最新时间排序');
-    } else if (currentFilter === 'oldest') {
-        // 最旧排序
-        filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        console.log('📅 按最旧时间排序');
-    } else if (currentFilter === 'all') {
-        // 显示所有文章
-        console.log('📚 显示所有文章');
+        console.log('🎯 标签筛选后的文章数量:', filteredInsights.length);
     }
     
+    // 3. 内容类型筛选
+    if (currentFilters.type && currentFilters.type !== 'all') {
+        console.log('📚 筛选内容类型:', currentFilters.type);
+        
+        filteredInsights = filteredInsights.filter(insight => {
+            // 这里可以根据实际的数据结构来判断内容类型
+            // 暂时先返回true，等有具体需求再实现
+            return true;
+        });
+        
+        console.log('🎯 类型筛选后的文章数量:', filteredInsights.length);
+    }
+    
+    console.log('🎯 最终筛选后的文章数量:', filteredInsights.length);
     return filteredInsights;
 }
 
@@ -1980,3 +2008,27 @@ function testInsightCardTags() {
 
 // 将测试函数暴露到全局
 window.testInsightCardTags = testInsightCardTags;
+
+// 清除所有筛选条件
+function clearAllFilters() {
+    console.log('🧹 清除所有筛选条件');
+    
+    // 重置筛选条件
+    currentFilters = {
+        latest: 'latest',  // 默认最新优先
+        tags: null,        // 清除标签筛选
+        type: 'all'        // 默认所有类型
+    };
+    
+    // 更新按钮状态
+    updateFilterButtonStates();
+    
+    // 显示筛选状态
+    showFilterStatus();
+    
+    // 重新渲染
+    renderInsights();
+}
+
+// 将清除筛选函数暴露到全局
+window.clearAllFilters = clearAllFilters;

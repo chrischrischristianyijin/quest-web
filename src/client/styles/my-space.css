@@ -261,6 +261,17 @@ body {
     border-color: #e55a2b;
 }
 
+.FilterButton.clear-all-filters-btn {
+    background: var(--quest-orange, #ff6b35);
+    color: white;
+    border-color: var(--quest-orange, #ff6b35);
+}
+
+.FilterButton.clear-all-filters-btn:hover {
+    background: #e55a2b;
+    border-color: #e55a2b;
+}
+
 /* 新的下拉式筛选按钮样式 */
 .filter-button-container {
     position: relative;
@@ -383,7 +394,7 @@ body {
 }
 
 .add-content-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
     color: white;
     border: none;
     padding: 14px 28px;
@@ -395,7 +406,7 @@ body {
     align-items: center;
     gap: 10px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
     position: relative;
     overflow: hidden;
     letter-spacing: 0.5px;
@@ -419,8 +430,8 @@ body {
 
 .add-content-btn:hover {
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
 }
 
 .add-content-btn:active {
@@ -439,7 +450,7 @@ body {
 
 /* 左上角添加内容按钮 */
 .add-content-btn-left {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -452,7 +463,7 @@ body {
     gap: 10px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin-left: 15px;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
     position: relative;
     overflow: hidden;
     letter-spacing: 0.3px;
@@ -475,8 +486,8 @@ body {
 
 .add-content-btn-left:hover {
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
-    background: linear-gradient(135deg, #0ea371 0%, #047857 100%);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
 }
 
 .add-content-btn-left:active {
@@ -656,11 +667,14 @@ body {
 }
 
 .tag-option:hover {
-    background: rgba(101, 85, 143, 0.05);
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
 }
 
 .tag-option.selected {
-    background: rgba(101, 85, 143, 0.1);
+    background: rgba(139, 92, 246, 0.15);
+    color: #7c3aed;
+    font-weight: 500;
 }
 
 .tag-option-content {
@@ -700,13 +714,14 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
+    padding: 6px 12px;
     border-radius: 16px;
-    background-color: var(--quest-purple);
+    background: linear-gradient(135deg, #8b5cf6, #a855f7);
     color: white;
     font-size: 0.75rem;
     font-weight: 500;
-    border: 1px solid var(--quest-purple);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .remove-tag-btn {
@@ -835,22 +850,23 @@ body {
 
 .content-card-tag {
     display: inline-block;
-    padding: 4px 8px;
-    border-radius: 12px;
+    padding: 6px 12px;
+    border-radius: 16px;
     font-size: 12px;
     font-weight: 500;
-    background-color: var(--quest-light-purple);
-    color: var(--quest-purple);
-    border: 1px solid var(--quest-light-purple);
+    background: linear-gradient(135deg, #8b5cf6, #a855f7);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .content-card-tag:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(101, 85, 143, 0.15);
-    background-color: var(--quest-purple);
-    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .content-card-tag.no-tag {
