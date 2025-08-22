@@ -652,7 +652,14 @@ function showCreateTagModal() {
 // 创建新标签
 async function createNewTag(tagName) {
     try {
-        const response = await api.createTag({ name: tagName });
+        // 生成随机颜色
+        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3', '#33FFF3', '#FF8333', '#8333FF'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        const response = await api.createTag({ 
+            name: tagName,
+            color: randomColor
+        });
         
         if (response.success) {
             // 重新加载标签
