@@ -122,3 +122,130 @@ console.log('🔍 调试信息:', {
 3. 验证数据格式
 4. 测试API调用
 5. 修复发现的问题
+
+## 🚨 **422错误专项排查**
+
+### 错误信息分析
+```
+HTTP 422: [object Object]
+```
+这个错误表示数据验证失败，但错误信息不够详细。
+
+### 立即排查步骤
+
+#### 步骤1：检查控制台日志
+```javascript
+// 在浏览器控制台中运行
+console.log('🔍 当前标签选择器:', document.getElementById('tagSelector'));
+console.log('🔍 所有复选框:', document.querySelectorAll('#tagSelector .tag-checkbox'));
+console.log('🔍 选中的复选框:', document.querySelectorAll('#tagSelector .tag-checkbox:checked'));
+```
+
+#### 步骤2：测试数据格式
+```javascript
+// 运行测试函数
+testInsightDataFormat();
+```
+
+#### 步骤3：手动构建测试数据
+```javascript
+// 手动构建insight数据
+const testData = {
+    url: 'https://example.com/test',
+    title: '测试标题',
+    thought: '测试想法',
+    tag_names: ['测试标签']
+};
+
+console.log('📝 测试数据:', testData);
+```
+
+### 常见422错误原因
+
+#### 1. **URL格式问题**
+- URL必须是有效的HTTP/HTTPS链接
+- 不能是相对路径
+- 长度不能超过500字符
+
+#### 2. **标题长度问题**
+- 标题长度必须在1-200字符之间
+- 不能为空字符串
+
+#### 3. **想法长度问题**
+- 想法长度不能超过2000字符
+
+#### 4. **标签格式问题**
+- `tag_names` 必须是字符串数组
+- 不能是对象数组
+- 不能包含空字符串
+
+#### 5. **必填字段缺失**
+- `url` 字段是必需的
+- 其他字段都是可选的
+
+### 快速修复方案
+
+#### 方案1：简化数据
+```javascript
+// 只发送必需字段
+const simpleData = {
+    url: 'https://example.com/article'
+};
+
+// 调用API
+const result = await api.createInsightFromUrl(url, simpleData);
+```
+
+#### 方案2：验证标签数据
+```javascript
+// 确保标签数据格式正确
+if (selectedTags && selectedTags.length > 0) {
+    const tagNames = selectedTags
+        .map(tag => tag.name)
+        .filter(name => name && name.trim().length > 0);
+    
+    if (tagNames.length > 0) {
+        insightData.tag_names = tagNames;
+    }
+}
+```
+
+#### 方案3：字段长度验证
+```javascript
+// 验证字段长度
+if (customTitle && customTitle.length > 200) {
+    showErrorMessage('标题长度不能超过200字符');
+    return;
+}
+
+if (customThought && customThought.length > 2000) {
+    showErrorMessage('想法长度不能超过2000字符');
+    return;
+}
+```
+
+### 调试命令
+
+```javascript
+// 在浏览器控制台中运行这些命令
+
+// 1. 检查当前表单数据
+console.log('表单数据:', {
+    url: document.getElementById('contentUrl').value,
+    title: document.getElementById('customTitle').value,
+    thought: document.getElementById('customThought').value
+});
+
+// 2. 检查标签选择器状态
+console.log('标签选择器状态:', {
+    element: document.getElementById('tagSelector'),
+    checkboxes: document.querySelectorAll('#tagSelector .tag-checkbox'),
+    selected: document.querySelectorAll('#tagSelector .tag-checkbox:checked')
+});
+
+// 3. 测试API调用
+const testData = { url: 'https://example.com/test' };
+api.createInsightFromUrl('https://example.com/test', testData)
+    .then(result => console.log('✅ 成功:', result))
+    .catch(error => console.error('❌ 失败:', error));
+```
