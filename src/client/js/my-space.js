@@ -192,12 +192,7 @@ function renderInsights() {
     }
     
     // 根据筛选条件排序
-    let sortedInsights = [...currentInsights];
-    if (currentFilter === 'latest') {
-        sortedInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (currentFilter === 'oldest') {
-        sortedInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    }
+    let sortedInsights = getFilteredInsights();
     
     sortedInsights.forEach(insight => {
         const card = createInsightCard(insight);
@@ -230,7 +225,7 @@ function createInsightCard(insight) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'action-btn';
     deleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    deleteBtn.title = '删除';
+    deleteBtn.title = 'Delete';
     deleteBtn.onclick = () => deleteInsight(insight.id);
     
     actions.appendChild(shareBtn);
@@ -242,7 +237,7 @@ function createInsightCard(insight) {
     // 卡片描述
     const description = document.createElement('div');
     description.className = 'content-card-description';
-    description.textContent = insight.description || `来自 ${new URL(insight.url).hostname} 的内容`;
+    description.textContent = insight.description || `Content from ${new URL(insight.url).hostname}`;
     
     // 标签
     const tags = document.createElement('div');
@@ -252,7 +247,9 @@ function createInsightCard(insight) {
         insight.tags.forEach(tag => {
             const tagElement = document.createElement('span');
             tagElement.className = 'content-card-tag';
-            tagElement.textContent = tag;
+            tagElement.textContent = typeof tag === 'string' ? tag : (tag.name || tag);
+            tagElement.style.backgroundColor = tag.color || '#667eea';
+            tagElement.style.color = 'white';
             tags.appendChild(tagElement);
         });
     }
@@ -269,7 +266,7 @@ function createInsightCard(insight) {
     
     const date = document.createElement('div');
     date.className = 'content-card-date';
-    date.textContent = new Date(insight.created_at).toLocaleDateString('zh-CN');
+    date.textContent = new Date(insight.created_at).toLocaleDateString('en-US');
     
     cardFooter.appendChild(url);
     cardFooter.appendChild(date);
@@ -357,6 +354,34 @@ function setFilter(filter) {
     
     // 重新渲染
     renderInsights();
+}
+
+// 获取当前筛选的文章
+function getFilteredInsights() {
+    let filteredInsights = [...currentInsights];
+    
+    // 根据筛选条件过滤
+    if (currentFilter && currentFilter.startsWith('tag_')) {
+        // 标签筛选
+        const tagData = currentFilter.replace('tag_', '');
+        filteredInsights = currentInsights.filter(insight => {
+            if (insight.tags && insight.tags.length > 0) {
+                return insight.tags.some(tag => {
+                    const tagId = typeof tag === 'string' ? tag : (tag.id || tag.name);
+                    return tagId === tagData;
+                });
+            }
+            return false;
+        });
+    } else if (currentFilter === 'latest') {
+        // 最新排序
+        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (currentFilter === 'oldest') {
+        // 最旧排序
+        filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+    
+    return filteredInsights;
 }
 
 // 搜索功能
