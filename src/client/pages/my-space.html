@@ -94,6 +94,20 @@
                     <div class="tag-selector" id="tagSelector">
                         <!-- Tag options will be dynamically generated -->
                     </div>
+                    <div class="tag-actions">
+                        <button type="button" class="tag-action-btn" id="createTagBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Create New Tag
+                        </button>
+                        <button type="button" class="tag-action-btn" id="manageTagsBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Manage Tags
+                        </button>
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="modal-btn modal-btn-secondary" id="cancelAddBtn">Cancel</button>
@@ -102,6 +116,63 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Create Tag Modal -->
+    <div class="create-tag-modal" id="createTagModal">
+        <div class="create-tag-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Tag</h2>
+                <button class="modal-close" id="closeCreateTagModal">&times;</button>
+            </div>
+            <form id="createTagForm">
+                <div class="form-group">
+                    <label class="form-label" for="newTagName">Tag Name</label>
+                    <input type="text" id="newTagName" class="form-input" required placeholder="Enter tag name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="newTagColor">Tag Color</label>
+                    <div class="color-picker">
+                        <input type="color" id="newTagColor" class="color-input" value="#FF5733">
+                        <div class="color-presets">
+                            <button type="button" class="color-preset" data-color="#FF5733" style="background-color: #FF5733;"></button>
+                            <button type="button" class="color-preset" data-color="#33FF57" style="background-color: #33FF57;"></button>
+                            <button type="button" class="color-preset" data-color="#3357FF" style="background-color: #3357FF;"></button>
+                            <button type="button" class="color-preset" data-color="#F3FF33" style="background-color: #F3FF33;"></button>
+                            <button type="button" class="color-preset" data-color="#FF33F3" style="background-color: #FF33F3;"></button>
+                            <button type="button" class="color-preset" data-color="#33FFF3" style="background-color: #33FFF3;"></button>
+                            <button type="button" class="color-preset" data-color="#FF8333" style="background-color: #FF8333;"></button>
+                            <button type="button" class="color-preset" data-color="#8333FF" style="background-color: #8333FF;"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn modal-btn-secondary" id="cancelCreateTagBtn">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary" id="submitCreateTagBtn">Create Tag</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manage Tags Modal -->
+    <div class="manage-tags-modal" id="manageTagsModal">
+        <div class="manage-tags-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Tags</h2>
+                <button class="modal-close" id="closeManageTagsModal">&times;</button>
+            </div>
+            <div class="tags-management">
+                <div class="tags-list" id="manageTagsList">
+                    <!-- Tags will be dynamically generated -->
+                </div>
+                <div class="tags-stats" id="tagsStats">
+                    <!-- Tags statistics will be shown here -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" id="closeManageTagsBtn">Close</button>
+            </div>
         </div>
     </div>
 

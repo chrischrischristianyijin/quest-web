@@ -142,33 +142,23 @@ function updateUserProfileUI() {
 // 加载用户见解
 async function loadUserInsights() {
     try {
-        const params = {
-            page: 1,
-            limit: 20,
-            user_id: currentUser?.id
-        };
+        console.log('📚 开始加载用户insights...');
         
-        if (currentSearch) {
-            params.search = currentSearch;
-        }
+        // 使用新的API方法获取insights
+        const response = await api.getInsights();
         
-        console.log('🔍 加载用户见解，参数:', params);
-        console.log('👤 当前用户:', currentUser);
-        
-        const response = await api.getInsights(params);
-        console.log('📡 API 响应:', response);
-        
-        if (response.success && response.data) {
-            currentInsights = response.data.insights || response.data || [];
-            console.log('✅ 解析后的见解数据:', currentInsights);
+        if (response.success && response.data && response.data.insights) {
+            currentInsights = response.data.insights;
+            console.log('✅ 用户insights加载成功:', currentInsights.length, '条');
             renderInsights();
         } else {
-            console.warn('⚠️ API 响应格式不正确:', response);
+            console.warn('⚠️ API返回格式不正确:', response);
             currentInsights = [];
             renderInsights();
         }
     } catch (error) {
-        console.error('❌ 加载见解失败:', error);
+        console.error('❌ 加载用户insights失败:', error);
+        showErrorMessage('加载insights失败，请刷新重试');
         currentInsights = [];
         renderInsights();
     }
@@ -533,13 +523,13 @@ function bindEvents() {
                 // 使用新的 create-insight API 端点（两步合一）
                 const insightData = {
                     url: url,
-                    tags: tags
+                    tag_names: Array.from(selectedTags).map(tag => tag.textContent) // 使用新的字段名
                 };
                 
                 console.log('📝 创建insight，数据:', insightData);
                 
                 // 使用新的 API 端点创建 insight
-                const result = await api.createInsightFromUrl(insightData);
+                const result = await api.createInsightFromUrl(url, insightData);
                 console.log('✅ 创建见解成功:', result);
                 
                 // 等待一下再重新加载内容，确保后端处理完成
@@ -611,31 +601,34 @@ function bindEvents() {
     if (addContentBtnLeft) {
         addContentBtnLeft.addEventListener('click', showAddContentModal);
     }
+    
+    // 绑定标签相关事件
+    bindTagEvents();
 }
 
 // 加载用户标签
 async function loadUserTags() {
     try {
         console.log('🏷️ 开始加载用户标签...');
+        
+        // 使用新的API方法获取标签
         const response = await api.getUserTags();
         
         if (response.success && response.data) {
-            console.log('✅ 标签加载成功:', response.data);
-            renderTagSelector(response.data);
+            const tags = response.data;
+            console.log('✅ 用户标签加载成功:', tags.length, '个');
+            
+            // 更新标签选择器
+            renderTagSelector(tags);
+            
+            // 更新过滤器按钮
+            updateFilterButtons(tags);
         } else {
-            console.log('⚠️ 标签响应格式异常，使用默认标签');
+            console.warn('⚠️ API返回格式不正确:', response);
             renderTagSelector([]);
         }
     } catch (error) {
-        console.error('❌ 加载标签失败:', error);
-        
-        // 如果是500错误（后端问题），显示友好提示
-        if (error.message.includes('500')) {
-            console.log('🔄 后端服务暂时不可用，使用默认标签');
-            showErrorMessage('标签服务暂时不可用，但您仍可以添加内容');
-        }
-        
-        // 使用默认标签，确保功能可用
+        console.error('❌ 加载用户标签失败:', error);
         renderTagSelector([]);
     }
 }
@@ -643,73 +636,375 @@ async function loadUserTags() {
 // 渲染标签选择器
 function renderTagSelector(tags) {
     const tagSelector = document.getElementById('tagSelector');
-    if (!tagSelector) {
-        console.warn('⚠️ 找不到标签选择器元素');
-        return;
-    }
+    if (!tagSelector) return;
     
     tagSelector.innerHTML = '';
     
-    // 添加现有标签
-    if (tags && tags.length > 0) {
-        tags.forEach(tag => {
-            const tagOption = document.createElement('div');
-            tagOption.className = 'tag-option';
-            tagOption.textContent = tag.name || tag;
-            tagOption.onclick = () => toggleTagSelection(tagOption);
-            tagSelector.appendChild(tagOption);
-        });
-    } else {
-        console.log('📝 没有现有标签，显示默认选项');
+    if (tags.length === 0) {
+        tagSelector.innerHTML = '<p class="no-tags">No tags available. Create some tags first!</p>';
+        return;
     }
     
-    // 添加"创建新标签"选项
-    const createTagOption = document.createElement('div');
-    createTagOption.className = 'tag-option create-tag';
-    createTagOption.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Create New Tag';
-    createTagOption.onclick = () => showCreateTagModal();
-    tagSelector.appendChild(createTagOption);
-    
-    console.log('✅ 标签选择器渲染完成');
+    // 创建标签选择器
+    tags.forEach(tag => {
+        const tagOption = document.createElement('div');
+        tagOption.className = 'tag-option';
+        tagOption.innerHTML = `
+            <input type="checkbox" id="tag_${tag.id}" value="${tag.id}" class="tag-checkbox">
+            <label for="tag_${tag.id}" class="tag-label" style="--tag-color: ${tag.color || '#FF5733'}">
+                <span class="tag-color-dot" style="background-color: ${tag.color || '#FF5733'}"></span>
+                ${tag.name}
+            </label>
+        `;
+        tagSelector.appendChild(tagOption);
+    });
 }
 
-// 切换标签选择状态
-function toggleTagSelection(tagElement) {
-    if (tagElement.classList.contains('create-tag')) return;
+// 更新过滤器按钮
+function updateFilterButtons(tags) {
+    const filterButtons = document.getElementById('filterButtons');
+    if (!filterButtons) return;
     
-    tagElement.classList.toggle('selected');
+    // 保留默认的Latest按钮
+    const latestButton = filterButtons.querySelector('[data-filter="latest"]');
+    filterButtons.innerHTML = '';
+    if (latestButton) {
+        filterButtons.appendChild(latestButton);
+    }
+    
+    // 添加标签过滤器按钮
+    tags.forEach(tag => {
+        const tagButton = document.createElement('button');
+        tagButton.className = 'FilterButton';
+        tagButton.setAttribute('data-filter', `tag_${tag.id}`);
+        tagButton.setAttribute('data-tag-id', tag.id);
+        tagButton.innerHTML = `
+            <span class="tag-color-dot" style="background-color: ${tag.color || '#FF5733'}"></span>
+            ${tag.name}
+        `;
+        filterButtons.appendChild(tagButton);
+    });
+    
+    // 重新绑定事件
+    initFilterButtons();
+}
+
+// 获取选中的标签
+function getSelectedTags() {
+    const selectedTags = [];
+    const checkboxes = document.querySelectorAll('#tagSelector .tag-checkbox:checked');
+    
+    checkboxes.forEach(checkbox => {
+        const tagId = checkbox.value;
+        const tagLabel = checkbox.nextElementSibling;
+        const tagName = tagLabel.textContent.trim();
+        selectedTags.push({ id: tagId, name: tagName });
+    });
+    
+    return selectedTags;
 }
 
 // 显示创建标签模态框
 function showCreateTagModal() {
-    const tagName = prompt('Please enter new tag name:');
-    if (tagName && tagName.trim()) {
-        createNewTag(tagName.trim());
+    const modal = document.getElementById('createTagModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('newTagName').focus();
+    }
+}
+
+// 隐藏创建标签模态框
+function hideCreateTagModal() {
+    const modal = document.getElementById('createTagModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.getElementById('createTagForm').reset();
+    }
+}
+
+// 显示管理标签模态框
+function showManageTagsModal() {
+    const modal = document.getElementById('manageTagsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        loadTagsForManagement();
+    }
+}
+
+// 隐藏管理标签模态框
+function hideManageTagsModal() {
+    const modal = document.getElementById('manageTagsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// 加载标签用于管理
+async function loadTagsForManagement() {
+    try {
+        const response = await api.getUserTags();
+        const tags = response.success ? response.data : [];
+        
+        const tagsList = document.getElementById('manageTagsList');
+        const tagsStats = document.getElementById('tagsStats');
+        
+        if (!tagsList || !tagsStats) return;
+        
+        // 渲染标签列表
+        tagsList.innerHTML = '';
+        
+        if (tags.length === 0) {
+            tagsList.innerHTML = '<p class="no-tags">No tags created yet</p>';
+            tagsStats.innerHTML = '<p class="no-stats">No tags to display statistics</p>';
+            return;
+        }
+        
+        tags.forEach(tag => {
+            const tagItem = document.createElement('div');
+            tagItem.className = 'manage-tag-item';
+            tagItem.innerHTML = `
+                <div class="tag-info">
+                    <span class="tag-color-dot" style="background-color: ${tag.color || '#FF5733'}"></span>
+                    <span class="tag-name">${tag.name}</span>
+                </div>
+                <div class="tag-actions">
+                    <button class="action-btn edit-tag-btn" onclick="editTagInManagement('${tag.id}', '${tag.name}', '${tag.color}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete-tag-btn" onclick="deleteTagInManagement('${tag.id}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            tagsList.appendChild(tagItem);
+        });
+        
+        // 显示标签统计
+        try {
+            const statsResponse = await api.getTagStats();
+            if (statsResponse.success && statsResponse.data) {
+                const stats = statsResponse.data;
+                tagsStats.innerHTML = `
+                    <div class="stats-summary">
+                        <h3>Tag Statistics</h3>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Tags:</span>
+                            <span class="stat-value">${stats.total_tags || tags.length}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Insights:</span>
+                            <span class="stat-value">${stats.total_insights || 0}</span>
+                        </div>
+                    </div>
+                    ${stats.most_used_tags ? `
+                        <div class="most-used-tags">
+                            <h4>Most Used Tags</h4>
+                            <div class="tag-stats-list">
+                                ${stats.most_used_tags.map(tag => `
+                                    <div class="tag-stat-item">
+                                        <span class="tag-color-dot" style="background-color: ${tag.color}"></span>
+                                        <span class="tag-name">${tag.name}</span>
+                                        <span class="tag-count">${tag.count}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            } else {
+                tagsStats.innerHTML = '<p class="no-stats">Unable to load tag statistics</p>';
+            }
+        } catch (error) {
+            console.error('Failed to load tag statistics:', error);
+            tagsStats.innerHTML = '<p class="no-stats">Failed to load tag statistics</p>';
+        }
+        
+    } catch (error) {
+        console.error('Failed to load tags for management:', error);
+        const tagsList = document.getElementById('manageTagsList');
+        if (tagsList) {
+            tagsList.innerHTML = '<p class="error">Failed to load tags</p>';
+        }
+    }
+}
+
+// 在管理界面中编辑标签
+async function editTagInManagement(tagId, currentName, currentColor) {
+    const newName = prompt('Enter new tag name:', currentName);
+    if (!newName || newName.trim() === currentName) return;
+    
+    try {
+        const response = await api.updateTag(tagId, { 
+            name: newName.trim(),
+            color: currentColor 
+        });
+        
+        if (response.success && response.data) {
+            console.log('✅ 标签更新成功:', response.data);
+            
+            // 重新加载标签
+            await loadTagsForManagement();
+            await loadUserTags();
+            
+            showSuccessMessage('Tag updated successfully!');
+        } else {
+            throw new Error(response.message || 'Failed to update tag');
+        }
+    } catch (error) {
+        console.error('❌ 更新标签失败:', error);
+        showErrorMessage(`Failed to update tag: ${error.message}`);
+    }
+}
+
+// 在管理界面中删除标签
+async function deleteTagInManagement(tagId) {
+    if (!confirm('Are you sure you want to delete this tag? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        console.log('🗑️ 删除标签:', tagId);
+        
+        const response = await api.deleteTag(tagId);
+        
+        if (response.success) {
+            console.log('✅ 标签删除成功');
+            
+            // 重新加载标签
+            await loadTagsForManagement();
+            await loadUserTags();
+            
+            showSuccessMessage('Tag deleted successfully!');
+        } else {
+            throw new Error(response.message || 'Failed to delete tag');
+        }
+    } catch (error) {
+        console.error('❌ 删除标签失败:', error);
+        showErrorMessage(`Failed to delete tag: ${error.message}`);
+    }
+}
+
+// 绑定标签相关事件
+function bindTagEvents() {
+    // 创建标签按钮
+    const createTagBtn = document.getElementById('createTagBtn');
+    if (createTagBtn) {
+        createTagBtn.addEventListener('click', showCreateTagModal);
+    }
+    
+    // 管理标签按钮
+    const manageTagsBtn = document.getElementById('manageTagsBtn');
+    if (manageTagsBtn) {
+        manageTagsBtn.addEventListener('click', showManageTagsModal);
+    }
+    
+    // 创建标签表单
+    const createTagForm = document.getElementById('createTagForm');
+    if (createTagForm) {
+        createTagForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createNewTag();
+        });
+    }
+    
+    // 关闭创建标签模态框
+    const closeCreateTagModal = document.getElementById('closeCreateTagModal');
+    if (closeCreateTagModal) {
+        closeCreateTagModal.addEventListener('click', hideCreateTagModal);
+    }
+    
+    const cancelCreateTagBtn = document.getElementById('cancelCreateTagBtn');
+    if (cancelCreateTagBtn) {
+        cancelCreateTagBtn.addEventListener('click', hideCreateTagModal);
+    }
+    
+    // 关闭管理标签模态框
+    const closeManageTagsModal = document.getElementById('closeManageTagsModal');
+    if (closeManageTagsModal) {
+        closeManageTagsModal.addEventListener('click', hideManageTagsModal);
+    }
+    
+    const closeManageTagsBtn = document.getElementById('closeManageTagsBtn');
+    if (closeManageTagsBtn) {
+        closeManageTagsBtn.addEventListener('click', hideManageTagsModal);
+    }
+    
+    // 颜色预设选择
+    const colorPresets = document.querySelectorAll('.color-preset');
+    colorPresets.forEach(preset => {
+        preset.addEventListener('click', () => {
+            const color = preset.getAttribute('data-color');
+            document.getElementById('newTagColor').value = color;
+        });
+    });
+    
+    // 点击模态框外部关闭
+    const createTagModal = document.getElementById('createTagModal');
+    if (createTagModal) {
+        createTagModal.addEventListener('click', (e) => {
+            if (e.target === createTagModal) {
+                hideCreateTagModal();
+            }
+        });
+    }
+    
+    const manageTagsModal = document.getElementById('manageTagsModal');
+    if (manageTagsModal) {
+        manageTagsModal.addEventListener('click', (e) => {
+            if (e.target === manageTagsModal) {
+                hideManageTagsModal();
+            }
+        });
     }
 }
 
 // 创建新标签
-async function createNewTag(tagName) {
+async function createNewTag() {
+    const tagName = document.getElementById('newTagName').value.trim();
+    const tagColor = document.getElementById('newTagColor').value;
+    
+    if (!tagName) {
+        showErrorMessage('Please enter a tag name');
+        return;
+    }
+    
     try {
-        // 生成随机颜色
-        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3', '#33FFF3', '#FF8333', '#8333FF'];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        console.log('🏷️ 创建新标签:', { name: tagName, color: tagColor });
         
-        const response = await api.createTag({ 
+        // 使用新的API方法创建标签
+        const response = await api.createTag({
             name: tagName,
-            color: randomColor
+            color: tagColor
         });
         
-        if (response.success) {
+        if (response.success && response.data) {
+            console.log('✅ 标签创建成功:', response.data);
+            
+            // 关闭创建标签模态框
+            const createTagModal = document.getElementById('createTagModal');
+            if (createTagModal) {
+                createTagModal.style.display = 'none';
+            }
+            
+            // 清空表单
+            document.getElementById('newTagName').value = '';
+            document.getElementById('newTagColor').value = '#FF5733';
+            
             // 重新加载标签
             await loadUserTags();
-            alert('Tag created successfully!');
+            
+            showSuccessMessage('Tag created successfully!');
         } else {
-            alert('Failed to create tag: ' + (response.message || 'Unknown error'));
+            throw new Error(response.message || 'Failed to create tag');
         }
     } catch (error) {
-        console.error('Failed to create tag:', error);
-        alert('Failed to create tag: ' + error.message);
+        console.error('❌ 创建标签失败:', error);
+        showErrorMessage(`Failed to create tag: ${error.message}`);
     }
 }
 
@@ -802,7 +1097,7 @@ async function loadTagsForEditing() {
 }
 
 // 编辑标签
-function editTag(tagId) {
+async function editTag(tagId) {
     const newName = prompt('Please enter new tag name:');
     if (newName && newName.trim()) {
         updateTag(tagId, newName.trim());
@@ -831,27 +1126,29 @@ async function updateTag(tagId, newName) {
 
 // 删除标签
 async function deleteTag(tagId) {
-    if (!confirm('Are you sure you want to delete this tag? Related content tags will also be removed.')) {
+    if (!confirm('Are you sure you want to delete this tag?')) {
         return;
     }
     
     try {
+        console.log('🗑️ 删除标签:', tagId);
+        
+        // 使用新的API方法删除标签
         const response = await api.deleteTag(tagId);
         
         if (response.success) {
+            console.log('✅ 标签删除成功');
+            
             // 重新加载标签
-            await loadTagsForEditing();
-            // 重新初始化筛选按钮
-            await initFilterButtons();
-            // 重新加载见解（因为标签可能影响筛选）
-            await loadUserInsights();
-            alert('Tag deleted successfully!');
+            await loadUserTags();
+            
+            showSuccessMessage('Tag deleted successfully!');
         } else {
-            alert('Tag deletion failed: ' + (response.message || 'Unknown error'));
+            throw new Error(response.message || 'Failed to delete tag');
         }
     } catch (error) {
-        console.error('Failed to delete tag:', error);
-        alert('Failed to delete tag: ' + error.message);
+        console.error('❌ 删除标签失败:', error);
+        showErrorMessage(`Failed to delete tag: ${error.message}`);
     }
 }
 
@@ -915,3 +1212,5 @@ window.hideAddContentModal = hideAddContentModal;
 window.editTag = editTag;
 window.updateTag = updateTag;
 window.deleteTag = deleteTag;
+window.editTagInManagement = editTagInManagement;
+window.deleteTagInManagement = deleteTagInManagement;

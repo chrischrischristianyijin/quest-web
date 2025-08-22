@@ -1,122 +1,70 @@
-import { CONFIG, API_ENDPOINTS } from './config.js';
-import { auth } from './auth.js';
+import { API_CONFIG } from './config.js';
 
-// API 服务类
+// API服务类
 class ApiService {
     constructor() {
-        this.baseUrl = CONFIG.API_BASE_URL;
+        this.baseUrl = API_CONFIG.API_BASE_URL;
+        this.authToken = null;
     }
 
-    // 获取认证 token
-    getAuthToken() {
-        return localStorage.getItem('authToken');
-    }
-
-    // 设置认证 token
+    // 设置认证token
     setAuthToken(token) {
-        if (token) {
-            localStorage.setItem('authToken', token);
-        } else {
-            localStorage.removeItem('authToken');
-        }
+        this.authToken = token;
+        console.log('🔑 Token已设置:', token ? '存在' : '不存在');
     }
 
     // 通用请求方法
-    async request(url, config = {}) {
-        // 检查token是否过期
-        if (!(await auth.checkAndHandleTokenExpiration())) {
-            throw new Error('认证已过期，请重新登录');
-        }
-
-        const finalConfig = {
-            headers: {
-                'Content-Type': 'application/json',
-                ...config.headers
-            },
-            ...config
+    async request(endpoint, options = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        
+        // 设置默认headers
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
         };
 
-        // 如果是FormData，不设置Content-Type，让浏览器自动处理
-        if (config.body instanceof FormData) {
-            delete finalConfig.headers['Content-Type'];
-            console.log('📤 检测到FormData，移除Content-Type头');
+        // 添加认证token
+        if (this.authToken) {
+            headers['Authorization'] = `Bearer ${this.authToken}`;
         }
 
-        // 添加认证头
-        const token = this.getAuthToken();
-        if (token) {
-            finalConfig.headers['Authorization'] = `Bearer ${token}`;
-            console.log('🔐 添加认证头');
+        // 如果是FormData，移除Content-Type让浏览器自动设置
+        if (options.body instanceof FormData) {
+            delete headers['Content-Type'];
         }
 
-        console.log('📡 发送请求:', {
-            url,
-            method: finalConfig.method || 'GET',
-            headers: finalConfig.headers,
-            body: config.body instanceof FormData ? 'FormData' : config.body
-        });
+        const config = {
+            method: options.method || 'GET',
+            headers,
+            ...options
+        };
 
         try {
-            const response = await fetch(url, finalConfig);
+            console.log(`📡 API请求: ${config.method} ${url}`);
+            const response = await fetch(url, config);
             
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                
-                // 如果是401或403错误，清除过期的认证
-                if (response.status === 401 || response.status === 403) {
-                    console.log('🔒 认证失败，清除过期token');
-                    auth.clearSession();
-                    throw new Error('认证已过期，请重新登录');
-                }
-                
-                throw new Error(errorData.message || `HTTP ${response.status}`);
+            console.log(`📡 API响应: ${response.status} ${response.statusText}`);
+            
+            // 处理认证错误
+            if (response.status === 401 || response.status === 403) {
+                console.error('❌ 认证失败:', response.status, response.statusText);
+                // 清除无效的token
+                this.setAuthToken(null);
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('quest_user_session');
+                throw new Error('认证已过期，请重新登录');
             }
 
-            return await response.json();
-        } catch (error) {
-            console.error('API 请求错误:', error);
-            throw error;
-        }
-    }
-
-    // 用户登录
-    async login(credentials) {
-        try {
-            console.log('🔐 发送登录请求:', credentials);
-            
-            // 登录请求不需要检查token过期，直接发送
-            const response = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(credentials)
-            });
-            
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP ${response.status}`);
+                throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
             }
-            
-            const result = await response.json();
-            console.log('📡 登录 API 原始响应:', result);
-            
-            // 转换后端格式到前端期望格式
-            if (result && result.success && result.data) {
-                return {
-                    user: {
-                        id: result.data.user_id,
-                        email: credentials.email,
-                        // 注意：后端没有返回完整的用户信息，只有 user_id
-                        // 需要后续调用 profile API 获取完整信息
-                    },
-                    token: result.data.access_token
-                };
-            } else {
-                throw new Error(result?.message || '登录失败');
-            }
+
+            const data = await response.json();
+            console.log('✅ API响应成功:', data);
+            return data;
         } catch (error) {
-            console.error('❌ 登录 API 调用失败:', error);
+            console.error('❌ API请求错误:', error);
             throw error;
         }
     }
@@ -124,200 +72,310 @@ class ApiService {
     // 用户注册
     async signup(userData) {
         try {
-            console.log('📝 发送注册请求:', userData);
-            
-            // 注册请求不需要检查token过期，直接发送
-            const response = await fetch(`${this.baseUrl}/api/v1/auth/signup`, {
+            console.log('📝 开始用户注册...', userData);
+            const response = await fetch(`${this.baseUrl}${API_CONFIG.AUTH.REGISTER}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(userData)
             });
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP ${response.status}`);
-            }
-            
+
             const result = await response.json();
-            console.log('📡 注册 API 原始响应:', result);
-            
-            // 转换后端格式到前端期望格式
-            if (result && result.success && result.data) {
+            console.log('📡 注册API响应:', result);
+
+            if (result.success && result.data) {
+                // 新API格式：access_token 而不是 token
+                const token = result.data.access_token;
+                if (token) {
+                    this.setAuthToken(token);
+                }
                 return {
-                    user: result.data,
-                    token: result.data.access_token || null
+                    success: true,
+                    user: result.data.user,
+                    token: token // 保持向后兼容
                 };
             } else {
-                throw new Error(result?.message || '注册失败');
+                throw new Error(result.message || '注册失败');
             }
         } catch (error) {
-            console.error('❌ 注册 API 调用失败:', error);
+            console.error('❌ 注册失败:', error);
             throw error;
         }
     }
 
-    async logout() {
+    // 用户登录
+    async login(credentials) {
         try {
-            await this.request(API_ENDPOINTS.AUTH.LOGOUT, {
-                method: 'POST'
+            console.log('🔐 开始用户登录...', credentials);
+            const response = await fetch(`${this.baseUrl}${API_CONFIG.AUTH.LOGIN}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(credentials)
             });
-        } finally {
-            this.setAuthToken(null);
-            localStorage.removeItem('quest_user_session');
+
+            const result = await response.json();
+            console.log('📡 登录API响应:', result);
+
+            if (result.success && result.data) {
+                // 新API格式：access_token 而不是 token
+                const token = result.data.access_token;
+                if (token) {
+                    this.setAuthToken(token);
+                }
+                return {
+                    success: true,
+                    user: { 
+                        id: result.data.user_id,
+                        email: result.data.email 
+                    },
+                    token: token // 保持向后兼容
+                };
+            } else {
+                throw new Error(result.message || '登录失败');
+            }
+        } catch (error) {
+            console.error('❌ 登录失败:', error);
+            throw error;
         }
     }
 
-    // 用户相关
+    // 用户登出
+    async logout() {
+        try {
+            const response = await this.request(API_CONFIG.AUTH.LOGOUT, {
+                method: 'POST'
+            });
+            
+            if (response.success) {
+                this.setAuthToken(null);
+                return response;
+            } else {
+                throw new Error(response.message || '登出失败');
+            }
+        } catch (error) {
+            console.error('❌ 登出失败:', error);
+            // 即使API调用失败，也要清除本地token
+            this.setAuthToken(null);
+            throw error;
+        }
+    }
+
+    // 获取用户资料
     async getUserProfile() {
-        return this.request(API_ENDPOINTS.AUTH.PROFILE);
+        return await this.request(API_CONFIG.AUTH.PROFILE);
     }
 
-    // 见解相关
-    async getInsights(params = {}) {
-        const queryString = new URLSearchParams(params).toString();
-        const endpoint = queryString ? `${API_ENDPOINTS.INSIGHTS.LIST}?${queryString}` : API_ENDPOINTS.INSIGHTS.LIST;
-        const fullUrl = `${this.baseUrl}${endpoint}`;
-        console.log('🔍 getInsights 完整URL:', fullUrl);
-        return this.request(fullUrl);
+    // 更新用户资料
+    async updateUserProfile(profileData) {
+        return await this.request(API_CONFIG.USER.PROFILE, {
+            method: 'PUT',
+            body: JSON.stringify(profileData)
+        });
     }
 
+    // 上传头像
+    async uploadAvatar(avatarFile, userId) {
+        const formData = new FormData();
+        formData.append('avatar', avatarFile);
+        formData.append('user_id', userId);
+
+        return await this.request(API_CONFIG.USER.UPLOAD_AVATAR, {
+            method: 'POST',
+            body: formData
+        });
+    }
+
+    // 检查邮箱是否存在
+    async checkEmail(email) {
+        return await this.request(API_CONFIG.AUTH.CHECK_EMAIL, {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        });
+    }
+
+    // 忘记密码
+    async forgotPassword(email) {
+        return await this.request(API_CONFIG.AUTH.FORGOT_PASSWORD, {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        });
+    }
+
+    // 获取用户所有insights（不分页）
+    async getInsights(userId = null, search = '') {
+        let endpoint = API_CONFIG.INSIGHTS.ALL;
+        const params = new URLSearchParams();
+        
+        if (userId) params.append('user_id', userId);
+        if (search) params.append('search', search);
+        
+        if (params.toString()) {
+            endpoint += `?${params.toString()}`;
+        }
+        
+        return await this.request(endpoint);
+    }
+
+    // 获取分页insights
+    async getInsightsPaginated(page = 1, limit = 10, userId = null, search = '') {
+        let endpoint = API_CONFIG.INSIGHTS.LIST;
+        const params = new URLSearchParams();
+        
+        params.append('page', page);
+        params.append('limit', limit);
+        if (userId) params.append('user_id', userId);
+        if (search) params.append('search', search);
+        
+        endpoint += `?${params.toString()}`;
+        return await this.request(endpoint);
+    }
+
+    // 获取单个insight
+    async getInsight(insightId) {
+        return await this.request(`${API_CONFIG.INSIGHTS.GET}/${insightId}`);
+    }
+
+    // 创建insight
     async createInsight(insightData) {
-        return this.request(API_ENDPOINTS.INSIGHTS.CREATE, {
+        return await this.request(API_CONFIG.INSIGHTS.CREATE, {
             method: 'POST',
             body: JSON.stringify(insightData)
         });
     }
 
-    // 从URL创建insight（两步合一）
-    async createInsightFromUrl(data) {
-        console.log('🔗 调用createInsightFromUrl API:', data);
-        
-        const formData = new FormData();
-        formData.append('url', data.url);
-        
-        // 根据API文档，使用正确的字段名
-        if (data.tags) {
-            // 将标签转换为数组格式
-            const tagArray = data.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-            if (tagArray.length > 0) {
-                formData.append('custom_tags', JSON.stringify(tagArray));
-            }
-        }
-        
-        // 添加调试信息
-        console.log('📤 发送的FormData内容:');
-        for (let [key, value] of formData.entries()) {
-            console.log(`${key}:`, value);
-        }
-        
-        try {
-            const apiUrl = `${this.baseUrl}/api/v1/metadata/create-insight`;
-            console.log('🌐 完整API URL:', apiUrl);
-            console.log('🔑 当前token:', this.getAuthToken() ? '存在' : '不存在');
-            
-            const response = await this.request(apiUrl, {
-                method: 'POST',
-                body: formData
-            });
-            
-            console.log('✅ createInsightFromUrl 成功:', response);
-            return response;
-        } catch (error) {
-            console.error('❌ createInsightFromUrl 失败:', error);
-            
-            // 添加更详细的错误信息
-            if (error.message.includes('500')) {
-                console.error('📋 500错误详情 - 后端服务器内部错误');
-                console.error('📤 发送的数据:', {
-                    url: data.url,
-                    tags: data.tags,
-                    formDataEntries: Array.from(formData.entries())
-                });
-                console.error('🔍 建议检查后端日志了解具体错误原因');
-            }
-            
-            throw error;
-        }
+    // 更新insight
+    async updateInsight(insightId, insightData) {
+        return await this.request(`${API_CONFIG.INSIGHTS.UPDATE}/${insightId}`, {
+            method: 'PUT',
+            body: JSON.stringify(insightData)
+        });
     }
 
-    async deleteInsight(id) {
-        return this.request(API_ENDPOINTS.INSIGHTS.DELETE(id), {
+    // 删除insight
+    async deleteInsight(insightId) {
+        return await this.request(`${API_CONFIG.INSIGHTS.DELETE}/${insightId}`, {
             method: 'DELETE'
         });
     }
 
-    // 标签相关
-    async getUserTags() {
-        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.LIST}`;
-        console.log('🏷️ getUserTags 完整URL:', fullUrl);
-        return this.request(fullUrl);
+    // 获取用户标签
+    async getUserTags(userId = null, page = 1, limit = 10) {
+        let endpoint = API_CONFIG.TAGS.LIST;
+        const params = new URLSearchParams();
+        
+        if (userId) params.append('user_id', userId);
+        params.append('page', page);
+        params.append('limit', limit);
+        
+        endpoint += `?${params.toString()}`;
+        return await this.request(endpoint);
     }
 
+    // 获取标签详情
+    async getTag(tagId) {
+        return await this.request(`${API_CONFIG.TAGS.GET}/${tagId}`);
+    }
+
+    // 创建标签
     async createTag(tagData) {
-        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.CREATE}`;
-        console.log('🏷️ createTag 完整URL:', fullUrl);
-        return this.request(fullUrl, {
+        return await this.request(API_CONFIG.TAGS.CREATE, {
             method: 'POST',
             body: JSON.stringify(tagData)
         });
     }
 
-    async updateTag(id, tagData) {
-        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.UPDATE(id)}`;
-        console.log('🏷️ updateTag 完整URL:', fullUrl);
-        return this.request(fullUrl, {
+    // 更新标签
+    async updateTag(tagId, tagData) {
+        return await this.request(`${API_CONFIG.TAGS.UPDATE}/${tagId}`, {
             method: 'PUT',
             body: JSON.stringify(tagData)
         });
     }
 
-    async deleteTag(id) {
-        const fullUrl = `${this.baseUrl}${API_ENDPOINTS.TAGS.DELETE(id)}`;
-        console.log('🏷️ deleteTag 完整URL:', fullUrl);
-        return this.request(fullUrl, {
+    // 删除标签
+    async deleteTag(tagId) {
+        return await this.request(`${API_CONFIG.TAGS.DELETE}/${tagId}`, {
             method: 'DELETE'
         });
     }
 
-    // 元数据相关
-    async extractMetadata(url) {
-        try {
-            const formData = new URLSearchParams();
-            formData.append('url', url);
-            
-            return await this.request(API_ENDPOINTS.METADATA.EXTRACT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: formData.toString()
-            });
-        } catch (error) {
-            // 返回默认元数据
-            return {
-                success: true,
-                data: {
-                    title: new URL(url).hostname,
-                    description: `Content from ${new URL(url).hostname}`,
-                    image_url: ''
-                }
-            };
-        }
+    // 获取标签统计
+    async getTagStats() {
+        return await this.request(API_CONFIG.TAGS.STATS);
     }
 
+    // 搜索标签
+    async searchTags(query, userId = null) {
+        let endpoint = API_CONFIG.TAGS.SEARCH;
+        const params = new URLSearchParams();
+        
+        params.append('q', query);
+        if (userId) params.append('user_id', userId);
+        
+        endpoint += `?${params.toString()}`;
+        return await this.request(endpoint);
+    }
+
+    // 预览网页元数据
+    async previewMetadata(url) {
+        return await this.request(API_CONFIG.METADATA.PREVIEW, {
+            method: 'POST',
+            body: JSON.stringify({ url })
+        });
+    }
+
+    // 提取网页元数据
+    async extractMetadata(url) {
+        return await this.request(API_CONFIG.METADATA.EXTRACT, {
+            method: 'POST',
+            body: JSON.stringify({ url })
+        });
+    }
+
+    // 从URL创建insight（包含metadata提取）
+    async createInsightFromUrl(url, customData = {}) {
+        const requestData = {
+            url,
+            ...customData
+        };
+
+        // 如果customData包含tag_names，确保是数组格式
+        if (customData.tag_names && Array.isArray(customData.tag_names)) {
+            requestData.tag_names = customData.tag_names;
+        }
+
+        return await this.request(API_CONFIG.METADATA.CREATE_INSIGHT, {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+        });
+    }
+
+    // 批量提取元数据
     async batchExtractMetadata(urls) {
-        return this.request(API_ENDPOINTS.METADATA.BATCH_EXTRACT, {
+        return await this.request(API_CONFIG.METADATA.BATCH_EXTRACT, {
             method: 'POST',
             body: JSON.stringify({ urls })
         });
     }
 
+    // 预览已保存的insight
     async previewInsight(insightId) {
-        return this.request(API_ENDPOINTS.METADATA.PREVIEW(insightId));
+        return await this.request(`${API_CONFIG.METADATA.PREVIEW_INSIGHT}/${insightId}`);
+    }
+
+    // 系统健康检查
+    async checkHealth() {
+        return await this.request(API_CONFIG.SYSTEM.HEALTH);
+    }
+
+    // 获取API信息
+    async getApiInfo() {
+        return await this.request(API_CONFIG.SYSTEM.INFO);
     }
 }
 
-// 创建全局 API 实例
+// 创建API实例
 export const api = new ApiService();

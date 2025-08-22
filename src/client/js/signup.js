@@ -89,10 +89,9 @@ async function handleSignup(email, nickname, password) {
         if (result.success) {
             showMessage('注册成功！正在跳转...', 'success');
             
-            // 延迟跳转，让用户看到成功消息
-            setTimeout(() => {
-                window.location.href = '/my-space';
-            }, 1000);
+            // 注册成功，重定向到My Space页面
+            console.log('✅ 注册成功，重定向到My Space页面');
+            window.location.href = '/my-space';
         }
     } catch (error) {
         console.error('注册失败:', error);
