@@ -72,7 +72,7 @@ async function handleLogin(email, password) {
             // 延迟跳转，让用户看到成功消息
             setTimeout(() => {
                 // 使用正确的页面路径
-                window.location.href = '/pages/my-space.html';
+                window.location.href = '/my-space';
             }, 1000);
         } else {
             // 登录失败，显示错误消息
@@ -133,7 +133,7 @@ passwordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // 如果用户已经登录，直接跳转
     if (auth.checkAuth()) {
-        window.location.href = '/pages/my-space.html';
+        window.location.href = '/my-space';
     }
     
     // 聚焦到邮箱输入框
