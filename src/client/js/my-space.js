@@ -148,12 +148,31 @@ async function loadUserInsights() {
         // 使用新的API方法获取insights
         const response = await api.getInsights();
         
+        console.log('📡 API响应:', response);
+        
         if (response.success && response.data && response.data.insights) {
             currentInsights = response.data.insights;
             console.log('✅ 用户insights加载成功:', currentInsights.length, '条');
+            
+            // 检查每个insight的标签数据
+            currentInsights.forEach((insight, index) => {
+                console.log(`📖 Insight ${index + 1}:`, {
+                    title: insight.title || insight.url,
+                    tags: insight.tags,
+                    tagsType: typeof insight.tags,
+                    tagsLength: insight.tags ? insight.tags.length : 'null/undefined'
+                });
+            });
+            
             renderInsights();
         } else {
             console.warn('⚠️ API返回格式不正确:', response);
+            console.log('🔍 响应数据结构:', {
+                success: response.success,
+                hasData: !!response.data,
+                dataKeys: response.data ? Object.keys(response.data) : 'no data',
+                insightsField: response.data ? response.data.insights : 'no insights field'
+            });
             currentInsights = [];
             renderInsights();
         }
@@ -275,15 +294,50 @@ function createInsightCard(insight) {
     const tags = document.createElement('div');
     tags.className = 'content-card-tags';
     
+    console.log('🏷️ 渲染标签，insight:', insight.title || insight.url);
+    console.log('🏷️ 标签数据:', insight.tags);
+    
     if (insight.tags && insight.tags.length > 0) {
-        insight.tags.forEach(tag => {
+        insight.tags.forEach((tag, index) => {
+            console.log(`🏷️ 处理标签 ${index + 1}:`, tag);
+            
             const tagElement = document.createElement('span');
             tagElement.className = 'content-card-tag';
-            tagElement.textContent = typeof tag === 'string' ? tag : (tag.name || tag);
-            tagElement.style.backgroundColor = tag.color || '#667eea';
+            
+            // 处理标签文本
+            let tagText = '';
+            if (typeof tag === 'string') {
+                tagText = tag;
+            } else if (tag && typeof tag === 'object') {
+                tagText = tag.name || tag.id || 'Unknown Tag';
+            } else {
+                tagText = 'Invalid Tag';
+            }
+            
+            tagElement.textContent = tagText;
+            
+            // 处理标签颜色
+            let tagColor = '#667eea'; // 默认颜色
+            if (tag && typeof tag === 'object' && tag.color) {
+                tagColor = tag.color;
+            }
+            
+            tagElement.style.backgroundColor = tagColor;
             tagElement.style.color = 'white';
+            
+            console.log(`🏷️ 创建标签元素:`, { text: tagText, color: tagColor });
+            
             tags.appendChild(tagElement);
         });
+    } else {
+        console.log('⚠️ 该insight没有标签数据');
+        // 显示"无标签"提示
+        const noTagElement = document.createElement('span');
+        noTagElement.className = 'content-card-tag no-tag';
+        noTagElement.textContent = '无标签';
+        noTagElement.style.backgroundColor = '#e0e0e0';
+        noTagElement.style.color = '#666';
+        tags.appendChild(noTagElement);
     }
     
     // 卡片底部
@@ -337,13 +391,20 @@ async function initFilterButtons() {
         
         // 添加标签筛选选项
         userTags.forEach(tag => {
-            const tagKey = `tag_${tag.id}`;
-            filterOptions.push({
-                key: tagKey,
-                label: tag.name,
-                tag: tag
-            });
-            console.log('🏷️ 添加标签筛选选项:', tagKey, tag.name);
+            console.log('🏷️ 处理用户标签:', tag);
+            
+            // 确保标签有有效的ID和名称
+            if (tag && tag.id && tag.name) {
+                const tagKey = `tag_${tag.id}`;
+                filterOptions.push({
+                    key: tagKey,
+                    label: tag.name,
+                    tag: tag
+                });
+                console.log('✅ 添加标签筛选选项:', tagKey, tag.name);
+            } else {
+                console.warn('⚠️ 跳过无效标签:', tag);
+            }
         });
         
         // 清空现有按钮
@@ -475,16 +536,35 @@ function getFilteredInsights() {
             
             if (insight.tags && insight.tags.length > 0) {
                 const hasTag = insight.tags.some(tag => {
-                    // 标签可能是对象 {id, name, color} 或字符串
-                    const tagIdToCheck = typeof tag === 'string' ? tag : tag.id;
-                    const isMatch = tagIdToCheck === tagId;
-                    console.log('🏷️ 文章标签:', tag, '标签ID:', tagIdToCheck, '匹配:', isMatch);
-                    return isMatch;
+                    console.log('🏷️ 检查单个标签:', tag);
+                    
+                    // 处理不同的标签格式
+                    let tagIdToCheck = null;
+                    
+                    if (typeof tag === 'string') {
+                        // 标签是字符串（可能是ID或名称）
+                        tagIdToCheck = tag;
+                    } else if (tag && typeof tag === 'object') {
+                        // 标签是对象，尝试获取ID
+                        tagIdToCheck = tag.id || tag.tag_id || tag.user_tag_id;
+                        console.log('🏷️ 从对象中提取的ID:', tagIdToCheck);
+                    }
+                    
+                    if (tagIdToCheck) {
+                        const isMatch = tagIdToCheck === tagId;
+                        console.log('🏷️ 标签ID比较:', tagIdToCheck, '===', tagId, '=', isMatch);
+                        return isMatch;
+                    } else {
+                        console.log('⚠️ 无法提取标签ID:', tag);
+                        return false;
+                    }
                 });
                 console.log('✅ 文章是否包含标签:', hasTag);
                 return hasTag;
+            } else {
+                console.log('⚠️ 文章没有标签数据');
+                return false;
             }
-            return false;
         });
         
         console.log('🎯 筛选后的文章数量:', filteredInsights.length);
@@ -1492,3 +1572,111 @@ function testImageDisplay() {
 
 // 将测试函数暴露到全局
 window.testImageDisplay = testImageDisplay;
+
+// 调试标签功能
+function debugTags() {
+    console.log('🔍 调试标签功能...');
+    
+    console.log('📊 当前insights数据:');
+    currentInsights.forEach((insight, index) => {
+        console.log(`${index + 1}. ${insight.title || insight.url}`);
+        console.log(`   标签数据:`, insight.tags);
+        console.log(`   标签类型:`, typeof insight.tags);
+        console.log(`   标签长度:`, insight.tags ? insight.tags.length : 'null/undefined');
+        if (insight.tags && insight.tags.length > 0) {
+            insight.tags.forEach((tag, tagIndex) => {
+                console.log(`     - 标签${tagIndex + 1}:`, tag);
+                console.log(`       类型:`, typeof tag);
+                console.log(`       内容:`, tag);
+            });
+        }
+        console.log('---');
+    });
+    
+    // 检查筛选按钮
+    if (filterButtons) {
+        const tagButtons = filterButtons.querySelectorAll('[data-filter^="tag_"]');
+        console.log('🏷️ 标签筛选按钮数量:', tagButtons.length);
+        tagButtons.forEach((btn, index) => {
+            console.log(`   按钮${index + 1}:`, {
+                filter: btn.dataset.filter,
+                text: btn.textContent,
+                tag: btn.dataset.tag
+            });
+        });
+    }
+    
+    return {
+        insightsCount: currentInsights.length,
+        insightsWithTags: currentInsights.filter(i => i.tags && i.tags.length > 0).length,
+        insightsWithoutTags: currentInsights.filter(i => !i.tags || i.tags.length === 0).length,
+        tagButtonsCount: filterButtons ? filterButtons.querySelectorAll('[data-filter^="tag_"]').length : 0
+    };
+}
+
+// 将调试函数暴露到全局
+window.debugTags = debugTags;
+
+// 分析标签数据结构
+function analyzeTagStructure() {
+    console.log('🔬 分析标签数据结构...');
+    
+    if (currentInsights.length === 0) {
+        console.log('⚠️ 没有insights数据可分析');
+        return;
+    }
+    
+    // 分析第一个有标签的insight
+    const insightWithTags = currentInsights.find(insight => insight.tags && insight.tags.length > 0);
+    
+    if (insightWithTags) {
+        console.log('📖 分析有标签的insight:', insightWithTags.title || insightWithTags.url);
+        console.log('🏷️ 标签数组:', insightWithTags.tags);
+        console.log('🏷️ 标签数组类型:', Array.isArray(insightWithTags.tags) ? 'Array' : typeof insightWithTags.tags);
+        console.log('🏷️ 标签数组长度:', insightWithTags.tags.length);
+        
+        insightWithTags.tags.forEach((tag, index) => {
+            console.log(`🏷️ 标签${index + 1}详细分析:`);
+            console.log(`   类型:`, typeof tag);
+            console.log(`   值:`, tag);
+            console.log(`   是否为对象:`, tag && typeof tag === 'object');
+            if (tag && typeof tag === 'object') {
+                console.log(`   对象键:`, Object.keys(tag));
+                console.log(`   对象值:`, Object.values(tag));
+                console.log(`   id字段:`, tag.id);
+                console.log(`   tag_id字段:`, tag.tag_id);
+                console.log(`   user_tag_id字段:`, tag.user_tag_id);
+                console.log(`   name字段:`, tag.name);
+                console.log(`   color字段:`, tag.color);
+            }
+            console.log('   ---');
+        });
+    } else {
+        console.log('⚠️ 没有找到包含标签的insight');
+    }
+    
+    // 分析筛选按钮的标签数据
+    if (filterButtons) {
+        const tagButtons = filterButtons.querySelectorAll('[data-filter^="tag_"]');
+        console.log('🏷️ 筛选按钮标签数据:');
+        tagButtons.forEach((btn, index) => {
+            const filterKey = btn.dataset.filter;
+            const tagId = filterKey.replace('tag_', '');
+            console.log(`   按钮${index + 1}:`, {
+                filter: filterKey,
+                tagId: tagId,
+                text: btn.textContent,
+                buttonElement: btn
+            });
+        });
+    }
+    
+    return {
+        insightsWithTags: currentInsights.filter(i => i.tags && i.tags.length > 0).length,
+        totalInsights: currentInsights.length,
+        tagButtonsCount: filterButtons ? filterButtons.querySelectorAll('[data-filter^="tag_"]').length : 0
+    };
+}
+
+// 将分析函数暴露到全局
+window.analyzeTagStructure = analyzeTagStructure;
