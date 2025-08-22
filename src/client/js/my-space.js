@@ -483,50 +483,14 @@ function hideAddContentModal() {
 function bindEvents() {
     // 登出按钮
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            // 显示确认对话框
-            if (!confirm('确定要退出登录吗？退出后需要重新登录。')) {
-                return;
-            }
+        logoutBtn.addEventListener('click', () => {
+            console.log('🚪 用户点击登出...');
             
-            try {
-                console.log('🚪 用户点击登出...');
-                
-                // 保存原始按钮文本
-                const originalText = logoutBtn.innerHTML;
-                
-                // 显示加载状态
-                logoutBtn.innerHTML = '<svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> 退出中...';
-                logoutBtn.disabled = true;
-                
-                // 调用登出API
-                await auth.logout();
-                console.log('✅ 登出成功，准备跳转...');
-                
-                // 显示成功消息
-                showSuccessMessage('已成功退出登录');
-                
-                // 延迟跳转，让用户看到成功消息
-                setTimeout(() => {
-                    window.location.href = '/pages/login.html';
-                }, 1000);
-                
-            } catch (error) {
-                console.error('❌ 登出失败:', error);
-                
-                // 恢复按钮状态
-                logoutBtn.innerHTML = originalText;
-                logoutBtn.disabled = false;
-                
-                // 即使API调用失败，也要清除本地状态并跳转
-                auth.clearSession();
-                showErrorMessage('登出失败，但已清除本地状态');
-                
-                // 延迟跳转
-                setTimeout(() => {
-                    window.location.href = '/pages/login.html';
-                }, 2000);
-            }
+            // 直接清除本地状态
+            auth.clearSession();
+            
+            // 立即跳转到登录页面
+            window.location.href = '/pages/login.html';
         });
     }
     

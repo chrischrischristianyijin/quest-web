@@ -110,19 +110,17 @@ class AuthManager {
     async logout() {
         try {
             console.log('🚪 开始用户登出流程...');
-            const result = await api.logout();
-            if (result.success) {
-                console.log('✅ 登出成功');
-                this.clearSession();
-                this.notifyListeners();
-                return { success: true };
-            } else {
-                throw new Error(result.message || '登出失败');
-            }
+            
+            // 直接清除本地状态，不需要调用后端API
+            this.clearSession();
+            this.notifyListeners();
+            
+            console.log('✅ 登出成功');
+            return { success: true };
+            
         } catch (error) {
             console.error('❌ 登出错误:', error);
-            // 即使API调用失败，也要清除本地会话
-            console.log('🔄 清理本地会话状态...');
+            // 即使出错，也要清除本地会话
             this.clearSession();
             this.notifyListeners();
             return { success: false, message: error.message };
