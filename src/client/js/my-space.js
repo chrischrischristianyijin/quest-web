@@ -30,14 +30,14 @@ async function initPage() {
         // 检查认证状态
         if (!auth.checkAuth()) {
             console.log('❌ 用户未认证，重定向到登录页面');
-            window.location.href = '/login.html';
+            window.location.href = '/pages/login.html';
             return;
         }
         
         // 检查token是否过期
         if (!(await auth.checkAndHandleTokenExpiration())) {
             console.log('⏰ Token已过期，重定向到登录页面');
-            window.location.href = '/login.html';
+            window.location.href = '/pages/login.html';
             return;
         }
         
@@ -64,7 +64,7 @@ async function initPage() {
         
         // 如果是认证错误，重定向到登录页面
         if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
-            window.location.href = '/login.html';
+            window.location.href = '/pages/login.html';
             return;
         }
         
@@ -166,7 +166,7 @@ async function loadUserInsights() {
             showErrorMessage('Authentication failed. Please log in again.');
             // 重定向到登录页面
             setTimeout(() => {
-                window.location.href = '/login';
+                window.location.href = '/pages/login.html';
             }, 2000);
         } else {
             showErrorMessage('Failed to load insights. Please refresh and try again.');
@@ -508,7 +508,7 @@ function bindEvents() {
                 
                 // 延迟跳转，让用户看到成功消息
                 setTimeout(() => {
-                    window.location.href = '/login.html';
+                    window.location.href = '/pages/login.html';
                 }, 1000);
                 
             } catch (error) {
@@ -524,7 +524,7 @@ function bindEvents() {
                 
                 // 延迟跳转
                 setTimeout(() => {
-                    window.location.href = '/login.html';
+                    window.location.href = '/pages/login.html';
                 }, 2000);
             }
         });
@@ -588,12 +588,32 @@ function bindEvents() {
                 
                 // 构建insight数据
                 const insightData = {
-                    url: url,
-                    tag_names: Array.from(selectedTags).map(tag => tag.textContent.trim()) // 确保是数组格式，并去除空格
+                    url: url
                 };
                 
+                // 获取自定义字段
+                const customTitle = document.getElementById('customTitle')?.value?.trim();
+                const customDescription = document.getElementById('customDescription')?.value?.trim();
+                const customThought = document.getElementById('customThought')?.value?.trim();
+                
+                // 只有当有选中的标签时才添加tag_names
+                if (selectedTags.length > 0) {
+                    const tagNames = Array.from(selectedTags)
+                        .map(tag => tag.textContent.trim())
+                        .filter(tag => tag.length > 0); // 过滤空字符串
+                    
+                    if (tagNames.length > 0) {
+                        insightData.tag_names = tagNames;
+                    }
+                }
+                
+                // 添加自定义字段（如果用户输入了的话）
+                if (customTitle) insightData.title = customTitle;
+                if (customDescription) insightData.description = customDescription;
+                if (customThought) insightData.thought = customThought;
+                
                 console.log('📝 创建insight，数据:', insightData);
-                console.log('🔍 tag_names类型:', typeof insightData.tag_names, '长度:', insightData.tag_names.length);
+                console.log('🔍 tag_names类型:', typeof insightData.tag_names, '长度:', insightData.tag_names ? insightData.tag_names.length : 0);
                 
                 // 使用新的 API 端点创建 insight
                 const result = await api.createInsightFromUrl(url, insightData);
@@ -607,6 +627,10 @@ function bindEvents() {
                 
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
+                // 手动清空自定义字段
+                document.getElementById('customTitle').value = '';
+                document.getElementById('customDescription').value = '';
+                document.getElementById('customThought').value = '';
                 hideAddContentModal();
                 
                 // 显示成功消息
@@ -623,6 +647,9 @@ function bindEvents() {
                         errorMessage = 'Invalid URL or content format.';
                     } else if (error.message.includes('422')) {
                         errorMessage = 'Data validation failed. Please check your input and try again.';
+                        console.error('🔍 422错误详情 - 请求数据:', insightData);
+                        console.error('🔍 422错误详情 - URL:', url);
+                        console.error('🔍 422错误详情 - 标签数量:', selectedTags.length);
                     } else if (error.message.includes('500') || error.message.includes('server error')) {
                         errorMessage = 'Server error. Please try again later.';
                     } else {
@@ -706,7 +733,7 @@ async function loadUserTags() {
             showErrorMessage('Authentication failed. Please log in again.');
             // 重定向到登录页面
             setTimeout(() => {
-                window.location.href = '/login';
+                window.location.href = '/pages/login.html';
             }, 2000);
         } else {
             showErrorMessage('Failed to load tags. Please refresh and try again.');

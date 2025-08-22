@@ -13,13 +13,13 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
     if (isLoggedIn && user) {
         navLinks.innerHTML = '';
         authButtons.innerHTML = `
-            <a href="/my-space" class="btn btn-outline">My Space</a>
+            <a href="/pages/my-space.html" class="btn btn-outline">My Space</a>
             <button class="btn btn-primary" id="logoutBtn">Log out</button>
         `;
         tryButton.textContent = 'Go to My Space';
-        tryButton.href = '/my-space';
+        tryButton.href = '/pages/my-space.html';
         ctaButton.textContent = 'Go to My Space';
-        ctaButton.href = '/my-space';
+        ctaButton.href = '/pages/my-space.html';
 
         // 显示欢迎回来区域
         if (welcomeBackSection) {
@@ -51,8 +51,8 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
     } else {
         navLinks.innerHTML = '';
         authButtons.innerHTML = `
-            <a href="/signup" class="btn btn-outline">Sign Up</a>
-            <a href="/login" class="btn btn-primary">Log In</a>
+            <a href="/pages/signup.html" class="btn btn-outline">Sign Up</a>
+            <a href="/pages/login.html" class="btn btn-primary">Log In</a>
         `;
         
         // 隐藏欢迎回来区域

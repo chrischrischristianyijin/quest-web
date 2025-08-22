@@ -150,6 +150,29 @@ body {
     color: var(--text-light);
 }
 
+.form-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    transition: var(--transition-normal);
+    background: var(--bg-primary);
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--quest-purple);
+    box-shadow: 0 0 0 3px rgba(75, 38, 79, 0.1);
+}
+
+.form-textarea::placeholder {
+    color: var(--text-light);
+}
+
 /* 通用消息样式 */
 .message {
     padding: var(--spacing-md);
