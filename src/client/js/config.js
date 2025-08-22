@@ -23,7 +23,7 @@ export const API_CONFIG = {
     
     // 认证相关接口
     AUTH: {
-        REGISTER: '/api/v1/auth/signup',
+        REGISTER: '/api/v1/auth/register',
         LOGIN: '/api/v1/auth/login',
         LOGOUT: '/api/v1/auth/signout',
         PROFILE: '/api/v1/auth/profile',
@@ -39,17 +39,15 @@ export const API_CONFIG = {
     
     // 元数据相关接口
     METADATA: {
-        PREVIEW: '/api/v1/metadata/preview',
         EXTRACT: '/api/v1/metadata/extract',
-        CREATE_INSIGHT: '/api/v1/metadata/create-insight',
-        BATCH_EXTRACT: '/api/v1/metadata/batch-extract',
-        PREVIEW_INSIGHT: '/api/v1/metadata/preview'
+        CREATE_INSIGHT: '/api/v1/metadata/create-insight'
     },
     
     // 见解管理接口
     INSIGHTS: {
         LIST: '/api/v1/insights',
         ALL: '/api/v1/insights/all',
+        GET: '/api/v1/insights',
         CREATE: '/api/v1/insights',
         UPDATE: '/api/v1/insights',
         DELETE: '/api/v1/insights'
@@ -62,21 +60,12 @@ export const API_CONFIG = {
         CREATE: '/api/v1/user-tags',
         UPDATE: '/api/v1/user-tags',
         DELETE: '/api/v1/user-tags',
-        STATS: '/api/v1/user-tags/stats/overview',
         SEARCH: '/api/v1/user-tags/search'
     },
     
     // 系统接口
     SYSTEM: {
-        HEALTH: '/api/v1/health',
-        INFO: '/api/v1/'
+        HEALTH: '/health',
+        INFO: '/'
     }
-};
-
-// Metadata相关API
-const METADATA = {
-    EXTRACT: '/api/v1/metadata/extract',
-    PREVIEW: '/api/v1/metadata/preview',
-    CREATE_INSIGHT: '/api/v1/metadata/create-insight',
-    BATCH_EXTRACT: '/api/v1/metadata/batch-extract'
 };

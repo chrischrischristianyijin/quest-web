@@ -57,7 +57,7 @@ class ApiService {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
+                throw new Error(`HTTP ${response.status}: ${errorData.detail || response.statusText}`);
             }
 
             const data = await response.json();
@@ -85,7 +85,7 @@ class ApiService {
             console.log('📡 注册API响应:', result);
 
             if (result.success && result.data) {
-                // 新API格式：access_token 而不是 token
+                // 新API格式：access_token
                 const token = result.data.access_token;
                 if (token) {
                     this.setAuthToken(token);
@@ -97,7 +97,7 @@ class ApiService {
                 };
             } else {
                 // 改进错误处理
-                let errorMessage = result.message || '注册失败';
+                let errorMessage = result.detail || '注册失败';
                 if (result.error && result.error.code === '23505') {
                     errorMessage = '该邮箱已被注册，请直接登录或使用其他邮箱';
                 }
@@ -125,7 +125,7 @@ class ApiService {
             console.log('📡 登录API响应:', result);
 
             if (result.success && result.data) {
-                // 新API格式：access_token 而不是 token
+                // 新API格式：access_token
                 const token = result.data.access_token;
                 if (token) {
                     this.setAuthToken(token);
@@ -139,7 +139,7 @@ class ApiService {
                     token: token // 保持向后兼容
                 };
             } else {
-                throw new Error(result.message || '登录失败');
+                throw new Error(result.detail || '登录失败');
             }
         } catch (error) {
             console.error('❌ 登录失败:', error);
@@ -163,7 +163,7 @@ class ApiService {
                 localStorage.removeItem('authToken'); // 清理可能存在的旧存储
                 return response;
             } else {
-                throw new Error(response.message || '登出失败');
+                throw new Error(response.detail || '登出失败');
             }
         } catch (error) {
             console.error('❌ 登出失败:', error);
@@ -175,30 +175,9 @@ class ApiService {
         }
     }
 
-    // 检查邮箱是否已存在
-    async checkEmail(emailData) {
-        try {
-            console.log('📧 检查邮箱是否已存在...', emailData);
-            const response = await fetch(`${this.baseUrl}${API_CONFIG.AUTH.CHECK_EMAIL}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(emailData)
-            });
-
-            const result = await response.json();
-            console.log('📡 邮箱检查API响应:', result);
-            return result;
-        } catch (error) {
-            console.error('❌ 检查邮箱失败:', error);
-            throw error;
-        }
-    }
-
     // 获取用户资料
     async getUserProfile() {
-        return await this.request(API_CONFIG.AUTH.PROFILE);
+        return await this.request(API_CONFIG.USER.PROFILE);
     }
 
     // 更新用户资料
@@ -206,26 +185,6 @@ class ApiService {
         return await this.request(API_CONFIG.USER.PROFILE, {
             method: 'PUT',
             body: JSON.stringify(profileData)
-        });
-    }
-
-    // 上传头像
-    async uploadAvatar(avatarFile, userId) {
-        const formData = new FormData();
-        formData.append('avatar', avatarFile);
-        formData.append('user_id', userId);
-
-        return await this.request(API_CONFIG.USER.UPLOAD_AVATAR, {
-            method: 'POST',
-            body: formData
-        });
-    }
-
-    // 忘记密码
-    async forgotPassword(email) {
-        return await this.request(API_CONFIG.AUTH.FORGOT_PASSWORD, {
-            method: 'POST',
-            body: JSON.stringify({ email })
         });
     }
 
@@ -327,11 +286,6 @@ class ApiService {
         });
     }
 
-    // 获取标签统计
-    async getUserTagStats() {
-        return await this.request(API_CONFIG.USER_TAGS.STATS);
-    }
-
     // 搜索标签
     async searchUserTags(query, userId = null) {
         let endpoint = API_CONFIG.USER_TAGS.SEARCH;
@@ -342,14 +296,6 @@ class ApiService {
         
         endpoint += `?${params.toString()}`;
         return await this.request(endpoint);
-    }
-
-    // 预览网页元数据
-    async previewMetadata(url) {
-        return await this.request(API_CONFIG.METADATA.PREVIEW, {
-            method: 'POST',
-            body: JSON.stringify({ url })
-        });
     }
 
     // 提取网页元数据
@@ -367,29 +313,19 @@ class ApiService {
             ...customData
         };
 
-        // 如果customData包含tag_names，确保是数组格式
+        // 如果customData包含tag_names，确保是数组格式并过滤空值
         if (customData.tag_names && Array.isArray(customData.tag_names)) {
-            requestData.tag_names = customData.tag_names;
+            requestData.tag_names = customData.tag_names
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0); // 过滤空字符串
         }
 
-        // 使用正确的insights API端点，而不是metadata/create-insight
-        return await this.request(API_CONFIG.INSIGHTS.CREATE, {
+        console.log('📝 发送到API的数据:', requestData);
+
+        return await this.request(API_CONFIG.METADATA.CREATE_INSIGHT, {
             method: 'POST',
             body: JSON.stringify(requestData)
         });
-    }
-
-    // 批量提取元数据
-    async batchExtractMetadata(urls) {
-        return await this.request(API_CONFIG.METADATA.BATCH_EXTRACT, {
-            method: 'POST',
-            body: JSON.stringify({ urls })
-        });
-    }
-
-    // 预览已保存的insight
-    async previewInsight(insightId) {
-        return await this.request(`${API_CONFIG.METADATA.PREVIEW_INSIGHT}/${insightId}`);
     }
 
     // 系统健康检查

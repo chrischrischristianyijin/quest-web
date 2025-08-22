@@ -1,4 +1,5 @@
 import { auth } from './auth.js';
+import { api } from './api.js'; // Added import for api
 
 // DOM 元素
 const signupForm = document.getElementById('signupForm');
@@ -7,6 +8,8 @@ const nicknameInput = document.getElementById('nickname');
 const passwordInput = document.getElementById('password');
 const confirmPasswordInput = document.getElementById('confirmPassword');
 const googleSignupBtn = document.getElementById('googleSignupBtn');
+const emailCheckBtn = document.getElementById('emailCheckBtn');
+const emailStatus = document.getElementById('emailStatus');
 const errorMessage = document.getElementById('errorMessage');
 const successMessage = document.getElementById('successMessage');
 
@@ -27,6 +30,56 @@ function showMessage(message, type = 'error') {
 function hideMessages() {
     errorMessage.style.display = 'none';
     successMessage.style.display = 'none';
+}
+
+// 检查邮箱是否可用
+async function checkEmailAvailability() {
+    const email = emailInput.value.trim();
+    
+    if (!email) {
+        showEmailStatus('请输入邮箱地址', 'error');
+        return;
+    }
+    
+    // 简单的邮箱格式验证
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showEmailStatus('请输入有效的邮箱地址', 'error');
+        return;
+    }
+    
+    try {
+        // 显示检查中状态
+        emailCheckBtn.disabled = true;
+        emailCheckBtn.innerHTML = '<svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> 检查中...';
+        
+        const result = await api.checkEmail({ email });
+        
+        if (result.data && result.data.exists) {
+            showEmailStatus('该邮箱已被注册，请使用其他邮箱或直接登录', 'error');
+        } else {
+            showEmailStatus('✅ 该邮箱可用', 'success');
+        }
+    } catch (error) {
+        console.error('邮箱检查失败:', error);
+        showEmailStatus('邮箱检查失败，请重试', 'error');
+    } finally {
+        // 恢复按钮状态
+        emailCheckBtn.disabled = false;
+        emailCheckBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.93 6.64 2.47M21 12l-3-3m3 3l-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> 检查';
+    }
+}
+
+// 显示邮箱状态
+function showEmailStatus(message, type = 'info') {
+    emailStatus.textContent = message;
+    emailStatus.className = `email-status email-status-${type}`;
+    emailStatus.style.display = 'block';
+    
+    // 3秒后自动隐藏
+    setTimeout(() => {
+        emailStatus.style.display = 'none';
+    }, 3000);
 }
 
 // 表单验证
@@ -83,6 +136,23 @@ async function handleSignup(email, nickname, password) {
         console.log('开始注册流程...');
         console.log('注册数据:', { email, nickname, password: '***' });
         
+        // 先检查邮箱是否已被注册
+        console.log('🔍 检查邮箱是否已被注册...');
+        try {
+            const emailCheck = await api.checkEmail({ email });
+            console.log('📧 邮箱检查结果:', emailCheck);
+            
+            if (emailCheck.data && emailCheck.data.exists) {
+                showMessage('该邮箱已被注册，请直接登录或使用其他邮箱', 'error');
+                return;
+            }
+        } catch (emailCheckError) {
+            console.warn('⚠️ 邮箱检查失败，继续注册流程:', emailCheckError);
+            // 如果邮箱检查失败，继续注册流程
+        }
+        
+        // 开始注册
+        console.log('✅ 邮箱可用，开始注册...');
         const result = await auth.signup(email, nickname, password);
         console.log('注册结果:', result);
         
@@ -91,7 +161,9 @@ async function handleSignup(email, nickname, password) {
             
             // 注册成功，重定向到My Space页面
             console.log('✅ 注册成功，重定向到My Space页面');
-            window.location.href = '/my-space';
+            setTimeout(() => {
+                window.location.href = '/pages/my-space.html';
+            }, 1000);
         }
     } catch (error) {
         console.error('注册失败:', error);
@@ -100,7 +172,19 @@ async function handleSignup(email, nickname, password) {
             message: error.message,
             stack: error.stack
         });
-        showMessage(error.message || '注册失败，请重试');
+        
+        // 改进错误处理
+        let errorMessage = error.message || '注册失败，请重试';
+        
+        if (error.message.includes('User already registered') || error.message.includes('already exists')) {
+            errorMessage = '该邮箱已被注册，请直接登录或使用其他邮箱';
+        } else if (error.message.includes('400') || error.message.includes('bad request')) {
+            errorMessage = '输入数据有误，请检查后重试';
+        } else if (error.message.includes('500') || error.message.includes('server error')) {
+            errorMessage = '服务器错误，请稍后重试';
+        }
+        
+        showMessage(errorMessage, 'error');
     }
 }
 
@@ -132,16 +216,19 @@ signupForm.addEventListener('submit', async (e) => {
     const submitBtn = signupForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
-    submitBtn.textContent = '注册中...';
+    submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> 注册中...';
     
     try {
         await handleSignup(email, nickname, password);
     } finally {
         // 恢复表单
         submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+        submitBtn.innerHTML = originalText;
     }
 });
+
+// 邮箱检查按钮事件
+emailCheckBtn.addEventListener('click', checkEmailAvailability);
 
 googleSignupBtn.addEventListener('click', handleGoogleSignup);
 
@@ -155,7 +242,7 @@ confirmPasswordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // 如果用户已经登录，直接跳转
     if (auth.checkAuth()) {
-        window.location.href = '/my-space';
+        window.location.href = '/pages/my-space.html';
     }
     
     // 聚焦到邮箱输入框
