@@ -290,14 +290,14 @@ function createInsightCard(insight) {
     description.className = 'content-card-description';
     description.textContent = insight.description || `Content from ${new URL(insight.url).hostname}`;
     
-    // 标签
-    const tags = document.createElement('div');
-    tags.className = 'content-card-tags';
-    
-    console.log('🏷️ 渲染标签，insight:', insight.title || insight.url);
-    console.log('🏷️ 标签数据:', insight.tags);
-    
+    // 标签 - 只有当有标签时才显示
     if (insight.tags && insight.tags.length > 0) {
+        const tags = document.createElement('div');
+        tags.className = 'content-card-tags';
+        
+        console.log('🏷️ 渲染标签，insight:', insight.title || insight.url);
+        console.log('🏷️ 标签数据:', insight.tags);
+        
         insight.tags.forEach((tag, index) => {
             console.log(`🏷️ 处理标签 ${index + 1}:`, tag);
             
@@ -316,19 +316,14 @@ function createInsightCard(insight) {
             
             tagElement.textContent = tagText;
             
-            // 不再设置标签颜色，使用CSS默认样式
-            
             console.log(`🏷️ 创建标签元素:`, { text: tagText });
             
             tags.appendChild(tagElement);
         });
+        
+        cardContent.appendChild(tags);
     } else {
-        console.log('⚠️ 该insight没有标签数据');
-        // 显示"无标签"提示
-        const noTagElement = document.createElement('span');
-        noTagElement.className = 'content-card-tag no-tag';
-        noTagElement.textContent = '无标签';
-        tags.appendChild(noTagElement);
+        console.log('⚠️ 该insight没有标签数据，不显示标签区域');
     }
     
     // 卡片底部
@@ -381,7 +376,6 @@ async function initFilterButtons() {
             {
                 key: 'latest',
                 label: 'Latest',
-                icon: '📅',
                 type: 'dropdown',
                 options: [
                     { key: 'latest', label: 'Latest First' },
@@ -391,7 +385,6 @@ async function initFilterButtons() {
             {
                 key: 'tags',
                 label: 'Tags',
-                icon: '🏷️',
                 type: 'dropdown',
                 options: userTags.map(tag => ({
                     key: `tag_${tag.id}`,
@@ -403,7 +396,6 @@ async function initFilterButtons() {
             {
                 key: 'type',
                 label: 'Type',
-                icon: '📚',
                 type: 'dropdown',
                 options: [
                     { key: 'all', label: 'All Content' },
@@ -423,7 +415,6 @@ async function initFilterButtons() {
             button.className = 'FilterButton main-filter-btn';
             button.dataset.filter = filterConfig.key;
             button.innerHTML = `
-                <span class="filter-icon">${filterConfig.icon}</span>
                 <span class="filter-label">${filterConfig.label}</span>
                 <svg class="filter-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -480,12 +471,7 @@ async function initFilterButtons() {
             console.log('✅ 创建筛选按钮:', filterConfig.key, filterConfig.label);
         });
         
-        // 添加编辑标签按钮
-        const editTagsBtn = document.createElement('button');
-        editTagsBtn.className = 'FilterButton edit-tags-btn';
-        editTagsBtn.textContent = 'Edit Tags';
-        editTagsBtn.onclick = () => showEditTagsModal();
-        filterButtons.appendChild(editTagsBtn);
+        // Edit Tags按钮已移到标签选择器旁边，不再需要在这里添加
         
         console.log('✅ 筛选按钮初始化完成，共', mainFilterButtons.length, '个主要按钮');
         
