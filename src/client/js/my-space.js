@@ -359,6 +359,40 @@ function createInsightCard(insight) {
     return card;
 }
 
+// 为标签筛选器加载用户标签
+async function loadUserTagsForFilter(dropdownOptions) {
+    try {
+        console.log('🔍 开始为标签筛选器加载用户标签...');
+        const response = await api.getUserTags();
+        const tags = response.success ? response.data : [];
+        
+        console.log('🏷️ 获取到用户标签:', tags);
+        console.log('🏷️ 标签数量:', tags.length);
+        
+        if (tags.length > 0) {
+            // 为每个标签创建选项
+            tags.forEach(tag => {
+                const tagOption = document.createElement('div');
+                tagOption.className = 'filter-option';
+                tagOption.dataset.filter = `tag_${tag.id}`;
+                tagOption.innerHTML = `
+                    <span class="filter-option-label">
+                        <span class="tag-color-dot" style="background-color: ${tag.color || '#8B5CF6'}; width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
+                        ${tag.name}
+                    </span>
+                `;
+                dropdownOptions.appendChild(tagOption);
+                console.log(`✅ 添加标签选项: ${tag.name} (ID: ${tag.id})`);
+            });
+            console.log('✅ 标签筛选器选项加载完成');
+        } else {
+            console.log('🔍 没有用户标签可用');
+        }
+    } catch (error) {
+        console.error('❌ 加载用户标签失败:', error);
+    }
+}
+
 // 初始化筛选按钮
 async function initFilterButtons() {
     if (!filterButtons) return;
@@ -402,7 +436,7 @@ async function initFilterButtons() {
             {
                 key: 'tags',
                 label: 'Filter by Tag',
-                type: 'modal',
+                type: 'dropdown',
                 options: []
             }
         ];
@@ -423,18 +457,62 @@ async function initFilterButtons() {
             `;
             
             // 根据按钮类型创建不同的内容
-            if (filterConfig.type === 'modal') {
-                // Tags按钮：创建弹窗
-                button.innerHTML = `
-                    <span class="filter-label">${filterConfig.label}</span>
-                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                `;
+            if (filterConfig.type === 'dropdown') {
+                // 所有按钮都创建下拉菜单
+                const dropdownOptions = document.createElement('div');
+                dropdownOptions.className = 'filter-dropdown-options';
                 
-                // 标签管理弹窗已删除，使用简单的标签下拉选择器
+                // 如果是标签按钮，动态加载用户标签
+                if (filterConfig.key === 'tags') {
+                    dropdownOptions.innerHTML = '<div class="filter-option" data-filter="all"><span class="filter-option-label">All Tags</span></div>';
+                    // 动态加载用户标签
+                    loadUserTagsForFilter(dropdownOptions);
+                } else {
+                    dropdownOptions.innerHTML = filterConfig.options.map(option => `
+                        <div class="filter-option" data-filter="${option.key}">
+                            <span class="filter-option-label">${option.label}</span>
+                        </div>
+                    `).join('');
+                }
+                
+                // 绑定点击事件
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    buttonContainer.classList.toggle('open');
+                    
+                    // 更新箭头方向
+                    const arrow = button.querySelector('.filter-arrow');
+                    if (arrow) {
+                        arrow.style.transform = buttonContainer.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+                    }
+                });
+                
+                // 绑定选项点击事件
+                dropdownOptions.addEventListener('click', (e) => {
+                    const option = e.target.closest('.filter-option');
+                    if (option) {
+                        const filterKey = option.dataset.filter;
+                        const filterType = filterConfig.key; // latest, tags, type
+                        const optionLabel = option.querySelector('.filter-option-label').textContent;
+                        console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
+                        setFilter(filterType, filterKey, optionLabel);
+                        
+                        // 关闭所有下拉框
+                        document.querySelectorAll('.filter-button-container').forEach(container => {
+                            container.classList.remove('open');
+                            const arrow = container.querySelector('.filter-arrow');
+                            if (arrow) arrow.style.transform = 'rotate(0deg)';
+                        });
+                    }
+                });
+                
+                // 阻止下拉选项点击事件冒泡
+                dropdownOptions.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
                 
                 buttonContainer.appendChild(button);
+                buttonContainer.appendChild(dropdownOptions);
             } else {
                 // 其他按钮：创建下拉菜单
                 const dropdownOptions = document.createElement('div');
@@ -1232,30 +1310,7 @@ function bindTagSelectorEvents() {
 
 // 更新过滤器按钮
 function updateFilterButtons(tags) {
-    const filterButtons = document.getElementById('filterButtons');
-    if (!filterButtons) return;
-    
-    // 保留默认的Latest按钮
-    const latestButton = filterButtons.querySelector('[data-filter="latest"]');
-    filterButtons.innerHTML = '';
-    if (latestButton) {
-        filterButtons.appendChild(latestButton);
-    }
-    
-    // 添加标签过滤器按钮
-    tags.forEach(tag => {
-        const tagButton = document.createElement('button');
-        tagButton.className = 'FilterButton';
-        tagButton.setAttribute('data-filter', `tag_${tag.id}`);
-        tagButton.setAttribute('data-tag-id', tag.id);
-        tagButton.innerHTML = `
-            <span class="tag-color-dot" style="background-color: ${tag.color || '#FF5733'}"></span>
-            ${tag.name}
-        `;
-        filterButtons.appendChild(tagButton);
-    });
-    
-    // 重新绑定事件
+    // 重新初始化筛选按钮，包括标签下拉选择器
     initFilterButtons();
 }
 
