@@ -5,6 +5,37 @@ import { PATHS, navigateTo } from './paths.js';
 const welcomeTitle = document.getElementById('welcomeTitle');
 const tryButton = document.getElementById('tryButton');
 
+// Update navigation based on login status
+function updateNavigation(isLoggedIn, user = null) {
+    const navLinks = document.getElementById('navLinks');
+    const authButtons = document.getElementById('authButtons');
+    
+    if (!navLinks || !authButtons) return;
+    
+    if (isLoggedIn && user) {
+        // User is logged in - show My Space link and logout button
+        navLinks.innerHTML = `
+            <a href="${PATHS.MY_SPACE}" class="nav-link">My Space</a>
+        `;
+        
+        authButtons.innerHTML = `
+            <button class="auth-btn auth-btn-secondary" onclick="handleLogout()">
+                Logout
+            </button>
+        `;
+    } else {
+        // User is not logged in - show login and signup buttons
+        navLinks.innerHTML = `
+            <a href="${PATHS.LOGIN}" class="nav-link">Login</a>
+        `;
+        
+        authButtons.innerHTML = `
+            <a href="${PATHS.LOGIN}" class="auth-btn auth-btn-secondary">Login</a>
+            <a href="${PATHS.SIGNUP}" class="auth-btn auth-btn-primary">Sign Up</a>
+        `;
+    }
+}
+
 // Update UI based on login status
 function updateUIForLoginStatus(isLoggedIn, user = null) {
     if (isLoggedIn && user) {
@@ -29,7 +60,7 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
         
         // Reset welcome title
         if (welcomeTitle) {
-            welcomeTitle.textContent = 'YOUR SECOND BRAIN';
+            welcomeTitle.textContent = 'Welcome to Quest';
         }
         
         // Reset button
@@ -57,6 +88,7 @@ async function handleLogout() {
         
         // Update UI state
         updateUIForLoginStatus(false);
+        updateNavigation(false); // Update navigation bar
         
         // Redirect to home page immediately
         window.location.href = PATHS.HOME;
@@ -66,6 +98,7 @@ async function handleLogout() {
         
         // Even if there's an error, clear local state and redirect
         updateUIForLoginStatus(false);
+        updateNavigation(false); // Update navigation bar
         window.location.href = PATHS.HOME;
     }
 }
@@ -245,12 +278,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (auth.checkAuth()) {
             const user = auth.getCurrentUser();
             updateUIForLoginStatus(true, user);
+            updateNavigation(true, user); // Update navigation bar
         } else {
             updateUIForLoginStatus(false);
+            updateNavigation(false); // Update navigation bar
         }
     } catch (error) {
         console.error('Error checking auth status:', error);
         updateUIForLoginStatus(false);
+        updateNavigation(false); // Update navigation bar
     }
     
     // Initialize other features
@@ -272,3 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Expose functions to global scope
+window.handleLogout = handleLogout;
