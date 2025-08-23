@@ -1273,14 +1273,16 @@ async function loadTagsForManagement() {
         const tagsList = document.getElementById('manageTagsList');
         const tagsStats = document.getElementById('tagsStats');
         
-        if (!tagsList || !tagsStats) return;
+        if (!tagsList) return;
         
         // 渲染标签列表
         tagsList.innerHTML = '';
         
         if (tags.length === 0) {
             tagsList.innerHTML = '<p class="no-tags">No tags created yet</p>';
-            tagsStats.innerHTML = '<p class="no-stats">No tags to display statistics</p>';
+            if (tagsStats) {
+                tagsStats.innerHTML = '<p class="no-stats">No tags to display statistics</p>';
+            }
             return;
         }
         
@@ -1289,7 +1291,7 @@ async function loadTagsForManagement() {
             tagItem.className = 'manage-tag-item';
             tagItem.innerHTML = `
                 <div class="tag-info">
-                    <span class="tag-color-dot" style="background-color: ${tag.color || '#FF5733'}"></span>
+                    <span class="tag-color-dot" style="background-color: ${tag.color || '#8B5CF6'}"></span>
                     <span class="tag-name">${tag.name}</span>
                 </div>
                 <div class="tag-actions">
@@ -1309,44 +1311,17 @@ async function loadTagsForManagement() {
             tagsList.appendChild(tagItem);
         });
         
-        // 显示标签统计
-        try {
-            const statsResponse = await api.getUserTagStats();
-            if (statsResponse.success && statsResponse.data) {
-                const stats = statsResponse.data;
-                tagsStats.innerHTML = `
-                    <div class="stats-summary">
-                        <h3>Tag Statistics</h3>
-                        <div class="stat-item">
-                            <span class="stat-label">Total Tags:</span>
-                            <span class="stat-value">${stats.total_tags || tags.length}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Total Insights:</span>
-                            <span class="stat-value">${stats.total_insights || 0}</span>
-                        </div>
+        // 显示简化的标签统计
+        if (tagsStats) {
+            tagsStats.innerHTML = `
+                <div class="stats-summary">
+                    <h3>Tag Summary</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Tags:</span>
+                        <span class="stat-value">${tags.length}</span>
                     </div>
-                    ${stats.most_used_tags ? `
-                        <div class="most-used-tags">
-                            <h4>Most Used Tags</h4>
-                            <div class="tag-stats-list">
-                                ${stats.most_used_tags.map(tag => `
-                                    <div class="tag-stat-item">
-                                        <span class="tag-color-dot" style="background-color: ${tag.color}"></span>
-                                        <span class="tag-name">${tag.name}</span>
-                                        <span class="tag-count">${tag.count}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                `;
-            } else {
-                tagsStats.innerHTML = '<p class="no-stats">Unable to load tag statistics</p>';
-            }
-        } catch (error) {
-            console.error('Failed to load tag statistics:', error);
-            tagsStats.innerHTML = '<p class="no-stats">Failed to load tag statistics</p>';
+                </div>
+            `;
         }
         
     } catch (error) {
@@ -1354,6 +1329,9 @@ async function loadTagsForManagement() {
         const tagsList = document.getElementById('manageTagsList');
         if (tagsList) {
             tagsList.innerHTML = '<p class="error">Failed to load tags</p>';
+        }
+        if (tagsStats) {
+            tagsStats.innerHTML = '<p class="error">Failed to load tag statistics</p>';
         }
     }
 }
@@ -1497,7 +1475,7 @@ function bindTagEvents() {
 // 创建新标签
 async function createNewTag() {
     const tagName = document.getElementById('newTagName').value.trim();
-    const tagColor = document.getElementById('newTagColor').value;
+    const defaultColor = '#8B5CF6'; // 默认紫色
     
     if (!tagName) {
         showErrorMessage('Please enter a tag name');
@@ -1505,12 +1483,12 @@ async function createNewTag() {
     }
     
     try {
-        console.log('🏷️ Creating new tag:', { name: tagName, color: tagColor });
+        console.log('🏷️ Creating new tag:', { name: tagName, color: defaultColor });
         
         // 使用API方法创建标签
         const response = await api.createUserTag({
             name: tagName,
-            color: tagColor
+            color: defaultColor
         });
         
         if (response.success && response.data) {
@@ -1518,7 +1496,6 @@ async function createNewTag() {
             
             // 清空表单
             document.getElementById('newTagName').value = '';
-            document.getElementById('newTagColor').value = '#FF5733';
             
             // 重新加载标签列表
             await loadTagsForManagement();
@@ -1561,7 +1538,6 @@ function showTagsManagementModal() {
                     <h3>Create New Tag</h3>
                     <div class="create-tag-form">
                         <input type="text" id="newTagName" placeholder="Enter tag name" class="tag-input">
-                        <input type="color" id="newTagColor" value="#FF5733" class="tag-color-input">
                         <button class="create-tag-btn" onclick="createNewTag()">Create</button>
                     </div>
                 </div>
