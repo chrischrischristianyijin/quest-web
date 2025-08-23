@@ -16,6 +16,17 @@ export const PATHS = {
     // API相关
     API_BASE: '/api/v1',
     
+    // API用户标签路径
+    USER_TAGS: {
+        LIST: '/user/tags',
+        GET: '/user/tags',
+        CREATE: '/user/tags',
+        UPDATE: '/user/tags',
+        DELETE: '/user/tags',
+        SEARCH: '/user/tags/search',
+        STATS: '/user/tags/stats'
+    },
+    
     // 其他页面
     ABOUT: '/about',
     HELP: '/help',

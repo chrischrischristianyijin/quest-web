@@ -265,6 +265,20 @@ class ApiService {
         return await this.request(endpoint);
     }
 
+    // 获取用户标签统计
+    async getUserTagStats(userId = null) {
+        let endpoint = API_CONFIG.USER_TAGS.STATS;
+        const params = new URLSearchParams();
+        
+        if (userId) params.append('user_id', userId);
+        
+        if (params.toString()) {
+            endpoint += `?${params.toString()}`;
+        }
+        
+        return await this.request(endpoint);
+    }
+
     // 获取标签详情
     async getUserTag(userTagId) {
         return await this.request(`${API_CONFIG.USER_TAGS.GET}/${userTagId}`);
