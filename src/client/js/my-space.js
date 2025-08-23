@@ -1375,11 +1375,25 @@ async function loadTagsForManagement() {
             return;
         }
         
+        // 添加标签选择说明
+        const selectionHeader = document.createElement('div');
+        selectionHeader.className = 'selection-header';
+        selectionHeader.innerHTML = `
+            <h4>Select Tags to Manage</h4>
+            <p class="selection-hint">Click on tags to select them for bulk operations</p>
+        `;
+        tagsList.appendChild(selectionHeader);
+        
         tags.forEach(tag => {
             const tagItem = document.createElement('div');
-            tagItem.className = 'manage-tag-item';
+            tagItem.className = 'manage-tag-item selectable';
+            tagItem.dataset.tagId = tag.id;
+            tagItem.dataset.tagName = tag.name;
+            tagItem.dataset.tagColor = tag.color || '#8B5CF6';
+            
             tagItem.innerHTML = `
                 <div class="tag-info">
+                    <input type="checkbox" id="manage_tag_${tag.id}" class="manage-tag-checkbox">
                     <span class="tag-color-dot" style="background-color: ${tag.color || '#8B5CF6'}"></span>
                     <span class="tag-name">${tag.name}</span>
                 </div>
@@ -1397,8 +1411,37 @@ async function loadTagsForManagement() {
                     </button>
                 </div>
             `;
+            
+            // 绑定标签选择事件
+            const checkbox = tagItem.querySelector('.manage-tag-checkbox');
+            const tagInfo = tagItem.querySelector('.tag-info');
+            
+            // 点击标签信息区域也可以选中/取消选中
+            tagInfo.addEventListener('click', (e) => {
+                if (e.target.type !== 'checkbox') {
+                    checkbox.checked = !checkbox.checked;
+                    updateTagSelectionUI(tagItem, checkbox.checked);
+                }
+            });
+            
+            // 复选框变化事件
+            checkbox.addEventListener('change', (e) => {
+                updateTagSelectionUI(tagItem, e.target.checked);
+            });
+            
             tagsList.appendChild(tagItem);
         });
+        
+        // 添加批量操作按钮
+        const bulkActions = document.createElement('div');
+        bulkActions.className = 'bulk-actions';
+        bulkActions.innerHTML = `
+            <button class="bulk-btn bulk-edit-btn" onclick="bulkEditTags()" disabled>Edit Selected</button>
+            <button class="bulk-btn bulk-delete-btn" onclick="bulkDeleteTags()" disabled>Delete Selected</button>
+            <button class="bulk-btn bulk-select-all-btn" onclick="selectAllTags()">Select All</button>
+            <button class="bulk-btn bulk-deselect-all-btn" onclick="deselectAllTags()">Deselect All</button>
+        `;
+        tagsList.appendChild(bulkActions);
         
         // 显示简化的标签统计
         if (tagsStats) {
@@ -1409,19 +1452,16 @@ async function loadTagsForManagement() {
                         <span class="stat-label">Total Tags:</span>
                         <span class="stat-value">${tags.length}</span>
                     </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Selected:</span>
+                        <span class="stat-value" id="selectedTagsCount">0</span>
+                    </div>
                 </div>
             `;
         }
         
     } catch (error) {
         console.error('Failed to load tags for management:', error);
-        const tagsList = document.getElementById('manageTagsList');
-        if (tagsList) {
-            tagsList.innerHTML = '<p class="error">Failed to load tags</p>';
-        }
-        if (tagsStats) {
-            tagsStats.innerHTML = '<p class="error">Failed to load tag statistics</p>';
-        }
     }
 }
 
@@ -1915,6 +1955,10 @@ window.showTagsManagementModal = showTagsManagementModal;
 window.loadTagsForManagement = loadTagsForManagement;
 window.createNewTag = createNewTag;
 window.createNewTagFromManagement = createNewTagFromManagement;
+window.selectAllTags = selectAllTags;
+window.deselectAllTags = deselectAllTags;
+window.bulkEditTags = bulkEditTags;
+window.bulkDeleteTags = bulkDeleteTags;
 
 // 测试insight数据格式
 function testInsightDataFormat() {
@@ -2375,5 +2419,125 @@ function testTagSelectorFunctionality() {
 
 // 将测试函数暴露到全局
 window.testTagSelectorFunctionality = testTagSelectorFunctionality;
+
+// 更新标签选择UI
+function updateTagSelectionUI(tagItem, isSelected) {
+    if (isSelected) {
+        tagItem.classList.add('selected');
+    } else {
+        tagItem.classList.remove('selected');
+    }
+    
+    // 更新选中标签数量
+    updateSelectedTagsCount();
+    
+    // 更新批量操作按钮状态
+    updateBulkActionsState();
+}
+
+// 更新选中标签数量
+function updateSelectedTagsCount() {
+    const selectedCount = document.querySelectorAll('.manage-tag-checkbox:checked').length;
+    const selectedTagsCountElement = document.getElementById('selectedTagsCount');
+    if (selectedTagsCountElement) {
+        selectedTagsCountElement.textContent = selectedCount;
+    }
+}
+
+// 更新批量操作按钮状态
+function updateBulkActionsState() {
+    const selectedCount = document.querySelectorAll('.manage-tag-checkbox:checked').length;
+    const bulkEditBtn = document.querySelector('.bulk-edit-btn');
+    const bulkDeleteBtn = document.querySelector('.bulk-delete-btn');
+    
+    if (bulkEditBtn) {
+        bulkEditBtn.disabled = selectedCount === 0;
+    }
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.disabled = selectedCount === 0;
+    }
+}
+
+// 全选标签
+function selectAllTags() {
+    const checkboxes = document.querySelectorAll('.manage-tag-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const tagItem = checkbox.closest('.manage-tag-item');
+        if (tagItem) {
+            updateTagSelectionUI(tagItem, true);
+        }
+    });
+}
+
+// 取消全选标签
+function deselectAllTags() {
+    const checkboxes = document.querySelectorAll('.manage-tag-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const tagItem = checkbox.closest('.manage-tag-item');
+        if (tagItem) {
+            updateTagSelectionUI(tagItem, false);
+        }
+    });
+}
+
+// 批量编辑标签
+function bulkEditTags() {
+    const selectedTags = getSelectedTagsForManagement();
+    if (selectedTags.length === 0) {
+        showErrorMessage('Please select tags to edit');
+        return;
+    }
+    
+    if (selectedTags.length === 1) {
+        // 单个标签编辑
+        const tag = selectedTags[0];
+        editTagInManagement(tag.id, tag.name, tag.color);
+    } else {
+        // 多个标签编辑
+        showErrorMessage('Bulk edit for multiple tags is not yet implemented');
+    }
+}
+
+// 批量删除标签
+function bulkDeleteTags() {
+    const selectedTags = getSelectedTagsForManagement();
+    if (selectedTags.length === 0) {
+        showErrorMessage('Please select tags to delete');
+        return;
+    }
+    
+    const tagNames = selectedTags.map(tag => tag.name).join(', ');
+    if (confirm(`Are you sure you want to delete these tags: ${tagNames}?`)) {
+        // 执行批量删除
+        Promise.all(selectedTags.map(tag => deleteTagInManagement(tag.id)))
+            .then(() => {
+                showSuccessMessage(`Successfully deleted ${selectedTags.length} tags`);
+            })
+            .catch(error => {
+                showErrorMessage(`Failed to delete some tags: ${error.message}`);
+            });
+    }
+}
+
+// 获取选中的标签（用于管理）
+function getSelectedTagsForManagement() {
+    const selectedTags = [];
+    const checkboxes = document.querySelectorAll('.manage-tag-checkbox:checked');
+    
+    checkboxes.forEach(checkbox => {
+        const tagItem = checkbox.closest('.manage-tag-item');
+        if (tagItem) {
+            selectedTags.push({
+                id: tagItem.dataset.tagId,
+                name: tagItem.dataset.tagName,
+                color: tagItem.dataset.tagColor
+            });
+        }
+    });
+    
+    return selectedTags;
+}
 
 
