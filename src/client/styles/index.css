@@ -66,6 +66,44 @@
     gap: 12px;
 }
 
+.auth-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+    transition: var(--transition-normal);
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-btn-primary {
+    background: var(--quest-purple);
+    color: white;
+}
+
+.auth-btn-primary:hover {
+    background: var(--quest-dark-purple);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(75, 38, 79, 0.3);
+}
+
+.auth-btn-secondary {
+    background: transparent;
+    color: var(--quest-purple);
+    border: 2px solid var(--quest-purple);
+}
+
+.auth-btn-secondary:hover {
+    background: var(--quest-purple);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(75, 38, 79, 0.3);
+}
+
 /* 主要内容 */
 .main-content {
     padding-top: 72px;
