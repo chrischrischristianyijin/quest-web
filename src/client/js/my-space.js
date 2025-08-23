@@ -1048,20 +1048,27 @@ async function loadUserTags() {
 
 // 渲染标签选择器
 function renderTagSelector(tags) {
+    console.log('🔍 开始渲染标签选择器...');
+    
     const tagSelectorOptions = document.getElementById('tagSelectorOptions');
-    if (!tagSelectorOptions) return;
+    if (!tagSelectorOptions) {
+        console.error('❌ 标签选择器选项容器未找到');
+        return;
+    }
     
     tagSelectorOptions.innerHTML = '';
     
     if (tags.length === 0) {
+        console.log('🔍 没有标签可用');
         tagSelectorOptions.innerHTML = '<div class="no-tags">No tags available. Create some tags first!</div>';
         return;
     }
     
     console.log('🏷️ 渲染标签选择器，标签数量:', tags.length);
+    console.log('🏷️ 标签数据:', tags);
     
     // 创建标签选项
-    tags.forEach(tag => {
+    tags.forEach((tag, index) => {
         const tagOption = document.createElement('div');
         tagOption.className = 'tag-option';
         tagOption.dataset.tagId = tag.id;
@@ -1075,18 +1082,36 @@ function renderTagSelector(tags) {
             </div>
         `;
         
+        console.log(`🔍 创建标签选项 ${index + 1}:`, {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+            element: tagOption
+        });
+        
         // 绑定点击事件
         tagOption.addEventListener('click', (e) => {
+            console.log('🔍 标签选项被点击:', {
+                tagId: tag.id,
+                tagName: tag.name,
+                target: e.target
+            });
+            
             // 防止点击checkbox时触发两次
-            if (e.target.type === 'checkbox') return;
+            if (e.target.type === 'checkbox') {
+                console.log('🔍 点击的是复选框，跳过处理');
+                return;
+            }
             
             const checkbox = tagOption.querySelector('.tag-checkbox');
             checkbox.checked = !checkbox.checked;
             
             if (checkbox.checked) {
                 tagOption.classList.add('selected');
+                console.log('✅ 标签已选中:', tag.name);
             } else {
                 tagOption.classList.remove('selected');
+                console.log('❌ 标签已取消选中:', tag.name);
             }
             
             updateSelectedTagsDisplay();
@@ -1095,7 +1120,7 @@ function renderTagSelector(tags) {
         tagSelectorOptions.appendChild(tagOption);
     });
     
-    console.log('🏷️ 标签选择器渲染完成');
+    console.log('✅ 标签选择器渲染完成');
 }
 
 // 更新已选标签显示
@@ -1155,20 +1180,34 @@ function bindFilterButtonOutsideClick() {
 
 // 绑定标签选择器事件
 function bindTagSelectorEvents() {
+    console.log('🔍 开始绑定标签选择器事件...');
+    
     const tagSelectorTrigger = document.getElementById('tagSelectorTrigger');
     const tagSelectorDropdown = document.getElementById('tagSelectorDropdown');
     
-    if (!tagSelectorTrigger || !tagSelectorDropdown) return;
+    console.log('🔍 标签选择器元素:', {
+        trigger: tagSelectorTrigger,
+        dropdown: tagSelectorDropdown
+    });
+    
+    if (!tagSelectorTrigger || !tagSelectorDropdown) {
+        console.error('❌ 标签选择器元素未找到');
+        return;
+    }
     
     // 点击触发器显示/隐藏下拉选项
     tagSelectorTrigger.addEventListener('click', (e) => {
+        console.log('🔍 标签选择器触发器被点击');
         e.stopPropagation();
         tagSelectorDropdown.classList.toggle('open');
+        
+        const isOpen = tagSelectorDropdown.classList.contains('open');
+        console.log('🔍 下拉框状态:', isOpen ? '展开' : '收缩');
         
         // 更新箭头方向
         const arrow = tagSelectorTrigger.querySelector('.tag-selector-arrow');
         if (arrow) {
-            arrow.style.transform = tagSelectorDropdown.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+            arrow.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
         }
     });
     
@@ -1187,9 +1226,12 @@ function bindTagSelectorEvents() {
     const tagSelectorOptions = document.getElementById('tagSelectorOptions');
     if (tagSelectorOptions) {
         tagSelectorOptions.addEventListener('click', (e) => {
+            console.log('🔍 标签选项被点击:', e.target);
             e.stopPropagation();
         });
     }
+    
+    console.log('✅ 标签选择器事件绑定完成');
 }
 
 // 更新过滤器按钮
@@ -2273,5 +2315,65 @@ function testSorting() {
 // 将测试函数暴露到全局
 window.testFiltering = testFiltering;
 window.testSorting = testSorting;
+
+// 测试标签选择器功能
+function testTagSelectorFunctionality() {
+    console.log('🧪 测试标签选择器功能...');
+    
+    // 检查DOM元素
+    const trigger = document.getElementById('tagSelectorTrigger');
+    const dropdown = document.getElementById('tagSelectorDropdown');
+    const options = document.getElementById('tagSelectorOptions');
+    
+    console.log('🔍 DOM元素检查:', {
+        trigger: trigger ? '✅ 存在' : '❌ 不存在',
+        dropdown: dropdown ? '✅ 存在' : '❌ 不存在',
+        options: options ? '✅ 存在' : '❌ 不存在'
+    });
+    
+    // 检查CSS类
+    if (dropdown) {
+        console.log('🔍 下拉框CSS类:', dropdown.classList.toString());
+        console.log('🔍 是否展开:', dropdown.classList.contains('open'));
+    }
+    
+    // 检查标签数据
+    const tagOptions = options ? options.querySelectorAll('.tag-option') : [];
+    console.log('🔍 标签选项数量:', tagOptions.length);
+    
+    // 检查复选框
+    const checkboxes = options ? options.querySelectorAll('.tag-checkbox') : [];
+    console.log('🔍 复选框数量:', checkboxes.length);
+    
+    // 测试点击事件
+    if (trigger) {
+        console.log('🔍 测试点击触发器...');
+        trigger.click();
+        
+        setTimeout(() => {
+            console.log('🔍 点击后状态:', dropdown.classList.contains('open') ? '展开' : '收缩');
+            
+            // 再次点击关闭
+            trigger.click();
+            setTimeout(() => {
+                console.log('🔍 再次点击后状态:', dropdown.classList.contains('open') ? '展开' : '收缩');
+            }, 100);
+        }, 100);
+    }
+    
+    return {
+        elementsExist: {
+            trigger: !!trigger,
+            dropdown: !!dropdown,
+            options: !!options
+        },
+        tagOptionsCount: tagOptions.length,
+        checkboxesCount: checkboxes.length,
+        isOpen: dropdown ? dropdown.classList.contains('open') : false
+    };
+}
+
+// 将测试函数暴露到全局
+window.testTagSelectorFunctionality = testTagSelectorFunctionality;
 
 
