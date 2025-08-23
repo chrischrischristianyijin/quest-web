@@ -1362,23 +1362,51 @@ async function loadTagsForManagement() {
         const tags = response.success ? response.data : [];
         
         console.log('🏷️ 获取到标签数据:', tags);
+        console.log('🏷️ 标签数量:', tags.length);
         
+        // 查找DOM元素
         const tagsList = document.getElementById('manageTagsList');
         const tagsStats = document.getElementById('tagsStats');
         
-        console.log('🔍 DOM元素:', { tagsList, tagsStats });
+        console.log('🔍 DOM元素查找结果:', { 
+            tagsList: tagsList, 
+            tagsStats: tagsStats,
+            tagsListId: tagsList ? tagsList.id : 'NOT_FOUND',
+            tagsStatsId: tagsStats ? tagsStats.id : 'NOT_FOUND'
+        });
         
         if (!tagsList) {
-            console.error('❌ 找不到标签列表容器');
+            console.error('❌ 找不到标签列表容器 manageTagsList');
+            // 尝试查找其他可能的容器
+            const allDivs = document.querySelectorAll('div');
+            console.log('🔍 页面中所有div元素:', allDivs.length);
+            allDivs.forEach((div, index) => {
+                if (div.id && div.id.includes('tag')) {
+                    console.log(`🔍 找到包含tag的div ${index}:`, div.id, div);
+                }
+            });
             return;
         }
         
-        // 渲染标签列表
+        // 清空容器并添加调试信息
         tagsList.innerHTML = '';
+        console.log('✅ 标签列表容器已清空');
+        
+        // 强制显示容器
+        tagsList.style.border = '3px solid red';
+        tagsList.style.background = '#ffe6e6';
+        tagsList.style.padding = '20px';
+        tagsList.style.minHeight = '200px';
         
         if (tags.length === 0) {
             console.log('🔍 没有标签可用');
-            tagsList.innerHTML = '<p class="no-tags">No tags created yet. Create your first tag above!</p>';
+            tagsList.innerHTML = `
+                <div style="border: 2px solid blue; padding: 20px; background: #e6f3ff;">
+                    <h3 style="color: blue;">No Tags Available</h3>
+                    <p>No tags created yet. Create your first tag above!</p>
+                    <p style="color: red; font-weight: bold;">This container should be visible with red border!</p>
+                </div>
+            `;
             if (tagsStats) {
                 tagsStats.innerHTML = '<p class="no-stats">No tags to display statistics</p>';
             }
@@ -1387,22 +1415,32 @@ async function loadTagsForManagement() {
         
         console.log('🏷️ 开始渲染标签，数量:', tags.length);
         
-        // 添加一个测试标签来验证渲染逻辑
+        // 添加一个明显的测试标签
         const testTagItem = document.createElement('div');
         testTagItem.className = 'manage-tag-item selectable test-tag';
+        testTagItem.style.cssText = `
+            border: 3px solid red !important;
+            background: #ffe6e6 !important;
+            padding: 20px !important;
+            margin: 10px 0 !important;
+            font-weight: bold !important;
+            color: red !important;
+        `;
         testTagItem.innerHTML = `
             <div class="tag-info">
-                <span class="tag-color-dot" style="background-color: #FF0000;"></span>
-                <span class="tag-name">TEST TAG (Click me!)</span>
+                <span class="tag-color-dot" style="background-color: #FF0000; width: 20px; height: 20px; border-radius: 50%; display: inline-block; margin-right: 10px;"></span>
+                <span class="tag-name">🧪 TEST TAG (Click me!)</span>
             </div>
         `;
         testTagItem.addEventListener('click', () => {
             console.log('✅ 测试标签被点击！');
             alert('Test tag clicked! Rendering is working.');
         });
-        tagsList.appendChild(testTagItem);
-        console.log('✅ 测试标签已添加');
         
+        tagsList.appendChild(testTagItem);
+        console.log('✅ 测试标签已添加到DOM');
+        
+        // 渲染真实标签
         tags.forEach((tag, index) => {
             console.log(`🔍 创建标签 ${index + 1}:`, tag);
             
@@ -1412,10 +1450,21 @@ async function loadTagsForManagement() {
             tagItem.dataset.tagName = tag.name;
             tagItem.dataset.tagColor = tag.color || '#8B5CF6';
             
+            // 强制样式
+            tagItem.style.cssText = `
+                border: 2px solid blue !important;
+                background: white !important;
+                padding: 16px !important;
+                margin: 8px 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                min-height: 50px !important;
+            `;
+            
             tagItem.innerHTML = `
-                <div class="tag-info">
-                    <span class="tag-color-dot" style="background-color: ${tag.color || '#8B5CF6'}"></span>
-                    <span class="tag-name">${tag.name}</span>
+                <div class="tag-info" style="display: flex; align-items: center; width: 100%;">
+                    <span class="tag-color-dot" style="background-color: ${tag.color || '#8B5CF6'}; width: 20px; height: 20px; border-radius: 50%; display: inline-block; margin-right: 10px;"></span>
+                    <span class="tag-name" style="font-size: 16px; font-weight: 500;">${tag.name}</span>
                 </div>
             `;
             
@@ -1433,6 +1482,7 @@ async function loadTagsForManagement() {
                 
                 // 选中当前标签
                 tagItem.classList.add('selected');
+                tagItem.style.background = '#e6f3ff !important';
                 
                 // 更新统计信息
                 updateTagSelectionStats(tag);
@@ -1449,12 +1499,13 @@ async function loadTagsForManagement() {
         });
         
         console.log('✅ 标签渲染完成');
+        console.log('🔍 最终标签列表内容:', tagsList.innerHTML);
         
         // 显示简化的标签统计
         if (tagsStats) {
             tagsStats.innerHTML = `
-                <div class="stats-summary">
-                    <h3>Tag Summary</h3>
+                <div class="stats-summary" style="border: 2px solid green; padding: 20px; background: #e6ffe6;">
+                    <h3 style="color: green;">Tag Summary</h3>
                     <div class="stat-item">
                         <span class="stat-label">Total Tags:</span>
                         <span class="stat-value">${tags.length}</span>
@@ -1471,7 +1522,13 @@ async function loadTagsForManagement() {
         console.error('❌ 加载标签失败:', error);
         const tagsList = document.getElementById('manageTagsList');
         if (tagsList) {
-            tagsList.innerHTML = '<p class="error">Failed to load tags. Please try again.</p>';
+            tagsList.innerHTML = `
+                <div style="border: 2px solid red; padding: 20px; background: #ffe6e6;">
+                    <h3 style="color: red;">Error Loading Tags</h3>
+                    <p>Failed to load tags. Please try again.</p>
+                    <p>Error: ${error.message}</p>
+                </div>
+            `;
         }
     }
 }
