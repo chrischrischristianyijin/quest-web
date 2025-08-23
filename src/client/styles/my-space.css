@@ -2201,7 +2201,23 @@ body .tag-selector-dropdown.open .tag-selector-options {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 0;
+    flex: 1;
+}
+
+.tags-management-modal .tag-color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tags-management-modal .tag-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
 }
 
 .tags-management-modal .modal-actions {
