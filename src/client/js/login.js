@@ -1,17 +1,17 @@
 import { auth } from './auth.js';
 import { PATHS, navigateTo } from './paths.js';
 
-// DOM 元素
+// DOM elements
 const loginForm = document.getElementById('loginForm');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const googleLoginBtn = document.getElementById('googleLoginBtn');
 const messageDiv = document.getElementById('message');
 
-// 显示消息
+// Show message
 function showMessage(message, type = 'error') {
     if (!messageDiv) {
-        console.error('❌ 找不到消息显示元素');
+        console.error('❌ Message display element not found');
         return;
     }
     
@@ -19,7 +19,7 @@ function showMessage(message, type = 'error') {
     messageDiv.className = `message ${type}`;
     messageDiv.style.display = 'block';
     
-    // 自动隐藏错误消息
+    // Auto-hide error messages
     if (type === 'error') {
         setTimeout(() => {
             messageDiv.style.display = 'none';
@@ -27,34 +27,34 @@ function showMessage(message, type = 'error') {
     }
 }
 
-// 隐藏消息
+// Hide messages
 function hideMessages() {
     if (messageDiv) {
         messageDiv.style.display = 'none';
     }
 }
 
-// 表单验证
+// Form validation
 function validateForm() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     
     if (!email) {
-        showMessage('请输入邮箱地址');
+        showMessage('Please enter your email address');
         emailInput.focus();
         return false;
     }
     
     if (!password) {
-        showMessage('请输入密码');
+        showMessage('Please enter your password');
         passwordInput.focus();
         return false;
     }
     
-    // 简单的邮箱格式验证
+    // Simple email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-        showMessage('请输入有效的邮箱地址');
+        showMessage('Please enter a valid email address');
         emailInput.focus();
         return false;
     }
@@ -62,44 +62,44 @@ function validateForm() {
     return true;
 }
 
-// 处理登录
+// Handle login
 async function handleLogin(email, password) {
     try {
         const result = await auth.login(email, password);
         
         if (result && result.success) {
-            showMessage('登录成功！正在跳转...', 'success');
+            showMessage('Login successful! Redirecting...', 'success');
             
-            // 延迟跳转，让用户看到成功消息
+            // Delay redirect to show success message
             setTimeout(() => {
-                // 登录成功，重定向到My Space页面
-                console.log('✅ 登录成功，重定向到My Space页面');
+                // Login successful, redirect to My Space page
+                console.log('✅ Login successful, redirecting to My Space page');
                 navigateTo(PATHS.MY_SPACE);
             }, 1000);
         } else {
-            // 登录失败，显示错误消息
-            const errorMsg = result ? result.message : '登录失败，请重试';
+            // Login failed, show error message
+            const errorMsg = result ? result.message : 'Login failed, please try again';
             showMessage(errorMsg);
         }
     } catch (error) {
-        console.error('登录失败:', error);
-        showMessage(error.message || '登录失败，请检查邮箱和密码');
+        console.error('Login failed:', error);
+        showMessage(error.message || 'Login failed, please check your email and password');
     }
 }
 
-// 处理 Google 登录
+// Handle Google login
 function handleGoogleLogin() {
     try {
-        // 跳转到 Google OAuth 端点
+        // Redirect to Google OAuth endpoint
         const authUrl = `https://quest-api-edz1.onrender.com/api/v1/auth/google/login`;
         window.location.href = authUrl;
     } catch (error) {
-        console.error('Google 登录失败:', error);
-        showMessage('Google 登录失败，请重试');
+        console.error('Google login failed:', error);
+        showMessage('Google login failed, please try again');
     }
 }
 
-// 事件监听器
+// Event listeners
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -110,16 +110,16 @@ loginForm.addEventListener('submit', async (e) => {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     
-    // 禁用表单
+    // Disable form
     const submitBtn = loginForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
-    submitBtn.textContent = '登录中...';
+    submitBtn.textContent = 'Logging in...';
     
     try {
         await handleLogin(email, password);
     } finally {
-        // 恢复表单
+        // Restore form
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
     }
@@ -127,17 +127,17 @@ loginForm.addEventListener('submit', async (e) => {
 
 googleLoginBtn.addEventListener('click', handleGoogleLogin);
 
-// 输入时隐藏消息
+// Hide messages on input
 emailInput.addEventListener('input', hideMessages);
 passwordInput.addEventListener('input', hideMessages);
 
-// 页面加载时检查认证状态
+// Check authentication status on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // 如果用户已经登录，直接跳转
+    // If user is already logged in, redirect directly
     if (auth.checkAuth()) {
         navigateTo(PATHS.MY_SPACE);
     }
     
-    // 聚焦到邮箱输入框
+    // Focus on email input
     emailInput.focus();
 });
