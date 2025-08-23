@@ -1236,22 +1236,8 @@ body {
     box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
 }
 
-.tag-color-input {
-    width: 50px;
-    height: 44px;
-    border: 2px solid rgba(139, 92, 246, 0.2);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.tag-color-input:hover {
-    border-color: rgba(139, 92, 246, 0.5);
-    transform: scale(1.05);
-}
-
 .create-tag-btn {
-    padding: 12px 20px;
+    padding: 12px 24px;
     background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
     color: white;
     border: none;
@@ -1261,6 +1247,17 @@ body {
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
+    min-width: 100px;
+}
+
+.create-tag-btn:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+}
+
+.create-tag-btn:active {
+    transform: translateY(0);
 }
 
 .create-tag-btn:hover {
@@ -1912,12 +1909,6 @@ body {
     
     .tag-input {
         width: 100%;
-    }
-    
-    .tag-color-input {
-        width: 60px;
-        height: 50px;
-        align-self: center;
     }
     
     .create-tag-btn {

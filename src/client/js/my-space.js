@@ -1342,9 +1342,11 @@ async function editTagInManagement(userTagId, currentName, currentColor) {
     if (!newName || newName.trim() === currentName) return;
     
     try {
+        const defaultColor = currentColor || '#8B5CF6'; // 使用当前颜色或默认颜色
+        
         const response = await api.updateUserTag(userTagId, { 
             name: newName.trim(),
-            color: currentColor 
+            color: defaultColor
         });
         
         if (response.success && response.data) {
