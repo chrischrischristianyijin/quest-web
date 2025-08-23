@@ -1356,35 +1356,56 @@ function hideManageTagsModal() {
 // 加载标签用于管理
 async function loadTagsForManagement() {
     try {
+        console.log('🔍 开始加载标签用于管理...');
+        
         const response = await api.getUserTags();
         const tags = response.success ? response.data : [];
+        
+        console.log('🏷️ 获取到标签数据:', tags);
         
         const tagsList = document.getElementById('manageTagsList');
         const tagsStats = document.getElementById('tagsStats');
         
-        if (!tagsList) return;
+        console.log('🔍 DOM元素:', { tagsList, tagsStats });
+        
+        if (!tagsList) {
+            console.error('❌ 找不到标签列表容器');
+            return;
+        }
         
         // 渲染标签列表
         tagsList.innerHTML = '';
         
         if (tags.length === 0) {
-            tagsList.innerHTML = '<p class="no-tags">No tags created yet</p>';
+            console.log('🔍 没有标签可用');
+            tagsList.innerHTML = '<p class="no-tags">No tags created yet. Create your first tag above!</p>';
             if (tagsStats) {
                 tagsStats.innerHTML = '<p class="no-stats">No tags to display statistics</p>';
             }
             return;
         }
         
-        // 添加标签选择说明
-        const selectionHeader = document.createElement('div');
-        selectionHeader.className = 'selection-header';
-        selectionHeader.innerHTML = `
-            <h4>Click on a tag to select it for filtering</h4>
-            <p class="selection-hint">Selected tag will be highlighted</p>
-        `;
-        tagsList.appendChild(selectionHeader);
+        console.log('🏷️ 开始渲染标签，数量:', tags.length);
         
-        tags.forEach(tag => {
+        // 添加一个测试标签来验证渲染逻辑
+        const testTagItem = document.createElement('div');
+        testTagItem.className = 'manage-tag-item selectable test-tag';
+        testTagItem.innerHTML = `
+            <div class="tag-info">
+                <span class="tag-color-dot" style="background-color: #FF0000;"></span>
+                <span class="tag-name">TEST TAG (Click me!)</span>
+            </div>
+        `;
+        testTagItem.addEventListener('click', () => {
+            console.log('✅ 测试标签被点击！');
+            alert('Test tag clicked! Rendering is working.');
+        });
+        tagsList.appendChild(testTagItem);
+        console.log('✅ 测试标签已添加');
+        
+        tags.forEach((tag, index) => {
+            console.log(`🔍 创建标签 ${index + 1}:`, tag);
+            
             const tagItem = document.createElement('div');
             tagItem.className = 'manage-tag-item selectable';
             tagItem.dataset.tagId = tag.id;
@@ -1398,8 +1419,13 @@ async function loadTagsForManagement() {
                 </div>
             `;
             
+            console.log(`🔍 标签元素 ${index + 1}:`, tagItem);
+            console.log(`🔍 标签HTML内容:`, tagItem.innerHTML);
+            
             // 绑定标签选择事件
             tagItem.addEventListener('click', (e) => {
+                console.log('🔍 标签被点击:', { tagId: tag.id, tagName: tag.name, event: e });
+                
                 // 移除其他标签的选中状态
                 document.querySelectorAll('.manage-tag-item').forEach(item => {
                     item.classList.remove('selected');
@@ -1415,7 +1441,14 @@ async function loadTagsForManagement() {
             });
             
             tagsList.appendChild(tagItem);
+            console.log(`✅ 标签 ${index + 1} 已添加到DOM`);
+            
+            // 验证标签是否正确添加到DOM
+            const addedTag = tagsList.querySelector(`[data-tag-id="${tag.id}"]`);
+            console.log(`🔍 验证标签 ${index + 1} 是否在DOM中:`, !!addedTag);
         });
+        
+        console.log('✅ 标签渲染完成');
         
         // 显示简化的标签统计
         if (tagsStats) {
@@ -1435,7 +1468,11 @@ async function loadTagsForManagement() {
         }
         
     } catch (error) {
-        console.error('Failed to load tags for management:', error);
+        console.error('❌ 加载标签失败:', error);
+        const tagsList = document.getElementById('manageTagsList');
+        if (tagsList) {
+            tagsList.innerHTML = '<p class="error">Failed to load tags. Please try again.</p>';
+        }
     }
 }
 
@@ -1696,6 +1733,15 @@ function showTagsManagementModal() {
             </div>
             
             <div class="tags-management-body">
+                <!-- 创建新标签 -->
+                <div class="create-tag-section">
+                    <h3>Create New Tag</h3>
+                    <div class="create-tag-form">
+                        <input type="text" id="newTagNameManagement" placeholder="Enter tag name" class="tag-input">
+                        <button class="create-tag-btn" onclick="createNewTagFromManagement()">Create</button>
+                    </div>
+                </div>
+                
                 <div class="selection-header">
                     <h4>Choose a tag to filter your content</h4>
                     <p class="selection-hint">Click on a tag to apply it as a filter in My Space</p>
@@ -2548,5 +2594,93 @@ function applySelectedTagFilter() {
     // 显示成功消息
     showSuccessMessage(`Content filtered by tag: ${tagName}`);
 }
+
+// 测试标签选择功能
+function testTagSelection() {
+    console.log('🧪 测试标签选择功能...');
+    
+    // 检查弹窗是否存在
+    const modal = document.querySelector('.tags-management-modal');
+    console.log('🔍 标签选择弹窗:', modal ? '✅ 存在' : '❌ 不存在');
+    
+    if (!modal) {
+        console.log('❌ 弹窗不存在，无法测试');
+        return;
+    }
+    
+    // 检查标签列表容器
+    const tagsList = document.getElementById('manageTagsList');
+    console.log('🔍 标签列表容器:', tagsList ? '✅ 存在' : '❌ 不存在');
+    
+    if (!tagsList) {
+        console.log('❌ 标签列表容器不存在');
+        return;
+    }
+    
+    // 检查标签项
+    const tagItems = tagsList.querySelectorAll('.manage-tag-item.selectable');
+    console.log('🔍 可选择的标签项数量:', tagItems.length);
+    
+    if (tagItems.length === 0) {
+        console.log('❌ 没有可选择的标签项');
+        return;
+    }
+    
+    // 检查每个标签项
+    tagItems.forEach((tagItem, index) => {
+        console.log(`🔍 标签项 ${index + 1}:`, {
+            element: tagItem,
+            tagId: tagItem.dataset.tagId,
+            tagName: tagItem.dataset.tagName,
+            tagColor: tagItem.dataset.tagColor,
+            classes: tagItem.className,
+            hasClickEvent: tagItem.onclick !== null
+        });
+        
+        // 检查是否有点击事件监听器
+        const hasEventListener = tagItem.onclick !== null || 
+                               tagItem._listeners || 
+                               tagItem.addEventListener;
+        
+        console.log(`🔍 标签项 ${index + 1} 事件监听器:`, hasEventListener ? '✅ 有' : '❌ 无');
+    });
+    
+    // 测试点击第一个标签项
+    if (tagItems.length > 0) {
+        console.log('🔍 测试点击第一个标签项...');
+        const firstTagItem = tagItems[0];
+        
+        // 模拟点击
+        const clickEvent = new Event('click', { bubbles: true });
+        firstTagItem.dispatchEvent(clickEvent);
+        
+        // 检查是否被选中
+        setTimeout(() => {
+            const isSelected = firstTagItem.classList.contains('selected');
+            console.log('🔍 点击后选中状态:', isSelected ? '✅ 已选中' : '❌ 未选中');
+            
+            // 检查统计信息是否更新
+            const selectedTagsCount = document.getElementById('selectedTagsCount');
+            if (selectedTagsCount) {
+                console.log('🔍 统计信息更新:', selectedTagsCount.textContent);
+            }
+        }, 100);
+    }
+    
+    return {
+        modalExists: !!modal,
+        tagsListExists: !!tagsList,
+        tagItemsCount: tagItems.length,
+        tagItems: Array.from(tagItems).map(item => ({
+            id: item.dataset.tagId,
+            name: item.dataset.tagName,
+            color: item.dataset.tagColor,
+            classes: item.className
+        }))
+    };
+}
+
+// 将测试函数暴露到全局
+window.testTagSelection = testTagSelection;
 
 
