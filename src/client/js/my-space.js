@@ -1358,7 +1358,7 @@ async function loadTagsForManagement() {
     }
 }
 
-// 在管理界面中编辑标签
+// Edit tag in management interface
 async function editTagInManagement(userTagId, currentName, currentColor) {
     const newName = prompt('Enter new tag name:', currentName);
     if (!newName || newName.trim() === currentName) return;
@@ -1370,65 +1370,71 @@ async function editTagInManagement(userTagId, currentName, currentColor) {
         });
         
         if (response.success && response.data) {
-            console.log('✅ 标签更新成功:', response.data);
+            console.log('✅ Tag updated successfully:', response.data);
             
-            // 重新加载标签
+            // Reload tags
             await loadTagsForManagement();
             await loadUserTags();
+            
+            // Reinitialize filter buttons
+            await initFilterButtons();
             
             showSuccessMessage('Tag updated successfully!');
         } else {
             throw new Error(response.message || 'Failed to update tag');
         }
     } catch (error) {
-        console.error('❌ 更新标签失败:', error);
+        console.error('❌ Failed to update tag:', error);
         showErrorMessage(`Failed to update tag: ${error.message}`);
     }
 }
 
-// 在管理界面中删除标签
+// Delete tag in management interface
 async function deleteTagInManagement(userTagId) {
     if (!confirm('Are you sure you want to delete this tag? This action cannot be undone.')) {
         return;
     }
     
     try {
-        console.log('🗑️ 删除标签:', userTagId);
+        console.log('🗑️ Deleting tag:', userTagId);
         
         const response = await api.deleteUserTag(userTagId);
         
         if (response.success) {
-            console.log('✅ 标签删除成功');
+            console.log('✅ Tag deleted successfully');
             
-            // 重新加载标签
+            // Reload tags
             await loadTagsForManagement();
             await loadUserTags();
+            
+            // Reinitialize filter buttons
+            await initFilterButtons();
             
             showSuccessMessage('Tag deleted successfully!');
         } else {
             throw new Error(response.message || 'Failed to delete tag');
         }
     } catch (error) {
-        console.error('❌ 删除标签失败:', error);
+        console.error('❌ Failed to delete tag:', error);
         showErrorMessage(`Failed to delete tag: ${error.message}`);
     }
 }
 
-// 绑定标签相关事件
+// Bind tag-related events
 function bindTagEvents() {
-    // 创建标签按钮
+    // Create tag button
     const createTagBtn = document.getElementById('createTagBtn');
     if (createTagBtn) {
         createTagBtn.addEventListener('click', showCreateTagModal);
     }
     
-    // 管理标签按钮
+    // Manage tags button
     const manageTagsBtn = document.getElementById('manageTagsBtn');
     if (manageTagsBtn) {
-        manageTagsBtn.addEventListener('click', showManageTagsModal);
+        manageTagsBtn.addEventListener('click', showTagsManagementModal);
     }
     
-    // 创建标签表单
+    // Create tag form
     const createTagForm = document.getElementById('createTagForm');
     if (createTagForm) {
         createTagForm.addEventListener('submit', async (e) => {
@@ -1437,7 +1443,7 @@ function bindTagEvents() {
         });
     }
     
-    // 关闭创建标签模态框
+    // Close create tag modal
     const closeCreateTagModal = document.getElementById('closeCreateTagModal');
     if (closeCreateTagModal) {
         closeCreateTagModal.addEventListener('click', hideCreateTagModal);
@@ -1448,7 +1454,7 @@ function bindTagEvents() {
         cancelCreateTagBtn.addEventListener('click', hideCreateTagModal);
     }
     
-    // 关闭管理标签模态框
+    // Close manage tags modal
     const closeManageTagsModal = document.getElementById('closeManageTagsModal');
     if (closeManageTagsModal) {
         closeManageTagsModal.addEventListener('click', hideManageTagsModal);
@@ -1459,7 +1465,7 @@ function bindTagEvents() {
         closeManageTagsBtn.addEventListener('click', hideManageTagsModal);
     }
     
-    // 颜色预设选择
+    // Color preset selection
     const colorPresets = document.querySelectorAll('.color-preset');
     colorPresets.forEach(preset => {
         preset.addEventListener('click', () => {
@@ -1468,7 +1474,7 @@ function bindTagEvents() {
         });
     });
     
-    // 点击模态框外部关闭
+    // Click outside modal to close
     const createTagModal = document.getElementById('createTagModal');
     if (createTagModal) {
         createTagModal.addEventListener('click', (e) => {
@@ -1499,36 +1505,36 @@ async function createNewTag() {
     }
     
     try {
-        console.log('🏷️ 创建新标签:', { name: tagName, color: tagColor });
+        console.log('🏷️ Creating new tag:', { name: tagName, color: tagColor });
         
-        // 使用新的API方法创建标签
+        // 使用API方法创建标签
         const response = await api.createUserTag({
             name: tagName,
             color: tagColor
         });
         
         if (response.success && response.data) {
-            console.log('✅ 标签创建成功:', response.data);
-            
-            // 关闭创建标签模态框
-            const createTagModal = document.getElementById('createTagModal');
-            if (createTagModal) {
-                createTagModal.style.display = 'none';
-            }
+            console.log('✅ Tag created successfully:', response.data);
             
             // 清空表单
             document.getElementById('newTagName').value = '';
             document.getElementById('newTagColor').value = '#FF5733';
             
-            // 重新加载标签
+            // 重新加载标签列表
+            await loadTagsForManagement();
+            
+            // 重新加载用户标签（用于筛选按钮）
             await loadUserTags();
+            
+            // 重新初始化筛选按钮
+            await initFilterButtons();
             
             showSuccessMessage('Tag created successfully!');
         } else {
             throw new Error(response.message || 'Failed to create tag');
         }
     } catch (error) {
-        console.error('❌ 创建标签失败:', error);
+        console.error('❌ Failed to create tag:', error);
         showErrorMessage(`Failed to create tag: ${error.message}`);
     }
 }
@@ -1555,6 +1561,7 @@ function showTagsManagementModal() {
                     <h3>Create New Tag</h3>
                     <div class="create-tag-form">
                         <input type="text" id="newTagName" placeholder="Enter tag name" class="tag-input">
+                        <input type="color" id="newTagColor" value="#FF5733" class="tag-color-input">
                         <button class="create-tag-btn" onclick="createNewTag()">Create</button>
                     </div>
                 </div>
@@ -1562,8 +1569,15 @@ function showTagsManagementModal() {
                 <!-- 标签列表 -->
                 <div class="tags-list-section">
                     <h3>Your Tags</h3>
-                    <div class="tags-list" id="tagsManagementList">
+                    <div class="tags-list" id="manageTagsList">
                         <!-- Tags will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- 标签统计 -->
+                <div class="tags-stats-section">
+                    <div id="tagsStats">
+                        <!-- Tag statistics will be loaded here -->
                     </div>
                 </div>
             </div>
