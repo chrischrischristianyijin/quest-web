@@ -24,10 +24,8 @@ function updateNavigation(isLoggedIn, user = null) {
             </button>
         `;
     } else {
-        // User is not logged in - show login and signup buttons
-        navLinks.innerHTML = `
-            <a href="${PATHS.LOGIN}" class="nav-link">Login</a>
-        `;
+        // User is not logged in - show only auth buttons (no nav links)
+        navLinks.innerHTML = '';
         
         authButtons.innerHTML = `
             <a href="${PATHS.LOGIN}" class="auth-btn auth-btn-secondary">Login</a>

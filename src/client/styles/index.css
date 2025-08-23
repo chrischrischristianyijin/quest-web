@@ -23,6 +23,7 @@
     justify-content: space-between;
     align-items: center;
     height: 72px;
+    gap: 2rem; /* 添加间距 */
 }
 
 .logo {
@@ -30,6 +31,7 @@
     align-items: center;
     text-decoration: none;
     transition: transform 0.3s ease;
+    flex-shrink: 0; /* 防止logo被压缩 */
 }
 
 .logo:hover {
@@ -45,6 +47,8 @@
     display: flex;
     align-items: center;
     gap: 2rem;
+    flex: 1; /* 占据剩余空间 */
+    justify-content: center; /* 居中显示 */
 }
 
 .nav-link {
@@ -64,6 +68,7 @@
 .auth-buttons {
     display: flex;
     gap: 12px;
+    margin-left: auto; /* 确保右对齐 */
 }
 
 .auth-btn {
@@ -78,11 +83,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    white-space: nowrap; /* 防止按钮文字换行 */
 }
 
 .auth-btn-primary {
     background: var(--quest-purple);
     color: white;
+    border: none; /* 移除边框 */
 }
 
 .auth-btn-primary:hover {
@@ -1026,5 +1033,45 @@
         padding: 1rem 1.5rem;
         border-radius: 20px;
         gap: 0.8rem;
+    }
+}
+
+/* 响应式导航栏 */
+@media (max-width: 768px) {
+    .nav-container {
+        padding: 0 1rem;
+        gap: 1rem;
+    }
+    
+    .auth-buttons {
+        gap: 8px;
+    }
+    
+    .auth-btn {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    .logo img {
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-container {
+        padding: 0 0.5rem;
+    }
+    
+    .auth-buttons {
+        gap: 6px;
+    }
+    
+    .auth-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .logo img {
+        height: 32px;
     }
 }
