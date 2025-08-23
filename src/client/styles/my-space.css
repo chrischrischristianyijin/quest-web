@@ -193,8 +193,10 @@ body {
 
 .FilterButtons {
     display: flex;
-    gap: var(--spacing-md);
+    gap: 16px;
     flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
 }
 
 .FilterButton {
@@ -258,6 +260,11 @@ body {
 .filter-button-container {
     position: relative;
     display: inline-block;
+    margin-right: 8px;
+}
+
+.filter-button-container:last-child {
+    margin-right: 0;
 }
 
 .main-filter-btn {
@@ -1161,6 +1168,115 @@ body {
     margin-top: var(--spacing-lg);
     position: relative;
     z-index: 1;
+}
+
+/* 标签管理弹窗样式 */
+.tags-management-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tags-management-modal-content {
+    background: var(--bg-primary);
+    border-radius: 24px;
+    padding: 32px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tags-management-body {
+    margin: 24px 0;
+}
+
+.create-tag-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid rgba(139, 92, 246, 0.1);
+}
+
+.create-tag-section h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--quest-purple);
+    margin-bottom: 16px;
+}
+
+.create-tag-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.tag-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    font-size: 1rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tag-input:focus {
+    outline: none;
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+}
+
+.create-tag-btn {
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.create-tag-btn:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+}
+
+.tags-list-section h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--quest-purple);
+    margin-bottom: 16px;
+}
+
+.tag-management-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: var(--bg-light);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tag-management-item:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
 }
 
 /* 编辑标签模态框样式 */

@@ -382,23 +382,9 @@ async function initFilterButtons() {
                 label: 'Latest',
                 type: 'dropdown',
                 options: [
-                    { key: 'latest', label: 'Latest First' },
-                    { key: 'oldest', label: 'Oldest First' },
-                    { key: 'alphabetical', label: 'Alphabetical Order' }
-                ]
-            },
-            {
-                key: 'tags',
-                label: 'Tags',
-                type: 'dropdown',
-                options: [
-                    { key: 'all', label: 'All Tags' },
-                    ...userTags.map(tag => ({
-                        key: `tag_${tag.id}`,
-                        label: tag.name,
-                        color: tag.color,
-                        tag: tag
-                    }))
+                    { key: 'latest', label: 'Latest' },
+                    { key: 'oldest', label: 'Oldest' },
+                    { key: 'alphabetical', label: 'Alphabetical' }
                 ]
             },
             {
@@ -412,6 +398,12 @@ async function initFilterButtons() {
                     { key: 'videos', label: 'Videos' },
                     { key: 'images', label: 'Images' }
                 ]
+            },
+            {
+                key: 'tags',
+                label: 'Tags',
+                type: 'modal',
+                options: []
             }
         ];
         
@@ -430,53 +422,72 @@ async function initFilterButtons() {
                 </svg>
             `;
             
-            // 创建下拉选项
-            const dropdownOptions = document.createElement('div');
-            dropdownOptions.className = 'filter-dropdown-options';
-            dropdownOptions.innerHTML = filterConfig.options.map(option => `
-                <div class="filter-option" data-filter="${option.key}">
-                    <span class="filter-option-label">${option.label}</span>
-                </div>
-            `).join('');
-            
-            // 绑定点击事件
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
-                buttonContainer.classList.toggle('open');
+            // 根据按钮类型创建不同的内容
+            if (filterConfig.type === 'modal') {
+                // Tags按钮：创建弹窗
+                button.innerHTML = `
+                    <span class="filter-label">${filterConfig.label}</span>
+                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
                 
-                // 更新箭头方向
-                const arrow = button.querySelector('.filter-arrow');
-                if (arrow) {
-                    arrow.style.transform = buttonContainer.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
-                }
-            });
-            
-            // 绑定选项点击事件
-            dropdownOptions.addEventListener('click', (e) => {
-                const option = e.target.closest('.filter-option');
-                if (option) {
-                    const filterKey = option.dataset.filter;
-                    const filterType = filterConfig.key; // latest, tags, type
-                    const optionLabel = option.querySelector('.filter-option-label').textContent;
-                    console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
-                    setFilter(filterType, filterKey, optionLabel);
+                // 绑定点击事件：显示标签管理弹窗
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showTagsManagementModal();
+                });
+                
+                buttonContainer.appendChild(button);
+            } else {
+                // 其他按钮：创建下拉菜单
+                const dropdownOptions = document.createElement('div');
+                dropdownOptions.className = 'filter-dropdown-options';
+                dropdownOptions.innerHTML = filterConfig.options.map(option => `
+                    <div class="filter-option" data-filter="${option.key}">
+                        <span class="filter-option-label">${option.label}</span>
+                    </div>
+                `).join('');
+                
+                // 绑定点击事件
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    buttonContainer.classList.toggle('open');
                     
-                    // 关闭所有下拉框
-                    document.querySelectorAll('.filter-button-container').forEach(container => {
-                        container.classList.remove('open');
-                        const arrow = container.querySelector('.filter-arrow');
-                        if (arrow) arrow.style.transform = 'rotate(0deg)';
-                    });
-                }
-            });
-            
-            // 阻止下拉选项点击事件冒泡
-            dropdownOptions.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-            
-            buttonContainer.appendChild(button);
-            buttonContainer.appendChild(dropdownOptions);
+                    // 更新箭头方向
+                    const arrow = button.querySelector('.filter-arrow');
+                    if (arrow) {
+                        arrow.style.transform = buttonContainer.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+                    }
+                });
+                
+                // 绑定选项点击事件
+                dropdownOptions.addEventListener('click', (e) => {
+                    const option = e.target.closest('.filter-option');
+                    if (option) {
+                        const filterKey = option.dataset.filter;
+                        const filterType = filterConfig.key; // latest, tags, type
+                        const optionLabel = option.querySelector('.filter-option-label').textContent;
+                        console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
+                        setFilter(filterType, filterKey, optionLabel);
+                        
+                        // 关闭所有下拉框
+                        document.querySelectorAll('.filter-button-container').forEach(container => {
+                            container.classList.remove('open');
+                            const arrow = container.querySelector('.filter-arrow');
+                            if (arrow) arrow.style.transform = 'rotate(0deg)';
+                        });
+                    }
+                });
+                
+                // 阻止下拉选项点击事件冒泡
+                dropdownOptions.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+                
+                buttonContainer.appendChild(button);
+                buttonContainer.appendChild(dropdownOptions);
+            }
             filterButtons.appendChild(buttonContainer);
             
             console.log('✅ 创建筛选按钮:', filterConfig.key, filterConfig.label);
@@ -583,7 +594,7 @@ function showFilterStatus() {
     } else if (currentFilters.latest === 'oldest') {
         statusParts.push('最旧优先');
     } else if (currentFilters.latest === 'alphabetical') {
-        statusParts.push('按标题字母排序');
+        statusParts.push('字母排序');
     }
     
     // 标签筛选状态
@@ -1527,6 +1538,48 @@ async function createNewTag() {
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initPage);
 
+// 显示标签管理弹窗
+function showTagsManagementModal() {
+    const modal = document.createElement('div');
+    modal.className = 'tags-management-modal';
+    modal.innerHTML = `
+        <div class="tags-management-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Tags</h2>
+                <button class="modal-close" onclick="this.closest('.tags-management-modal').remove()">&times;</button>
+            </div>
+            
+            <div class="tags-management-body">
+                <!-- 创建新标签 -->
+                <div class="create-tag-section">
+                    <h3>Create New Tag</h3>
+                    <div class="create-tag-form">
+                        <input type="text" id="newTagName" placeholder="Enter tag name" class="tag-input">
+                        <button class="create-tag-btn" onclick="createNewTag()">Create</button>
+                    </div>
+                </div>
+                
+                <!-- 标签列表 -->
+                <div class="tags-list-section">
+                    <h3>Your Tags</h3>
+                    <div class="tags-list" id="tagsManagementList">
+                        <!-- Tags will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="this.closest('.tags-management-modal').remove()">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 加载标签列表
+    loadTagsForManagement();
+}
+
 // 显示编辑标签模态框
 function showEditTagsModal() {
     const modal = document.createElement('div');
@@ -1550,6 +1603,53 @@ function showEditTagsModal() {
     
     // 加载并显示标签
     loadTagsForEditing();
+}
+
+// 加载标签用于管理
+async function loadTagsForManagement() {
+    try {
+        const response = await api.getUserTags();
+        const tags = response.success ? response.data : [];
+        
+        const tagsList = document.getElementById('tagsManagementList');
+        if (!tagsList) return;
+        
+        tagsList.innerHTML = '';
+        
+        if (tags.length === 0) {
+            tagsList.innerHTML = '<p class="no-tags">No tags created yet</p>';
+            return;
+        }
+        
+        tags.forEach(tag => {
+            const tagItem = document.createElement('div');
+            tagItem.className = 'tag-management-item';
+            tagItem.innerHTML = `
+                <span class="tag-name">${tag.name || tag}</span>
+                <div class="tag-actions">
+                    <button class="action-btn edit-tag-btn" onclick="editUserTag('${tag.id || tag.name}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete-tag-btn" onclick="deleteUserTag('${tag.id || tag.name}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            tagsList.appendChild(tagItem);
+        });
+        
+    } catch (error) {
+        console.error('Failed to load tags:', error);
+        const tagsList = document.getElementById('tagsManagementList');
+        if (tagsList) {
+            tagsList.innerHTML = '<p class="error">Failed to load tags</p>';
+        }
+    }
 }
 
 // 加载标签用于编辑
@@ -1582,7 +1682,7 @@ async function loadTagsForEditing() {
                     </button>
                     <button class="action-btn delete-tag-btn" onclick="deleteUserTag('${tag.id || tag.name}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1 2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
                 </div>
@@ -1604,6 +1704,47 @@ async function editUserTag(userTagId) {
     const newName = prompt('Please enter new tag name:');
     if (newName && newName.trim()) {
         updateUserTag(userTagId, newName.trim());
+    }
+}
+
+// 创建新标签
+async function createNewTag() {
+    const tagNameInput = document.getElementById('newTagName');
+    const tagName = tagNameInput?.value?.trim();
+    
+    if (!tagName) {
+        alert('Please enter a tag name');
+        return;
+    }
+    
+    try {
+        console.log('🏷️ 创建新标签:', tagName);
+        
+        const response = await api.createUserTag({ name: tagName });
+        if (response.success) {
+            console.log('✅ 标签创建成功:', response.data);
+            
+            // 清空输入框
+            tagNameInput.value = '';
+            
+            // 重新加载标签
+            await loadUserTags();
+            
+            // 刷新标签管理弹窗
+            const modal = document.querySelector('.tags-management-modal');
+            if (modal) {
+                loadTagsForManagement();
+            }
+            
+            // 显示成功消息
+            alert('Tag created successfully!');
+        } else {
+            console.error('❌ 标签创建失败:', response.message);
+            alert('Failed to create tag: ' + response.message);
+        }
+    } catch (error) {
+        console.error('❌ 标签创建错误:', error);
+        alert('Failed to create tag: ' + error.message);
     }
 }
 
@@ -1717,6 +1858,9 @@ window.updateUserTag = updateUserTag;
 window.deleteUserTag = deleteUserTag;
 window.editTagInManagement = editTagInManagement;
 window.deleteTagInManagement = deleteTagInManagement;
+window.showTagsManagementModal = showTagsManagementModal;
+window.loadTagsForManagement = loadTagsForManagement;
+window.createNewTag = createNewTag;
 
 // 测试insight数据格式
 function testInsightDataFormat() {
@@ -2087,13 +2231,13 @@ function testFiltering() {
     }, 2000);
     
     setTimeout(() => {
-        console.log('测试所有标签...');
-        setFilter('tags', 'all', 'All Tags');
+        console.log('测试所有类型...');
+        setFilter('type', 'all', 'All Content');
     }, 3000);
     
     setTimeout(() => {
-        console.log('测试所有类型...');
-        setFilter('type', 'all', 'All Content');
+        console.log('测试所有标签...');
+        setFilter('tags', 'all', 'All Tags');
     }, 4000);
 }
 
