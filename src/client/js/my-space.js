@@ -401,7 +401,7 @@ async function initFilterButtons() {
             },
             {
                 key: 'tags',
-                label: 'Tags',
+                label: 'Filter by Tag',
                 type: 'modal',
                 options: []
             }
@@ -428,7 +428,7 @@ async function initFilterButtons() {
                 button.innerHTML = `
                     <span class="filter-label">${filterConfig.label}</span>
                     <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 `;
                 
@@ -1379,8 +1379,8 @@ async function loadTagsForManagement() {
         const selectionHeader = document.createElement('div');
         selectionHeader.className = 'selection-header';
         selectionHeader.innerHTML = `
-            <h4>Select Tags to Manage</h4>
-            <p class="selection-hint">Click on tags to select them for bulk operations</p>
+            <h4>Click on a tag to select it for filtering</h4>
+            <p class="selection-hint">Selected tag will be highlighted</p>
         `;
         tagsList.appendChild(selectionHeader);
         
@@ -1393,55 +1393,29 @@ async function loadTagsForManagement() {
             
             tagItem.innerHTML = `
                 <div class="tag-info">
-                    <input type="checkbox" id="manage_tag_${tag.id}" class="manage-tag-checkbox">
                     <span class="tag-color-dot" style="background-color: ${tag.color || '#8B5CF6'}"></span>
                     <span class="tag-name">${tag.name}</span>
-                </div>
-                <div class="tag-actions">
-                    <button class="action-btn edit-tag-btn" onclick="editTagInManagement('${tag.id}', '${tag.name}', '${tag.color}')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <button class="action-btn delete-tag-btn" onclick="deleteTagInManagement('${tag.id}')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
                 </div>
             `;
             
             // 绑定标签选择事件
-            const checkbox = tagItem.querySelector('.manage-tag-checkbox');
-            const tagInfo = tagItem.querySelector('.tag-info');
-            
-            // 点击标签信息区域也可以选中/取消选中
-            tagInfo.addEventListener('click', (e) => {
-                if (e.target.type !== 'checkbox') {
-                    checkbox.checked = !checkbox.checked;
-                    updateTagSelectionUI(tagItem, checkbox.checked);
-                }
-            });
-            
-            // 复选框变化事件
-            checkbox.addEventListener('change', (e) => {
-                updateTagSelectionUI(tagItem, e.target.checked);
+            tagItem.addEventListener('click', (e) => {
+                // 移除其他标签的选中状态
+                document.querySelectorAll('.manage-tag-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // 选中当前标签
+                tagItem.classList.add('selected');
+                
+                // 更新统计信息
+                updateTagSelectionStats(tag);
+                
+                console.log('✅ 标签已选中用于筛选:', tag.name);
             });
             
             tagsList.appendChild(tagItem);
         });
-        
-        // 添加批量操作按钮
-        const bulkActions = document.createElement('div');
-        bulkActions.className = 'bulk-actions';
-        bulkActions.innerHTML = `
-            <button class="bulk-btn bulk-edit-btn" onclick="bulkEditTags()" disabled>Edit Selected</button>
-            <button class="bulk-btn bulk-delete-btn" onclick="bulkDeleteTags()" disabled>Delete Selected</button>
-            <button class="bulk-btn bulk-select-all-btn" onclick="selectAllTags()">Select All</button>
-            <button class="bulk-btn bulk-deselect-all-btn" onclick="deselectAllTags()">Deselect All</button>
-        `;
-        tagsList.appendChild(bulkActions);
         
         // 显示简化的标签统计
         if (tagsStats) {
@@ -1454,7 +1428,7 @@ async function loadTagsForManagement() {
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">Selected:</span>
-                        <span class="stat-value" id="selectedTagsCount">0</span>
+                        <span class="stat-value" id="selectedTagsCount">None</span>
                     </div>
                 </div>
             `;
@@ -1717,18 +1691,14 @@ function showTagsManagementModal() {
     modal.innerHTML = `
         <div class="tags-management-modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Manage Tags</h2>
+                <h2 class="modal-title">Select Tag to Filter</h2>
                 <button class="modal-close" onclick="this.closest('.tags-management-modal').remove()">&times;</button>
             </div>
             
             <div class="tags-management-body">
-                <!-- 创建新标签 -->
-                <div class="create-tag-section">
-                    <h3>Create New Tag</h3>
-                    <div class="create-tag-form">
-                        <input type="text" id="newTagNameManagement" placeholder="Enter tag name" class="tag-input">
-                        <button class="create-tag-btn" onclick="createNewTagFromManagement()">Create</button>
-                    </div>
+                <div class="selection-header">
+                    <h4>Choose a tag to filter your content</h4>
+                    <p class="selection-hint">Click on a tag to apply it as a filter in My Space</p>
                 </div>
                 
                 <!-- 标签列表 -->
@@ -1742,13 +1712,14 @@ function showTagsManagementModal() {
                 <!-- 标签统计 -->
                 <div class="tags-stats-section">
                     <div id="tagsStats">
-                        <!-- Tag statistics will be loaded here -->
+                        <!-- Tag statistics will be shown here -->
                     </div>
                 </div>
             </div>
             
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-secondary" onclick="this.closest('.tags-management-modal').remove()">Close</button>
+                <button class="modal-btn modal-btn-primary" onclick="applySelectedTagFilter()">Apply Filter</button>
             </div>
         </div>
     `;
@@ -1959,6 +1930,7 @@ window.selectAllTags = selectAllTags;
 window.deselectAllTags = deselectAllTags;
 window.bulkEditTags = bulkEditTags;
 window.bulkDeleteTags = bulkDeleteTags;
+window.applySelectedTagFilter = applySelectedTagFilter;
 
 // 测试insight数据格式
 function testInsightDataFormat() {
@@ -2538,6 +2510,43 @@ function getSelectedTagsForManagement() {
     });
     
     return selectedTags;
+}
+
+// 更新标签选择统计
+function updateTagSelectionStats(selectedTag) {
+    const selectedTagsCountElement = document.getElementById('selectedTagsCount');
+    if (selectedTagsCountElement && selectedTag) {
+        selectedTagsCountElement.textContent = selectedTag.name;
+        selectedTagsCountElement.style.color = selectedTag.color || '#8B5CF6';
+        selectedTagsCountElement.style.fontWeight = '600';
+    }
+}
+
+// 应用选中的标签筛选
+function applySelectedTagFilter() {
+    const selectedTagItem = document.querySelector('.manage-tag-item.selected');
+    
+    if (!selectedTagItem) {
+        showErrorMessage('Please select a tag first');
+        return;
+    }
+    
+    const tagId = selectedTagItem.dataset.tagId;
+    const tagName = selectedTagItem.dataset.tagName;
+    
+    console.log('🔍 应用标签筛选:', { id: tagId, name: tagName });
+    
+    // 应用标签筛选
+    setFilter('tags', `tag_${tagId}`, tagName);
+    
+    // 关闭弹窗
+    const modal = document.querySelector('.tags-management-modal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    // 显示成功消息
+    showSuccessMessage(`Content filtered by tag: ${tagName}`);
 }
 
 

@@ -8,9 +8,8 @@ const emailInput = document.getElementById('email');
 const nicknameInput = document.getElementById('nickname');
 const passwordInput = document.getElementById('password');
 const confirmPasswordInput = document.getElementById('confirmPassword');
-const googleSignupBtn = document.getElementById('googleSignupBtn');
-const emailCheckBtn = document.getElementById('emailCheckBtn');
-const emailStatus = document.getElementById('emailStatus');
+const agreeTermsCheckbox = document.getElementById('agreeTerms');
+const submitBtn = document.getElementById('submitBtn');
 const errorMessage = document.getElementById('errorMessage');
 const successMessage = document.getElementById('successMessage');
 
@@ -189,18 +188,6 @@ async function handleSignup(email, nickname, password) {
     }
 }
 
-// Handle Google signup
-function handleGoogleSignup() {
-    try {
-        // Redirect to Google OAuth endpoint
-        const authUrl = `${PATHS.AUTH_GOOGLE_LOGIN}`;
-        window.location.href = authUrl;
-    } catch (error) {
-        console.error('Google signup failed:', error);
-        showMessage('Google signup failed, please try again');
-    }
-}
-
 // Event listeners
 signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -214,7 +201,6 @@ signupForm.addEventListener('submit', async (e) => {
     const password = passwordInput.value;
     
     // Disable form
-    const submitBtn = signupForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Signing up...';
@@ -227,11 +213,6 @@ signupForm.addEventListener('submit', async (e) => {
         submitBtn.innerHTML = originalText;
     }
 });
-
-// Email check button event
-emailCheckBtn.addEventListener('click', checkEmailAvailability);
-
-googleSignupBtn.addEventListener('click', handleGoogleSignup);
 
 // Hide messages on input
 emailInput.addEventListener('input', hideMessages);

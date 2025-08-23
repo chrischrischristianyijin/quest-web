@@ -5,7 +5,13 @@ import { PATHS, navigateTo } from './paths.js';
 const loginForm = document.getElementById('loginForm');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
-const googleLoginBtn = document.getElementById('googleLoginBtn');
+const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+const closeModal = document.getElementById('closeModal');
+const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+const resetEmailInput = document.getElementById('resetEmail');
+const modalMessage = document.getElementById('modalMessage');
+const resetPasswordButton = document.getElementById('resetPasswordButton');
 const messageDiv = document.getElementById('message');
 
 // Show message
@@ -87,18 +93,6 @@ async function handleLogin(email, password) {
     }
 }
 
-// Handle Google login
-function handleGoogleLogin() {
-    try {
-        // Redirect to Google OAuth endpoint
-        const authUrl = `https://quest-api-edz1.onrender.com/api/v1/auth/google/login`;
-        window.location.href = authUrl;
-    } catch (error) {
-        console.error('Google login failed:', error);
-        showMessage('Google login failed, please try again');
-    }
-}
-
 // Event listeners
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -124,8 +118,6 @@ loginForm.addEventListener('submit', async (e) => {
         submitBtn.textContent = originalText;
     }
 });
-
-googleLoginBtn.addEventListener('click', handleGoogleLogin);
 
 // Hide messages on input
 emailInput.addEventListener('input', hideMessages);
