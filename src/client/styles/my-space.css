@@ -2152,3 +2152,96 @@ body .tag-selector-dropdown.open .tag-selector-options {
     background: #6b7280;
     color: white;
 }
+
+/* 标签选择弹窗样式 */
+.tags-management-modal .selection-header {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    text-align: center;
+}
+
+.tags-management-modal .selection-header h4 {
+    margin: 0 0 8px 0;
+    color: var(--quest-purple);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.tags-management-modal .selection-hint {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.tags-management-modal .manage-tag-item.selectable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.tags-management-modal .manage-tag-item.selectable:hover {
+    background: rgba(139, 92, 246, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+}
+
+.tags-management-modal .manage-tag-item.selectable.selected {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.25) 100%);
+    border: 2px solid var(--quest-purple);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+}
+
+.tags-management-modal .manage-tag-item .tag-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.tags-management-modal .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+.tags-management-modal .modal-btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    min-width: 120px;
+}
+
+.tags-management-modal .modal-btn-primary {
+    background: var(--quest-purple);
+    color: white;
+}
+
+.tags-management-modal .modal-btn-primary:hover {
+    background: var(--quest-dark-purple);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.tags-management-modal .modal-btn-secondary {
+    background: transparent;
+    color: var(--quest-purple);
+    border: 2px solid var(--quest-purple);
+}
+
+.tags-management-modal .modal-btn-secondary:hover {
+    background: var(--quest-purple);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}

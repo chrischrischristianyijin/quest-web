@@ -113,49 +113,6 @@ body {
     color: var(--text-light);
 }
 
-.divider {
-    text-align: center;
-    margin: var(--spacing-xl) 0;
-    position: relative;
-    color: var(--text-light);
-    font-size: 0.875rem;
-}
-
-.divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--border-default);
-}
-
-.divider span {
-    background: var(--bg-primary);
-    padding: 0 var(--spacing-md);
-}
-
-.btn-google {
-    width: 100%;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 2px solid var(--border-default);
-    font-weight: 500;
-    margin-bottom: var(--spacing-lg);
-}
-
-.btn-google:hover {
-    background: var(--bg-light);
-    border-color: var(--quest-purple);
-    color: var(--quest-purple);
-}
-
-.btn-google img {
-    width: 18px;
-    height: 18px;
-}
-
 .login-section {
     text-align: center;
     padding-top: var(--spacing-lg);
