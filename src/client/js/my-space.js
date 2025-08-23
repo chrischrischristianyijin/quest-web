@@ -1723,6 +1723,8 @@ document.addEventListener('DOMContentLoaded', initPage);
 
 // 显示标签管理弹窗
 function showTagsManagementModal() {
+    console.log('🔍 开始创建标签选择弹窗...');
+    
     const modal = document.createElement('div');
     modal.className = 'tags-management-modal';
     modal.innerHTML = `
@@ -1751,14 +1753,14 @@ function showTagsManagementModal() {
                 <div class="tags-list-section">
                     <h3>Your Tags</h3>
                     <div class="tags-list" id="manageTagsList">
-                        <!-- Tags will be loaded here -->
+                        <p>Loading tags...</p>
                     </div>
                 </div>
                 
                 <!-- 标签统计 -->
                 <div class="tags-stats-section">
                     <div id="tagsStats">
-                        <!-- Tag statistics will be shown here -->
+                        <p>Loading statistics...</p>
                     </div>
                 </div>
             </div>
@@ -1770,10 +1772,34 @@ function showTagsManagementModal() {
         </div>
     `;
     
-    document.body.appendChild(modal);
+    console.log('🔍 弹窗HTML已创建');
+    console.log('🔍 弹窗元素:', modal);
     
-    // 加载标签列表
-    loadTagsForManagement();
+    document.body.appendChild(modal);
+    console.log('✅ 弹窗已添加到页面');
+    
+    // 验证弹窗是否正确显示
+    setTimeout(() => {
+        const modalInDOM = document.querySelector('.tags-management-modal');
+        const tagsList = document.getElementById('manageTagsList');
+        const tagsStats = document.getElementById('tagsStats');
+        
+        console.log('🔍 弹窗验证:', {
+            modalInDOM: !!modalInDOM,
+            tagsList: !!tagsList,
+            tagsStats: !!tagsStats,
+            modalDisplay: modalInDOM ? getComputedStyle(modalInDOM).display : 'N/A',
+            tagsListContent: tagsList ? tagsList.innerHTML : 'N/A'
+        });
+        
+        if (modalInDOM && tagsList) {
+            console.log('✅ 弹窗元素验证成功，开始加载标签');
+            // 加载标签列表
+            loadTagsForManagement();
+        } else {
+            console.error('❌ 弹窗元素验证失败');
+        }
+    }, 100);
 }
 
 // 显示编辑标签模态框
@@ -2682,5 +2708,62 @@ function testTagSelection() {
 
 // 将测试函数暴露到全局
 window.testTagSelection = testTagSelection;
+
+// 测试弹窗功能
+function testSimpleModal() {
+    console.log('🧪 测试简单弹窗...');
+    
+    const testModal = document.createElement('div');
+    testModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    testModal.innerHTML = `
+        <div style="
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+        ">
+            <h2 style="color: red; margin-bottom: 20px;">TEST MODAL</h2>
+            <p style="margin-bottom: 20px;">This is a test modal to verify basic functionality.</p>
+            <div style="
+                border: 2px solid blue;
+                padding: 20px;
+                margin: 20px 0;
+                background: #f0f0f0;
+            ">
+                <p style="color: blue; font-weight: bold;">TEST CONTAINER</p>
+                <p>This should be visible with blue border.</p>
+            </div>
+            <button onclick="this.closest('div[style*=\'position: fixed\']').remove()" style="
+                background: red;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+            ">Close Test Modal</button>
+        </div>
+    `;
+    
+    document.body.appendChild(testModal);
+    console.log('✅ 测试弹窗已创建');
+    
+    return testModal;
+}
+
+// 将测试函数暴露到全局
+window.testSimpleModal = testSimpleModal;
 
 
