@@ -1605,53 +1605,6 @@ function showEditTagsModal() {
     loadTagsForEditing();
 }
 
-// 加载标签用于管理
-async function loadTagsForManagement() {
-    try {
-        const response = await api.getUserTags();
-        const tags = response.success ? response.data : [];
-        
-        const tagsList = document.getElementById('tagsManagementList');
-        if (!tagsList) return;
-        
-        tagsList.innerHTML = '';
-        
-        if (tags.length === 0) {
-            tagsList.innerHTML = '<p class="no-tags">No tags created yet</p>';
-            return;
-        }
-        
-        tags.forEach(tag => {
-            const tagItem = document.createElement('div');
-            tagItem.className = 'tag-management-item';
-            tagItem.innerHTML = `
-                <span class="tag-name">${tag.name || tag}</span>
-                <div class="tag-actions">
-                    <button class="action-btn edit-tag-btn" onclick="editUserTag('${tag.id || tag.name}')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <button class="action-btn delete-tag-btn" onclick="deleteUserTag('${tag.id || tag.name}')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                </div>
-            `;
-            tagsList.appendChild(tagItem);
-        });
-        
-    } catch (error) {
-        console.error('Failed to load tags:', error);
-        const tagsList = document.getElementById('tagsManagementList');
-        if (tagsList) {
-            tagsList.innerHTML = '<p class="error">Failed to load tags</p>';
-        }
-    }
-}
-
 // 加载标签用于编辑
 async function loadTagsForEditing() {
     try {
@@ -1682,7 +1635,7 @@ async function loadTagsForEditing() {
                     </button>
                     <button class="action-btn delete-tag-btn" onclick="deleteUserTag('${tag.id || tag.name}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 6h18M19 6v14a2 2 0 0 1 2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
                 </div>
@@ -1707,46 +1660,7 @@ async function editUserTag(userTagId) {
     }
 }
 
-// 创建新标签
-async function createNewTag() {
-    const tagNameInput = document.getElementById('newTagName');
-    const tagName = tagNameInput?.value?.trim();
-    
-    if (!tagName) {
-        alert('Please enter a tag name');
-        return;
-    }
-    
-    try {
-        console.log('🏷️ 创建新标签:', tagName);
-        
-        const response = await api.createUserTag({ name: tagName });
-        if (response.success) {
-            console.log('✅ 标签创建成功:', response.data);
-            
-            // 清空输入框
-            tagNameInput.value = '';
-            
-            // 重新加载标签
-            await loadUserTags();
-            
-            // 刷新标签管理弹窗
-            const modal = document.querySelector('.tags-management-modal');
-            if (modal) {
-                loadTagsForManagement();
-            }
-            
-            // 显示成功消息
-            alert('Tag created successfully!');
-        } else {
-            console.error('❌ 标签创建失败:', response.message);
-            alert('Failed to create tag: ' + response.message);
-        }
-    } catch (error) {
-        console.error('❌ 标签创建错误:', error);
-        alert('Failed to create tag: ' + error.message);
-    }
-}
+
 
 // 更新标签
 async function updateUserTag(userTagId, newName) {
