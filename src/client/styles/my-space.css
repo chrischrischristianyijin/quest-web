@@ -2026,3 +2026,129 @@ body .tag-selector-dropdown.open .tag-selector-options {
     opacity: 1;
     transform: translateY(0);
 }
+
+/* 标签管理弹窗中的标签选择样式 */
+.selection-header {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.selection-header h4 {
+    margin: 0 0 8px 0;
+    color: var(--quest-purple);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.selection-hint {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.manage-tag-item.selectable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.manage-tag-item.selectable:hover {
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.manage-tag-item.selectable.selected {
+    background: rgba(139, 92, 246, 0.1);
+    border-left: 3px solid var(--quest-purple);
+}
+
+.manage-tag-item .tag-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.manage-tag-checkbox {
+    margin: 0;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--quest-purple);
+    cursor: pointer;
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    flex-wrap: wrap;
+}
+
+.bulk-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--quest-light-purple);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bulk-btn:hover:not(:disabled) {
+    background: var(--quest-light-purple);
+    color: white;
+    border-color: var(--quest-purple);
+}
+
+.bulk-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.bulk-edit-btn {
+    border-color: var(--quest-purple);
+    color: var(--quest-purple);
+}
+
+.bulk-edit-btn:hover:not(:disabled) {
+    background: var(--quest-purple);
+    color: white;
+}
+
+.bulk-delete-btn {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.bulk-delete-btn:hover:not(:disabled) {
+    background: #ef4444;
+    color: white;
+}
+
+.bulk-select-all-btn {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.bulk-select-all-btn:hover:not(:disabled) {
+    background: #10b981;
+    color: white;
+}
+
+.bulk-deselect-all-btn {
+    border-color: #6b7280;
+    color: #6b7280;
+}
+
+.bulk-deselect-all-btn:hover:not(:disabled) {
+    background: #6b7280;
+    color: white;
+}
