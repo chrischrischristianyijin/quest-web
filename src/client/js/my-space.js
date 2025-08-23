@@ -777,9 +777,28 @@ async function deleteInsight(id) {
 
 // 显示添加内容模态框
 function showAddContentModal() {
+    console.log('🔍 显示添加内容模态框...');
+    console.log('🔍 弹窗元素:', addContentModal);
+    
     if (addContentModal) {
+        // 确保弹窗可见
+        addContentModal.style.display = 'flex';
+        addContentModal.style.alignItems = 'center';
+        addContentModal.style.justifyContent = 'center';
+        
+        // 添加show类
         addContentModal.classList.add('show');
+        
+        // 隐藏body滚动
         document.body.style.overflow = 'hidden';
+        
+        console.log('✅ 弹窗样式已设置');
+        console.log('🔍 弹窗当前样式:', {
+            display: addContentModal.style.display,
+            alignItems: addContentModal.style.alignItems,
+            justifyContent: addContentModal.style.justifyContent,
+            classList: addContentModal.classList.toString()
+        });
         
         // 加载用户标签
         loadUserTags();
@@ -788,6 +807,8 @@ function showAddContentModal() {
         if (addContentForm) {
             addContentForm.reset();
         }
+    } else {
+        console.error('❌ 弹窗元素未找到');
     }
 }
 
@@ -1231,10 +1252,36 @@ function getSelectedTags() {
 
 // 显示创建标签模态框
 function showCreateTagModal() {
+    console.log('🔍 显示创建标签模态框...');
+    
     const modal = document.getElementById('createTagModal');
+    console.log('🔍 创建标签模态框元素:', modal);
+    
     if (modal) {
         modal.style.display = 'flex';
-        document.getElementById('newTagName').focus();
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        
+        // 确保弹窗居中
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.zIndex = '1000';
+        
+        console.log('✅ 创建标签模态框已显示');
+        
+        // 聚焦到输入框
+        const tagNameInput = document.getElementById('newTagName');
+        if (tagNameInput) {
+            tagNameInput.focus();
+            console.log('✅ 标签名称输入框已聚焦');
+        } else {
+            console.error('❌ 找不到标签名称输入框');
+        }
+    } else {
+        console.error('❌ 找不到创建标签模态框');
     }
 }
 
@@ -1474,15 +1521,73 @@ function bindTagEvents() {
     }
 }
 
-// 创建新标签
-async function createNewTag() {
-    const tagName = document.getElementById('newTagName').value.trim();
+// 从标签管理弹窗创建新标签
+async function createNewTagFromManagement() {
+    const tagName = document.getElementById('newTagNameManagement').value.trim();
     const defaultColor = '#8B5CF6'; // 默认紫色
     
     if (!tagName) {
         showErrorMessage('Please enter a tag name');
         return;
     }
+    
+    try {
+        console.log('🏷️ Creating new tag from management:', { name: tagName, color: defaultColor });
+        
+        // 使用API方法创建标签
+        const response = await api.createUserTag({
+            name: tagName,
+            color: defaultColor
+        });
+        
+        if (response.success && response.data) {
+            console.log('✅ Tag created successfully:', response.data);
+            
+            // 清空表单
+            document.getElementById('newTagNameManagement').value = '';
+            
+            // 重新加载标签列表
+            await loadTagsForManagement();
+            
+            // 重新加载用户标签（用于筛选按钮）
+            await loadUserTags();
+            
+            // 重新初始化筛选按钮
+            await initFilterButtons();
+            
+            showSuccessMessage('Tag created successfully!');
+        } else {
+            throw new Error(response.message || 'Failed to create tag');
+        }
+    } catch (error) {
+        console.error('❌ Failed to create tag:', error);
+        showErrorMessage(`Failed to create tag: ${error.message}`);
+    }
+}
+
+// 创建新标签
+async function createNewTag() {
+    console.log('🔍 开始创建新标签...');
+    
+    const tagNameInput = document.getElementById('newTagName');
+    console.log('🔍 标签名称输入框:', tagNameInput);
+    
+    if (!tagNameInput) {
+        console.error('❌ 找不到标签名称输入框');
+        showErrorMessage('Tag name input not found');
+        return;
+    }
+    
+    const tagName = tagNameInput.value.trim();
+    console.log('🔍 标签名称值:', `"${tagName}"`);
+    
+    if (!tagName) {
+        console.log('❌ 标签名称为空');
+        showErrorMessage('Please enter a tag name');
+        return;
+    }
+    
+    const defaultColor = '#8B5CF6'; // 默认紫色
     
     try {
         console.log('🏷️ Creating new tag:', { name: tagName, color: defaultColor });
@@ -1497,7 +1602,7 @@ async function createNewTag() {
             console.log('✅ Tag created successfully:', response.data);
             
             // 清空表单
-            document.getElementById('newTagName').value = '';
+            tagNameInput.value = '';
             
             // 重新加载标签列表
             await loadTagsForManagement();
@@ -1539,8 +1644,8 @@ function showTagsManagementModal() {
                 <div class="create-tag-section">
                     <h3>Create New Tag</h3>
                     <div class="create-tag-form">
-                        <input type="text" id="newTagName" placeholder="Enter tag name" class="tag-input">
-                        <button class="create-tag-btn" onclick="createNewTag()">Create</button>
+                        <input type="text" id="newTagNameManagement" placeholder="Enter tag name" class="tag-input">
+                        <button class="create-tag-btn" onclick="createNewTagFromManagement()">Create</button>
                     </div>
                 </div>
                 
@@ -1767,6 +1872,7 @@ window.deleteTagInManagement = deleteTagInManagement;
 window.showTagsManagementModal = showTagsManagementModal;
 window.loadTagsForManagement = loadTagsForManagement;
 window.createNewTag = createNewTag;
+window.createNewTagFromManagement = createNewTagFromManagement;
 
 // 测试insight数据格式
 function testInsightDataFormat() {

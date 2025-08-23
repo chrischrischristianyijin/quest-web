@@ -861,14 +861,14 @@ body {
     font-size: 0.75rem;
 }
 
-/* 模态框样式 */
-.add-content-modal {
+/* 模态框样式 - 使用更强的选择器确保优先级 */
+body .add-content-modal {
     display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     background: rgba(0, 0, 0, 0.6);
     z-index: 1000;
     backdrop-filter: blur(8px);
@@ -876,14 +876,16 @@ body {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.add-content-modal.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+body .add-content-modal.show {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     opacity: 1;
+    flex-direction: row;
+    flex-wrap: nowrap;
 }
 
-.add-content-modal-content {
+body .add-content-modal-content {
     background: var(--bg-primary);
     border-radius: 24px;
     padding: 32px;
@@ -893,6 +895,9 @@ body {
     position: relative;
     animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid rgba(139, 92, 246, 0.1);
+    transform: translateY(0);
+    margin: auto;
+    flex-shrink: 0;
 }
 
 
