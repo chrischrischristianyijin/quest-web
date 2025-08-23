@@ -1236,6 +1236,20 @@ body {
     box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
 }
 
+.tag-color-input {
+    width: 50px;
+    height: 44px;
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tag-color-input:hover {
+    border-color: rgba(139, 92, 246, 0.5);
+    transform: scale(1.05);
+}
+
 .create-tag-btn {
     padding: 12px 20px;
     background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
@@ -1255,11 +1269,93 @@ body {
     box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
 }
 
+.tags-list-section {
+    margin-bottom: 32px;
+}
+
 .tags-list-section h3 {
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--quest-purple);
     margin-bottom: 16px;
+}
+
+.tags-stats-section {
+    padding-top: 24px;
+    border-top: 2px solid rgba(139, 92, 246, 0.1);
+}
+
+.tags-stats-section h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--quest-purple);
+    margin-bottom: 16px;
+}
+
+.stats-summary {
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.stat-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-weight: 600;
+    color: var(--quest-purple);
+}
+
+.most-used-tags h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--quest-purple);
+    margin-bottom: 12px;
+}
+
+.tag-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tag-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 8px;
+}
+
+.tag-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tag-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.tag-count {
+    font-weight: 600;
+    color: var(--quest-purple);
+    background: rgba(139, 92, 246, 0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.875rem;
 }
 
 .tag-management-item {
@@ -1798,5 +1894,62 @@ body {
     
     .color-presets {
         grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .tags-management-modal-content {
+        width: 95%;
+        padding: 24px;
+        margin: 20px;
+    }
+    
+    .create-tag-form {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .tag-input {
+        width: 100%;
+    }
+    
+    .tag-color-input {
+        width: 60px;
+        height: 50px;
+        align-self: center;
+    }
+    
+    .create-tag-btn {
+        width: 100%;
+        padding: 16px 20px;
+        font-size: 1rem;
+    }
+    
+    .tag-management-item {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .tag-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .tags-management-modal-content {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .create-tag-section h3,
+    .tags-list-section h3 {
+        font-size: 1.125rem;
     }
 }

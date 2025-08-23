@@ -1,115 +1,78 @@
 import { auth } from './auth.js';
 import { PATHS, navigateTo } from './paths.js';
 
-// Function to update UI based on login status
+// DOM elements
+const welcomeTitle = document.getElementById('welcomeTitle');
+const tryButton = document.getElementById('tryButton');
+
+// Update UI based on login status
 function updateUIForLoginStatus(isLoggedIn, user = null) {
-    const navLinks = document.getElementById('navLinks');
-    const authButtons = document.getElementById('authButtons');
-    const welcomeTitle = document.getElementById('welcomeTitle');
-    const tryButton = document.getElementById('tryButton');
-    const ctaButton = document.getElementById('ctaButton');
-    const welcomeBackSection = document.getElementById('welcomeBackSection');
-    const welcomeBackTitle = document.getElementById('welcomeBackTitle');
-
     if (isLoggedIn && user) {
-        navLinks.innerHTML = '';
-        authButtons.innerHTML = `
-            <a href="${PATHS.MY_SPACE}" class="btn btn-outline">My Space</a>
-            <button class="btn btn-primary" id="logoutBtn">Log out</button>
-        `;
-        tryButton.textContent = 'Go to My Space';
-        tryButton.href = PATHS.MY_SPACE;
-        ctaButton.textContent = 'Go to My Space';
-        ctaButton.href = PATHS.MY_SPACE;
-
-        // 显示欢迎回来区域
-        if (welcomeBackSection) {
-            welcomeBackSection.style.display = 'block';
-        }
+        // User is logged in
+        console.log('✅ User is logged in:', user);
         
-        // 更新欢迎回来标题
-        if (welcomeBackTitle) {
-            if (user.nickname) {
-                welcomeBackTitle.textContent = `欢迎回来，${user.nickname}！`;
-            } else {
-                welcomeBackTitle.textContent = '欢迎回来，Quest！';
-            }
-        }
-        
-        // 隐藏 Hero Section 的欢迎信息
+        // Update welcome title
         if (welcomeTitle) {
-            welcomeTitle.style.display = 'none';
+            welcomeTitle.textContent = `Welcome back, ${user.nickname}!`;
         }
-
-        // Bind logout event
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.onclick = function(e) {
-                e.preventDefault();
-                handleLogout();
-            };
+        
+        // Update button
+        if (tryButton) {
+            tryButton.textContent = 'Go to My Space';
+            tryButton.href = PATHS.MY_SPACE;
         }
+        
+        console.log('✅ UI updated for logged in user');
     } else {
-        navLinks.innerHTML = '';
-        authButtons.innerHTML = `
-            <a href="${PATHS.SIGNUP}" class="btn btn-outline">Sign Up</a>
-            <a href="${PATHS.LOGIN}" class="btn btn-primary">Log In</a>
-        `;
+        // User is not logged in
+        console.log('❌ User is not logged in');
         
-        // 隐藏欢迎回来区域
-        if (welcomeBackSection) {
-            welcomeBackSection.style.display = 'none';
-        }
-        
-        // 显示 Hero Section 的欢迎信息
+        // Reset welcome title
         if (welcomeTitle) {
-            welcomeTitle.style.display = 'block';
-            welcomeTitle.textContent = 'Welcome to Quest';
+            welcomeTitle.textContent = 'YOUR SECOND BRAIN';
         }
         
-        tryButton.innerHTML = `
-            Start Your Journey
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        `;
-        tryButton.href = PATHS.SIGNUP;
-        ctaButton.innerHTML = `
-            Get Started for Free
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        `;
-        ctaButton.href = PATHS.SIGNUP;
+        // Reset button
+        if (tryButton) {
+            tryButton.innerHTML = `
+                Start Your Journey
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+            tryButton.href = PATHS.SIGNUP;
+        }
+        
+        console.log('✅ UI updated for guest user');
     }
 }
 
 // Handle logout
 async function handleLogout() {
-    console.log('🚪 用户点击登出...');
+    console.log('🚪 User clicked logout...');
     
     try {
-        // 直接清除本地状态
+        // Clear local state directly
         await auth.logout();
         
-        // 更新UI状态
+        // Update UI state
         updateUIForLoginStatus(false);
         
-        // 立即跳转到首页
+        // Redirect to home page immediately
         window.location.href = PATHS.HOME;
         
     } catch (error) {
-        console.error('❌ 登出失败:', error);
+        console.error('❌ Logout failed:', error);
         
-        // 即使出错，也清除本地状态并跳转
+        // Even if there's an error, clear local state and redirect
         updateUIForLoginStatus(false);
         window.location.href = PATHS.HOME;
     }
 }
 
-// 显示登出消息
+// Show logout message
 function showLogoutMessage(message, type = 'info') {
-    // 移除现有消息
+    // Remove existing message
     const existingMessage = document.querySelector('.logout-message');
     if (existingMessage) {
         existingMessage.remove();
@@ -131,7 +94,7 @@ function showLogoutMessage(message, type = 'info') {
         </div>
     `;
     
-    // 添加样式
+    // Add styles
     messageElement.style.cssText = `
         position: fixed;
         top: 20px;
@@ -153,7 +116,7 @@ function showLogoutMessage(message, type = 'info') {
     
     document.body.appendChild(messageElement);
     
-    // 自动隐藏
+    // Auto hide
     setTimeout(() => {
         if (messageElement.parentNode) {
             messageElement.style.animation = 'slideOutRight 0.3s ease-in';
@@ -165,7 +128,7 @@ function showLogoutMessage(message, type = 'info') {
         }
     }, 3000);
     
-    // 添加CSS动画
+    // Add CSS animations
     if (!document.querySelector('#logout-message-styles')) {
         const style = document.createElement('style');
         style.id = 'logout-message-styles';
@@ -277,7 +240,7 @@ function initNavbarScrollEffect() {
 
 // Check login status on page load
 document.addEventListener('DOMContentLoaded', async function() {
-    // 检查认证状态
+    // Check authentication status
     try {
         if (auth.checkAuth()) {
             const user = auth.getCurrentUser();
@@ -290,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateUIForLoginStatus(false);
     }
     
-    // 初始化其他功能
+    // Initialize other features
     initExtensionCarousel();
     initNavbarScrollEffect();
 });
