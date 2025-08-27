@@ -125,11 +125,17 @@ async function handleSignup(email, nickname, password) {
     }
 }
 
+// 防重复提交开关
+let isSubmitting = false;
+
 // Event listeners
 signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
+        return;
+    }
+    if (isSubmitting) {
         return;
     }
     
@@ -141,6 +147,7 @@ signupForm.addEventListener('submit', async (e) => {
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Signing up...';
+    isSubmitting = true;
     
     try {
         await handleSignup(email, nickname, password);
@@ -148,6 +155,7 @@ signupForm.addEventListener('submit', async (e) => {
         // Restore form
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
+        isSubmitting = false;
     }
 });
 
