@@ -145,19 +145,39 @@ class ApiService {
             const result = await response.json();
             console.log('📡 登录API响应:', result);
 
-            if (result.success && result.data) {
-                // 新API格式：access_token
-                const token = result.data.access_token;
+            if (result.success) {
+                // 兼容多种返回格式：
+                // A) { success, data: { user_id, email, access_token } }
+                // B) { success, data: { user, access_token } }
+                // C) { success, user, access_token }
+                // D) { success, data: { success, message, data: { user, access_token } } }
+                const dataLevel1 = result.data || {};
+                const dataLevel2 = dataLevel1.data || {};
+
+                const token = result.access_token 
+                    || dataLevel1.access_token 
+                    || dataLevel2.access_token 
+                    || result.token 
+                    || dataLevel1.token 
+                    || dataLevel2.token 
+                    || null;
+
+                const user = result.user 
+                    || dataLevel1.user 
+                    || dataLevel2.user 
+                    || {
+                        id: dataLevel1.user_id || dataLevel2.user_id || null,
+                        email: dataLevel1.email || dataLevel2.email || credentials.email
+                    };
+
                 if (token) {
                     this.setAuthToken(token);
                 }
+
                 return {
                     success: true,
-                    user: { 
-                        id: result.data.user_id,
-                        email: result.data.email 
-                    },
-                    token: token // 保持向后兼容
+                    user,
+                    token
                 };
             } else {
                 throw new Error(result.detail || '登录失败');
