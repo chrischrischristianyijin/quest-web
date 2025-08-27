@@ -6,7 +6,7 @@ export const PATHS = {
     HOME: '/',
     LOGIN: '/login',
     SIGNUP: '/signup',
-    MY_SPACE: '/spaces/my-space.html',
+    MY_SPACE: '/my-space',
     
     // 静态资源
     STYLES: '/styles',
