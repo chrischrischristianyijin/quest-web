@@ -89,7 +89,6 @@ class ApiService {
             });
 
             const result = await response.json();
-            console.log('📡 注册API响应:', result);
 
             if (result.success) {
                 // 兼容两种返回格式：
