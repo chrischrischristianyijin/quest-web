@@ -23,7 +23,7 @@ export const API_CONFIG = {
     
     // 认证相关接口
     AUTH: {
-        REGISTER: '/api/v1/auth/register',
+        REGISTER: '/api/v1/auth/signup',
         LOGIN: '/api/v1/auth/login',
         LOGOUT: '/api/v1/auth/signout',
         PROFILE: '/api/v1/auth/profile',
