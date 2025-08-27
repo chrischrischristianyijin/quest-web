@@ -32,55 +32,7 @@ function hideMessages() {
     successMessage.style.display = 'none';
 }
 
-// Check email availability
-async function checkEmailAvailability() {
-    const email = emailInput.value.trim();
-    
-    if (!email) {
-        showEmailStatus('Please enter your email address', 'error');
-        return;
-    }
-    
-    // Simple email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showEmailStatus('Please enter a valid email address', 'error');
-        return;
-    }
-    
-    try {
-        // Show checking status
-        emailCheckBtn.disabled = true;
-        emailCheckBtn.innerHTML = '<svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Checking...';
-        
-        const result = await api.checkEmail({ email });
-        
-        if (result.data && result.data.exists) {
-            showEmailStatus('This email is already registered, please use another email or login directly', 'error');
-        } else {
-            showEmailStatus('✅ This email is available', 'success');
-        }
-    } catch (error) {
-        console.error('Email check failed:', error);
-        showEmailStatus('Email check failed, please try again', 'error');
-    } finally {
-        // Restore button state
-        emailCheckBtn.disabled = false;
-        emailCheckBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.93 6.64 2.47M21 12l-3-3m3 3l-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Check';
-    }
-}
-
-// Show email status
-function showEmailStatus(message, type = 'info') {
-    emailStatus.textContent = message;
-    emailStatus.className = `email-status email-status-${type}`;
-    emailStatus.style.display = 'block';
-    
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-        emailStatus.style.display = 'none';
-    }, 3000);
-}
+// 移除邮箱预检查相关函数与UI
 
 // Form validation
 function validateForm() {
@@ -136,23 +88,8 @@ async function handleSignup(email, nickname, password) {
         console.log('Starting signup process...');
         console.log('Signup data:', { email, nickname, password: '***' });
         
-        // First check if email is already registered
-        console.log('🔍 Checking if email is already registered...');
-        try {
-            const emailCheck = await api.checkEmail({ email });
-            console.log('📧 Email check result:', emailCheck);
-            
-            if (emailCheck.data && emailCheck.data.exists) {
-                showMessage('This email is already registered, please login directly or use another email', 'error');
-                return;
-            }
-        } catch (emailCheckError) {
-            console.warn('⚠️ Email check failed, continuing with signup process:', emailCheckError);
-            // If email check fails, continue with signup process
-        }
-        
-        // Start signup
-        console.log('✅ Email available, starting signup...');
+        // 直接开始注册，后端自行校验邮箱是否已注册
+        console.log('✅ Starting signup...');
         const result = await auth.signup(email, nickname, password);
         console.log('Signup result:', result);
         
