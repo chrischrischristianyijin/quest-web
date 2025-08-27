@@ -91,17 +91,28 @@ class ApiService {
             const result = await response.json();
             console.log('📡 注册API响应:', result);
 
-            if (result.success && result.data) {
-                // 新API格式：access_token
-                const token = result.data.access_token;
+            if (result.success) {
+                // 兼容两种返回格式：
+                // 1) { success, data: { user, access_token } }
+                // 2) { success, user, access_token }
+                const dataWrapper = result.data || {};
+                const user = result.user || dataWrapper.user;
+                const token = result.access_token || dataWrapper.access_token || result.token || dataWrapper.token;
+
                 if (token) {
                     this.setAuthToken(token);
                 }
-                return {
-                    success: true,
-                    user: result.data.user,
-                    token: token // 保持向后兼容
-                };
+
+                if (user) {
+                    return {
+                        success: true,
+                        user: user,
+                        token: token || null
+                    };
+                }
+
+                // success=true 但缺少 user，视为异常
+                throw new Error('注册成功但未返回用户信息');
             } else {
                 // 改进错误处理
                 let errorMessage = result.detail || '注册失败';
