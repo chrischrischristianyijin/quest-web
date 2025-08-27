@@ -96,6 +96,13 @@ async function handleSignup(email, nickname, password) {
         if (result.success) {
             showMessage('Signup successful! Redirecting...', 'success');
             
+            // 尝试自动登录以获取有效 token，避免 My Space 页面401后跳转登录
+            try {
+                await auth.login(email, password);
+            } catch (e) {
+                console.warn('Auto-login after signup failed:', e);
+            }
+
             // Signup successful, redirect to My Space page
             console.log('✅ Signup successful, redirecting to My Space page');
             setTimeout(() => {
