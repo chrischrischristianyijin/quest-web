@@ -32,18 +32,21 @@ async function initPage() {
         // 恢复会话状态
         auth.restoreSession();
         
-        // 检查认证状态
+        // 检查认证状态（放宽：先尝试恢复会话后再判断，避免闪跳）
         if (!auth.checkAuth()) {
-            console.log('❌ 用户未认证，重定向到登录页面');
-            window.location.href = PATHS.LOGIN;
-            return;
+            console.log('⚠️ 未检测到会话，尝试恢复...');
+            const restored = auth.restoreSession();
+            if (!restored) {
+                console.log('❌ 无会话可恢复，保持在当前页并提示登录');
+                showErrorMessage('Please sign in to use My Space.');
+                return;
+            }
         }
         
-        // 检查token是否过期
-        if (!(await auth.checkAndHandleTokenExpiration())) {
-            console.log('⏰ Token已过期，重定向到登录页面');
-            window.location.href = PATHS.LOGIN;
-            return;
+        // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
+        const tokenOk = await auth.checkAndHandleTokenExpiration();
+        if (!tokenOk) {
+            console.log('⏰ Token校验失败，继续以降级模式加载My Space UI');
         }
         
         console.log('✅ 认证状态正常，继续初始化...');
