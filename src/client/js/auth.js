@@ -358,16 +358,7 @@ class AuthManager {
         return true;
     }
 
-    // 检查邮箱是否存在
-    async checkEmail(email) {
-        try {
-            const result = await api.checkEmail(email);
-            return result;
-        } catch (error) {
-            console.error('检查邮箱失败:', error);
-            return { success: false, message: error.message };
-        }
-    }
+    // 移除邮箱检查方法，改由注册接口内部校验
 
     // 忘记密码
     async forgotPassword(email) {
