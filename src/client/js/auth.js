@@ -40,18 +40,20 @@ class AuthManager {
         try {
             const result = await api.signup({ email, nickname, password });
             
-            if (result.success && result.user) {
-                this.user = result.user;
+            if (result && result.success) {
+                // 兼容后端可能未返回 user 的情况，使用前端表单数据兜底
+                const resolvedUser = result.user || { email, nickname };
+                this.user = resolvedUser;
                 this.isAuthenticated = true;
                 
                 // 保存用户会话
-                this.saveSession(result.user, result.token);
+                this.saveSession(this.user, result.token);
                 
                 this.notifyListeners();
-                return { success: true, user: result.user };
-            } else {
-                return { success: false, message: '注册失败：无效的用户信息' };
+                return { success: true, user: this.user };
             }
+
+            return { success: false, message: '注册失败：无效的返回结果' };
         } catch (error) {
             console.error('注册错误:', error);
             return { success: false, message: error.message || '注册失败，请重试' };
