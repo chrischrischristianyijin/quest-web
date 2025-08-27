@@ -102,16 +102,12 @@ class ApiService {
                     this.setAuthToken(token);
                 }
 
-                if (user) {
-                    return {
-                        success: true,
-                        user: user,
-                        token: token || null
-                    };
-                }
-
-                // success=true 但缺少 user，视为异常
-                throw new Error('注册成功但未返回用户信息');
+                // 即使后端未返回 user，也返回成功，交给上层兜底
+                return {
+                    success: true,
+                    user: user || null,
+                    token: token || null
+                };
             } else {
                 // 改进错误处理
                 let errorMessage = result.detail || '注册失败';
