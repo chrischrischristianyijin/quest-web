@@ -91,12 +91,20 @@ class ApiService {
             const result = await response.json();
 
             if (result.success) {
-                // 兼容两种返回格式：
-                // 1) { success, data: { user, access_token } }
-                // 2) { success, user, access_token }
-                const dataWrapper = result.data || {};
-                const user = result.user || dataWrapper.user;
-                const token = result.access_token || dataWrapper.access_token || result.token || dataWrapper.token;
+                // 兼容多种返回格式：
+                // A) { success, data: { user, access_token } }
+                // B) { success, user, access_token }
+                // C) { success, data: { success, message, data: { user, access_token } } }
+                const dataLevel1 = result.data || {};
+                const dataLevel2 = dataLevel1.data || {};
+                const user = result.user || dataLevel1.user || dataLevel2.user || null;
+                const token = result.access_token 
+                    || dataLevel1.access_token 
+                    || dataLevel2.access_token 
+                    || result.token 
+                    || dataLevel1.token 
+                    || dataLevel2.token 
+                    || null;
 
                 if (token) {
                     this.setAuthToken(token);
