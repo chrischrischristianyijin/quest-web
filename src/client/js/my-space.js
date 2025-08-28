@@ -1,5 +1,6 @@
 import { auth } from './auth.js';
 import { api } from './api.js';
+import { API_CONFIG } from './config.js';
 import { PATHS, navigateTo } from './paths.js';
 
 // DOM 元素
@@ -36,11 +37,16 @@ async function initPage() {
         if (!auth.checkAuth()) {
             console.log('⚠️ 未检测到会话，尝试恢复...');
             const restored = auth.restoreSession();
-            if (!restored) {
-                console.log('❌ 无会话可恢复，保持在当前页并提示登录');
-                showErrorMessage('Please sign in to use My Space.');
-                return;
-            }
+                    if (!restored) {
+            console.log('❌ 无会话可恢复，保持在当前页并提示登录');
+            showErrorMessage('Please sign in to use My Space.');
+            
+            // 即使未认证，也绑定基础UI事件（如用户资料编辑）
+            console.log('🔧 未认证状态下绑定基础UI事件...');
+            bindProfileEditEvents();
+            
+            return;
+        }
         }
         
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
@@ -138,13 +144,20 @@ function updateUserProfileUI() {
     
     // 更新头像
     if (currentUser.avatar_url && profileAvatar) {
-        profileAvatar.querySelector('img').src = currentUser.avatar_url;
+        const imgElement = profileAvatar.querySelector('img');
+        if (imgElement) {
+            imgElement.src = currentUser.avatar_url;
+        }
     }
     
-    // 更新用户名
+    // 更新用户名，但保留编辑提示
     if (usernamePlaceholder) {
-        usernamePlaceholder.textContent = currentUser.nickname || currentUser.email || 'User';
+        const editHint = usernamePlaceholder.querySelector('.edit-hint');
+        const hintText = editHint ? editHint.outerHTML : '<span class="edit-hint">Click to edit</span>';
+        usernamePlaceholder.innerHTML = `${currentUser.nickname || currentUser.email || 'User'} ${hintText}`;
     }
+    
+    console.log('✅ 用户资料UI已更新');
 }
 
 // 加载用户见解
@@ -1080,6 +1093,9 @@ function bindEvents() {
         
         // 绑定筛选按钮点击外部关闭事件
         bindFilterButtonOutsideClick();
+        
+        // 绑定用户资料编辑事件
+        bindProfileEditEvents();
 }
 
 // 加载用户标签
@@ -2397,5 +2413,410 @@ function getSelectedTagsForManagement() {
 // testTagSelection 已删除
 
 // 测试弹窗功能已删除
+
+// ===== PROFILE EDIT FUNCTIONALITY =====
+
+// Profile Edit DOM Elements (will be retrieved fresh in bindProfileEditEvents)
+
+// 绑定用户资料编辑事件
+function bindProfileEditEvents() {
+    console.log('🔧 绑定用户资料编辑事件...');
+    
+    // 重新获取DOM元素（确保元素存在）
+    const profileContainer = document.getElementById('profileContainer');
+    const profileEditModal = document.getElementById('profileEditModal');
+    const profileEditForm = document.getElementById('profileEditForm');
+    const closeProfileModal = document.getElementById('closeProfileModal');
+    const cancelProfileEdit = document.getElementById('cancelProfileEdit');
+    const profileAvatarUpload = document.getElementById('profileAvatarUpload');
+    
+    console.log('🔍 检查DOM元素:', {
+        profileContainer: !!profileContainer,
+        profileEditModal: !!profileEditModal,
+        closeProfileModal: !!closeProfileModal,
+        cancelProfileEdit: !!cancelProfileEdit
+    });
+    
+    // 点击头像区域打开编辑模态框
+    if (profileContainer) {
+        // 添加多种事件测试
+        profileContainer.addEventListener('mousedown', function(e) {
+            console.log('🖱️ 鼠标按下事件触发', e.target);
+        });
+        
+        profileContainer.addEventListener('mouseup', function(e) {
+            console.log('🖱️ 鼠标抬起事件触发', e.target);
+        });
+        
+        profileContainer.addEventListener('click', function(e) {
+            console.log('🖱️ 用户点击了用户资料区域');
+            console.log('  - 事件目标:', e.target);
+            console.log('  - 当前目标:', e.currentTarget);
+            console.log('  - 事件类型:', e.type);
+            e.preventDefault();
+            e.stopPropagation();
+            openProfileEditModal();
+        }, true); // 使用捕获阶段
+        
+        // 也添加普通的点击事件作为备用
+        profileContainer.addEventListener('click', function(e) {
+            console.log('🖱️ 备用点击事件触发');
+            openProfileEditModal();
+        });
+        
+        console.log('✅ 用户资料容器点击事件已绑定');
+        console.log('  - 元素信息:', profileContainer);
+        console.log('  - 元素样式:', window.getComputedStyle(profileContainer));
+    } else {
+        console.error('❌ 找不到profileContainer元素');
+    }
+    
+    // 关闭编辑模态框
+    if (closeProfileModal) {
+        closeProfileModal.addEventListener('click', function() {
+            console.log('🖱️ 用户点击了关闭按钮');
+            closeProfileEditModal();
+        });
+        console.log('✅ 关闭按钮事件已绑定');
+    } else {
+        console.error('❌ 找不到closeProfileModal元素');
+    }
+    
+    if (cancelProfileEdit) {
+        cancelProfileEdit.addEventListener('click', function() {
+            console.log('🖱️ 用户点击了取消按钮');
+            closeProfileEditModal();
+        });
+        console.log('✅ 取消按钮事件已绑定');
+    } else {
+        console.error('❌ 找不到cancelProfileEdit元素');
+    }
+    
+    // 点击模态框外部关闭
+    if (profileEditModal) {
+        profileEditModal.addEventListener('click', function(e) {
+            if (e.target === profileEditModal) {
+                console.log('🖱️ 用户点击了模态框外部');
+                closeProfileEditModal();
+            }
+        });
+        console.log('✅ 模态框外部点击事件已绑定');
+    } else {
+        console.error('❌ 找不到profileEditModal元素');
+    }
+    
+    // 表单提交
+    if (profileEditForm) {
+        profileEditForm.addEventListener('submit', handleProfileUpdate);
+        console.log('✅ 表单提交事件已绑定');
+    } else {
+        console.error('❌ 找不到profileEditForm元素');
+    }
+    
+    // 头像预览
+    if (profileAvatarUpload) {
+        profileAvatarUpload.addEventListener('change', handleAvatarPreview);
+        console.log('✅ 头像预览事件已绑定');
+    } else {
+        console.error('❌ 找不到profileAvatarUpload元素');
+    }
+    
+    console.log('✅ 用户资料编辑事件绑定完成');
+}
+
+// 打开用户资料编辑模态框
+function openProfileEditModal() {
+    console.log('📝 打开用户资料编辑模态框...');
+    
+    const profileEditModal = document.getElementById('profileEditModal');
+    const profileAvatarUpload = document.getElementById('profileAvatarUpload');
+    const avatarPreviewImg = document.getElementById('avatarPreviewImg');
+    
+    if (!profileEditModal) {
+        console.error('❌ 找不到用户资料编辑模态框');
+        return;
+    }
+    
+    // 预填充当前用户信息
+    const nicknameInput = document.getElementById('profileNickname');
+    if (nicknameInput && currentUser) {
+        nicknameInput.value = currentUser.nickname || currentUser.email || '';
+    }
+    
+    // 重置头像上传
+    if (profileAvatarUpload) {
+        profileAvatarUpload.value = '';
+    }
+    
+    // 隐藏头像预览
+    if (avatarPreviewImg) {
+        avatarPreviewImg.style.display = 'none';
+    }
+    
+    // 显示模态框
+    profileEditModal.classList.add('show');
+    profileEditModal.style.display = 'flex';
+    
+    // 禁用背景滚动
+    document.body.style.overflow = 'hidden';
+    
+    console.log('✅ 用户资料编辑模态框已打开');
+}
+
+// 关闭用户资料编辑模态框
+function closeProfileEditModal() {
+    console.log('❌ 关闭用户资料编辑模态框...');
+    
+    const profileEditModal = document.getElementById('profileEditModal');
+    const profileEditForm = document.getElementById('profileEditForm');
+    const avatarPreviewImg = document.getElementById('avatarPreviewImg');
+    
+    if (!profileEditModal) return;
+    
+    // 隐藏模态框
+    profileEditModal.classList.remove('show');
+    
+    // 延迟设置display为none，以保证动画效果
+    setTimeout(() => {
+        profileEditModal.style.display = 'none';
+    }, 300);
+    
+    // 恢复背景滚动
+    document.body.style.overflow = '';
+    
+    // 重置表单
+    if (profileEditForm) {
+        profileEditForm.reset();
+    }
+    
+    // 隐藏头像预览
+    if (avatarPreviewImg) {
+        avatarPreviewImg.style.display = 'none';
+    }
+    
+    console.log('✅ 用户资料编辑模态框已关闭');
+}
+
+// 处理头像预览
+function handleAvatarPreview(event) {
+    const file = event.target.files[0];
+    const avatarPreviewImg = document.getElementById('avatarPreviewImg');
+    
+    if (!file) {
+        if (avatarPreviewImg) {
+            avatarPreviewImg.style.display = 'none';
+        }
+        return;
+    }
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+        showErrorMessage('Please select a valid image file');
+        event.target.value = '';
+        return;
+    }
+    
+    // 验证文件大小 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showErrorMessage('Image file size must be less than 5MB');
+        event.target.value = '';
+        return;
+    }
+    
+    // 显示预览
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        if (avatarPreviewImg) {
+            avatarPreviewImg.src = e.target.result;
+            avatarPreviewImg.style.display = 'block';
+        }
+    };
+    reader.readAsDataURL(file);
+    
+    console.log('✅ 头像预览已更新');
+}
+
+// 处理用户资料更新
+async function handleProfileUpdate(event) {
+    event.preventDefault();
+    
+    console.log('💾 开始更新用户资料...');
+    
+    // 检查认证状态
+    if (!auth.checkAuth()) {
+        showErrorMessage('Please log in to update your profile');
+        return;
+    }
+    
+    const nicknameInput = document.getElementById('profileNickname');
+    const saveBtn = document.getElementById('saveProfileEdit');
+    const saveBtnText = document.getElementById('saveProfileBtnText');
+    
+    if (!nicknameInput) {
+        showErrorMessage('Nickname input not found');
+        return;
+    }
+    
+    const nickname = nicknameInput.value.trim();
+    
+    if (!nickname) {
+        showErrorMessage('Please enter a nickname');
+        return;
+    }
+    
+    // 显示加载状态
+    if (saveBtn && saveBtnText) {
+        saveBtn.disabled = true;
+        saveBtnText.textContent = 'Saving...';
+        saveBtn.classList.add('loading');
+    }
+    
+    try {
+        let avatarUrl = currentUser.avatar_url;
+        
+        // 处理头像上传
+        const profileAvatarUpload = document.getElementById('profileAvatarUpload');
+        const avatarFile = profileAvatarUpload?.files[0];
+        if (avatarFile) {
+            console.log('📸 上传新头像...');
+            avatarUrl = await uploadAvatar(avatarFile);
+            console.log('✅ 头像上传成功:', avatarUrl);
+        }
+        
+        // 更新用户资料
+        const profileData = {
+            nickname: nickname
+        };
+        
+        // 只有当头像URL有变化时才包含它
+        if (avatarUrl && avatarUrl !== currentUser.avatar_url) {
+            profileData.avatar_url = avatarUrl;
+        }
+        
+        console.log('📡 发送用户资料更新请求:', profileData);
+        
+        const response = await api.updateUserProfile(profileData);
+        
+        if (response.success) {
+            // 更新本地用户数据
+            currentUser = { ...currentUser, ...profileData };
+            
+            // 更新本地存储
+            if (auth.getCurrentUser()) {
+                // Store updated user info in local storage
+                localStorage.setItem('quest_user_session', JSON.stringify(currentUser));
+            }
+            
+            // 刷新UI显示
+            updateUserProfileUI();
+            
+            // 关闭模态框
+            closeProfileEditModal();
+            
+            // 显示成功消息
+            showSuccessMessage('Profile updated successfully!');
+            
+            console.log('✅ 用户资料更新成功');
+        } else {
+            throw new Error(response.message || 'Failed to update profile');
+        }
+        
+    } catch (error) {
+        console.error('❌ 用户资料更新失败:', error);
+        
+        let errorMessage = 'Failed to update profile. Please try again.';
+        
+        if (error.message.includes('401') || error.message.includes('unauthorized')) {
+            errorMessage = 'Please log in again to update your profile.';
+        } else if (error.message.includes('400') || error.message.includes('bad request')) {
+            errorMessage = 'Invalid profile data. Please check your input.';
+        } else if (error.message.includes('500') || error.message.includes('server error')) {
+            errorMessage = 'Server error. Please try again later.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        showErrorMessage(errorMessage);
+        
+    } finally {
+        // 恢复按钮状态
+        if (saveBtn && saveBtnText) {
+            saveBtn.disabled = false;
+            saveBtnText.textContent = 'Save Changes';
+            saveBtn.classList.remove('loading');
+        }
+    }
+}
+
+// 上传头像
+async function uploadAvatar(file) {
+    console.log('📸 开始上传头像文件...');
+    
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    try {
+        const response = await api.request(API_CONFIG.USER.UPLOAD_AVATAR, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.success && response.data && response.data.avatar_url) {
+            console.log('✅ 头像上传成功:', response.data.avatar_url);
+            return response.data.avatar_url;
+        } else {
+            throw new Error('Avatar upload failed: Invalid response format');
+        }
+        
+    } catch (error) {
+        console.error('❌ 头像上传失败:', error);
+        throw new Error(`Failed to upload avatar: ${error.message}`);
+    }
+}
+
+// updateUserProfileUI function is defined above, no duplicate needed
+
+// 显示通知（成功/错误）
+function showNotification(message, type = 'success') {
+    // 移除现有通知
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const icon = type === 'success' 
+        ? '<svg class="notification-icon" viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<svg class="notification-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/></svg>';
+    
+    notification.innerHTML = `
+        ${icon}
+        <span class="notification-text">${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // 显示动画
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // 自动隐藏
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+// 暴露全局函数
+window.openProfileEditModal = openProfileEditModal;
+window.closeProfileEditModal = closeProfileEditModal;
+window.handleProfileUpdate = handleProfileUpdate;
 
 
