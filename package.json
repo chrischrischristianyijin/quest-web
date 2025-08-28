@@ -4,13 +4,14 @@
   "description": "Quest Web Application",
   "main": "index.js",
   "scripts": {
-    "start": "http-server src/client -p 8080 -c-1 -o",
-    "dev": "http-server src/client -p 8080 -c-1 -o",
+    "start": "node src/server/dev-server.js",
+    "dev": "node src/server/dev-server.js",
     "build": "echo 'Frontend build completed'",
     "vercel-build": "echo 'Frontend build completed'"
   },
   "devDependencies": {
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "express": "^4.19.2"
   },
   "keywords": [
     "quest",
