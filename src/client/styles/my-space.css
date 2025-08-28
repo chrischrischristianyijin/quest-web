@@ -2263,3 +2263,216 @@ body .tag-selector-dropdown.open .tag-selector-options {
 }
 
 /* 标签选择弹窗强制显示样式已删除 */
+
+/* Profile Edit Styles */
+.clickable-profile {
+    cursor: pointer;
+    transition: var(--transition-normal);
+    position: relative;
+}
+
+.clickable-profile:hover {
+    transform: scale(1.02);
+}
+
+.profile-avatar {
+    position: relative;
+    overflow: visible;
+}
+
+.edit-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(139, 92, 246, 0.9);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: var(--transition-normal);
+    backdrop-filter: blur(5px);
+}
+
+.clickable-profile:hover .edit-overlay {
+    opacity: 1;
+}
+
+.edit-icon {
+    color: white;
+    width: 20px;
+    height: 20px;
+}
+
+.edit-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-weight: 400;
+    margin-top: 4px;
+    opacity: 0;
+    transition: var(--transition-normal);
+}
+
+.clickable-profile:hover .edit-hint {
+    opacity: 1;
+}
+
+/* Profile Edit Modal */
+.profile-edit-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-edit-modal.show {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1;
+}
+
+.profile-edit-modal-content {
+    background: var(--bg-primary);
+    border-radius: 24px;
+    padding: 32px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    transform: translateY(0);
+}
+
+/* Avatar Preview */
+.avatar-preview {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.avatar-preview img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--quest-light-purple);
+    box-shadow: var(--shadow-light);
+}
+
+.form-help {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+/* Success and Error Notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    z-index: 2000;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-medium);
+    min-width: 300px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.notification-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.notification-text {
+    flex: 1;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top: 2px solid var(--quest-purple);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Responsive Design for Profile Edit */
+@media (max-width: 768px) {
+    .profile-edit-modal-content {
+        margin: 20px;
+        padding: 24px;
+        width: calc(100% - 40px);
+    }
+    
+    .edit-overlay {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .edit-icon {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-edit-modal-content {
+        margin: 10px;
+        padding: 20px;
+        width: calc(100% - 20px);
+    }
+    
+    .edit-hint {
+        font-size: 0.7rem;
+    }
+}

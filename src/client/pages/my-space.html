@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles/my-space.css">
 </head>
+
 <body>
     <div class="MySpace">
         <!-- Header Section -->
@@ -18,12 +20,13 @@
                 <div class="WelcomeToYourPersonalSpacePlaceholder">Welcome to your personal space</div>
             </div>
             <div class="right">
-                                    <button class="header-logout-btn" id="logoutBtn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17L21 12L16 7M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Logout
-                    </button>
+                <button class="header-logout-btn" id="logoutBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17L21 12L16 7M21 12H9" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    Logout
+                </button>
             </div>
         </div>
 
@@ -32,11 +35,20 @@
             <div class="content-area">
                 <!-- Profile Section -->
                 <div class="profile-section">
-                    <div class="profile-container">
+                    <div class="profile-container clickable-profile" id="profileContainer">
                         <div class="profile-avatar" id="profileAvatar">
                             <img src="/public/3d_avatar_12.png" alt="User Avatar">
+                            <div class="edit-overlay">
+                                <svg class="edit-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </div>
                         </div>
-                        <div class="UsernamePlaceholder" id="usernamePlaceholder">Username</div>
+                        <div class="UsernamePlaceholder" id="usernamePlaceholder">Username
+                            <span class="edit-hint">Click to edit</span>
+                        </div>
                     </div>
                 </div>
 
@@ -49,7 +61,8 @@
                         </div>
                         <button class="add-content-btn-left" id="addContentBtnLeft">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
                             </svg>
                             Add Content
                         </button>
@@ -78,17 +91,19 @@
                     <label class="form-label" for="contentUrl">Content URL</label>
                     <input type="url" id="contentUrl" class="form-input" required placeholder="https://...">
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="customTitle">Custom Title (Optional)</label>
-                    <input type="text" id="customTitle" class="form-input" placeholder="Enter custom title or leave empty to use webpage title">
+                    <input type="text" id="customTitle" class="form-input"
+                        placeholder="Enter custom title or leave empty to use webpage title">
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="customThought">Your Thoughts (Optional)</label>
-                    <textarea id="customThought" class="form-textarea" rows="3" placeholder="Share your thoughts, insights, or notes about this content"></textarea>
+                    <textarea id="customThought" class="form-textarea" rows="3"
+                        placeholder="Share your thoughts, insights, or notes about this content"></textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="tagSelector">Tags (Optional)</label>
                     <div class="tag-selector-container">
@@ -96,8 +111,10 @@
                             <div class="tag-selector-dropdown" id="tagSelectorDropdown">
                                 <div class="tag-selector-trigger" id="tagSelectorTrigger">
                                     <span class="tag-selector-text">Select tags...</span>
-                                    <svg class="tag-selector-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <svg class="tag-selector-arrow" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none">
+                                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
                                 </div>
                                 <div class="tag-selector-options" id="tagSelectorOptions">
@@ -106,7 +123,9 @@
                             </div>
                             <button type="button" class="tag-action-btn edit-tags-btn" id="manageTagsBtn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
                                 </svg>
                                 Edit Tags
                             </button>
@@ -118,7 +137,8 @@
                     <div class="tag-actions">
                         <button type="button" class="tag-action-btn" id="createTagBtn">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 5V19M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 5V19M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
                             </svg>
                             Create New Tag
                         </button>
@@ -151,20 +171,29 @@
                     <div class="color-picker">
                         <input type="color" id="newTagColor" class="color-input" value="#FF5733">
                         <div class="color-presets">
-                            <button type="button" class="color-preset" data-color="#FF5733" style="background-color: #FF5733;"></button>
-                            <button type="button" class="color-preset" data-color="#33FF57" style="background-color: #33FF57;"></button>
-                            <button type="button" class="color-preset" data-color="#3357FF" style="background-color: #3357FF;"></button>
-                            <button type="button" class="color-preset" data-color="#F3FF33" style="background-color: #F3FF33;"></button>
-                            <button type="button" class="color-preset" data-color="#FF33F3" style="background-color: #FF33F3;"></button>
-                            <button type="button" class="color-preset" data-color="#33FFF3" style="background-color: #33FFF3;"></button>
-                            <button type="button" class="color-preset" data-color="#FF8333" style="background-color: #FF8333;"></button>
-                            <button type="button" class="color-preset" data-color="#8333FF" style="background-color: #8333FF;"></button>
+                            <button type="button" class="color-preset" data-color="#FF5733"
+                                style="background-color: #FF5733;"></button>
+                            <button type="button" class="color-preset" data-color="#33FF57"
+                                style="background-color: #33FF57;"></button>
+                            <button type="button" class="color-preset" data-color="#3357FF"
+                                style="background-color: #3357FF;"></button>
+                            <button type="button" class="color-preset" data-color="#F3FF33"
+                                style="background-color: #F3FF33;"></button>
+                            <button type="button" class="color-preset" data-color="#FF33F3"
+                                style="background-color: #FF33F3;"></button>
+                            <button type="button" class="color-preset" data-color="#33FFF3"
+                                style="background-color: #33FFF3;"></button>
+                            <button type="button" class="color-preset" data-color="#FF8333"
+                                style="background-color: #FF8333;"></button>
+                            <button type="button" class="color-preset" data-color="#8333FF"
+                                style="background-color: #8333FF;"></button>
                         </div>
                     </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="modal-btn modal-btn-secondary" id="cancelCreateTagBtn">Cancel</button>
-                    <button type="submit" class="modal-btn modal-btn-primary" id="submitCreateTagBtn">Create Tag</button>
+                    <button type="submit" class="modal-btn modal-btn-primary" id="submitCreateTagBtn">Create
+                        Tag</button>
                 </div>
             </form>
         </div>
@@ -191,6 +220,40 @@
         </div>
     </div>
 
+    <!-- Profile Edit Modal -->
+    <div class="profile-edit-modal" id="profileEditModal">
+        <div class="profile-edit-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Profile</h2>
+                <button class="modal-close" id="closeProfileModal">&times;</button>
+            </div>
+            <form id="profileEditForm">
+                <div class="form-group">
+                    <label class="form-label" for="profileNickname">Nickname</label>
+                    <input type="text" id="profileNickname" class="form-input" required
+                        placeholder="Enter your nickname">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="profileAvatar">Avatar</label>
+                    <input type="file" id="profileAvatarUpload" class="form-input" accept="image/*">
+                    <div class="avatar-preview" id="avatarPreview">
+                        <img id="avatarPreviewImg" alt="Avatar Preview" style="display: none;">
+                    </div>
+                    <small class="form-help">Choose an image file (JPG, PNG, GIF). Max 5MB.</small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn modal-btn-secondary" id="cancelProfileEdit">Cancel</button>
+                    <button type="submit" class="modal-btn modal-btn-primary" id="saveProfileEdit">
+                        <span id="saveProfileBtnText">Save Changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script type="module" src="/js/my-space.js"></script>
 </body>
+
 </html>
