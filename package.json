@@ -4,14 +4,13 @@
   "description": "Quest Web Application",
   "main": "index.js",
   "scripts": {
-    "start": "node src/server/dev-server.js",
-    "dev": "node src/server/dev-server.js",
+    "start": "http-server src/client -p 8080 -c-1 -o",
+    "dev": "http-server src/client -p 8080 -c-1 -o",
     "build": "echo 'Frontend build completed'",
     "vercel-build": "echo 'Frontend build completed'"
   },
   "devDependencies": {
-    "http-server": "^14.1.1",
-    "express": "^4.19.2"
+    "http-server": "^14.1.1"
   },
   "keywords": [
     "quest",
@@ -19,5 +18,10 @@
     "application"
   ],
   "author": "Quest Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0"
+  }
 }
