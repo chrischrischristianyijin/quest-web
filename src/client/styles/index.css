@@ -1,6 +1,11 @@
 /* 首页特定样式 */
 @import url('./common.css');
 
+/* 全局字体设置 */
+body {
+    font-family: 'Rubik', sans-serif;
+}
+
 /* 导航栏 */
 .navbar {
     position: fixed;
@@ -233,7 +238,7 @@
 
 .hero-title {
     font-size: clamp(3.5rem, 7vw, 6.5rem);
-    font-family: 'Pacifico', cursive;
+    font-family: 'Rubik', sans-serif;
     background: linear-gradient(135deg, var(--quest-purple) 0%, var(--quest-light-purple) 100%);
     background-clip: text;
     -webkit-background-clip: text;
@@ -259,7 +264,7 @@
 
 .hero-subtitle {
     font-size: clamp(1.1rem, 2.8vw, 1.8rem);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Rubik', sans-serif;
     color: var(--quest-orange);
     font-weight: 600;
     margin-bottom: 0;
@@ -645,7 +650,7 @@
 
 .section-title {
     font-size: clamp(2.4rem, 5vw, 3.8rem);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Rubik', sans-serif;
     background: linear-gradient(135deg, var(--quest-light-purple) 0%, var(--quest-purple) 50%, var(--quest-orange) 100%);
     background-clip: text;
     -webkit-background-clip: text;
@@ -723,7 +728,7 @@
 
 .feature-title {
     font-size: clamp(1.1rem, 2.5vw, 1.5rem);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Rubik', sans-serif;
     color: var(--quest-purple);
     font-weight: 700;
     margin-bottom: 1.5rem;
@@ -736,7 +741,7 @@
     font-size: clamp(1rem, 2vw, 1.1rem);
     color: var(--quest-purple);
     line-height: 1.8;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Rubik', sans-serif;
     font-weight: 400;
     opacity: 0.9;
 }
@@ -785,7 +790,7 @@
 
 .cta-title {
     font-size: clamp(2rem, 4vw, 3rem);
-    font-family: 'Pacifico', cursive;
+    font-family: 'Rubik', sans-serif;
     margin-bottom: 2rem;
     line-height: 1.2;
 }
