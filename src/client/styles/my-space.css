@@ -13,7 +13,8 @@ body {
     position: relative;
     background: var(--bg-primary);
     margin: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* 头部区域 */
