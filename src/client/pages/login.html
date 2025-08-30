@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles/login.css">
 </head>
+
 <body>
     <section class="login-section">
         <div class="login-container">
@@ -14,29 +16,33 @@
                 <h1 class="login-title">Welcome!</h1>
                 <p class="login-subtitle">Log in to your space.</p>
             </div>
-            
+
             <div class="message" id="message"></div>
-            
+
             <form class="login-form" id="loginForm">
                 <div class="form-group">
                     <label class="form-label" for="email">Email/Account Number</label>
-                    <input type="email" id="email" class="form-input" placeholder="Registered Email / Account Number" required>
+                    <input type="email" id="email" class="form-input" placeholder="Registered Email / Account Number"
+                        required>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label" for="password">Password</label>
-                    <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot Password?</a>
                     <input type="password" id="password" class="form-input" placeholder="Password" required>
                 </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Log in
-                </button>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Log in
+                    </button>
+                    <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot Password?</a>
+                </div>
             </form>
-            
+
             <div class="signup-section">
                 <p class="signup-text">Don't have an account?</p>
                 <a href="/signup" class="btn btn-secondary">Sign Up</a>
@@ -63,4 +69,5 @@
 
     <script type="module" src="/js/login.js"></script>
 </body>
+
 </html>

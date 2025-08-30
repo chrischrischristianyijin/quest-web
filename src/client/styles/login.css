@@ -59,13 +59,19 @@ body {
     margin-bottom: var(--spacing-xl);
 }
 
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-lg);
+}
+
 .forgot-password {
     color: var(--quest-blue);
     font-size: 0.875rem;
     text-decoration: none;
-    float: right;
-    margin-bottom: var(--spacing-sm);
     transition: var(--transition-fast);
+    font-weight: 500;
 }
 
 .forgot-password:hover {
@@ -221,6 +227,18 @@ body {
     
     .login-title {
         font-size: 2rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .forgot-password {
+        order: 2;
+        text-align: center;
     }
     
     .forgot-password-content {
