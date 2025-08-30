@@ -282,6 +282,15 @@ function createInsightCard(insight) {
     
     const title = document.createElement('div');
     title.className = 'content-card-title';
+    
+    // Debug: 检查title数据
+    console.log('🔍 创建卡片标题:', {
+        insightTitle: insight.title,
+        insightUrl: insight.url,
+        hostname: new URL(insight.url).hostname,
+        finalTitle: insight.title || new URL(insight.url).hostname
+    });
+    
     title.textContent = insight.title || new URL(insight.url).hostname;
     
     const actions = document.createElement('div');
@@ -371,6 +380,9 @@ function createInsightCard(insight) {
     
     // 组装完整卡片
     card.appendChild(cardContent);
+    
+    // 使卡片可点击
+    makeCardClickable(card, insight);
     
     return card;
 }
@@ -665,12 +677,8 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
 function updateFilterButtonStates() {
     const buttons = filterButtons.querySelectorAll('.FilterButton');
     buttons.forEach(btn => {
-        const filterType = btn.dataset.filter;
-        if (filterType && currentFilters[filterType]) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
+        // Remove active class from all buttons - no purple highlighting
+        btn.classList.remove('active');
     });
 }
 
@@ -1047,6 +1055,12 @@ function bindEvents() {
                 // 使用正确的API端点创建insight
                 const result = await api.createInsight(insightData);
                 console.log('✅ 创建见解成功:', result);
+                console.log('🔍 检查返回的insight数据:', {
+                    title: result.data?.title,
+                    customTitle: customTitle,
+                    url: result.data?.url,
+                    fullData: result.data
+                });
                 
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
@@ -1141,6 +1155,9 @@ function bindEvents() {
         
         // 绑定用户资料编辑事件
         bindProfileEditEvents();
+        
+        // 绑定内容详情模态框事件
+        bindContentDetailModalEvents();
 }
 
 // 加载用户标签
@@ -2910,6 +2927,228 @@ function showNotification(message, type = 'success') {
             }
         }, 300);
     }, 3000);
+}
+
+// ===== CONTENT DETAIL MODAL FUNCTIONS =====
+
+let currentDetailInsight = null;
+
+// 使卡片可点击
+function makeCardClickable(card, insight) {
+    card.addEventListener('click', (e) => {
+        // 防止点击操作按钮时打开模态框
+        if (e.target.closest('.action-btn') || e.target.closest('.content-card-actions')) {
+            return;
+        }
+        
+        console.log('🖱️ 用户点击了内容卡片:', insight.title || insight.url);
+        openContentDetailModal(insight);
+    });
+}
+
+// 打开内容详情模态框
+function openContentDetailModal(insight) {
+    console.log('📖 打开内容详情模态框:', insight);
+    
+    currentDetailInsight = insight;
+    const modal = document.getElementById('contentDetailModal');
+    
+    if (!modal) {
+        console.error('❌ 找不到内容详情模态框元素');
+        return;
+    }
+    
+    // 填充模态框内容
+    populateModalContent(insight);
+    
+    // 显示模态框
+    modal.style.display = 'flex';
+    // 强制重绘以确保动画效果
+    modal.offsetHeight;
+    modal.classList.add('show');
+    
+    // 防止页面滚动
+    document.body.style.overflow = 'hidden';
+    
+    console.log('✅ 内容详情模态框已打开');
+}
+
+// 关闭内容详情模态框
+function closeContentDetailModal() {
+    console.log('❌ 关闭内容详情模态框');
+    
+    const modal = document.getElementById('contentDetailModal');
+    if (!modal) return;
+    
+    modal.classList.remove('show');
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        currentDetailInsight = null;
+    }, 300);
+}
+
+// 填充模态框内容
+function populateModalContent(insight) {
+    console.log('📝 填充模态框内容:', insight);
+    
+    // 标题
+    const titleElement = document.getElementById('contentDetailTitle');
+    if (titleElement) {
+        titleElement.textContent = insight.title || new URL(insight.url).hostname;
+    }
+    
+    // 图片
+    const imageContainer = document.getElementById('contentDetailImage');
+    if (imageContainer) {
+        imageContainer.innerHTML = '';
+        
+        if (insight.image_url) {
+            const img = document.createElement('img');
+            img.src = insight.image_url;
+            img.alt = insight.title || 'Content image';
+            img.onerror = function() {
+                imageContainer.classList.add('no-image');
+                this.style.display = 'none';
+            };
+            imageContainer.appendChild(img);
+            imageContainer.classList.remove('no-image');
+        } else {
+            imageContainer.classList.add('no-image');
+        }
+    }
+    
+    // 元数据（来源和日期）
+    const metaElement = document.getElementById('contentDetailMeta');
+    if (metaElement) {
+        const hostname = new URL(insight.url).hostname;
+        const date = new Date(insight.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        metaElement.innerHTML = `
+            <a href="${insight.url}" target="_blank" class="content-detail-source">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                ${hostname}
+            </a>
+            <span class="content-detail-date">${date}</span>
+        `;
+    }
+    
+    // 描述
+    const descriptionElement = document.getElementById('contentDetailDescription');
+    if (descriptionElement) {
+        descriptionElement.textContent = insight.description || `Content from ${new URL(insight.url).hostname}`;
+    }
+    
+    // 用户想法
+    const thoughtsElement = document.getElementById('contentDetailThoughts');
+    if (thoughtsElement) {
+        if (insight.thought && insight.thought.trim()) {
+            thoughtsElement.innerHTML = `
+                <div class="content-detail-thoughts-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Your Thoughts:
+                </div>
+                <div class="content-detail-thoughts-text">${insight.thought}</div>
+            `;
+            thoughtsElement.style.display = 'block';
+        } else {
+            thoughtsElement.style.display = 'none';
+        }
+    }
+    
+    // 标签
+    const tagsElement = document.getElementById('contentDetailTags');
+    if (tagsElement) {
+        tagsElement.innerHTML = '';
+        
+        if (insight.tags && insight.tags.length > 0) {
+            insight.tags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.className = 'content-detail-tag';
+                
+                let tagText = '';
+                if (typeof tag === 'string') {
+                    tagText = tag;
+                } else if (tag && typeof tag === 'object') {
+                    tagText = tag.name || tag.id || 'Unknown Tag';
+                } else {
+                    tagText = 'Invalid Tag';
+                }
+                
+                tagElement.textContent = tagText;
+                tagsElement.appendChild(tagElement);
+            });
+        }
+    }
+    
+    // 设置按钮事件
+    setupModalActions(insight);
+}
+
+// 设置模态框操作按钮
+function setupModalActions(insight) {
+    // 访问原始链接按钮
+    const visitBtn = document.getElementById('contentDetailVisit');
+    if (visitBtn) {
+        visitBtn.onclick = () => {
+            window.open(insight.url, '_blank');
+        };
+    }
+    
+    // 分享按钮
+    const shareBtn = document.getElementById('contentDetailShare');
+    if (shareBtn) {
+        shareBtn.onclick = () => {
+            shareInsight(insight);
+        };
+    }
+    
+    // 删除按钮
+    const deleteBtn = document.getElementById('contentDetailDelete');
+    if (deleteBtn) {
+        deleteBtn.onclick = () => {
+            if (confirm('Are you sure you want to delete this content?')) {
+                deleteInsight(insight.id);
+                closeContentDetailModal();
+            }
+        };
+    }
+}
+
+// 绑定模态框事件监听器
+function bindContentDetailModalEvents() {
+    const modal = document.getElementById('contentDetailModal');
+    const overlay = document.getElementById('contentDetailOverlay');
+    const closeBtn = document.getElementById('contentDetailClose');
+    
+    // 点击遮罩层关闭
+    if (overlay) {
+        overlay.addEventListener('click', closeContentDetailModal);
+    }
+    
+    // 点击关闭按钮
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeContentDetailModal);
+    }
+    
+    // ESC键关闭
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && modal.classList.contains('show')) {
+            closeContentDetailModal();
+        }
+    });
+    
+    console.log('✅ 内容详情模态框事件监听器已绑定');
 }
 
 // 暴露全局函数
