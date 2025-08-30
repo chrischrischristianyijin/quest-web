@@ -865,6 +865,40 @@ async function deleteInsight(id) {
     }
 }
 
+// 滚动状态管理工具
+const scrollManager = {
+    disable() {
+        // 保存当前滚动位置
+        this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // 禁用滚动
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${this.scrollPosition}px`;
+        document.body.style.width = '100%';
+        
+        console.log('📱 滚动已禁用，保存位置:', this.scrollPosition);
+    },
+    
+    enable() {
+        // 恢复滚动
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        
+        // 恢复滚动位置
+        if (this.scrollPosition !== undefined) {
+            window.scrollTo(0, this.scrollPosition);
+        }
+        
+        console.log('📱 滚动已恢复，恢复位置:', this.scrollPosition);
+        this.scrollPosition = undefined;
+    }
+};
+
 // 显示添加内容模态框
 function showAddContentModal() {
     console.log('🔍 显示添加内容模态框...');
@@ -879,8 +913,8 @@ function showAddContentModal() {
         // 添加show类
         addContentModal.classList.add('show');
         
-        // 隐藏body滚动
-        document.body.style.overflow = 'hidden';
+        // 使用滚动管理器禁用滚动
+        scrollManager.disable();
         
         console.log('✅ 弹窗样式已设置');
         console.log('🔍 弹窗当前样式:', {
@@ -906,7 +940,12 @@ function showAddContentModal() {
 function hideAddContentModal() {
     if (addContentModal) {
         addContentModal.classList.remove('show');
-        document.body.style.overflow = '';
+        addContentModal.style.display = 'none';
+        
+        // 使用滚动管理器恢复滚动
+        scrollManager.enable();
+        
+        console.log('✅ 模态框已关闭，页面滚动已恢复');
     }
 }
 
@@ -1009,12 +1048,6 @@ function bindEvents() {
                 const result = await api.createInsight(insightData);
                 console.log('✅ 创建见解成功:', result);
                 
-                // 等待一下再重新加载内容，确保后端处理完成
-                setTimeout(async () => {
-                    console.log('🔄 开始重新加载内容...');
-                    await loadUserInsights();
-                }, 1000);
-                
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
                 // 手动清空自定义字段
@@ -1024,6 +1057,18 @@ function bindEvents() {
                 
                 // 显示成功消息
                 showSuccessMessage('Content added successfully!');
+                
+                // 等待一下再重新加载内容，确保后端处理完成
+                setTimeout(async () => {
+                    console.log('🔄 开始重新加载内容...');
+                    try {
+                        await loadUserInsights();
+                        console.log('✅ 内容重新加载完成');
+                    } catch (error) {
+                        console.error('❌ 重新加载内容失败:', error);
+                        // 不要显示错误，因为内容已经添加成功了
+                    }
+                }, 1000);
                 
             } catch (error) {
                 console.error('❌ 添加内容失败:', error);
@@ -2557,8 +2602,8 @@ function openProfileEditModal() {
     profileEditModal.classList.add('show');
     profileEditModal.style.display = 'flex';
     
-    // 禁用背景滚动
-    document.body.style.overflow = 'hidden';
+    // 使用滚动管理器禁用滚动
+    scrollManager.disable();
     
     console.log('✅ 用户资料编辑模态框已打开');
 }
@@ -2581,8 +2626,8 @@ function closeProfileEditModal() {
         profileEditModal.style.display = 'none';
     }, 300);
     
-    // 恢复背景滚动
-    document.body.style.overflow = '';
+    // 使用滚动管理器恢复滚动
+    scrollManager.enable();
     
     // 重置表单
     if (profileEditForm) {
@@ -2679,8 +2724,31 @@ async function handleProfileUpdate(event) {
         const avatarFile = profileAvatarUpload?.files[0];
         if (avatarFile) {
             console.log('📸 上传新头像...');
-            avatarUrl = await uploadAvatar(avatarFile);
-            console.log('✅ 头像上传成功:', avatarUrl);
+            
+            // 显示上传进度
+            const saveBtn = document.getElementById('saveProfileEdit');
+            const originalText = saveBtn?.innerHTML;
+            if (saveBtn) {
+                saveBtn.innerHTML = '📤 Uploading Avatar...';
+                saveBtn.disabled = true;
+            }
+            
+            try {
+                avatarUrl = await uploadAvatar(avatarFile);
+                console.log('✅ 头像上传成功:', avatarUrl);
+                
+                // 恢复按钮状态
+                if (saveBtn) {
+                    saveBtn.innerHTML = '💾 Saving Profile...';
+                }
+            } catch (error) {
+                // 恢复按钮状态
+                if (saveBtn && originalText) {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }
+                throw error; // 重新抛出错误
+            }
         }
         
         // 更新用户资料
@@ -2752,8 +2820,21 @@ async function handleProfileUpdate(event) {
 async function uploadAvatar(file) {
     console.log('📸 开始上传头像文件...');
     
+    // 检查用户是否已登录
+    if (!currentUser || !currentUser.id) {
+        throw new Error('User not logged in');
+    }
+    
     const formData = new FormData();
     formData.append('avatar', file);
+    formData.append('user_id', currentUser.id);  // 添加必需的 user_id 参数
+    
+    console.log('📤 上传数据:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        userId: currentUser.id
+    });
     
     try {
         const response = await api.request(API_CONFIG.USER.UPLOAD_AVATAR, {
@@ -2761,16 +2842,33 @@ async function uploadAvatar(file) {
             body: formData
         });
         
+        console.log('📡 服务器响应:', response);
+        
         if (response.success && response.data && response.data.avatar_url) {
             console.log('✅ 头像上传成功:', response.data.avatar_url);
             return response.data.avatar_url;
         } else {
-            throw new Error('Avatar upload failed: Invalid response format');
+            throw new Error(response.message || 'Avatar upload failed: Invalid response format');
         }
         
     } catch (error) {
         console.error('❌ 头像上传失败:', error);
-        throw new Error(`Failed to upload avatar: ${error.message}`);
+        
+        // 提供更详细的错误信息
+        let errorMessage = 'Failed to upload avatar';
+        if (error.message) {
+            if (error.message.includes('422')) {
+                errorMessage = 'Invalid file format or missing required data';
+            } else if (error.message.includes('413')) {
+                errorMessage = 'File size too large (max 5MB)';
+            } else if (error.message.includes('401') || error.message.includes('403')) {
+                errorMessage = 'Authentication required. Please log in again.';
+            } else {
+                errorMessage = error.message;
+            }
+        }
+        
+        throw new Error(errorMessage);
     }
 }
 
