@@ -253,6 +253,60 @@
         </div>
     </div>
 
+    <!-- Content Detail Modal -->
+    <div class="content-detail-modal" id="contentDetailModal">
+        <div class="content-detail-overlay" id="contentDetailOverlay"></div>
+        <div class="content-detail-container">
+            <div class="content-detail-header">
+                <h2 class="content-detail-title" id="contentDetailTitle">Content Details</h2>
+                <button class="content-detail-close" id="contentDetailClose">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="content-detail-body">
+                <div class="content-detail-image" id="contentDetailImage">
+                    <!-- Image will be inserted here -->
+                </div>
+                <div class="content-detail-info">
+                    <div class="content-detail-meta" id="contentDetailMeta">
+                        <!-- Source and date info -->
+                    </div>
+                    <div class="content-detail-description" id="contentDetailDescription">
+                        <!-- Full description -->
+                    </div>
+                    <div class="content-detail-thoughts" id="contentDetailThoughts">
+                        <!-- User thoughts section -->
+                    </div>
+                    <div class="content-detail-tags" id="contentDetailTags">
+                        <!-- Tags will be inserted here -->
+                    </div>
+                </div>
+            </div>
+            <div class="content-detail-actions">
+                <button class="btn-primary" id="contentDetailVisit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Visit Original
+                </button>
+                <button class="btn-secondary" id="contentDetailShare">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Share
+                </button>
+                <button class="btn-secondary" id="contentDetailDelete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="/js/my-space.js"></script>
 </body>
 
