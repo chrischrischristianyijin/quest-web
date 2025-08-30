@@ -57,14 +57,23 @@ async function initPage() {
         
         console.log('✅ 认证状态正常，继续初始化...');
         
-        // 加载用户资料
-        await loadUserProfile();
+        // 并行加载所有数据以提高性能
+        const [profileResult, insightsResult, tagsResult] = await Promise.allSettled([
+            loadUserProfile(),
+            loadUserInsights(),
+            loadUserTags()
+        ]);
         
-        // 加载用户insights
-        await loadUserInsights();
-        
-        // 加载用户标签
-        await loadUserTags();
+        // 检查每个加载结果并记录错误
+        if (profileResult.status === 'rejected') {
+            console.error('❌ 用户资料加载失败:', profileResult.reason);
+        }
+        if (insightsResult.status === 'rejected') {
+            console.error('❌ 用户insights加载失败:', insightsResult.reason);
+        }
+        if (tagsResult.status === 'rejected') {
+            console.error('❌ 用户标签加载失败:', tagsResult.reason);
+        }
         
         // 初始化过滤器按钮
         initFilterButtons();
@@ -142,19 +151,37 @@ async function loadUserProfile() {
 function updateUserProfileUI() {
     if (!currentUser) return;
     
-    // 更新头像
-    if (currentUser.avatar_url && profileAvatar) {
-        const imgElement = profileAvatar.querySelector('img');
-        if (imgElement) {
-            imgElement.src = currentUser.avatar_url;
-        }
+    // Hide skeleton and show actual content
+    const profileContainer = document.getElementById('profileContainer');
+    const avatarSkeleton = document.getElementById('avatarSkeleton');
+    const usernameSkeleton = document.getElementById('usernameSkeleton');
+    const userAvatar = document.getElementById('userAvatar');
+    const actualUsername = document.getElementById('actualUsername');
+    
+    if (profileContainer) {
+        profileContainer.classList.add('profile-loaded');
     }
     
-    // 更新用户名，但保留编辑提示
-    if (usernamePlaceholder) {
-        const editHint = usernamePlaceholder.querySelector('.edit-hint');
-        const hintText = editHint ? editHint.outerHTML : '<span class="edit-hint">Click to edit</span>';
-        usernamePlaceholder.innerHTML = `${currentUser.nickname || currentUser.email || 'User'} ${hintText}`;
+    // Hide skeletons
+    if (avatarSkeleton) {
+        avatarSkeleton.style.display = 'none';
+    }
+    if (usernameSkeleton) {
+        usernameSkeleton.style.display = 'none';
+    }
+    
+    // 更新头像
+    if (userAvatar) {
+        if (currentUser.avatar_url) {
+            userAvatar.src = currentUser.avatar_url;
+        }
+        userAvatar.style.display = 'block';
+    }
+    
+    // 更新用户名
+    if (actualUsername) {
+        actualUsername.textContent = currentUser.nickname || currentUser.email || 'User';
+        actualUsername.style.display = 'inline';
     }
     
     console.log('✅ 用户资料UI已更新');
@@ -221,19 +248,31 @@ async function loadUserInsights() {
 function renderInsights() {
     if (!contentCards) return;
     
-    contentCards.innerHTML = '';
+    // Hide loading skeleton
+    const loadingSkeleton = document.getElementById('loadingSkeleton');
+    if (loadingSkeleton) {
+        loadingSkeleton.style.display = 'none';
+    }
+    
+    // Mark content as loaded
+    contentCards.classList.add('content-loaded');
+    
+    // Clear existing content cards (but keep skeleton for next time)
+    const existingCards = contentCards.querySelectorAll('.content-card, .empty-state');
+    existingCards.forEach(card => card.remove());
     
     if (currentInsights.length === 0) {
-        contentCards.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📚</div>
-                <h3>No content collected yet</h3>
-                <p>Start adding your favorite media content to your collection</p>
-                <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
-                    Add Content
-                </button>
-            </div>
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.innerHTML = `
+            <div class="empty-state-icon">📚</div>
+            <h3>No content collected yet</h3>
+            <p>Start adding your favorite media content to your collection</p>
+            <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
+                Add Content
+            </button>
         `;
+        contentCards.appendChild(emptyState);
         return;
     }
     
@@ -468,6 +507,15 @@ async function initFilterButtons() {
                 options: []
             }
         ];
+        
+        // Hide filter loading skeleton
+        const filterLoading = document.getElementById('filterLoading');
+        if (filterLoading) {
+            filterLoading.style.display = 'none';
+        }
+        
+        // Mark filters as loaded
+        filterButtons.classList.add('filters-loaded');
         
         // 创建筛选按钮
         mainFilterButtons.forEach(filterConfig => {

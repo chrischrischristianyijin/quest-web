@@ -1673,6 +1673,147 @@ body .add-content-modal-content {
     to { transform: rotate(360deg); }
 }
 
+/* Loading Skeleton Styles */
+.loading-skeleton {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.skeleton-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+    position: relative;
+    height: 400px;
+    animation: skeleton-pulse 1.5s ease-in-out infinite alternate;
+}
+
+.skeleton-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 200px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    opacity: 0.3;
+}
+
+.skeleton-card::after {
+    content: '';
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    height: 100px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 2s infinite;
+    border-radius: 8px;
+}
+
+@keyframes skeleton-pulse {
+    0% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 0.9;
+    }
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Hide skeleton when content is loaded */
+.content-loaded .loading-skeleton {
+    display: none;
+}
+
+/* Filter Button Loading Skeleton */
+.filter-loading {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.filter-skeleton-btn {
+    height: 40px;
+    width: 120px;
+    background: linear-gradient(
+        90deg,
+        rgba(139, 92, 246, 0.1) 0%,
+        rgba(139, 92, 246, 0.2) 50%,
+        rgba(139, 92, 246, 0.1) 100%
+    );
+    background-size: 200% 100%;
+    border-radius: 25px;
+    animation: skeleton-shimmer 2s infinite;
+}
+
+/* Hide filter loading when buttons are loaded */
+.filters-loaded .filter-loading {
+    display: none;
+}
+
+/* Avatar Loading Skeleton */
+.avatar-skeleton {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(
+        90deg,
+        rgba(139, 92, 246, 0.1) 0%,
+        rgba(139, 92, 246, 0.3) 50%,
+        rgba(139, 92, 246, 0.1) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 2s infinite;
+    border: 4px solid white;
+    box-shadow: var(--shadow-medium);
+}
+
+/* Username Loading Skeleton */
+.username-skeleton {
+    width: 150px;
+    height: 28px;
+    border-radius: 14px;
+    background: linear-gradient(
+        90deg,
+        rgba(139, 92, 246, 0.1) 0%,
+        rgba(139, 92, 246, 0.2) 50%,
+        rgba(139, 92, 246, 0.1) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 2s infinite;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Hide avatar skeletons when profile is loaded */
+.profile-loaded .avatar-skeleton,
+.profile-loaded .username-skeleton {
+    display: none;
+}
+
+/* Show actual content when profile is loaded */
+.profile-loaded #userAvatar,
+.profile-loaded #actualUsername {
+    display: block !important;
+}
+
 /* Tag Selector Styles */
 .tag-selector {
     margin-top: 8px;
