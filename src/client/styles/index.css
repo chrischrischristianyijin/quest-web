@@ -4,6 +4,7 @@
 /* 全局字体设置 */
 body {
     font-family: 'Rubik', sans-serif;
+    scroll-behavior: smooth;
 }
 
 /* 导航栏 */
@@ -190,8 +191,8 @@ body {
     border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Hero 区域 */
-.hero-section {
+/* Home 区域 */
+.home-section {
     min-height: 80vh;
     display: flex;
     align-items: center;
@@ -204,7 +205,7 @@ body {
     overflow: hidden;
 }
 
-.hero-section::before {
+.home-section::before {
     content: '';
     position: absolute;
     top: 0;
@@ -353,8 +354,8 @@ body {
     }
 }
 
-/* Extension Showcase Section */
-.extension-showcase {
+/* Extension Section */
+.extension-section {
     min-height: 120vh;
     padding: 80px 2rem 200px 2rem;
     background: linear-gradient(135deg, rgba(248, 246, 250, 0.8) 0%, rgba(240, 235, 245, 0.9) 100%);
@@ -365,7 +366,7 @@ body {
     margin-top: -50px;
 }
 
-.extension-showcase::before {
+.extension-section::before {
     content: '';
     position: absolute;
     width: 800px;
@@ -379,7 +380,7 @@ body {
     pointer-events: none;
 }
 
-.showcase-container {
+.extension-container {
     max-width: 1400px;
     margin: 0 auto;
     display: grid;
@@ -621,15 +622,15 @@ body {
     }
 }
 
-/* 特性区域 */
-.features-section {
+/* Explore 区域 */
+.explore-section {
     padding: 40px 2rem 120px 2rem;
     background: rgba(248, 246, 250, 0.5);
     position: relative;
     z-index: 5;
 }
 
-.features-container {
+.explore-container {
     max-width: 1400px;
     margin: 0 auto;
 }
@@ -774,8 +775,8 @@ body {
     box-shadow: var(--shadow-heavy);
 }
 
-/* CTA 区域 */
-.cta-section {
+/* Join 区域 */
+.join-section {
     background: var(--quest-gradient);
     color: white;
     padding: 100px 2rem;
@@ -783,7 +784,7 @@ body {
     margin: 0;
 }
 
-.cta-content {
+.join-content {
     max-width: 800px;
     margin: 0 auto;
 }
@@ -821,6 +822,137 @@ body {
 }
 
 .cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-medium);
+}
+
+/* More Section */
+.more-section {
+    background: linear-gradient(135deg, rgba(248, 246, 250, 0.9) 0%, rgba(240, 235, 245, 0.95) 100%);
+    padding: 100px 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.more-section::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 300px;
+    right: 100px;
+    top: 50px;
+    background: rgba(98, 71, 193, 0.15);
+    filter: blur(40px);
+    z-index: 1;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.more-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+}
+
+.more-content {
+    text-align: center;
+}
+
+.more-title {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    font-family: 'Rubik', sans-serif;
+    background: linear-gradient(135deg, var(--quest-purple) 0%, var(--quest-light-purple) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.more-description {
+    font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+    color: var(--quest-purple);
+    margin-bottom: 3rem;
+    line-height: 1.6;
+    opacity: 0.9;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+    .more-features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    @media (max-width: 768px) {
+        .more-features {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        
+        .more-feature {
+            padding: 1.5rem;
+        }
+    }
+
+.more-feature {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: var(--shadow-light);
+    transition: var(--transition-normal);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+}
+
+.more-feature:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-medium);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.more-feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.more-feature h3 {
+    font-size: 1.3rem;
+    color: var(--quest-purple);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.more-feature p {
+    color: var(--quest-purple);
+    line-height: 1.6;
+    opacity: 0.8;
+    font-size: 1rem;
+}
+
+.more-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    background: var(--quest-gradient);
+    color: white;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 18px;
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-light);
+    border: none;
+}
+
+.more-cta:hover {
     transform: translateY(-3px);
     box-shadow: var(--shadow-medium);
 }
@@ -872,7 +1004,7 @@ body {
 }
 
 /* 动画效果 */
-.hero-content > * {
+.home-content > * {
     animation: fadeInUp 1s ease forwards;
     opacity: 0;
 }
@@ -899,7 +1031,7 @@ body {
     opacity: 0;
 }
 
-.showcase-content > * {
+.extension-content > * {
     animation: fadeInUp 1s ease forwards;
     opacity: 0;
 }
@@ -924,7 +1056,7 @@ body {
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
-    .showcase-container {
+    .extension-container {
         grid-template-columns: 1fr;
         gap: 60px;
     }
@@ -968,13 +1100,13 @@ body {
         padding-top: 70px;
     }
 
-    .hero-section {
+    .home-section {
         margin-top: 70px;
         min-height: calc(100vh - 70px);
         padding: 2rem 1rem 1rem;
     }
 
-    .features-section {
+    .explore-section {
         padding: 80px 1rem;
     }
 
@@ -993,11 +1125,11 @@ body {
         border-radius: 24px;
     }
 
-    .extension-showcase {
+    .extension-section {
         padding: 60px 1rem;
     }
 
-    .showcase-container {
+    .extension-container {
         gap: 40px;
     }
 
@@ -1014,7 +1146,11 @@ body {
         height: 300px;
     }
 
-    .cta-section {
+    .join-section {
+        padding: 80px 1rem;
+    }
+
+    .more-section {
         padding: 80px 1rem;
     }
 
@@ -1029,7 +1165,7 @@ body {
 }
 
 @media (max-width: 480px) {
-    .hero-section {
+    .home-section {
         padding: 1.5rem 1rem 2rem;
         min-height: 60vh;
     }
