@@ -17,7 +17,11 @@
                 <img src="/public/logo.png" alt="Quest">
             </a>
             <div class="nav-links" id="navLinks">
-                <!-- Navigation links will be dynamically updated -->
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#extension" class="nav-link">Extension</a>
+                <a href="#explore" class="nav-link">Explore</a>
+                <a href="#join" class="nav-link">Join</a>
+                <a href="#more" class="nav-link">More</a>
             </div>
             <div class="auth-buttons" id="authButtons">
                 <!-- Auth buttons will be dynamically updated -->
@@ -26,8 +30,8 @@
     </nav>
 
     <main class="main-content">
-        <!-- Hero Section -->
-        <section class="hero-section">
+        <!-- Home Section -->
+        <section id="home" class="home-section">
             <div class="hero-content">
                 <h1 class="hero-title" id="welcomeTitle">Welcome to Quest</h1>
                 <p class="hero-subtitle">YOUR SECOND BRAIN</p>
@@ -40,9 +44,9 @@
             </div>
         </section>
 
-        <!-- Extension Showcase Section -->
-        <section class="extension-showcase">
-            <div class="showcase-container">
+        <!-- Extension Section -->
+        <section id="extension" class="extension-section">
+            <div class="extension-container">
                 <div class="showcase-content">
                     <h2 class="showcase-title">Click Less. Remember More.</h2>
                     <p class="showcase-description">
@@ -85,9 +89,9 @@
             </div>
         </section>
 
-        <!-- Features Section -->
-        <section class="features-section">
-            <div class="features-container">
+        <!-- Explore Section -->
+        <section id="explore" class="explore-section">
+            <div class="explore-container">
                 <div class="section-header">
                     <h2 class="section-title">DISCOVER. ORGANIZE. CONNECT.</h2>
                     <p class="section-description">
@@ -129,9 +133,9 @@
             </div>
         </section>
 
-        <!-- CTA Section -->
-        <section class="cta-section">
-            <div class="cta-content">
+        <!-- Join Section -->
+        <section id="join" class="join-section">
+            <div class="join-content">
                 <h2 class="cta-title">Ready to Transform Your Learning?</h2>
                 <p class="cta-description">
                     Transform scattered content into a cohesive intellectual journey. Curate your world, connect through knowledge.
@@ -142,6 +146,41 @@
                         <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </a>
+            </div>
+        </section>
+
+        <!-- More Section -->
+        <section id="more" class="more-section">
+            <div class="more-container">
+                <div class="more-content">
+                    <h2 class="more-title">Discover More with Quest</h2>
+                    <p class="more-description">
+                        Explore advanced features and tools to enhance your knowledge journey
+                    </p>
+                    <div class="more-features">
+                        <div class="more-feature">
+                            <div class="more-feature-icon">📚</div>
+                            <h3>Advanced Search</h3>
+                            <p>Find exactly what you need with intelligent search algorithms</p>
+                        </div>
+                        <div class="more-feature">
+                            <div class="more-feature-icon">🔗</div>
+                            <h3>Smart Connections</h3>
+                            <p>Discover hidden relationships between your saved content</p>
+                        </div>
+                        <div class="more-feature">
+                            <div class="more-feature-icon">📊</div>
+                            <h3>Analytics Dashboard</h3>
+                            <p>Track your learning progress and insights</p>
+                        </div>
+                    </div>
+                    <a href="/signup" class="more-cta">
+                        Explore All Features
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
+                </div>
             </div>
         </section>
     </main>
