@@ -3181,6 +3181,7 @@ body .tag-selector-dropdown.open .tag-selector-options {
     margin-bottom: 32px;
     padding-bottom: 24px;
     border-bottom: 1px solid var(--border-light);
+    width: 100%;
 }
 
 .user-info {
@@ -3298,6 +3299,9 @@ body .tag-selector-dropdown.open .tag-selector-options {
     font-weight: 500;
     cursor: pointer;
     transition: var(--transition-normal);
+    flex-shrink: 0;
+    position: absolute;
+    right: 0;
 }
 
 .share-my-space-btn:hover {
@@ -3454,8 +3458,21 @@ body .tag-selector-dropdown.open .tag-selector-options {
     position: relative;
 }
 
+.ai-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.ai-summary-header .section-title {
+    margin: 0;
+}
+
 .ai-summary-content {
-    position: relative;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
 }
 
 .ai-summary-text {
@@ -3463,19 +3480,17 @@ body .tag-selector-dropdown.open .tag-selector-options {
     line-height: 1.6;
     color: var(--text-secondary);
     font-style: italic;
-    margin-bottom: 16px;
+    margin: 0;
 }
 
 .ai-summary-date {
-    position: absolute;
-    top: 0;
-    right: 0;
     background: var(--quest-purple);
     color: white;
     padding: 4px 8px;
     border-radius: var(--radius-sm);
     font-size: 0.75rem;
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 /* Quest Suggestions Section */
@@ -3667,12 +3682,870 @@ body .tag-selector-dropdown.open .tag-selector-options {
     75% { transform: translateX(2px) rotate(0.5deg); }
 }
 
+/* Delete Button for Content Cards */
+.content-card-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 32px;
+    height: 32px;
+    background: #ff0000;
+    border: 3px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+.content-card-delete-btn:hover {
+    background: #cc0000;
+    transform: scale(1.1);
+}
+
+.content-card-delete-btn svg {
+    width: 16px;
+    height: 16px;
+    color: white;
+}
+
+/* Show delete button when in edit mode */
+.edit-mode .content-card-delete-btn {
+    display: flex;
+}
+
 
 
 /* Make content cards relative positioned for delete button positioning */
 .content-card {
     position: relative;
     overflow: visible;
+}
+
+/* ===== STACK FUNCTIONALITY STYLES ===== */
+
+/* Drag and Drop Styles */
+.content-card.dragging {
+    opacity: 0.3;
+    transform: scale(0.98);
+    z-index: 1000;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.content-card.stack-hover {
+    background: rgba(139, 92, 246, 0.1);
+    border: 2px dashed var(--quest-purple);
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+}
+
+.drag-ghost {
+    border-radius: var(--radius-lg) !important;
+    background: white !important;
+}
+
+/* Stack Card Styles */
+.stack-card {
+    border: 2px solid var(--quest-purple);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+.stack-card::before {
+    background: linear-gradient(90deg, var(--quest-purple), var(--quest-blue), var(--quest-purple));
+    transform: scaleX(1);
+}
+
+.stack-indicator {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--quest-purple);
+    color: white;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+}
+
+.stack-count {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.stack-title {
+    color: var(--quest-purple) !important;
+    font-weight: 700;
+}
+
+/* Stack Expansion Modal */
+.stack-expansion-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stack-expansion-modal.show {
+    opacity: 1;
+}
+
+.stack-expansion-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+}
+
+.stack-expansion-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.stack-expansion-modal.show .stack-expansion-content {
+    transform: translateY(0);
+}
+
+/* Stack Header */
+.stack-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-light);
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.stack-info {
+    flex: 1;
+}
+
+.stack-name {
+    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--quest-purple);
+}
+
+.stack-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stack-count {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.stack-dates {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.stack-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.stack-edit-name-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--quest-purple);
+    border-radius: 8px;
+    background: white;
+    color: var(--quest-purple);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-normal);
+}
+
+.stack-edit-name-btn:hover {
+    background: var(--quest-purple);
+    color: white;
+}
+
+.stack-close-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--quest-purple);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-normal);
+}
+
+.stack-close-btn:hover {
+    background: var(--quest-purple);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Stack Cards Grid */
+.stack-cards-grid {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.stack-expanded-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: var(--transition-normal);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.stack-expanded-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.stack-expanded-card.shake {
+    animation: shake 0.5s ease-in-out infinite;
+}
+
+.stack-expanded-card.dragging {
+    opacity: 0.3;
+    transform: scale(0.98);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.stack-expanded-card.removing-from-stack {
+    border: 2px solid #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.stack-card-image-container {
+    width: 100%;
+    height: 150px;
+    overflow: hidden;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stack-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.stack-expanded-card:hover .stack-card-image {
+    transform: scale(1.05);
+}
+
+.stack-card-content {
+    padding: 16px;
+}
+
+.stack-card-title {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.stack-card-description {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Stack Footer */
+.stack-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+    background: #f8fafc;
+    display: flex;
+    justify-content: center;
+}
+
+.stack-edit-mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 2px solid var(--quest-light-purple);
+    background: white;
+    color: var(--quest-purple);
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: var(--transition-normal);
+}
+
+.stack-edit-mode-btn:hover {
+    border-color: var(--quest-purple);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
+}
+
+.stack-edit-mode-btn.active {
+    background: var(--quest-purple);
+    color: white;
+    border-color: var(--quest-purple);
+    box-shadow: var(--shadow-medium);
+}
+
+.stack-edit-mode-btn svg {
+    transition: transform 0.3s ease;
+}
+
+.stack-edit-mode-btn.active svg {
+    transform: rotate(45deg);
+}
+
+/* Stack Edit Mode Styles */
+.stack-expansion-modal.stack-edit-mode .stack-expanded-card {
+    cursor: grab;
+}
+
+.stack-expansion-modal.stack-edit-mode .stack-expanded-card:active {
+    cursor: grabbing;
+}
+
+/* Mobile Responsive for Stack Modal */
+@media (max-width: 768px) {
+    .stack-expansion-content {
+        width: 95%;
+        max-height: 95vh;
+        margin: 10px;
+    }
+    
+    .stack-header {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .stack-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .stack-cards-grid {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 16px;
+    }
+    
+    .stack-card-image-container {
+        height: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stack-expansion-content {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        margin: 0;
+    }
+    
+    .stack-header {
+        padding: 16px;
+    }
+    
+    .stack-name {
+        font-size: 1.25rem;
+    }
+    
+    .stack-cards-grid {
+        padding: 12px;
+        max-height: calc(100vh - 200px);
+    }
+}
+
+/* ===== INLINE STACK EXPANSION STYLES ===== */
+
+.stack-expansion-view {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+.stack-header-inline {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 0;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.stack-info-inline {
+    flex: 1;
+}
+
+.stack-name-inline {
+    margin: 0 0 16px 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--quest-purple);
+    line-height: 1.2;
+}
+
+.stack-meta-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stack-created,
+.stack-modified {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.stack-actions-inline {
+    display: flex;
+    align-items: flex-start;
+}
+
+.stack-edit-name-btn-inline {
+    padding: 8px 16px;
+    border: 1px solid var(--quest-purple);
+    border-radius: 8px;
+    background: white;
+    color: var(--quest-purple);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-normal);
+}
+
+.stack-edit-name-btn-inline:hover {
+    background: var(--quest-purple);
+    color: white;
+}
+
+.stack-cards-grid-inline {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: 32px;
+}
+
+.stack-footer-inline {
+    display: flex;
+    justify-content: center;
+    padding: 24px 0;
+    border-top: 1px solid var(--border-light);
+}
+
+.stack-edit-mode-btn-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: 2px solid var(--quest-light-purple);
+    background: white;
+    color: var(--quest-purple);
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: var(--transition-normal);
+}
+
+.stack-edit-mode-btn-inline:hover {
+    border-color: var(--quest-purple);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
+}
+
+.stack-edit-mode-btn-inline.active {
+    background: var(--quest-purple);
+    color: white;
+    border-color: var(--quest-purple);
+    box-shadow: var(--shadow-medium);
+}
+
+.stack-edit-mode-btn-inline svg {
+    transition: transform 0.3s ease;
+}
+
+.stack-edit-mode-btn-inline.active svg {
+    transform: rotate(45deg);
+}
+
+.stack-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 2px solid var(--quest-light-purple);
+    background: white;
+    color: var(--quest-purple);
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: var(--transition-normal);
+    margin-right: 15px;
+}
+
+.stack-back-btn:hover {
+    border-color: var(--quest-purple);
+    background: var(--quest-purple);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
+}
+
+.stack-back-btn svg {
+    transition: transform 0.3s ease;
+}
+
+.stack-back-btn:hover svg {
+    transform: translateX(-2px);
+}
+
+/* Stack Edit Mode Inline Styles */
+.stack-expansion-view.stack-edit-mode-inline .stack-expanded-card {
+    cursor: grab;
+}
+
+.stack-expansion-view.stack-edit-mode-inline .stack-expanded-card:active {
+    cursor: grabbing;
+}
+
+/* Mobile Responsive for Inline Stack */
+@media (max-width: 768px) {
+    .stack-header-inline {
+        flex-direction: column;
+        gap: 16px;
+        text-align: left;
+        align-items: stretch;
+    }
+    
+    .stack-name-inline {
+        font-size: 1.5rem;
+    }
+    
+    .stack-actions-inline {
+        justify-content: flex-start;
+    }
+    
+    .stack-cards-grid-inline {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stack-header-inline {
+        padding: 16px 0;
+        margin-bottom: 24px;
+    }
+    
+    .stack-name-inline {
+        font-size: 1.25rem;
+        margin-bottom: 12px;
+    }
+    
+    .stack-meta-inline {
+        gap: 6px;
+    }
+    
+    .stack-created,
+    .stack-modified {
+        font-size: 0.8125rem;
+    }
+    
+    .stack-footer-inline {
+        padding: 16px 0;
+    }
+}
+
+/* ===== HORIZONTAL STACK EXPANSION STYLES ===== */
+
+.stack-expanded {
+    grid-column: 1 / -1; /* Take full width of the grid */
+    width: 100%;
+    max-width: none;
+    border: 2px solid var(--quest-purple);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+}
+
+.stack-expanded-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.stack-info-horizontal {
+    flex: 1;
+}
+
+.stack-name-horizontal {
+    margin: 0 0 12px 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--quest-purple);
+    line-height: 1.2;
+}
+
+.stack-meta-horizontal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stack-actions-horizontal {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.stack-edit-name-btn-horizontal {
+    padding: 6px 12px;
+    border: 1px solid var(--quest-purple);
+    border-radius: 6px;
+    background: white;
+    color: var(--quest-purple);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-normal);
+}
+
+.stack-edit-name-btn-horizontal:hover {
+    background: var(--quest-purple);
+    color: white;
+}
+
+.stack-collapse-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--quest-purple);
+    border-radius: 50%;
+    background: white;
+    color: var(--quest-purple);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-normal);
+}
+
+.stack-collapse-btn:hover {
+    background: var(--quest-purple);
+    color: white;
+    transform: scale(1.1);
+}
+
+.stack-cards-horizontal {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 8px 0;
+    margin: 16px 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--quest-purple) transparent;
+}
+
+.stack-cards-horizontal::-webkit-scrollbar {
+    height: 8px;
+}
+
+.stack-cards-horizontal::-webkit-scrollbar-track {
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 4px;
+}
+
+.stack-cards-horizontal::-webkit-scrollbar-thumb {
+    background: var(--quest-purple);
+    border-radius: 4px;
+}
+
+.stack-horizontal-card {
+    flex: 0 0 350px;
+    /* Use exact same styles as normal content cards */
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-light);
+    transition: var(--transition-normal);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.stack-horizontal-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-medium);
+}
+
+.stack-horizontal-card.shake {
+    animation: shake 0.5s ease-in-out infinite;
+}
+
+.stack-horizontal-card.dragging {
+    opacity: 0.3;
+    transform: scale(0.98);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.stack-horizontal-card.removing-from-stack {
+    border: 2px solid #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.stack-footer-horizontal {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+}
+
+.stack-edit-mode-btn-horizontal {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--quest-light-purple);
+    background: white;
+    color: var(--quest-purple);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: var(--transition-normal);
+}
+
+.stack-edit-mode-btn-horizontal:hover {
+    border-color: var(--quest-purple);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-light);
+}
+
+.stack-edit-mode-btn-horizontal.active {
+    background: var(--quest-purple);
+    color: white;
+    border-color: var(--quest-purple);
+    box-shadow: var(--shadow-medium);
+}
+
+.stack-edit-mode-btn-horizontal svg {
+    transition: transform 0.3s ease;
+}
+
+.stack-edit-mode-btn-horizontal.active svg {
+    transform: rotate(45deg);
+}
+
+/* Stack Edit Mode Horizontal Styles */
+.stack-expanded.stack-edit-mode-horizontal .stack-horizontal-card {
+    cursor: grab;
+}
+
+.stack-expanded.stack-edit-mode-horizontal .stack-horizontal-card:active {
+    cursor: grabbing;
+}
+
+/* Mobile Responsive for Horizontal Stack */
+@media (max-width: 768px) {
+    .stack-expanded {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .stack-expanded-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .stack-name-horizontal {
+        font-size: 1.25rem;
+        margin-bottom: 8px;
+    }
+    
+    .stack-actions-horizontal {
+        justify-content: flex-start;
+    }
+    
+    .stack-horizontal-card {
+        flex: 0 0 280px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stack-expanded {
+        padding: 12px;
+    }
+    
+    .stack-name-horizontal {
+        font-size: 1.125rem;
+    }
+    
+    .stack-horizontal-card {
+        flex: 0 0 250px;
+    }
 }
 
 
@@ -3739,4 +4612,146 @@ body .tag-selector-dropdown.open .tag-selector-options {
     justify-content: center;
     align-items: center;
     margin-top: auto;
+}
+
+/* Tag Edit Modal Styles */
+.tag-edit-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.tag-edit-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.tag-edit-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.tag-edit-modal .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--quest-purple);
+}
+
+.tag-edit-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.tag-edit-modal .modal-close:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.tag-edit-modal .modal-body {
+    padding: 24px;
+}
+
+.tag-edit-modal .modal-description {
+    margin: 0 0 20px 0;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.tag-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.tag-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+}
+
+.tag-option input[type="checkbox"] {
+    display: none;
+}
+
+.tag-option-label {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.tag-option input[type="checkbox"]:checked + .tag-option-label {
+    border-color: white;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+    transform: scale(1.05);
+}
+
+.tag-edit-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.tag-edit-modal .modal-btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.tag-edit-modal .modal-btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.tag-edit-modal .modal-btn-secondary:hover {
+    background: #e5e7eb;
+}
+
+.tag-edit-modal .modal-btn-primary {
+    background: var(--quest-purple);
+    color: white;
+}
+
+.tag-edit-modal .modal-btn-primary:hover {
+    background: var(--quest-dark-purple);
 }
