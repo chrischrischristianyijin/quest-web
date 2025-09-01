@@ -353,6 +353,100 @@ class ApiService {
         return await this.request(endpoint);
     }
 
+    // ===== 堆叠管理接口 =====
+    
+    // 获取用户所有堆叠
+    async getUserStacks(userId = null) {
+        let endpoint = API_CONFIG.STACKS.LIST;
+        const params = new URLSearchParams();
+        
+        if (userId) params.append('user_id', userId);
+        
+        if (params.toString()) {
+            endpoint += `?${params.toString()}`;
+        }
+        
+        return await this.request(endpoint);
+    }
+
+    // 获取单个堆叠详情
+    async getStack(stackId) {
+        return await this.request(`${API_CONFIG.STACKS.GET}/${stackId}`);
+    }
+
+    // 创建新堆叠
+    async createStack(stackData) {
+        return await this.request(API_CONFIG.STACKS.CREATE, {
+            method: 'POST',
+            body: JSON.stringify(stackData)
+        });
+    }
+
+    // 更新堆叠信息
+    async updateStack(stackId, stackData) {
+        return await this.request(`${API_CONFIG.STACKS.UPDATE}/${stackId}`, {
+            method: 'PUT',
+            body: JSON.stringify(stackData)
+        });
+    }
+
+    // 删除堆叠
+    async deleteStack(stackId) {
+        return await this.request(`${API_CONFIG.STACKS.DELETE}/${stackId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // 获取堆叠内容 (直接从insights表查询)
+    async getStackItems(stackId) {
+        return await this.request(`${API_CONFIG.INSIGHTS.LIST}?stack_id=${stackId}`);
+    }
+
+    // 添加项目到堆叠 (更新insight的stack_id)
+    async addItemToStack(stackId, insightId) {
+        return await this.request(`${API_CONFIG.INSIGHTS.UPDATE}/${insightId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                stack_id: stackId
+            })
+        });
+    }
+
+    // 移动项目到另一个堆叠 (更新insight的stack_id)
+    async moveItemToStack(newStackId, insightId) {
+        return await this.request(`${API_CONFIG.INSIGHTS.UPDATE}/${insightId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                stack_id: newStackId
+            })
+        });
+    }
+
+    // 从堆叠移除项目 (设置stack_id为null)
+    async removeItemFromStack(stackId, insightId) {
+        return await this.request(`${API_CONFIG.INSIGHTS.UPDATE}/${insightId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                stack_id: null
+            })
+        });
+    }
+
+    // 获取用户所有堆叠 (包含insights数据)
+    async getUserStacksWithInsights(userId = null) {
+        let endpoint = API_CONFIG.STACKS.LIST;
+        const params = new URLSearchParams();
+        
+        if (userId) params.append('user_id', userId);
+        params.append('include_insights', 'true');
+        
+        if (params.toString()) {
+            endpoint += `?${params.toString()}`;
+        }
+        
+        return await this.request(endpoint);
+    }
+
     // 提取网页元数据
     async extractMetadata(url) {
         return await this.request(API_CONFIG.METADATA.EXTRACT, {

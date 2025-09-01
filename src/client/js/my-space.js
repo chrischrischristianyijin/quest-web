@@ -26,6 +26,11 @@ let currentFilters = {
     type: 'all'        // 内容类型
 };
 let isEditMode = false; // Edit mode state
+let draggedCard = null;
+let dragOffset = { x: 0, y: 0 };
+let stackHoverTimeout = null;
+let stacks = new Map(); // Store stacks data
+let stackIdCounter = 1;
 
 
 // 页面初始化
@@ -111,6 +116,71 @@ async function initPage() {
         }
         
         showErrorMessage('页面初始化失败，请刷新重试');
+    }
+}
+
+// 加载用户stacks
+async function loadUserStacks() {
+    try {
+        console.log('📚 开始加载用户stacks...');
+        
+        // 检查认证状态
+        if (!auth.checkAuth()) {
+            console.warn('⚠️ 用户未认证，跳过stacks加载');
+            return;
+        }
+        
+        const response = await api.getUserStacksWithInsights();
+        
+        if (response.success && response.data) {
+            // 将API返回的stacks数据转换为本地格式
+            const apiStacks = response.data;
+            stacks.clear(); // 清空现有stacks
+            
+            apiStacks.forEach(apiStack => {
+                const stackData = {
+                    id: apiStack.id.toString(),
+                    name: apiStack.name || 'Stack',
+                    cards: apiStack.insights || [], // API直接返回insights数组
+                    createdAt: apiStack.created_at,
+                    modifiedAt: apiStack.modified_at,
+                    isExpanded: false
+                };
+                
+                stacks.set(stackData.id, stackData);
+            });
+            
+            // 更新stackIdCounter
+            if (apiStacks.length > 0) {
+                const maxId = Math.max(...apiStacks.map(s => parseInt(s.id)));
+                stackIdCounter = maxId + 1;
+            }
+            
+            // 验证one-to-one约束 (现在由数据库保证)
+            const allInsightIds = new Set();
+            let hasDuplicates = false;
+            
+            stacks.forEach(stack => {
+                stack.cards.forEach(card => {
+                    if (allInsightIds.has(card.id)) {
+                        console.warn('⚠️ 发现重复的insight ID:', card.id, '违反one-to-one约束');
+                        hasDuplicates = true;
+                    }
+                    allInsightIds.add(card.id);
+                });
+            });
+            
+            if (hasDuplicates) {
+                console.error('❌ 数据违反one-to-one约束，请检查后端数据');
+            }
+            
+            console.log('✅ 用户stacks加载成功:', stacks.size, '个stacks');
+        } else {
+            console.warn('⚠️ 没有stacks数据或API返回格式错误');
+        }
+    } catch (error) {
+        console.error('❌ 加载用户stacks失败:', error);
+        // 不抛出错误，允许页面继续加载
     }
 }
 
@@ -317,6 +387,12 @@ function renderInsights() {
         contentCards.appendChild(card);
     });
     
+    // 渲染stacks
+    stacks.forEach(stackData => {
+        const stackCard = createStackCard(stackData);
+        contentCards.appendChild(stackCard);
+    });
+    
     // Update edit mode state after rendering cards
     updateEditModeState();
 }
@@ -325,6 +401,21 @@ function renderInsights() {
 function createInsightCard(insight) {
     const card = document.createElement('div');
     card.className = 'content-card';
+    card.dataset.insightId = insight.id;
+    
+    // Add delete button for edit mode
+    const editDeleteBtn = document.createElement('button');
+    editDeleteBtn.className = 'content-card-delete-btn';
+    editDeleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    editDeleteBtn.title = 'Delete';
+    editDeleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteInsight(insight.id);
+    };
+    card.appendChild(editDeleteBtn);
+    
+    // Add drag and drop functionality
+    setupCardDragAndDrop(card, insight);
     
     // 卡片图片区域
     if (insight.image_url) {
@@ -421,50 +512,37 @@ function createInsightCard(insight) {
     description.className = 'content-card-description';
     description.textContent = insight.description || `Content from ${new URL(insight.url).hostname}`;
     
-    // 标签 - 只有当有标签时才显示 (smaller tags below description)
-    if (insight.tags && insight.tags.length > 0) {
-        const tags = document.createElement('div');
-        tags.className = 'content-card-tags';
-        
-        console.log('🏷️ 渲染标签，insight:', insight.title || insight.url);
-        console.log('🏷️ 标签数据:', insight.tags);
-        
-        insight.tags.forEach((tag, index) => {
-            console.log(`🏷️ 处理标签 ${index + 1}:`, tag);
-            
-            const tagElement = document.createElement('span');
-            tagElement.className = 'content-card-tag';
-            
-            // 处理标签文本
-            let tagText = '';
-            if (typeof tag === 'string') {
-                tagText = tag;
-            } else if (tag && typeof tag === 'object') {
-                tagText = tag.name || tag.id || 'Unknown Tag';
-            } else {
-                tagText = 'Invalid Tag';
-            }
-            
-            tagElement.textContent = tagText;
-            
-            console.log(`🏷️ 创建标签元素:`, { text: tagText });
-            
-            tags.appendChild(tagElement);
-        });
-        
-        cardContent.appendChild(tags);
-    } else {
-        console.log('⚠️ 该insight没有标签数据，不显示标签区域');
-    }
+    // 标签功能已移除 - 只在底部显示主要标签
     
     // 卡片底部
     const cardFooter = document.createElement('div');
     cardFooter.className = 'content-card-footer';
     
-    // Tag instead of PROJECT button
+    // Tag based on actual insight tags or default to Project
     const tag = document.createElement('div');
     tag.className = 'content-card-tag-main';
-    tag.textContent = 'PROJECT'; // Default tag, can be customized based on content type
+    
+    // Use the first tag from insight.tags, or default to "Project"
+    let tagText = 'Project'; // Default
+    let tagId = null;
+    
+    if (insight.tags && insight.tags.length > 0) {
+        const firstTag = insight.tags[0];
+        if (typeof firstTag === 'string') {
+            tagText = firstTag;
+        } else if (firstTag && typeof firstTag === 'object') {
+            tagText = firstTag.name || 'Project';
+            tagId = firstTag.id;
+        }
+    }
+    
+    tag.textContent = tagText;
+    tag.dataset.tagId = tagId || '';
+    tag.dataset.insightId = insight.id;
+    
+    // Make tag clickable to edit tags
+    tag.style.cursor = 'pointer';
+    tag.onclick = () => openTagEditModal(insight);
     
     cardFooter.appendChild(tag);
     
@@ -3223,6 +3301,34 @@ function populateModalContent(insight) {
         aiSummaryDate.textContent = date;
     }
     
+    // 绑定编辑标签按钮事件
+    const editTagsBtn = document.getElementById('modalEditTagsBtn');
+    if (editTagsBtn) {
+        // Remove any existing event listeners
+        editTagsBtn.onclick = null;
+        // Add new event listener
+        editTagsBtn.onclick = () => {
+            console.log('🏷️ Modal edit tags button clicked');
+            closeContentDetailModal(); // Close current modal first
+            openTagEditModal(insight);  // Open tag edit modal
+        };
+        console.log('✅ Modal edit tags button event bound');
+    } else {
+        console.error('❌ Modal edit tags button not found');
+    }
+    
+    // 更新标签显示
+    const projectTag = document.querySelector('.project-tag');
+    if (projectTag && insight.tags && insight.tags.length > 0) {
+        const firstTag = insight.tags[0];
+        const tagName = typeof firstTag === 'string' ? firstTag : firstTag.name;
+        projectTag.textContent = tagName;
+        projectTag.style.backgroundColor = typeof firstTag === 'object' ? firstTag.color : '#8B5CF6';
+    } else if (projectTag) {
+        projectTag.textContent = 'Project';
+        projectTag.style.backgroundColor = '#8B5CF6';
+    }
+    
     // 填充Quest建议
     populateQuestSuggestions();
     
@@ -3380,6 +3486,7 @@ function bindContentDetailModalEvents() {
 window.openProfileEditModal = openProfileEditModal;
 window.closeProfileEditModal = closeProfileEditModal;
 window.handleProfileUpdate = handleProfileUpdate;
+window.replaceAllTagsWithDefaults = replaceAllTagsWithDefaults;
 
 // Edit Mode Functionality
 function bindEditModeEvents() {
@@ -3399,6 +3506,7 @@ function toggleEditMode() {
         // Enter edit mode
         editModeBtn.classList.add('active');
         editBtnText.textContent = 'Done';
+        document.body.classList.add('edit-mode');
         
         // Add shaking animation to all content cards
         const contentCards = document.querySelectorAll('.content-card');
@@ -3411,6 +3519,7 @@ function toggleEditMode() {
         // Exit edit mode
         editModeBtn.classList.remove('active');
         editBtnText.textContent = 'Edit';
+        document.body.classList.remove('edit-mode');
         
         // Remove shaking animation from all content cards
         const contentCards = document.querySelectorAll('.content-card');
@@ -3456,6 +3565,1262 @@ function updateEditModeState() {
         contentCards.forEach(card => {
             card.classList.add('shake');
         });
+    }
+}
+
+// Setup drag and drop functionality for a card
+function setupCardDragAndDrop(card, insight) {
+    // Only enable drag in edit mode
+    card.addEventListener('mousedown', (e) => {
+        if (!isEditMode || e.target.closest('.content-card-delete-btn')) {
+            return;
+        }
+        
+        e.preventDefault();
+        startDrag(card, e);
+    });
+    
+    // Touch events for mobile
+    card.addEventListener('touchstart', (e) => {
+        if (!isEditMode || e.target.closest('.content-card-delete-btn')) {
+            return;
+        }
+        
+        e.preventDefault();
+        const touch = e.touches[0];
+        startDrag(card, touch);
+    });
+}
+
+// Start dragging a card
+function startDrag(card, event) {
+    draggedCard = card;
+    const rect = card.getBoundingClientRect();
+    
+    dragOffset.x = event.clientX - rect.left;
+    dragOffset.y = event.clientY - rect.top;
+    
+    // Add dragging class
+    card.classList.add('dragging');
+    card.classList.remove('shake'); // Stop shaking while dragging
+    
+    // Create ghost element
+    const ghost = card.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.position = 'fixed';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '10000';
+    ghost.style.width = rect.width + 'px';
+    ghost.style.height = rect.height + 'px';
+    ghost.style.transform = 'rotate(2deg) scale(1.05)';
+    ghost.style.opacity = '0.95';
+    ghost.style.transition = 'none';
+    ghost.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.3)';
+    ghost.style.border = '2px solid var(--quest-purple)';
+    document.body.appendChild(ghost);
+    
+    // Position ghost
+    updateGhostPosition(ghost, event);
+    
+    // Add event listeners
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchmove', handleDragMove);
+    document.addEventListener('touchend', handleDragEnd);
+    
+    console.log('🎯 Started dragging card:', card.dataset.insightId);
+}
+
+// Handle drag move
+function handleDragMove(e) {
+    if (!draggedCard) return;
+    
+    const event = e.touches ? e.touches[0] : e;
+    const ghost = document.querySelector('.drag-ghost');
+    
+    if (ghost) {
+        updateGhostPosition(ghost, event);
+    }
+    
+    // Check for potential stack creation
+    checkForStackHover(event);
+}
+
+// Update ghost position
+function updateGhostPosition(ghost, event) {
+    ghost.style.left = (event.clientX - dragOffset.x) + 'px';
+    ghost.style.top = (event.clientY - dragOffset.y) + 'px';
+}
+
+// Check if dragging over another card for stack creation
+function checkForStackHover(event) {
+    // Temporarily hide the ghost to get element below
+    const ghost = document.querySelector('.drag-ghost');
+    let elementBelow;
+    
+    if (ghost) {
+        ghost.style.display = 'none';
+        elementBelow = document.elementFromPoint(event.clientX, event.clientY);
+        ghost.style.display = 'block';
+    } else {
+        elementBelow = document.elementFromPoint(event.clientX, event.clientY);
+    }
+    
+    const targetCard = elementBelow?.closest('.content-card:not(.dragging):not(.stack-card)');
+    
+    if (targetCard && targetCard !== draggedCard) {
+        // Clear previous timeout
+        if (stackHoverTimeout) {
+            clearTimeout(stackHoverTimeout);
+        }
+        
+        // Add hover effect
+        targetCard.classList.add('stack-hover');
+        
+        // Set timeout for stack creation
+        stackHoverTimeout = setTimeout(() => {
+            createStack(draggedCard, targetCard);
+        }, 1500); // 1.5 seconds hover time
+        
+        console.log('🎯 Hovering over card for stack creation:', targetCard.dataset.insightId);
+        
+    } else {
+        // Clear hover effects
+        document.querySelectorAll('.content-card.stack-hover').forEach(card => {
+            card.classList.remove('stack-hover');
+        });
+        
+        if (stackHoverTimeout) {
+            clearTimeout(stackHoverTimeout);
+            stackHoverTimeout = null;
+        }
+    }
+}
+
+// Handle drag end
+function handleDragEnd(e) {
+    if (!draggedCard) return;
+    
+    // Clean up
+    const ghost = document.querySelector('.drag-ghost');
+    if (ghost) {
+        ghost.remove();
+    }
+    
+    // Remove dragging class and restore shake if in edit mode
+    draggedCard.classList.remove('dragging');
+    if (isEditMode) {
+        draggedCard.classList.add('shake');
+    }
+    
+    // Clear hover effects
+    document.querySelectorAll('.content-card.stack-hover').forEach(card => {
+        card.classList.remove('stack-hover');
+    });
+    
+    // Clear timeout
+    if (stackHoverTimeout) {
+        clearTimeout(stackHoverTimeout);
+        stackHoverTimeout = null;
+    }
+    
+    // Remove event listeners
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.removeEventListener('touchmove', handleDragMove);
+    document.removeEventListener('touchend', handleDragEnd);
+    
+    draggedCard = null;
+    console.log('🎯 Ended dragging');
+}
+
+// Create a stack from two cards
+async function createStack(card1, card2) {
+    console.log('📚 Creating stack with cards:', card1.dataset.insightId, card2.dataset.insightId);
+    
+    try {
+        // Get insight data for both cards
+        const insight1 = getInsightById(card1.dataset.insightId);
+        const insight2 = getInsightById(card2.dataset.insightId);
+        
+        if (!insight1 || !insight2) {
+            console.error('❌ Cannot find insight data for cards');
+            return;
+        }
+        
+        // Check if either insight is already in a stack (one-to-one constraint)
+        const insight1InStack = Array.from(stacks.values()).some(stack => 
+            stack.cards.some(card => card.id === insight1.id)
+        );
+        const insight2InStack = Array.from(stacks.values()).some(stack => 
+            stack.cards.some(card => card.id === insight2.id)
+        );
+        
+        if (insight1InStack || insight2InStack) {
+            showErrorMessage('One or both cards are already in a stack. Each card can only be in one stack.');
+            return;
+        }
+        
+        // Create stack via API (one-to-one relationship)
+        const stackData = {
+            name: 'Stack'
+        };
+        
+        const response = await api.createStack(stackData);
+        
+        if (response.success && response.data) {
+            const apiStack = response.data;
+            const stackId = apiStack.id.toString();
+            
+            // Add insights to the stack via API
+            await Promise.all([
+                api.addItemToStack(stackId, insight1.id),
+                api.addItemToStack(stackId, insight2.id)
+            ]);
+            
+            // Create local stack data
+            const localStackData = {
+                id: stackId,
+                name: apiStack.name || 'Stack',
+                cards: [insight1, insight2],
+                createdAt: apiStack.created_at || new Date().toISOString(),
+                modifiedAt: apiStack.modified_at || new Date().toISOString(),
+                isExpanded: false
+            };
+            
+            // Add to local stacks collection
+            stacks.set(stackId, localStackData);
+            
+            // Remove cards from currentInsights to avoid duplicates
+            // (This is safe because of one-to-one constraint)
+            currentInsights = currentInsights.filter(insight => 
+                insight.id !== card1.dataset.insightId && 
+                insight.id !== card2.dataset.insightId
+            );
+            
+            // Update stackIdCounter
+            stackIdCounter = Math.max(stackIdCounter, parseInt(stackId) + 1);
+            
+            // Re-render content
+            renderInsights();
+            
+            showSuccessMessage('Stack created successfully!');
+        } else {
+            throw new Error(response.message || 'Failed to create stack');
+        }
+    } catch (error) {
+        console.error('❌ Failed to create stack via API:', error);
+        showErrorMessage('Failed to create stack. Please try again.');
+    }
+    
+    // Clear drag state
+    if (stackHoverTimeout) {
+        clearTimeout(stackHoverTimeout);
+        stackHoverTimeout = null;
+    }
+}
+
+// Get insight by ID
+function getInsightById(id) {
+    return currentInsights.find(insight => insight.id === id);
+}
+
+// Get stack by insight ID (one-to-one relationship)
+function getStackByInsightId(insightId) {
+    return Array.from(stacks.values()).find(stack => 
+        stack.cards.some(card => card.id === insightId)
+    );
+}
+
+// Check if insight is in any stack
+function isInsightInStack(insightId) {
+    return getStackByInsightId(insightId) !== undefined;
+}
+
+// Create stack card element
+function createStackCard(stackData) {
+    const card = document.createElement('div');
+    card.className = 'content-card stack-card';
+    card.dataset.stackId = stackData.id;
+    
+    // Add delete button for edit mode
+    const editDeleteBtn = document.createElement('button');
+    editDeleteBtn.className = 'content-card-delete-btn';
+    editDeleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    editDeleteBtn.title = 'Delete Stack';
+    editDeleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteStack(stackData.id);
+    };
+    card.appendChild(editDeleteBtn);
+    
+    // Stack visual indicator
+    const stackIndicator = document.createElement('div');
+    stackIndicator.className = 'stack-indicator';
+    stackIndicator.innerHTML = `<span class="stack-count">${stackData.cards.length}</span>`;
+    card.appendChild(stackIndicator);
+    
+    // Use first card's image as preview
+    const firstCard = stackData.cards[0];
+    if (firstCard && firstCard.image_url) {
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'content-card-image-container';
+        
+        const img = document.createElement('img');
+        img.src = firstCard.image_url;
+        img.alt = firstCard.title || 'Stack Preview';
+        img.className = 'content-card-image';
+        img.loading = 'lazy';
+        
+        imageContainer.appendChild(img);
+        card.appendChild(imageContainer);
+    } else {
+        const placeholderContainer = document.createElement('div');
+        placeholderContainer.className = 'content-card-image-container no-image';
+        card.appendChild(placeholderContainer);
+    }
+    
+    // Stack content
+    const content = document.createElement('div');
+    content.className = 'content-card-content';
+    
+    const header = document.createElement('div');
+    header.className = 'content-card-header';
+    
+    const title = document.createElement('h3');
+    title.className = 'content-card-title stack-title';
+    title.textContent = stackData.name;
+    header.appendChild(title);
+    
+    const description = document.createElement('p');
+    description.className = 'content-card-description';
+    description.textContent = `${stackData.cards.length} items • Created ${formatDate(stackData.createdAt)}`;
+    
+    content.appendChild(header);
+    content.appendChild(description);
+    
+    // Footer with main tag
+    const footer = document.createElement('div');
+    footer.className = 'content-card-footer';
+    
+    const mainTag = document.createElement('span');
+    mainTag.className = 'content-card-tag-main';
+    mainTag.textContent = 'STACK';
+    footer.appendChild(mainTag);
+    
+    content.appendChild(footer);
+    card.appendChild(content);
+    
+    // Click handler to expand/collapse stack
+    card.addEventListener('click', (e) => {
+        if (!e.target.closest('.content-card-delete-btn')) {
+            if (stackData.isExpanded) {
+                collapseStack(stackData.id);
+            } else {
+                expandStack(stackData);
+            }
+        }
+    });
+    
+    return card;
+}
+
+// Delete a stack
+async function deleteStack(stackId) {
+    if (confirm('Are you sure you want to delete this stack? All items will be moved back to your space.')) {
+        try {
+            const stackData = stacks.get(stackId);
+            if (stackData) {
+                // Delete stack via API
+                const response = await api.deleteStack(stackId);
+                
+                if (response.success) {
+                    // Move all cards back to insights
+                    currentInsights.push(...stackData.cards);
+                    stacks.delete(stackId);
+                    
+                    // Re-render content
+                    renderInsights();
+                    showSuccessMessage('Stack deleted and items restored.');
+                } else {
+                    throw new Error(response.message || 'Failed to delete stack');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Failed to delete stack via API:', error);
+            showErrorMessage('Failed to delete stack. Please try again.');
+        }
+    }
+}
+
+// Format date for display
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
+// Expand stack horizontally in place
+function expandStack(stackData) {
+    console.log('📂 Expanding stack horizontally:', stackData.name);
+    
+    // Find the stack card element
+    const stackCard = document.querySelector(`[data-stack-id="${stackData.id}"]`);
+    if (!stackCard) return;
+    
+    // Mark this stack as expanded
+    stackData.isExpanded = true;
+    
+    // Add expanded class to the card
+    stackCard.classList.add('stack-expanded');
+    
+    // Replace the stack card content with expanded view
+    stackCard.innerHTML = `
+        <div class="stack-expanded-header">
+            <div class="stack-info-horizontal">
+                <h3 class="stack-name-horizontal">${stackData.name}</h3>
+                <div class="stack-meta-horizontal">
+                    <span class="stack-created">Created: ${formatDate(stackData.createdAt)}</span>
+                    <span class="stack-modified">Last Modified: ${formatDate(stackData.modifiedAt)}</span>
+                </div>
+            </div>
+            <div class="stack-actions-horizontal">
+                <button class="stack-edit-name-btn-horizontal">Edit Name</button>
+                <button class="stack-collapse-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="stack-cards-horizontal" id="stackCardsHorizontal-${stackData.id}">
+            <!-- Cards will be populated here -->
+        </div>
+        
+        <div class="stack-footer-horizontal">
+            <button class="stack-edit-mode-btn-horizontal" data-stack-id="${stackData.id}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span class="stack-edit-btn-text-horizontal">Edit</span>
+            </button>
+        </div>
+    `;
+    
+    // Add event listeners
+    const editNameBtn = stackCard.querySelector('.stack-edit-name-btn-horizontal');
+    const collapseBtn = stackCard.querySelector('.stack-collapse-btn');
+    const editModeBtn = stackCard.querySelector('.stack-edit-mode-btn-horizontal');
+    
+    editNameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editStackName(stackData.id);
+    });
+    
+    collapseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        collapseStack(stackData.id);
+    });
+    
+    editModeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleStackEditModeHorizontal(stackData.id);
+    });
+    
+    // Populate cards horizontally
+    const stackCardsContainer = document.getElementById(`stackCardsHorizontal-${stackData.id}`);
+    stackData.cards.forEach(cardData => {
+        const card = createStackHorizontalCard(cardData, stackData.id);
+        stackCardsContainer.appendChild(card);
+    });
+}
+
+// Create card for stack expansion view
+function createStackExpandedCard(insight, stackId) {
+    const card = document.createElement('div');
+    card.className = 'stack-expanded-card';
+    card.dataset.insightId = insight.id;
+    card.dataset.stackId = stackId;
+    
+    // Card image
+    if (insight.image_url) {
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'stack-card-image-container';
+        
+        const img = document.createElement('img');
+        img.src = insight.image_url;
+        img.alt = insight.title || 'Content Image';
+        img.className = 'stack-card-image';
+        img.loading = 'lazy';
+        
+        imageContainer.appendChild(img);
+        card.appendChild(imageContainer);
+    }
+    
+    // Card content
+    const content = document.createElement('div');
+    content.className = 'stack-card-content';
+    
+    const title = document.createElement('h4');
+    title.className = 'stack-card-title';
+    title.textContent = insight.title || 'Untitled';
+    
+    const description = document.createElement('p');
+    description.className = 'stack-card-description';
+    description.textContent = insight.summary || insight.description || 'No description available';
+    
+    content.appendChild(title);
+    content.appendChild(description);
+    card.appendChild(content);
+    
+    // Setup drag functionality for stack edit mode
+    setupStackCardDrag(card, insight, stackId);
+    
+    // Click handler to view full content
+    card.addEventListener('click', (e) => {
+        if (!e.target.closest('.stack-card-remove-btn')) {
+            // Open content detail modal (reuse existing functionality)
+            openContentDetailModal(insight);
+        }
+    });
+    
+    return card;
+}
+
+// Setup drag functionality for cards in stack expansion
+function setupStackCardDrag(card, insight, stackId) {
+    card.addEventListener('mousedown', (e) => {
+        // Check for both modal and inline edit modes
+        const stackModal = document.querySelector('.stack-expansion-modal');
+        const stackView = document.querySelector('.stack-expansion-view');
+        
+        const isModalEditMode = stackModal?.classList.contains('stack-edit-mode');
+        const isInlineEditMode = stackView?.classList.contains('stack-edit-mode-inline');
+        
+        if (!isModalEditMode && !isInlineEditMode) {
+            return;
+        }
+        
+        e.preventDefault();
+        startStackCardDrag(card, e, insight, stackId);
+    });
+}
+
+// Start dragging a card from stack
+function startStackCardDrag(card, event, insight, stackId) {
+    console.log('🎯 Starting stack card drag:', insight.id);
+    
+    draggedCard = card;
+    const rect = card.getBoundingClientRect();
+    
+    dragOffset.x = event.clientX - rect.left;
+    dragOffset.y = event.clientY - rect.top;
+    
+    // Add dragging class
+    card.classList.add('dragging');
+    
+    // Create ghost element
+    const ghost = card.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.position = 'fixed';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '10000';
+    ghost.style.width = rect.width + 'px';
+    ghost.style.height = rect.height + 'px';
+    ghost.style.transform = 'rotate(2deg) scale(1.05)';
+    ghost.style.opacity = '0.95';
+    ghost.style.transition = 'none';
+    ghost.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.3)';
+    ghost.style.border = '2px solid var(--quest-purple)';
+    document.body.appendChild(ghost);
+    
+    // Position ghost
+    updateGhostPosition(ghost, event);
+    
+    // Add event listeners
+    document.addEventListener('mousemove', handleStackCardDragMove);
+    document.addEventListener('mouseup', (e) => handleStackCardDragEnd(e, insight, stackId));
+}
+
+// Handle stack card drag move
+function handleStackCardDragMove(e) {
+    if (!draggedCard) return;
+    
+    const ghost = document.querySelector('.drag-ghost');
+    if (ghost) {
+        updateGhostPosition(ghost, e);
+    }
+    
+    // Check if dragging outside stack container to remove from stack
+    const stackModal = document.querySelector('.stack-expansion-modal');
+    const stackView = document.querySelector('.stack-expansion-view');
+    
+    let containerRect;
+    if (stackModal) {
+        containerRect = stackModal.getBoundingClientRect();
+    } else if (stackView) {
+        containerRect = stackView.getBoundingClientRect();
+    }
+    
+    if (containerRect && (e.clientX < containerRect.left || e.clientX > containerRect.right ||
+        e.clientY < containerRect.top || e.clientY > containerRect.bottom)) {
+        // Show indication that card will be removed from stack
+        draggedCard.classList.add('removing-from-stack');
+    } else {
+        draggedCard.classList.remove('removing-from-stack');
+    }
+}
+
+// Handle stack card drag end
+function handleStackCardDragEnd(e, insight, stackId) {
+    if (!draggedCard) return;
+    
+    // Clean up ghost
+    const ghost = document.querySelector('.drag-ghost');
+    if (ghost) {
+        ghost.remove();
+    }
+    
+    // Check if card was dragged outside stack modal
+    const stackModal = document.querySelector('.stack-expansion-modal');
+    const modalRect = stackModal.getBoundingClientRect();
+    
+    if (e.clientX < modalRect.left || e.clientX > modalRect.right ||
+        e.clientY < modalRect.top || e.clientY > modalRect.bottom) {
+        // Remove card from stack
+        removeCardFromStack(insight, stackId);
+    }
+    
+    // Clean up
+    draggedCard.classList.remove('dragging', 'removing-from-stack');
+    
+    // Remove event listeners
+    document.removeEventListener('mousemove', handleStackCardDragMove);
+    
+    draggedCard = null;
+}
+
+// Move card to another stack (one-to-one relationship)
+async function moveCardToStack(insight, newStackId) {
+    try {
+        // Check if insight is already in a stack
+        const currentStack = getStackByInsightId(insight.id);
+        if (!currentStack) {
+            showErrorMessage('Card is not in any stack');
+            return;
+        }
+        
+        // Check if target stack exists
+        const targetStack = stacks.get(newStackId);
+        if (!targetStack) {
+            showErrorMessage('Target stack not found');
+            return;
+        }
+        
+        // Move card via API (updates insight's stack_id)
+        const response = await api.moveItemToStack(newStackId, insight.id);
+        
+        if (response.success) {
+            // Remove from current stack
+            currentStack.cards = currentStack.cards.filter(card => card.id !== insight.id);
+            
+            // Add to target stack
+            targetStack.cards.push(insight);
+            targetStack.modifiedAt = response.data?.modified_at || new Date().toISOString();
+            
+            // If current stack is empty, delete it
+            if (currentStack.cards.length === 0) {
+                stacks.delete(currentStack.id);
+                showSuccessMessage('Card moved to new stack. Empty stack deleted.');
+            } else {
+                showSuccessMessage('Card moved to new stack successfully.');
+            }
+            
+            // Re-render content
+            renderInsights();
+        } else {
+            throw new Error(response.message || 'Failed to move card');
+        }
+    } catch (error) {
+        console.error('❌ Failed to move card via API:', error);
+        showErrorMessage('Failed to move card. Please try again.');
+    }
+}
+
+// Remove card from stack
+async function removeCardFromStack(insight, stackId) {
+    const stackData = stacks.get(stackId);
+    if (!stackData) return;
+    
+    try {
+        // Remove card from stack via API (sets stack_id to null)
+        const response = await api.removeItemFromStack(stackId, insight.id);
+        
+        if (response.success) {
+            // Remove card from local stack data
+            stackData.cards = stackData.cards.filter(card => card.id !== insight.id);
+            stackData.modifiedAt = response.data?.modified_at || new Date().toISOString();
+            
+            // Add card back to main insights (safe because of one-to-one constraint)
+            currentInsights.push(insight);
+            
+            // If stack has only one card left, dissolve the stack
+            if (stackData.cards.length <= 1) {
+                if (stackData.cards.length === 1) {
+                    // Remove the last card from stack
+                    const lastCard = stackData.cards[0];
+                    await api.removeItemFromStack(stackId, lastCard.id);
+                    currentInsights.push(lastCard);
+                }
+                stacks.delete(stackId);
+                closeStackExpansion();
+                showSuccessMessage('Stack dissolved - cards moved back to your space.');
+            } else {
+                // Update stack display
+                const stackCardsGrid = document.getElementById('stackCardsGrid');
+                const cardElement = stackCardsGrid.querySelector(`[data-insight-id="${insight.id}"]`);
+                if (cardElement) {
+                    cardElement.remove();
+                }
+                
+                // Update stack info
+                const stackCountEl = document.querySelector('.stack-count');
+                if (stackCountEl) {
+                    stackCountEl.textContent = `${stackData.cards.length} items`;
+                }
+                
+                showSuccessMessage('Card removed from stack.');
+            }
+            
+            // Re-render main view
+            renderInsights();
+        } else {
+            throw new Error(response.message || 'Failed to remove card from stack');
+        }
+    } catch (error) {
+        console.error('❌ Failed to remove card from stack via API:', error);
+        showErrorMessage('Failed to remove card from stack. Please try again.');
+    }
+}
+
+// Close stack expansion modal (legacy)
+function closeStackExpansion() {
+    const modal = document.querySelector('.stack-expansion-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+}
+
+// Close inline stack expansion
+function closeStackExpansionInline(stackId) {
+    const stackData = stacks.get(stackId);
+    if (stackData) {
+        stackData.isExpanded = false;
+    }
+    
+    // Remove back button
+    const backBtn = document.querySelector('.stack-back-btn');
+    if (backBtn) {
+        backBtn.remove();
+    }
+    
+    // Show filter buttons and add content button
+    const filterButtons = document.getElementById('filterButtons');
+    const addContentBtn = document.getElementById('addContentBtnLeft');
+    const editModeMainBtn = document.getElementById('editModeBtn');
+    
+    if (filterButtons) filterButtons.style.display = 'flex';
+    if (addContentBtn) addContentBtn.style.display = 'flex';
+    if (editModeMainBtn) editModeMainBtn.style.display = 'flex';
+    
+    // Re-render main view
+    renderInsights();
+}
+
+// Collapse stack back to normal card
+function collapseStack(stackId) {
+    const stackData = stacks.get(stackId);
+    if (!stackData) return;
+    
+    stackData.isExpanded = false;
+    
+    // Re-render to show collapsed stack
+    renderInsights();
+}
+
+// Edit stack name
+async function editStackName(stackId) {
+    const stackData = stacks.get(stackId);
+    if (!stackData) return;
+    
+    const newName = prompt('Enter new stack name:', stackData.name);
+    if (newName && newName.trim() && newName.trim() !== stackData.name) {
+        try {
+            // Update stack name via API
+            const response = await api.updateStack(stackId, {
+                name: newName.trim()
+            });
+            
+            if (response.success) {
+                // Update local data
+                stackData.name = newName.trim();
+                stackData.modifiedAt = response.data?.modified_at || new Date().toISOString();
+                
+                // Update UI
+                const stackNameEl = document.querySelector('.stack-name');
+                if (stackNameEl) {
+                    stackNameEl.textContent = stackData.name;
+                }
+        
+                // Update stack dates
+                const stackDatesEl = document.querySelector('.stack-dates');
+                if (stackDatesEl) {
+                    stackDatesEl.innerHTML = `
+                        Created: ${formatDate(stackData.createdAt)} • 
+                        Modified: ${formatDate(stackData.modifiedAt)}
+                    `;
+                }
+        
+                // Re-render main view to update stack card
+                renderInsights();
+        
+                showSuccessMessage('Stack name updated successfully!');
+            } else {
+                throw new Error(response.message || 'Failed to update stack name');
+            }
+        } catch (error) {
+            console.error('❌ Failed to update stack name via API:', error);
+            showErrorMessage('Failed to update stack name. Please try again.');
+        }
+    }
+}
+
+// Toggle stack edit mode (legacy modal)
+function toggleStackEditMode(stackId) {
+    const modal = document.querySelector('.stack-expansion-modal');
+    const editBtn = document.querySelector('.stack-edit-mode-btn');
+    const editBtnText = editBtn.querySelector('.stack-edit-btn-text');
+    
+    if (modal.classList.contains('stack-edit-mode')) {
+        // Exit edit mode
+        modal.classList.remove('stack-edit-mode');
+        editBtn.classList.remove('active');
+        editBtnText.textContent = 'Edit';
+        
+        // Remove shake from cards
+        document.querySelectorAll('.stack-expanded-card').forEach(card => {
+            card.classList.remove('shake');
+        });
+    } else {
+        // Enter edit mode
+        modal.classList.add('stack-edit-mode');
+        editBtn.classList.add('active');
+        editBtnText.textContent = 'Done';
+        
+        // Add shake to cards
+        document.querySelectorAll('.stack-expanded-card').forEach(card => {
+            card.classList.add('shake');
+        });
+    }
+}
+
+// Toggle stack edit mode inline
+function toggleStackEditModeInline(stackId) {
+    const stackView = document.querySelector('.stack-expansion-view');
+    const editBtn = document.querySelector('.stack-edit-mode-btn-inline');
+    const editBtnText = editBtn.querySelector('.stack-edit-btn-text-inline');
+    
+    if (stackView.classList.contains('stack-edit-mode-inline')) {
+        // Exit edit mode
+        stackView.classList.remove('stack-edit-mode-inline');
+        editBtn.classList.remove('active');
+        editBtnText.textContent = 'Edit';
+        
+        // Remove shake from cards
+        document.querySelectorAll('.stack-expanded-card').forEach(card => {
+            card.classList.remove('shake');
+        });
+    } else {
+        // Enter edit mode
+        stackView.classList.add('stack-edit-mode-inline');
+        editBtn.classList.add('active');
+        editBtnText.textContent = 'Done';
+        
+        // Add shake to cards
+        document.querySelectorAll('.stack-expanded-card').forEach(card => {
+            card.classList.add('shake');
+        });
+    }
+}
+
+// Toggle stack edit mode horizontal
+function toggleStackEditModeHorizontal(stackId) {
+    const stackCard = document.querySelector(`[data-stack-id="${stackId}"]`);
+    const editBtn = stackCard.querySelector('.stack-edit-mode-btn-horizontal');
+    const editBtnText = editBtn.querySelector('.stack-edit-btn-text-horizontal');
+    
+    if (stackCard.classList.contains('stack-edit-mode-horizontal')) {
+        // Exit edit mode
+        stackCard.classList.remove('stack-edit-mode-horizontal');
+        editBtn.classList.remove('active');
+        editBtnText.textContent = 'Edit';
+        
+        // Remove shake from cards
+        stackCard.querySelectorAll('.stack-horizontal-card').forEach(card => {
+            card.classList.remove('shake');
+        });
+    } else {
+        // Enter edit mode
+        stackCard.classList.add('stack-edit-mode-horizontal');
+        editBtn.classList.add('active');
+        editBtnText.textContent = 'Done';
+        
+        // Add shake to cards
+        stackCard.querySelectorAll('.stack-horizontal-card').forEach(card => {
+            card.classList.add('shake');
+        });
+    }
+}
+
+// Create horizontal card for stack expansion
+function createStackHorizontalCard(insight, stackId) {
+    const card = document.createElement('div');
+    card.className = 'stack-horizontal-card';
+    card.dataset.insightId = insight.id;
+    card.dataset.stackId = stackId;
+    
+    // Add delete button for edit mode (same as normal card)
+    const editDeleteBtn = document.createElement('button');
+    editDeleteBtn.className = 'content-card-delete-btn';
+    editDeleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    editDeleteBtn.title = 'Delete';
+    editDeleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteInsight(insight.id);
+    };
+    card.appendChild(editDeleteBtn);
+    
+    // 卡片图片区域 (same as normal card)
+    if (insight.image_url) {
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'content-card-image-container';
+        
+        const image = document.createElement('img');
+        image.className = 'content-card-image';
+        image.src = insight.image_url;
+        image.alt = insight.title || 'Content image';
+        image.loading = 'lazy';
+        
+        // 图片加载错误处理
+        image.onerror = function() {
+            this.style.display = 'none';
+            this.parentElement.classList.add('no-image');
+        };
+        
+        imageContainer.appendChild(image);
+        card.appendChild(imageContainer);
+    }
+    
+    // 卡片内容区域 (same as normal card)
+    const cardContent = document.createElement('div');
+    cardContent.className = 'content-card-content';
+    
+    // 卡片头部 - Top row with date and source info (same as normal card)
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'content-card-header';
+    
+    // Top row: Date on left, source info on right
+    const topRow = document.createElement('div');
+    topRow.className = 'content-card-top-row';
+    
+    const headerDate = document.createElement('div');
+    headerDate.className = 'content-card-date';
+    headerDate.textContent = new Date(insight.created_at).toLocaleDateString('en-US');
+    
+    const sourceInfo = document.createElement('div');
+    sourceInfo.className = 'content-card-source';
+    
+    const sourceLogo = document.createElement('div');
+    sourceLogo.className = 'content-card-source-logo';
+    // You can customize this based on the source
+    sourceLogo.innerHTML = '🎵'; // Default music icon, can be replaced with actual logos
+    
+    const sourceName = document.createElement('span');
+    sourceName.className = 'content-card-source-name';
+    sourceName.textContent = getSourceName(insight.url);
+    
+    sourceInfo.appendChild(sourceLogo);
+    sourceInfo.appendChild(sourceName);
+    
+    topRow.appendChild(headerDate);
+    topRow.appendChild(sourceInfo);
+    
+    // Title below the top row (same as normal card)
+    const title = document.createElement('div');
+    title.className = 'content-card-title';
+    
+    // Extract clean title (remove source name if it's concatenated)
+    let cleanTitle = insight.title || 'Untitled';
+    const sourceNameForTitle = getSourceName(insight.url);
+    
+    // If title contains source name, try to clean it
+    if (cleanTitle.includes(sourceNameForTitle)) {
+        cleanTitle = cleanTitle.replace(sourceNameForTitle, '').trim();
+    }
+    
+    // For Wikipedia URLs, extract just the article title
+    if (insight.url && insight.url.includes('wikipedia.org')) {
+        const urlPath = new URL(insight.url).pathname;
+        const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+        if (articleTitle && articleTitle !== cleanTitle) {
+            cleanTitle = articleTitle;
+        }
+    }
+    
+    title.textContent = cleanTitle;
+    
+    cardHeader.appendChild(topRow);
+    cardHeader.appendChild(title);
+    
+    // 卡片描述 (same as normal card)
+    const description = document.createElement('div');
+    description.className = 'content-card-description';
+    description.textContent = insight.description || (insight.url ? `Content from ${new URL(insight.url).hostname}` : 'No description available');
+    
+    // 卡片底部 (same as normal card)
+    const cardFooter = document.createElement('div');
+    cardFooter.className = 'content-card-footer';
+    
+    // Tag based on actual insight tags or default to Project
+    const tag = document.createElement('div');
+    tag.className = 'content-card-tag-main';
+    
+    // Use the first tag from insight.tags, or default to "Project"
+    let tagText = 'Project'; // Default
+    let tagId = null;
+    
+    if (insight.tags && insight.tags.length > 0) {
+        const firstTag = insight.tags[0];
+        if (typeof firstTag === 'string') {
+            tagText = firstTag;
+        } else if (firstTag && typeof firstTag === 'object') {
+            tagText = firstTag.name || 'Project';
+            tagId = firstTag.id;
+        }
+    }
+    
+    tag.textContent = tagText;
+    tag.dataset.tagId = tagId || '';
+    tag.dataset.insightId = insight.id;
+    
+    // Make tag clickable to edit tags
+    tag.style.cursor = 'pointer';
+    tag.onclick = () => openTagEditModal(insight);
+    
+    cardFooter.appendChild(tag);
+    
+    // 组装卡片内容 (same as normal card)
+    cardContent.appendChild(cardHeader);
+    cardContent.appendChild(description);
+    cardContent.appendChild(cardFooter);
+    
+    // 组装完整卡片 (same as normal card)
+    card.appendChild(cardContent);
+    
+    // Setup drag functionality for horizontal cards
+    setupStackHorizontalCardDrag(card, insight, stackId);
+    
+    // 使卡片可点击 (same as normal card)
+    makeCardClickable(card, insight);
+    
+    return card;
+}
+
+// Setup drag functionality for horizontal stack cards
+function setupStackHorizontalCardDrag(card, insight, stackId) {
+    card.addEventListener('mousedown', (e) => {
+        const stackCard = document.querySelector(`[data-stack-id="${stackId}"]`);
+        
+        if (!stackCard?.classList.contains('stack-edit-mode-horizontal')) {
+            return;
+        }
+        
+        e.preventDefault();
+        startStackCardDrag(card, e, insight, stackId);
+    });
+}
+
+// Function to open tag edit modal for an insight
+async function openTagEditModal(insight) {
+    try {
+        console.log('🏷️ Opening tag edit modal for insight:', insight.id);
+        
+        // Get all available tags
+        const response = await api.getUserTags();
+        const allTags = response.success ? response.data : [];
+        
+        // Get current tags for this insight
+        const currentTags = insight.tags || [];
+        
+        // Create modal HTML
+        const modal = document.createElement('div');
+        modal.className = 'tag-edit-modal';
+        modal.innerHTML = `
+            <div class="tag-edit-modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Edit Tags</h2>
+                    <button class="modal-close" id="closeTagEditModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-description">Select tags for: <strong>${insight.title || 'Content'}</strong></p>
+                    <div class="tag-options">
+                        ${allTags.map(tag => `
+                            <label class="tag-option">
+                                <input type="checkbox" value="${tag.id}" 
+                                    ${currentTags.some(ct => (ct.id || ct) === (tag.id || tag.name)) ? 'checked' : ''}
+                                    data-tag-name="${tag.name}">
+                                <span class="tag-option-label" style="background-color: ${tag.color || '#8B5CF6'}">${tag.name}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn modal-btn-secondary" id="cancelTagEdit">Cancel</button>
+                    <button type="button" class="modal-btn modal-btn-primary" id="saveTagEdit">Save Tags</button>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+        
+        // Bind events
+        document.getElementById('closeTagEditModal').onclick = () => closeTagEditModal(modal);
+        document.getElementById('cancelTagEdit').onclick = () => closeTagEditModal(modal);
+        document.getElementById('saveTagEdit').onclick = () => saveInsightTags(insight, modal);
+        
+        // Click outside to close
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                closeTagEditModal(modal);
+            }
+        };
+        
+    } catch (error) {
+        console.error('❌ Failed to open tag edit modal:', error);
+        showErrorMessage('Failed to load tags for editing');
+    }
+}
+
+// Function to close tag edit modal
+function closeTagEditModal(modal) {
+    modal.remove();
+}
+
+// Function to save insight tags
+async function saveInsightTags(insight, modal) {
+    try {
+        const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+        const selectedTags = Array.from(checkboxes).map(cb => ({
+            id: cb.value,
+            name: cb.dataset.tagName
+        }));
+        
+        console.log('💾 Saving tags for insight:', insight.id, selectedTags);
+        
+        // Update insight with new tags (you may need to adjust this API call based on your backend)
+        const response = await api.updateInsight(insight.id, {
+            ...insight,
+            tags: selectedTags
+        });
+        
+        if (response.success) {
+            console.log('✅ Tags updated successfully');
+            
+            // Update the insight in memory
+            const insightIndex = currentInsights.findIndex(i => i.id === insight.id);
+            if (insightIndex !== -1) {
+                currentInsights[insightIndex].tags = selectedTags;
+            }
+            
+            // Re-render the insights to show updated tags
+            renderInsights();
+            
+            closeTagEditModal(modal);
+            showSuccessMessage('Tags updated successfully!');
+        } else {
+            throw new Error(response.message || 'Failed to update tags');
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to save tags:', error);
+        showErrorMessage(`Failed to save tags: ${error.message}`);
+    }
+}
+
+// Function to replace all tags with the four specified ones
+async function replaceAllTagsWithDefaults() {
+    const defaultTags = [
+        { name: 'Project', color: '#8B5CF6' },
+        { name: 'Area', color: '#10B981' },
+        { name: 'Resource', color: '#3B82F6' },
+        { name: 'Archive', color: '#F59E0B' }
+    ];
+
+    try {
+        console.log('🔄 Starting tag replacement process...');
+        
+        // First, get all existing tags
+        const response = await api.getUserTags();
+        const existingTags = response.success ? response.data : [];
+        
+        console.log('📋 Found existing tags:', existingTags.length);
+        
+        // Delete all existing tags
+        for (const tag of existingTags) {
+            try {
+                console.log('🗑️ Deleting tag:', tag.name || tag.id);
+                await api.deleteUserTag(tag.id);
+            } catch (error) {
+                console.warn('⚠️ Failed to delete tag:', tag.name, error.message);
+            }
+        }
+        
+        // Create the four new default tags
+        for (const tagData of defaultTags) {
+            try {
+                console.log('➕ Creating tag:', tagData.name);
+                await api.createUserTag(tagData);
+            } catch (error) {
+                console.warn('⚠️ Failed to create tag:', tagData.name, error.message);
+            }
+        }
+        
+        // Reload tags and update UI
+        console.log('🔄 Reloading tags and updating UI...');
+        await loadUserTags();
+        await initFilterButtons();
+        
+        // Verify the tags were created correctly
+        const verifyResponse = await api.getUserTags();
+        const finalTags = verifyResponse.success ? verifyResponse.data : [];
+        console.log('✅ Final tags after replacement:', finalTags.map(t => t.name));
+        
+        console.log('✅ Tag replacement completed successfully');
+        showSuccessMessage('Tags updated successfully! Now using: Project, Area, Resource, Archive');
+        
+    } catch (error) {
+        console.error('❌ Tag replacement failed:', error);
+        showErrorMessage(`Failed to replace tags: ${error.message}`);
     }
 }
 

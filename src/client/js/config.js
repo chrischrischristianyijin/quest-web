@@ -62,6 +62,16 @@ export const API_CONFIG = {
         SEARCH: '/api/v1/user-tags/search'
     },
     
+    // 堆叠管理接口
+    STACKS: {
+        LIST: '/api/v1/stacks',
+        GET: '/api/v1/stacks',
+        CREATE: '/api/v1/stacks',
+        UPDATE: '/api/v1/stacks',
+        DELETE: '/api/v1/stacks',
+        ITEMS: '/api/v1/stacks/items'
+    },
+    
     // 系统接口
     SYSTEM: {
         HEALTH: '/health',
