@@ -25,6 +25,7 @@ let currentFilters = {
     tags: null,        // 标签筛选
     type: 'all'        // 内容类型
 };
+let isEditMode = false; // Edit mode state
 
 
 // 页面初始化
@@ -95,6 +96,9 @@ async function initPage() {
         
         // 绑定事件
         bindEvents();
+        
+        // 绑定编辑模式按钮事件
+        bindEditModeEvents();
         
         console.log('✅ My Space页面初始化完成');
     } catch (error) {
@@ -312,6 +316,9 @@ function renderInsights() {
         const card = createInsightCard(insight);
         contentCards.appendChild(card);
     });
+    
+    // Update edit mode state after rendering cards
+    updateEditModeState();
 }
 
 // 创建见解卡片
@@ -344,10 +351,37 @@ function createInsightCard(insight) {
     const cardContent = document.createElement('div');
     cardContent.className = 'content-card-content';
     
-    // 卡片头部
+    // 卡片头部 - Top row with date and source info
     const cardHeader = document.createElement('div');
     cardHeader.className = 'content-card-header';
     
+    // Top row: Date on left, source info on right
+    const topRow = document.createElement('div');
+    topRow.className = 'content-card-top-row';
+    
+    const headerDate = document.createElement('div');
+    headerDate.className = 'content-card-date';
+    headerDate.textContent = new Date(insight.created_at).toLocaleDateString('en-US');
+    
+    const sourceInfo = document.createElement('div');
+    sourceInfo.className = 'content-card-source';
+    
+    const sourceLogo = document.createElement('div');
+    sourceLogo.className = 'content-card-source-logo';
+    // You can customize this based on the source
+    sourceLogo.innerHTML = '🎵'; // Default music icon, can be replaced with actual logos
+    
+    const sourceName = document.createElement('span');
+    sourceName.className = 'content-card-source-name';
+    sourceName.textContent = getSourceName(insight.url);
+    
+    sourceInfo.appendChild(sourceLogo);
+    sourceInfo.appendChild(sourceName);
+    
+    topRow.appendChild(headerDate);
+    topRow.appendChild(sourceInfo);
+    
+    // Title below the top row
     const title = document.createElement('div');
     title.className = 'content-card-title';
     
@@ -359,35 +393,35 @@ function createInsightCard(insight) {
         finalTitle: insight.title || new URL(insight.url).hostname
     });
     
-    title.textContent = insight.title || new URL(insight.url).hostname;
+    // Extract clean title (remove source name if it's concatenated)
+    let cleanTitle = insight.title || 'Untitled';
+    const sourceNameForTitle = getSourceName(insight.url);
     
-    const actions = document.createElement('div');
-    actions.className = 'content-card-actions';
+    // If title contains source name, try to clean it
+    if (cleanTitle.includes(sourceNameForTitle)) {
+        cleanTitle = cleanTitle.replace(sourceNameForTitle, '').trim();
+    }
     
-    const shareBtn = document.createElement('button');
-    shareBtn.className = 'action-btn';
-    shareBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    shareBtn.title = 'Share';
-    shareBtn.onclick = () => shareInsight(insight);
+    // For Wikipedia URLs, extract just the article title
+    if (insight.url.includes('wikipedia.org')) {
+        const urlPath = new URL(insight.url).pathname;
+        const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+        if (articleTitle && articleTitle !== cleanTitle) {
+            cleanTitle = articleTitle;
+        }
+    }
     
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'action-btn';
-    deleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    deleteBtn.title = 'Delete';
-    deleteBtn.onclick = () => deleteInsight(insight.id);
+    title.textContent = cleanTitle;
     
-    actions.appendChild(shareBtn);
-    actions.appendChild(deleteBtn);
-    
+    cardHeader.appendChild(topRow);
     cardHeader.appendChild(title);
-    cardHeader.appendChild(actions);
     
     // 卡片描述
     const description = document.createElement('div');
     description.className = 'content-card-description';
     description.textContent = insight.description || `Content from ${new URL(insight.url).hostname}`;
     
-    // 标签 - 只有当有标签时才显示
+    // 标签 - 只有当有标签时才显示 (smaller tags below description)
     if (insight.tags && insight.tags.length > 0) {
         const tags = document.createElement('div');
         tags.className = 'content-card-tags';
@@ -427,18 +461,12 @@ function createInsightCard(insight) {
     const cardFooter = document.createElement('div');
     cardFooter.className = 'content-card-footer';
     
-    const url = document.createElement('a');
-    url.className = 'content-card-url';
-    url.href = insight.url;
-    url.target = '_blank';
-    url.textContent = new URL(insight.url).hostname;
+    // Tag instead of PROJECT button
+    const tag = document.createElement('div');
+    tag.className = 'content-card-tag-main';
+    tag.textContent = 'PROJECT'; // Default tag, can be customized based on content type
     
-    const date = document.createElement('div');
-    date.className = 'content-card-date';
-    date.textContent = new Date(insight.created_at).toLocaleDateString('en-US');
-    
-    cardFooter.appendChild(url);
-    cardFooter.appendChild(date);
+    cardFooter.appendChild(tag);
     
     // 组装卡片内容
     cardContent.appendChild(cardHeader);
@@ -3149,13 +3177,13 @@ function populateModalContent(insight) {
     console.log('📝 填充模态框内容:', insight);
     
     // 标题
-    const titleElement = document.getElementById('contentDetailTitle');
+    const titleElement = document.getElementById('modalContentTitle');
     if (titleElement) {
         titleElement.textContent = insight.title || new URL(insight.url).hostname;
     }
     
-    // 图片
-    const imageContainer = document.getElementById('contentDetailImage');
+    // 图片占位符
+    const imageContainer = document.getElementById('modalImagePlaceholder');
     if (imageContainer) {
         imageContainer.innerHTML = '';
         
@@ -3164,120 +3192,162 @@ function populateModalContent(insight) {
             img.src = insight.image_url;
             img.alt = insight.title || 'Content image';
             img.onerror = function() {
-                imageContainer.classList.add('no-image');
-                this.style.display = 'none';
+                imageContainer.innerHTML = '<span>No image available</span>';
             };
             imageContainer.appendChild(img);
-            imageContainer.classList.remove('no-image');
         } else {
-            imageContainer.classList.add('no-image');
+            imageContainer.innerHTML = '<span>No image available</span>';
         }
     }
     
-    // 元数据（来源和日期）
-    const metaElement = document.getElementById('contentDetailMeta');
-    if (metaElement) {
-        const hostname = new URL(insight.url).hostname;
-        const date = new Date(insight.created_at).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-        
-        metaElement.innerHTML = `
-            <a href="${insight.url}" target="_blank" class="content-detail-source">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                ${hostname}
-            </a>
-            <span class="content-detail-date">${date}</span>
-        `;
+    // 用户评论
+    const commentElement = document.getElementById('modalCommentText');
+    if (commentElement) {
+        commentElement.textContent = insight.thought || 'No comment added yet.';
     }
     
-    // 描述
-    const descriptionElement = document.getElementById('contentDetailDescription');
-    if (descriptionElement) {
-        descriptionElement.textContent = insight.description || `Content from ${new URL(insight.url).hostname}`;
+    // 填充评论编辑表单
+    const commentTextarea = document.getElementById('commentEditTextarea');
+    if (commentTextarea) {
+        commentTextarea.value = insight.thought || '';
     }
     
-    // 用户想法
-    const thoughtsElement = document.getElementById('contentDetailThoughts');
-    if (thoughtsElement) {
-        if (insight.thought && insight.thought.trim()) {
-            thoughtsElement.innerHTML = `
-                <div class="content-detail-thoughts-label">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Your Thoughts:
-                </div>
-                <div class="content-detail-thoughts-text">${insight.thought}</div>
-            `;
-            thoughtsElement.style.display = 'block';
-        } else {
-            thoughtsElement.style.display = 'none';
-        }
+    // 填充AI摘要日期
+    const aiSummaryDate = document.querySelector('.ai-summary-date');
+    if (aiSummaryDate) {
+        const date = new Date(insight.created_at || Date.now()).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric'
+        }).replace(',', '');
+        aiSummaryDate.textContent = date;
     }
     
-    // 标签
-    const tagsElement = document.getElementById('contentDetailTags');
-    if (tagsElement) {
-        tagsElement.innerHTML = '';
-        
-        if (insight.tags && insight.tags.length > 0) {
-            insight.tags.forEach(tag => {
-                const tagElement = document.createElement('span');
-                tagElement.className = 'content-detail-tag';
-                
-                let tagText = '';
-                if (typeof tag === 'string') {
-                    tagText = tag;
-                } else if (tag && typeof tag === 'object') {
-                    tagText = tag.name || tag.id || 'Unknown Tag';
-                } else {
-                    tagText = 'Invalid Tag';
-                }
-                
-                tagElement.textContent = tagText;
-                tagsElement.appendChild(tagElement);
-            });
-        }
-    }
+    // 填充Quest建议
+    populateQuestSuggestions();
     
     // 设置按钮事件
     setupModalActions(insight);
 }
 
+// 填充Quest建议
+function populateQuestSuggestions() {
+    const questGrid = document.getElementById('questSuggestionsGrid');
+    if (!questGrid) return;
+    
+    // 清空现有内容
+    questGrid.innerHTML = '';
+    
+    // 创建3个占位符卡片
+    const placeholderCards = [
+        {
+            date: 'MMDD, YYYY',
+            title: 'Title Placeholder',
+            tags: ['functional', 'Spotify']
+        },
+        {
+            date: 'MMDD, YYYY',
+            title: 'Title Placeholder',
+            tags: ['functional', 'Spotify']
+        },
+        {
+            date: 'MMDD, YYYY',
+            title: 'Title Placeholder',
+            tags: ['functional', 'Spotify']
+        }
+    ];
+    
+    placeholderCards.forEach(card => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'quest-suggestion-card';
+        
+        cardElement.innerHTML = `
+            <div class="quest-card-date">${card.date}</div>
+            <div class="quest-card-title">${card.title}</div>
+            <div class="quest-card-tags">
+                ${card.tags.map(tag => `<span class="quest-card-tag ${tag.toLowerCase()}">${tag}</span>`).join('')}
+            </div>
+        `;
+        
+        questGrid.appendChild(cardElement);
+    });
+}
+
 // 设置模态框操作按钮
 function setupModalActions(insight) {
-    // 访问原始链接按钮
-    const visitBtn = document.getElementById('contentDetailVisit');
-    if (visitBtn) {
-        visitBtn.onclick = () => {
-            window.open(insight.url, '_blank');
+    // 设置评论编辑功能
+    setupCommentEditing();
+    
+    // Note: Share button removed from user info section
+    
+    // 设置分享我的空间按钮
+    const shareMySpaceBtn = document.querySelector('.share-my-space-btn');
+    if (shareMySpaceBtn) {
+        shareMySpaceBtn.onclick = () => {
+            // TODO: Implement share my space functionality
+            console.log('Share My Space clicked');
         };
     }
     
-    // 分享按钮
-    const shareBtn = document.getElementById('contentDetailShare');
-    if (shareBtn) {
-        shareBtn.onclick = () => {
-            shareInsight(insight);
+    // 设置编辑标签按钮
+    const editTagsBtn = document.querySelector('.edit-tags-btn');
+    if (editTagsBtn) {
+        editTagsBtn.onclick = () => {
+            // TODO: Implement edit tags functionality
+            console.log('Edit Tags clicked');
         };
     }
+}
+
+// 设置评论编辑功能
+function setupCommentEditing() {
+    const editCommentBtn = document.getElementById('editCommentBtn');
+    const commentContent = document.getElementById('modalCommentContent');
+    const commentEditForm = document.getElementById('commentEditForm');
+    const saveCommentBtn = document.getElementById('saveCommentBtn');
+    const cancelCommentBtn = document.getElementById('cancelCommentBtn');
+    const commentTextarea = document.getElementById('commentEditTextarea');
     
-    // 删除按钮
-    const deleteBtn = document.getElementById('contentDetailDelete');
-    if (deleteBtn) {
-        deleteBtn.onclick = () => {
-            if (confirm('Are you sure you want to delete this content?')) {
-                deleteInsight(insight.id);
-                closeContentDetailModal();
+    if (!editCommentBtn || !commentContent || !commentEditForm) return;
+    
+    // 编辑按钮点击事件
+    editCommentBtn.addEventListener('click', () => {
+        commentContent.style.display = 'none';
+        commentEditForm.style.display = 'block';
+        commentTextarea.focus();
+    });
+    
+    // 保存按钮点击事件
+    saveCommentBtn.addEventListener('click', () => {
+        const newComment = commentTextarea.value.trim();
+        if (newComment) {
+            // 更新显示的评论
+            const commentText = document.getElementById('modalCommentText');
+            if (commentText) {
+                commentText.textContent = newComment;
             }
-        };
-    }
+            
+            // TODO: Save comment to backend
+            console.log('Saving comment:', newComment);
+        }
+        
+        // 切换回显示模式
+        commentContent.style.display = 'flex';
+        commentEditForm.style.display = 'none';
+    });
+    
+    // 取消按钮点击事件
+    cancelCommentBtn.addEventListener('click', () => {
+        // 恢复原始内容
+        const commentText = document.getElementById('modalCommentText');
+        if (commentText) {
+            commentTextarea.value = commentText.textContent;
+        }
+        
+        // 切换回显示模式
+        commentContent.style.display = 'flex';
+        commentEditForm.style.display = 'none';
+    });
 }
 
 // 绑定模态框事件监听器
@@ -3310,5 +3380,83 @@ function bindContentDetailModalEvents() {
 window.openProfileEditModal = openProfileEditModal;
 window.closeProfileEditModal = closeProfileEditModal;
 window.handleProfileUpdate = handleProfileUpdate;
+
+// Edit Mode Functionality
+function bindEditModeEvents() {
+    const editModeBtn = document.getElementById('editModeBtn');
+    if (editModeBtn) {
+        editModeBtn.addEventListener('click', toggleEditMode);
+        console.log('✅ Edit mode button event bound');
+    }
+}
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const editModeBtn = document.getElementById('editModeBtn');
+    const editBtnText = editModeBtn.querySelector('.edit-btn-text');
+    
+    if (isEditMode) {
+        // Enter edit mode
+        editModeBtn.classList.add('active');
+        editBtnText.textContent = 'Done';
+        
+        // Add shaking animation to all content cards
+        const contentCards = document.querySelectorAll('.content-card');
+        contentCards.forEach(card => {
+            card.classList.add('shake');
+        });
+        
+        console.log('✅ Entered edit mode');
+    } else {
+        // Exit edit mode
+        editModeBtn.classList.remove('active');
+        editBtnText.textContent = 'Edit';
+        
+        // Remove shaking animation from all content cards
+        const contentCards = document.querySelectorAll('.content-card');
+        contentCards.forEach(card => {
+            card.classList.remove('shake');
+        });
+        
+        console.log('✅ Exited edit mode');
+    }
+}
+
+// Function to get source name from URL
+function getSourceName(url) {
+    try {
+        const hostname = new URL(url).hostname;
+        // Map common domains to friendly names
+        const sourceMap = {
+            'open.spotify.com': 'Spotify',
+            'www.youtube.com': 'YouTube',
+            'youtube.com': 'YouTube',
+            'www.wikipedia.org': 'Wikipedia',
+            'en.wikipedia.org': 'Wikipedia',
+            'www.medium.com': 'Medium',
+            'medium.com': 'Medium',
+            'www.github.com': 'GitHub',
+            'github.com': 'GitHub',
+            'www.twitter.com': 'Twitter',
+            'twitter.com': 'Twitter',
+            'www.linkedin.com': 'LinkedIn',
+            'linkedin.com': 'LinkedIn'
+        };
+        
+        return sourceMap[hostname] || hostname.replace('www.', '');
+    } catch (error) {
+        return 'Unknown Source';
+    }
+}
+
+// Function to update edit mode state when content cards are re-rendered
+function updateEditModeState() {
+    if (isEditMode) {
+        const contentCards = document.querySelectorAll('.content-card');
+        contentCards.forEach(card => {
+            card.classList.add('shake');
+        });
+    }
+}
 
 
