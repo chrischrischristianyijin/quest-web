@@ -1429,7 +1429,7 @@ function renderTagSelector(tags) {
         tagOption.innerHTML = `
             <div class="tag-option-content">
                 <span class="tag-name">${tag.name}</span>
-                <input type="checkbox" id="tag_${tag.id}" value="${tag.id}" class="tag-checkbox">
+                <input type="radio" name="selectedTag" id="tag_${tag.id}" value="${tag.id}" class="tag-radio">
             </div>
         `;
         
@@ -1448,22 +1448,26 @@ function renderTagSelector(tags) {
                 target: e.target
             });
             
-            // 防止点击checkbox时触发两次
-            if (e.target.type === 'checkbox') {
-                console.log('🔍 点击的是复选框，跳过处理');
+            // 防止点击radio时触发两次
+            if (e.target.type === 'radio') {
+                console.log('🔍 点击的是单选按钮，跳过处理');
                 return;
             }
             
-            const checkbox = tagOption.querySelector('.tag-checkbox');
-            checkbox.checked = !checkbox.checked;
-            
-            if (checkbox.checked) {
-                tagOption.classList.add('selected');
-                console.log('✅ 标签已选中:', tag.name);
-            } else {
-                tagOption.classList.remove('selected');
-                console.log('❌ 标签已取消选中:', tag.name);
+            // 清除之前选中的标签
+            const previouslySelected = tagSelectorOptions.querySelector('.tag-option.selected');
+            if (previouslySelected) {
+                previouslySelected.classList.remove('selected');
+                const prevRadio = previouslySelected.querySelector('.tag-radio');
+                if (prevRadio) prevRadio.checked = false;
             }
+            
+            // 选中当前标签
+            const radio = tagOption.querySelector('.tag-radio');
+            radio.checked = true;
+            tagOption.classList.add('selected');
+            
+            console.log('✅ 标签已选中:', tag.name);
             
             updateSelectedTagsDisplay();
         });
@@ -1484,27 +1488,27 @@ function updateSelectedTagsDisplay() {
     selectedTagsDisplay.innerHTML = '';
     
     if (selectedTags.length === 0) {
-        selectedTagsDisplay.innerHTML = '<span class="no-selected-tags">No tags selected</span>';
+        selectedTagsDisplay.innerHTML = '<span class="no-selected-tags">No tag selected</span>';
         return;
     }
     
-    selectedTags.forEach(tag => {
-        const tagElement = document.createElement('span');
-        tagElement.className = 'selected-tag';
-        tagElement.innerHTML = `
-            ${tag.name}
-            <button class="remove-tag-btn" onclick="removeSelectedTag('${tag.id}')">&times;</button>
-        `;
-        selectedTagsDisplay.appendChild(tagElement);
-    });
+    // Since we only allow one tag, we'll only have one tag in the array
+    const tag = selectedTags[0];
+    const tagElement = document.createElement('span');
+    tagElement.className = 'selected-tag';
+    tagElement.innerHTML = `
+        ${tag.name}
+        <button class="remove-tag-btn" onclick="removeSelectedTag('${tag.id}')">&times;</button>
+    `;
+    selectedTagsDisplay.appendChild(tagElement);
 }
 
 // 移除已选标签
 function removeSelectedTag(tagId) {
-    const checkbox = document.getElementById(`tag_${tagId}`);
-    if (checkbox) {
-        checkbox.checked = false;
-        const tagOption = checkbox.closest('.tag-option');
+    const radio = document.getElementById(`tag_${tagId}`);
+    if (radio) {
+        radio.checked = false;
+        const tagOption = radio.closest('.tag-option');
         if (tagOption) {
             tagOption.classList.remove('selected');
         }
@@ -1594,19 +1598,19 @@ function updateFilterButtons(tags) {
 // 获取选中的标签
 function getSelectedTags() {
     const selectedTags = [];
-    const checkboxes = document.querySelectorAll('#tagSelectorOptions .tag-checkbox:checked');
+    const radio = document.querySelector('#tagSelectorOptions .tag-radio:checked');
     
-    console.log('🔍 查找选中的标签，找到复选框数量:', checkboxes.length);
+    console.log('🔍 查找选中的标签，找到单选按钮:', radio ? '是' : '否');
     
-    checkboxes.forEach((checkbox, index) => {
-        const tagId = checkbox.value;
-        const tagOption = checkbox.closest('.tag-option');
+    if (radio) {
+        const tagId = radio.value;
+        const tagOption = radio.closest('.tag-option');
         
         if (tagOption) {
             const tagName = tagOption.dataset.tagName || 'Unknown Tag';
             const tagColor = tagOption.dataset.tagColor || '#667eea';
             
-            console.log(`🔍 标签 ${index + 1}:`, { id: tagId, name: tagName, color: tagColor });
+            console.log(`🔍 选中的标签:`, { id: tagId, name: tagName, color: tagColor });
             
             selectedTags.push({ 
                 id: tagId, 
@@ -1614,7 +1618,7 @@ function getSelectedTags() {
                 color: tagColor 
             });
         }
-    });
+    }
     
     console.log('✅ 最终选中的标签:', selectedTags);
     return selectedTags;
