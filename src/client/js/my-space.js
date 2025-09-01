@@ -7,7 +7,9 @@ import { PATHS, navigateTo } from './paths.js';
 const profileAvatar = document.getElementById('profileAvatar');
 const usernamePlaceholder = document.getElementById('usernamePlaceholder');
 const contentCards = document.getElementById('contentCards');
-const logoutBtn = document.getElementById('logoutBtn');
+const headerLogout = document.getElementById('headerLogout');
+const headerEditProfile = document.getElementById('headerEditProfile');
+const headerAvatar = document.getElementById('headerAvatar');
 const addContentForm = document.getElementById('addContentForm');
 const addContentModal = document.getElementById('addContentModal');
 const closeAddModal = document.getElementById('closeAddModal');
@@ -29,24 +31,37 @@ let currentFilters = {
 async function initPage() {
     try {
         console.log('🚀 初始化My Space页面...');
+        console.log('🔍 Debug: auth module available:', typeof auth);
+        console.log('🔍 Debug: api module available:', typeof api);
         
         // 恢复会话状态
-        auth.restoreSession();
+        try {
+            auth.restoreSession();
+            console.log('✅ Session restore completed');
+        } catch (sessionError) {
+            console.error('❌ Session restore failed:', sessionError);
+        }
         
         // 检查认证状态（放宽：先尝试恢复会话后再判断，避免闪跳）
-        if (!auth.checkAuth()) {
+        console.log('🔍 Debug: Checking auth status...');
+        const isAuthenticated = auth.checkAuth();
+        console.log('🔍 Debug: Auth status:', isAuthenticated);
+        
+        if (!isAuthenticated) {
             console.log('⚠️ 未检测到会话，尝试恢复...');
             const restored = auth.restoreSession();
-                    if (!restored) {
-            console.log('❌ 无会话可恢复，保持在当前页并提示登录');
-            showErrorMessage('Please sign in to use My Space.');
+            console.log('🔍 Debug: Session restoration result:', restored);
             
-            // 即使未认证，也绑定基础UI事件（如用户资料编辑）
-            console.log('🔧 未认证状态下绑定基础UI事件...');
-            bindProfileEditEvents();
-            
-            return;
-        }
+            if (!restored) {
+                console.log('❌ 无会话可恢复，保持在当前页并提示登录');
+                showErrorMessage('Please sign in to use My Space.');
+                
+                // 即使未认证，也绑定基础UI事件（如用户资料编辑）
+                console.log('🔧 未认证状态下绑定基础UI事件...');
+                bindProfileEditEvents();
+                
+                return;
+            }
         }
         
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
@@ -182,6 +197,20 @@ function updateUserProfileUI() {
     if (actualUsername) {
         actualUsername.textContent = currentUser.nickname || currentUser.email || 'User';
         actualUsername.style.display = 'inline';
+    }
+    
+    // 更新header头像
+    if (headerAvatar) {
+        if (currentUser.avatar_url) {
+            headerAvatar.src = currentUser.avatar_url;
+        }
+    }
+    
+    // 更新header欢迎消息
+    const welcomeMessage = document.querySelector('.WelcomeToYourPersonalSpacePlaceholder');
+    if (welcomeMessage) {
+        const displayName = currentUser.nickname || currentUser.email || 'User';
+        welcomeMessage.textContent = `Welcome, ${displayName}!`;
     }
     
     console.log('✅ 用户资料UI已更新');
@@ -1007,9 +1036,9 @@ function hideAddContentModal() {
 
 // 绑定事件
 function bindEvents() {
-    // 登出按钮
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+    // Header logout button
+    if (headerLogout) {
+        headerLogout.addEventListener('click', () => {
             console.log('🚪 用户点击登出...');
             
             // 直接清除本地状态
@@ -1017,6 +1046,19 @@ function bindEvents() {
             
             // 立即跳转到首页
             window.location.href = PATHS.HOME;
+        });
+    }
+    
+    // Header edit profile button
+    if (headerEditProfile) {
+        headerEditProfile.addEventListener('click', () => {
+            console.log('✏️ 用户点击编辑资料...');
+            
+            // 触发编辑资料模态框
+            const profileContainer = document.getElementById('profileContainer');
+            if (profileContainer) {
+                profileContainer.click();
+            }
         });
     }
     
@@ -2539,12 +2581,14 @@ function bindProfileEditEvents() {
     const closeProfileModal = document.getElementById('closeProfileModal');
     const cancelProfileEdit = document.getElementById('cancelProfileEdit');
     const profileAvatarUpload = document.getElementById('profileAvatarUpload');
+    const avatarEditBtn = document.getElementById('avatarEditBtn');
     
     console.log('🔍 检查DOM元素:', {
         profileContainer: !!profileContainer,
         profileEditModal: !!profileEditModal,
         closeProfileModal: !!closeProfileModal,
-        cancelProfileEdit: !!cancelProfileEdit
+        cancelProfileEdit: !!cancelProfileEdit,
+        avatarEditBtn: !!avatarEditBtn
     });
     
     // 点击头像区域打开编辑模态框
@@ -2631,6 +2675,18 @@ function bindProfileEditEvents() {
         console.error('❌ 找不到profileAvatarUpload元素');
     }
     
+    // 头像编辑按钮
+    if (avatarEditBtn) {
+        avatarEditBtn.addEventListener('click', () => {
+            if (profileAvatarUpload) {
+                profileAvatarUpload.click();
+            }
+        });
+        console.log('✅ 头像编辑按钮事件已绑定');
+    } else {
+        console.error('❌ 找不到avatarEditBtn元素');
+    }
+    
     console.log('✅ 用户资料编辑事件绑定完成');
 }
 
@@ -2648,19 +2704,42 @@ function openProfileEditModal() {
     }
     
     // 预填充当前用户信息
-    const nicknameInput = document.getElementById('profileNickname');
-    if (nicknameInput && currentUser) {
-        nicknameInput.value = currentUser.nickname || currentUser.email || '';
+    const usernameInput = document.getElementById('profileUsername');
+    const emailInput = document.getElementById('profileEmail');
+    
+    if (usernameInput && currentUser) {
+        usernameInput.value = currentUser.nickname || currentUser.email || '';
+    }
+    
+    if (emailInput && currentUser) {
+        emailInput.value = currentUser.email || '';
+    }
+    
+    // 设置当前头像
+    if (avatarPreviewImg && currentUser) {
+        if (currentUser.avatar_url) {
+            avatarPreviewImg.src = currentUser.avatar_url;
+        } else if (currentUser.avatar) {
+            avatarPreviewImg.src = currentUser.avatar;
+        } else {
+            avatarPreviewImg.src = '/public/3d_avatar_12.png';
+        }
+        
+        // Ensure avatar is visible
+        avatarPreviewImg.style.display = 'block';
+        avatarPreviewImg.style.visibility = 'visible';
+        avatarPreviewImg.style.opacity = '1';
+        
+        // Add error handling for image loading
+        avatarPreviewImg.onerror = function() {
+            this.src = '/public/3d_avatar_12.png';
+            this.style.display = 'block';
+        };
     }
     
     // 重置头像上传
     if (profileAvatarUpload) {
         profileAvatarUpload.value = '';
-    }
-    
-    // 隐藏头像预览
-    if (avatarPreviewImg) {
-        avatarPreviewImg.style.display = 'none';
     }
     
     // 显示模态框
@@ -2699,11 +2778,6 @@ function closeProfileEditModal() {
         profileEditForm.reset();
     }
     
-    // 隐藏头像预览
-    if (avatarPreviewImg) {
-        avatarPreviewImg.style.display = 'none';
-    }
-    
     console.log('✅ 用户资料编辑模态框已关闭');
 }
 
@@ -2714,7 +2788,13 @@ function handleAvatarPreview(event) {
     
     if (!file) {
         if (avatarPreviewImg) {
-            avatarPreviewImg.style.display = 'none';
+            // Reset to current user avatar or default
+            if (currentUser && currentUser.avatar_url) {
+                avatarPreviewImg.src = currentUser.avatar_url;
+            } else {
+                avatarPreviewImg.src = '/public/3d_avatar_12.png';
+            }
+            avatarPreviewImg.style.display = 'block';
         }
         return;
     }
@@ -2758,21 +2838,42 @@ async function handleProfileUpdate(event) {
         return;
     }
     
-    const nicknameInput = document.getElementById('profileNickname');
+    const usernameInput = document.getElementById('profileUsername');
+    const emailInput = document.getElementById('profileEmail');
+    const passwordInput = document.getElementById('profilePassword');
+    const confirmPasswordInput = document.getElementById('profileConfirmPassword');
     const saveBtn = document.getElementById('saveProfileEdit');
     const saveBtnText = document.getElementById('saveProfileBtnText');
     
-    if (!nicknameInput) {
-        showErrorMessage('Nickname input not found');
+    if (!usernameInput || !emailInput) {
+        showErrorMessage('Username or email input not found');
         return;
     }
     
-    const nickname = nicknameInput.value.trim();
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput ? passwordInput.value : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
     
-    if (!nickname) {
-        showErrorMessage('Please enter a nickname');
+    // Validate inputs
+    if (!username || !email) {
+        showErrorMessage('Username and email are required');
         return;
     }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showErrorMessage('Please enter a valid email address');
+        return;
+    }
+    
+    // Validate password match if password is provided
+    if (password && password !== confirmPassword) {
+        showErrorMessage('Passwords do not match');
+        return;
+    }
+
     
     // 显示加载状态
     if (saveBtn && saveBtnText) {
@@ -2818,8 +2919,14 @@ async function handleProfileUpdate(event) {
         
         // 更新用户资料
         const profileData = {
-            nickname: nickname
+            nickname: username,
+            email: email
         };
+        
+        // 只有当密码提供时才包含它
+        if (password) {
+            profileData.password = password;
+        }
         
         // 只有当头像URL有变化时才包含它
         if (avatarUrl && avatarUrl !== currentUser.avatar_url) {
