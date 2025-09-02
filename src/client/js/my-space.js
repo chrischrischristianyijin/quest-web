@@ -22,8 +22,7 @@ let currentUser = null;
 let currentInsights = [];
 let currentFilters = {
     latest: 'latest',  // 时间排序
-    tags: null,        // 标签筛选
-    type: 'all'        // 内容类型
+    tags: null         // 标签筛选
 };
 let isEditMode = false; // Edit mode state
 let draggedCard = null;
@@ -79,15 +78,19 @@ async function initPage() {
         console.log('✅ 认证状态正常，继续初始化...');
         
         // 并行加载所有数据以提高性能
-        const [profileResult, insightsResult, tagsResult] = await Promise.allSettled([
+        const [profileResult, insightsResult, tagsResult, stacksResult] = await Promise.allSettled([
             loadUserProfile(),
             loadUserInsights(),
-            loadUserTags()
+            loadUserTags(),
+            loadUserStacks()
         ]);
         
         // 检查每个加载结果并记录错误
         if (profileResult.status === 'rejected') {
             console.error('❌ 用户资料加载失败:', profileResult.reason);
+        }
+        if (stacksResult.status === 'rejected') {
+            console.error('❌ 用户stacks加载失败:', stacksResult.reason);
         }
         if (insightsResult.status === 'rejected') {
             console.error('❌ 用户insights加载失败:', insightsResult.reason);
@@ -130,31 +133,87 @@ async function loadUserStacks() {
             return;
         }
         
-        const response = await api.getUserStacksWithInsights();
-        
-        if (response.success && response.data) {
-            // 将API返回的stacks数据转换为本地格式
-            const apiStacks = response.data;
-            stacks.clear(); // 清空现有stacks
+        try {
+            // Load all insights and group them by stack_id
+            const response = await api.getInsights();
             
-            apiStacks.forEach(apiStack => {
-                const stackData = {
-                    id: apiStack.id.toString(),
-                    name: apiStack.name || 'Stack',
-                    cards: apiStack.insights || [], // API直接返回insights数组
-                    createdAt: apiStack.created_at,
-                    modifiedAt: apiStack.modified_at,
-                    isExpanded: false
-                };
+            console.log('🔍 Stack loading API response:', response);
+            
+            if (response.success && response.data) {
+                // Handle different response structures
+                let allInsights;
+                if (Array.isArray(response.data)) {
+                    allInsights = response.data;
+                } else if (response.data.insights && Array.isArray(response.data.insights)) {
+                    allInsights = response.data.insights;
+                } else if (response.data.data && Array.isArray(response.data.data)) {
+                    allInsights = response.data.data;
+                } else {
+                    console.warn('⚠️ Unexpected API response structure:', response.data);
+                    allInsights = [];
+                }
                 
-                stacks.set(stackData.id, stackData);
-            });
-            
-            // 更新stackIdCounter
-            if (apiStacks.length > 0) {
-                const maxId = Math.max(...apiStacks.map(s => parseInt(s.id)));
-                stackIdCounter = maxId + 1;
-            }
+                stacks.clear(); // 清空现有stacks
+                
+                console.log('🔍 All insights loaded:', allInsights.length);
+                console.log('🔍 Sample insight fields:', allInsights[0] ? Object.keys(allInsights[0]) : 'No insights');
+                console.log('🔍 Insights with stack_id:', allInsights.filter(i => i.stack_id));
+                
+                // Group insights by stack_id
+                const stackGroups = {};
+                allInsights.forEach(insight => {
+                    if (insight.stack_id) {
+                        console.log('🔍 Found insight with stack_id:', insight.id, '->', insight.stack_id);
+                        if (!stackGroups[insight.stack_id]) {
+                            stackGroups[insight.stack_id] = [];
+                        }
+                        stackGroups[insight.stack_id].push(insight);
+                    }
+                });
+                
+                console.log('🔍 Stack groups found:', Object.keys(stackGroups));
+                
+                // Create stack objects from grouped insights
+                Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
+                    if (stackInsights.length > 0) {
+                        const stackData = {
+                            id: stackId,
+                            name: 'Stack',
+                            cards: stackInsights,
+                            createdAt: stackInsights[0].created_at || new Date().toISOString(),
+                            modifiedAt: stackInsights[0].modified_at || new Date().toISOString(),
+                            isExpanded: false
+                        };
+                        
+                        stacks.set(stackId, stackData);
+                    }
+                });
+                
+                // If no stacks found in database, try loading from localStorage
+                if (Object.keys(stackGroups).length === 0) {
+                    console.log('🔍 No stacks found in database, checking localStorage...');
+                    const savedStacks = localStorage.getItem('quest_stacks');
+                    if (savedStacks) {
+                        try {
+                            const stackEntries = JSON.parse(savedStacks);
+                            stackEntries.forEach(([stackId, stackData]) => {
+                                stacks.set(stackId, stackData);
+                                console.log('🔍 Loaded stack from localStorage:', stackId);
+                            });
+                        } catch (error) {
+                            console.error('❌ Failed to parse saved stacks:', error);
+                        }
+                    }
+                }
+                
+                // 更新stackIdCounter
+                if (Object.keys(stackGroups).length > 0) {
+                    const maxTimestamp = Math.max(...Object.keys(stackGroups).map(id => {
+                        const timestamp = id.split('_')[1];
+                        return timestamp ? parseInt(timestamp) : 0;
+                    }));
+                    stackIdCounter = maxTimestamp + 1;
+                }
             
             // 验证one-to-one约束 (现在由数据库保证)
             const allInsightIds = new Set();
@@ -174,15 +233,50 @@ async function loadUserStacks() {
                 console.error('❌ 数据违反one-to-one约束，请检查后端数据');
             }
             
-            console.log('✅ 用户stacks加载成功:', stacks.size, '个stacks');
-        } else {
-            console.warn('⚠️ 没有stacks数据或API返回格式错误');
+                console.log('✅ 用户stacks加载成功:', stacks.size, '个stacks');
+            } else {
+                console.warn('⚠️ 没有stacks数据或API返回格式错误，尝试从localStorage加载');
+                // Try loading from localStorage as fallback
+                const savedStacks = localStorage.getItem('quest_stacks');
+                if (savedStacks) {
+                    try {
+                        const stackEntries = JSON.parse(savedStacks);
+                        stackEntries.forEach(([stackId, stackData]) => {
+                            stacks.set(stackId, stackData);
+                            console.log('🔍 Loaded stack from localStorage:', stackId);
+                        });
+                    } catch (error) {
+                        console.error('❌ Failed to parse saved stacks:', error);
+                    }
+                }
+            }
+        } catch (apiError) {
+            console.error('❌ API调用失败:', apiError);
+            // 如果API调用失败，继续使用本地存储
+            console.log('🔍 API failed, trying localStorage fallback...');
+            const savedStacks = localStorage.getItem('quest_stacks');
+            if (savedStacks) {
+                try {
+                    const stackEntries = JSON.parse(savedStacks);
+                    stackEntries.forEach(([stackId, stackData]) => {
+                        stacks.set(stackId, stackData);
+                        console.log('🔍 Loaded stack from localStorage:', stackId);
+                    });
+                } catch (error) {
+                    console.error('❌ Failed to parse saved stacks:', error);
+                }
+            }
         }
-    } catch (error) {
-        console.error('❌ 加载用户stacks失败:', error);
-        // 不抛出错误，允许页面继续加载
-    }
+        } catch (error) {
+            console.error('❌ 加载用户stacks失败:', error);
+            // 如果stacks端点不存在，继续使用本地存储
+            if (error.message.includes('404') || error.message.includes('Not Found')) {
+                console.log('📝 Stacks API端点尚未实现，使用本地存储模式');
+            }
+            // 不抛出错误，允许页面继续加载
+        }
 }
+
 
 // 加载用户资料
 async function loadUserProfile() {
@@ -269,7 +363,19 @@ function updateUserProfileUI() {
     
     // 更新用户名
     if (actualUsername) {
-        actualUsername.textContent = currentUser.nickname || currentUser.email || 'User';
+        console.log('🔍 用户数据显示调试:', {
+            currentUser: currentUser,
+            nickname: currentUser.nickname,
+            email: currentUser.email,
+            username: currentUser.username,
+            name: currentUser.name,
+            allKeys: Object.keys(currentUser)
+        });
+        
+        const displayName = currentUser.nickname || currentUser.email || 'User';
+        console.log('🔍 选择的显示名称:', displayName);
+        
+        actualUsername.textContent = displayName;
         actualUsername.style.display = 'inline';
     }
     
@@ -301,18 +407,56 @@ async function loadUserInsights() {
         console.log('📡 API响应:', response);
         
         if (response.success && response.data && response.data.insights) {
-            currentInsights = response.data.insights;
-            console.log('✅ 用户insights加载成功:', currentInsights.length, '条');
+            // Filter out insights that are already in stacks
+            const allInsights = response.data.insights;
+            currentInsights = allInsights.filter(insight => !insight.stack_id);
+            console.log('✅ 用户insights加载成功:', allInsights.length, '条');
+            console.log('📚 过滤掉已在stacks中的insights后:', currentInsights.length, '条');
             
             // 检查每个insight的标签数据
             currentInsights.forEach((insight, index) => {
                 console.log(`📖 Insight ${index + 1}:`, {
+                    id: insight.id,
                     title: insight.title || insight.url,
                     tags: insight.tags,
                     tagsType: typeof insight.tags,
-                    tagsLength: insight.tags ? insight.tags.length : 'null/undefined'
+                    tagsLength: insight.tags ? insight.tags.length : 'null/undefined',
+                    tagIds: insight.tag_ids,
+                    allFields: Object.keys(insight)
                 });
+                
+                // 详细检查标签数据结构
+                if (insight.tags && insight.tags.length > 0) {
+                    insight.tags.forEach((tag, tagIndex) => {
+                        console.log(`  🏷️ Tag ${tagIndex + 1}:`, {
+                            tag: tag,
+                            type: typeof tag,
+                            isObject: tag && typeof tag === 'object',
+                            hasId: tag && tag.id,
+                            hasName: tag && tag.name
+                        });
+                    });
+                }
             });
+            
+            // Normalize tag structure for all insights first
+            currentInsights.forEach(insight => {
+                if (insight.tags && insight.tags.length > 0) {
+                    // Normalize tag structure - backend returns {tag_id, name, color}, frontend expects {id, name, color}
+                    insight.tags = insight.tags.map(tag => ({
+                        id: tag.tag_id || tag.id,
+                        name: tag.name,
+                        color: tag.color
+                    }));
+                }
+            });
+            
+            // Check if insights have tags, if not, try to load them separately
+            const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
+            if (insightsWithoutTags.length > 0) {
+                console.log('⚠️ Found insights without tags, attempting to load tags separately...');
+                await loadTagsForInsights(insightsWithoutTags);
+            }
             
             renderInsights();
         } else {
@@ -395,6 +539,83 @@ function renderInsights() {
     
     // Update edit mode state after rendering cards
     updateEditModeState();
+}
+
+// Load tags for insights that don't have them
+async function loadTagsForInsights(insights) {
+    try {
+        console.log('🏷️ Loading tags for insights without tags...');
+        
+        // Get all user tags first
+        const tagsResponse = await api.getUserTags();
+        const allTags = tagsResponse.success ? tagsResponse.data : [];
+        
+        console.log('🏷️ Available tags:', allTags);
+        
+        // For each insight without tags, try to find its tags
+        for (const insight of insights) {
+            try {
+                console.log(`🔍 Checking insight ${insight.id} for tags...`);
+                
+                // Try to get the insight individually to see if it has tags
+                const insightResponse = await api.getInsight(insight.id);
+                console.log(`📡 Individual insight response for ${insight.id}:`, insightResponse);
+                
+                if (insightResponse.success && insightResponse.data) {
+                    const fullInsight = insightResponse.data;
+                    console.log(`📖 Full insight data for ${insight.id}:`, {
+                        id: fullInsight.id,
+                        title: fullInsight.title,
+                        tags: fullInsight.tags,
+                        tag_ids: fullInsight.tag_ids,
+                        allFields: Object.keys(fullInsight)
+                    });
+                    
+                    if (fullInsight.tags && fullInsight.tags.length > 0) {
+                        console.log(`✅ Found tags for insight ${insight.id}:`, fullInsight.tags);
+                        
+                        // Normalize tag structure - backend returns {tag_id, name, color}, frontend expects {id, name, color}
+                        const normalizedTags = fullInsight.tags.map(tag => ({
+                            id: tag.tag_id || tag.id,
+                            name: tag.name,
+                            color: tag.color
+                        }));
+                        console.log(`🔄 Normalized tags:`, normalizedTags);
+                        
+                        // Update the insight in currentInsights
+                        const insightIndex = currentInsights.findIndex(i => i.id === insight.id);
+                        if (insightIndex !== -1) {
+                            currentInsights[insightIndex].tags = normalizedTags;
+                        }
+                    } else if (fullInsight.tag_ids && fullInsight.tag_ids.length > 0) {
+                        console.log(`🔍 Found tag_ids for insight ${insight.id}:`, fullInsight.tag_ids);
+                        // Convert tag_ids to tag objects
+                        const tagObjects = fullInsight.tag_ids.map(tagId => {
+                            const tag = allTags.find(t => t.id === tagId);
+                            return tag || { id: tagId, name: 'Unknown Tag' };
+                        });
+                        console.log(`✅ Converted tag_ids to tag objects:`, tagObjects);
+                        
+                        // Update the insight in currentInsights
+                        const insightIndex = currentInsights.findIndex(i => i.id === insight.id);
+                        if (insightIndex !== -1) {
+                            currentInsights[insightIndex].tags = tagObjects;
+                        }
+                    } else {
+                        console.log(`⚠️ No tags or tag_ids found for insight ${insight.id}`);
+                    }
+                } else {
+                    console.warn(`⚠️ Failed to get individual insight ${insight.id}:`, insightResponse);
+                }
+            } catch (error) {
+                console.warn(`⚠️ Failed to load tags for insight ${insight.id}:`, error.message);
+            }
+        }
+        
+        console.log('✅ Finished loading tags for insights');
+    } catch (error) {
+        console.error('❌ Failed to load tags for insights:', error);
+    }
 }
 
 // 创建见解卡片
@@ -611,7 +832,7 @@ async function initFilterButtons() {
         // 清空现有按钮
         filterButtons.innerHTML = '';
         
-        // 创建三个主要筛选按钮
+        // 创建两个主要筛选按钮
         const mainFilterButtons = [
             {
                 key: 'latest',
@@ -621,18 +842,6 @@ async function initFilterButtons() {
                     { key: 'latest', label: 'Latest' },
                     { key: 'oldest', label: 'Oldest' },
                     { key: 'alphabetical', label: 'Alphabetical' }
-                ]
-            },
-            {
-                key: 'type',
-                label: 'Type',
-                type: 'dropdown',
-                options: [
-                    { key: 'all', label: 'All Content' },
-                    { key: 'none', label: 'No Type' },
-                    { key: 'articles', label: 'Articles' },
-                    { key: 'videos', label: 'Videos' },
-                    { key: 'images', label: 'Images' }
                 ]
             },
             {
@@ -703,7 +912,7 @@ async function initFilterButtons() {
                     const option = e.target.closest('.filter-option');
                     if (option) {
                         const filterKey = option.dataset.filter;
-                        const filterType = filterConfig.key; // latest, tags, type
+                        const filterType = filterConfig.key; // latest, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
                         console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
                         setFilter(filterType, filterKey, optionLabel);
@@ -751,7 +960,7 @@ async function initFilterButtons() {
                     const option = e.target.closest('.filter-option');
                     if (option) {
                         const filterKey = option.dataset.filter;
-                        const filterType = filterConfig.key; // latest, tags, type
+                        const filterType = filterConfig.key; // latest, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
                         console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
                         setFilter(filterType, filterKey, optionLabel);
@@ -846,13 +1055,6 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
         } else if (filterValue === 'alphabetical') {
             button.textContent = 'Alphabetical';
         }
-    } else if (filterType === 'type') {
-        // 内容类型：显示选中的类型
-        if (optionLabel && filterValue !== 'all') {
-            button.textContent = optionLabel;
-        } else {
-            button.textContent = 'Type';
-        }
     }
 }
 
@@ -893,22 +1095,7 @@ function showFilterStatus() {
         statusParts.push('所有标签');
     }
     
-    // 内容类型状态
-    if (currentFilters.type && currentFilters.type !== 'all') {
-        const typeButton = document.querySelector(`[data-filter="type"]`);
-        if (typeButton) {
-            const typeOption = typeButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.type}"]`);
-            if (typeOption) {
-                if (currentFilters.type === 'none') {
-                    statusParts.push('无类型内容');
-                } else {
-                    statusParts.push(`类型: ${typeOption.textContent.trim()}`);
-                }
-            }
-        }
-    } else if (currentFilters.type === 'all') {
-        statusParts.push('所有类型');
-    }
+
     
     const statusText = statusParts.length > 0 ? statusParts.join(' | ') : '显示所有内容';
     console.log('📊 筛选状态:', statusText);
@@ -921,8 +1108,19 @@ function showFilterStatus() {
 function getFilteredInsights() {
     let filteredInsights = [...currentInsights];
     
+    // Filter out cards that are already in stacks
+    const cardsInStacks = new Set();
+    stacks.forEach(stackData => {
+        stackData.cards.forEach(card => {
+            cardsInStacks.add(card.id);
+        });
+    });
+    
+    filteredInsights = filteredInsights.filter(insight => !cardsInStacks.has(insight.id));
+    
     console.log('🔍 当前筛选条件:', currentFilters);
     console.log('📚 当前文章数据:', currentInsights);
+    console.log('📚 过滤掉已在stacks中的卡片后:', filteredInsights.length);
     
     // 1. 排序逻辑（始终应用）
     if (currentFilters.latest === 'latest') {
@@ -977,30 +1175,7 @@ function getFilteredInsights() {
         console.log('🏷️ 显示所有标签的内容');
     }
     
-    // 3. 内容类型筛选
-    if (currentFilters.type && currentFilters.type !== 'all') {
-        console.log('📚 筛选内容类型:', currentFilters.type);
-        
-        if (currentFilters.type === 'none') {
-            // 筛选没有类型的内容
-            filteredInsights = filteredInsights.filter(insight => {
-                // 这里可以根据实际的数据结构来判断内容类型
-                // 暂时先返回true，等有具体需求再实现
-                return true;
-            });
-            console.log('🎯 筛选无类型内容后的文章数量:', filteredInsights.length);
-        } else {
-            // 筛选特定类型的内容
-            filteredInsights = filteredInsights.filter(insight => {
-                // 这里可以根据实际的数据结构来判断内容类型
-                // 暂时先返回true，等有具体需求再实现
-                return true;
-            });
-            console.log('🎯 类型筛选后的文章数量:', filteredInsights.length);
-        }
-    } else {
-        console.log('📚 显示所有类型的内容');
-    }
+
     
     console.log('🎯 最终筛选后的文章数量:', filteredInsights.length);
     return filteredInsights;
@@ -1048,6 +1223,14 @@ async function deleteInsight(id) {
     
     try {
         await api.deleteInsight(id);
+        
+        // Clear cache for insights endpoint to ensure fresh data
+        if (window.apiCache) {
+            const insightsUrl = `${api.baseUrl}/api/v1/insights/all?include_tags=true`;
+            window.apiCache.delete(insightsUrl);
+            console.log('🗑️ Cleared insights cache after deletion');
+        }
+        
         await loadUserInsights();
         alert('Content deleted successfully!');
     } catch (error) {
@@ -1272,6 +1455,13 @@ function bindEvents() {
                 setTimeout(async () => {
                     console.log('🔄 开始重新加载内容...');
                     try {
+                        // Clear cache for insights endpoint to ensure fresh data
+                        if (window.apiCache) {
+                            const insightsUrl = `${api.baseUrl}/api/v1/insights/all?include_tags=true`;
+                            window.apiCache.delete(insightsUrl);
+                            console.log('🗑️ Cleared insights cache after creation');
+                        }
+                        
                         await loadUserInsights();
                         console.log('✅ 内容重新加载完成');
                     } catch (error) {
@@ -2454,10 +2644,7 @@ function testFiltering() {
         setFilter('latest', 'latest', 'Latest');
     }, 2000);
     
-    setTimeout(() => {
-        console.log('测试所有类型...');
-        setFilter('type', 'all', 'All Content');
-    }, 3000);
+
     
     setTimeout(() => {
         console.log('测试所有标签...');
@@ -2818,7 +3005,19 @@ function openProfileEditModal() {
     const emailInput = document.getElementById('profileEmail');
     
     if (usernameInput && currentUser) {
-        usernameInput.value = currentUser.nickname || currentUser.email || '';
+        console.log('🔍 预填充用户信息调试:', {
+            currentUser: currentUser,
+            nickname: currentUser.nickname,
+            email: currentUser.email,
+            username: currentUser.username,
+            name: currentUser.name,
+            allKeys: Object.keys(currentUser)
+        });
+        
+        const usernameValue = currentUser.nickname || currentUser.email || '';
+        console.log('🔍 设置的用户名输入值:', usernameValue);
+        
+        usernameInput.value = usernameValue;
     }
     
     if (emailInput && currentUser) {
@@ -3049,12 +3248,26 @@ async function handleProfileUpdate(event) {
         
         if (response.success) {
             // 更新本地用户数据
+            console.log('🔍 API更新成功，更新前的用户数据:', currentUser);
+            console.log('🔍 要合并的profileData:', profileData);
+            
             currentUser = { ...currentUser, ...profileData };
+            
+            console.log('🔍 API更新成功，更新后的用户数据:', currentUser);
             
             // 更新本地存储
             if (auth.getCurrentUser()) {
-                // Store updated user info in local storage
-                localStorage.setItem('quest_user_session', JSON.stringify(currentUser));
+                // Get existing session data to preserve token and timestamp
+                const existingSession = localStorage.getItem('quest_user_session');
+                if (existingSession) {
+                    const sessionData = JSON.parse(existingSession);
+                    // Update only the user data, preserve token and timestamp
+                    sessionData.user = currentUser;
+                    localStorage.setItem('quest_user_session', JSON.stringify(sessionData));
+                    console.log('💾 API更新成功，已保存到localStorage (保持session结构)');
+                } else {
+                    console.warn('⚠️ 没有找到现有session数据');
+                }
             }
             
             // 刷新UI显示
@@ -3074,10 +3287,54 @@ async function handleProfileUpdate(event) {
     } catch (error) {
         console.error('❌ 用户资料更新失败:', error);
         
+        // Try to update profile locally as fallback to prevent logout
+        console.warn('⚠️ API update failed, attempting local update to prevent logout...');
+        
+        try {
+            // 更新本地用户数据
+            console.log('🔍 更新前的用户数据:', currentUser);
+            console.log('🔍 要更新的数据:', { nickname: username, email: email });
+            
+            currentUser = { ...currentUser, nickname: username, email: email };
+            
+            console.log('🔍 更新后的用户数据:', currentUser);
+            
+            // 更新本地存储
+            if (auth.getCurrentUser()) {
+                // Get existing session data to preserve token and timestamp
+                const existingSession = localStorage.getItem('quest_user_session');
+                if (existingSession) {
+                    const sessionData = JSON.parse(existingSession);
+                    // Update only the user data, preserve token and timestamp
+                    sessionData.user = currentUser;
+                    localStorage.setItem('quest_user_session', JSON.stringify(sessionData));
+                    console.log('💾 已保存到localStorage (保持session结构)');
+                } else {
+                    console.warn('⚠️ 没有找到现有session数据');
+                }
+            }
+            
+            // 刷新UI显示
+            updateUserProfileUI();
+            
+            // 关闭模态框
+            closeProfileEditModal();
+            
+            // 显示警告消息
+            showSuccessMessage('Profile updated locally (server may be temporarily unavailable)');
+            
+            console.log('✅ 用户资料本地更新成功');
+            return; // Exit early since we handled it locally
+        } catch (localError) {
+            console.error('❌ 本地更新也失败:', localError);
+        }
+        
         let errorMessage = 'Failed to update profile. Please try again.';
         
-        if (error.message.includes('401') || error.message.includes('unauthorized')) {
-            errorMessage = 'Please log in again to update your profile.';
+        if (error.message.includes('401') || error.message.includes('unauthorized') || error.message.includes('认证已过期')) {
+            // Only show login message, don't automatically log out
+            errorMessage = 'Your session has expired. Please refresh the page and try again.';
+            console.warn('⚠️ Authentication error during profile update, but not logging out automatically');
         } else if (error.message.includes('400') || error.message.includes('bad request')) {
             errorMessage = 'Invalid profile data. Please check your input.';
         } else if (error.message.includes('500') || error.message.includes('server error')) {
@@ -3742,16 +3999,16 @@ function handleDragEnd(e) {
 async function createStack(card1, card2) {
     console.log('📚 Creating stack with cards:', card1.dataset.insightId, card2.dataset.insightId);
     
+    // Get insight data for both cards (moved outside try block for scope)
+    const insight1 = getInsightById(card1.dataset.insightId);
+    const insight2 = getInsightById(card2.dataset.insightId);
+    
+    if (!insight1 || !insight2) {
+        console.error('❌ Cannot find insight data for cards');
+        return;
+    }
+    
     try {
-        // Get insight data for both cards
-        const insight1 = getInsightById(card1.dataset.insightId);
-        const insight2 = getInsightById(card2.dataset.insightId);
-        
-        if (!insight1 || !insight2) {
-            console.error('❌ Cannot find insight data for cards');
-            return;
-        }
-        
         // Check if either insight is already in a stack (one-to-one constraint)
         const insight1InStack = Array.from(stacks.values()).some(stack => 
             stack.cards.some(card => card.id === insight1.id)
@@ -3765,30 +4022,34 @@ async function createStack(card1, card2) {
             return;
         }
         
-        // Create stack via API (one-to-one relationship)
-        const stackData = {
-            name: 'Stack'
-        };
+        // Generate a unique stack ID locally
+        const stackId = `stack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        const response = await api.createStack(stackData);
+        // Add insights to the stack via insights API (using stack_id field)
+        console.log('🔍 Attempting to update insights with stack_id:', stackId);
+        console.log('🔍 Insight 1 ID:', insight1.id);
+        console.log('🔍 Insight 2 ID:', insight2.id);
         
-        if (response.success && response.data) {
-            const apiStack = response.data;
-            const stackId = apiStack.id.toString();
-            
-            // Add insights to the stack via API
-            await Promise.all([
-                api.addItemToStack(stackId, insight1.id),
-                api.addItemToStack(stackId, insight2.id)
-            ]);
-            
+        const updatePromises = [
+            api.addItemToStack(stackId, insight1.id),
+            api.addItemToStack(stackId, insight2.id)
+        ];
+        
+        const responses = await Promise.all(updatePromises);
+        
+        console.log('🔍 API responses for stack updates:', responses);
+        
+        // Check if all updates were successful
+        const allSuccessful = responses.every(response => response.success);
+        
+        if (allSuccessful) {
             // Create local stack data
             const localStackData = {
                 id: stackId,
-                name: apiStack.name || 'Stack',
+                name: 'Stack',
                 cards: [insight1, insight2],
-                createdAt: apiStack.created_at || new Date().toISOString(),
-                modifiedAt: apiStack.modified_at || new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
                 isExpanded: false
             };
             
@@ -3798,24 +4059,57 @@ async function createStack(card1, card2) {
             // Remove cards from currentInsights to avoid duplicates
             // (This is safe because of one-to-one constraint)
             currentInsights = currentInsights.filter(insight => 
-                insight.id !== card1.dataset.insightId && 
-                insight.id !== card2.dataset.insightId
+                insight.id !== insight1.id && 
+                insight.id !== insight2.id
             );
             
             // Update stackIdCounter
-            stackIdCounter = Math.max(stackIdCounter, parseInt(stackId) + 1);
+            stackIdCounter = Math.max(stackIdCounter, parseInt(stackId.split('_')[1]) + 1);
+            
+            // Save to localStorage for persistence
+            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
             
             // Re-render content
             renderInsights();
             
             showSuccessMessage('Stack created successfully!');
         } else {
-            throw new Error(response.message || 'Failed to create stack');
+            throw new Error('Failed to update insights with stack information');
         }
-    } catch (error) {
-        console.error('❌ Failed to create stack via API:', error);
-        showErrorMessage('Failed to create stack. Please try again.');
-    }
+            } catch (error) {
+            console.error('❌ Failed to create stack via API:', error);
+            
+            // Fallback to local storage if API doesn't support stack_id
+            console.log('📝 Stack API not working, using local storage fallback');
+            
+            // Create stack locally
+            const stackId = `stack_${stackIdCounter++}`;
+            const localStackData = {
+                id: stackId,
+                name: 'Stack',
+                cards: [insight1, insight2],
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                isExpanded: false
+            };
+            
+            // Add to local stacks collection
+            stacks.set(stackId, localStackData);
+            
+            // Remove cards from currentInsights
+            currentInsights = currentInsights.filter(insight => 
+                insight.id !== insight1.id && 
+                insight.id !== insight2.id
+            );
+            
+            // Save to localStorage for persistence
+            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
+            
+            // Re-render content
+            renderInsights();
+            
+            showSuccessMessage('Stack created successfully! (Local storage)');
+        }
     
     // Clear drag state
     if (stackHoverTimeout) {
@@ -3929,16 +4223,132 @@ function createStackCard(stackData) {
     return card;
 }
 
+// Remove an item from a stack
+async function removeItemFromStack(stackId, insightId) {
+    if (confirm('Are you sure you want to remove this item from the stack?')) {
+        try {
+            console.log('🗑️ Removing item from stack:', { stackId, insightId });
+            
+            // Remove stack_id from the insight via API
+            const response = await api.removeItemFromStack(stackId, insightId);
+            
+            if (response.success) {
+                // Get the stack data
+                const stackData = stacks.get(stackId);
+                if (stackData) {
+                    // Find and remove the insight from the stack
+                    const insightIndex = stackData.cards.findIndex(card => card.id === insightId);
+                    if (insightIndex !== -1) {
+                        const removedInsight = stackData.cards[insightIndex];
+                        
+                        // Remove from stack
+                        stackData.cards.splice(insightIndex, 1);
+                        
+                        // Add back to currentInsights
+                        currentInsights.push(removedInsight);
+                        
+                        // Update stack metadata
+                        stackData.modifiedAt = new Date().toISOString();
+                        
+                        // If stack has 1 or fewer items, dissolve it
+                        if (stackData.cards.length <= 1) {
+                            // Move the remaining item back to insights if there is one
+                            if (stackData.cards.length === 1) {
+                                currentInsights.push(stackData.cards[0]);
+                            }
+                            stacks.delete(stackId);
+                            showSuccessMessage('Item removed from stack. Stack dissolved (only 1 item remaining).');
+                        } else {
+                            // Update stack count in localStorage
+                            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
+                            showSuccessMessage('Item removed from stack.');
+                        }
+                        
+                        // Re-render content
+                        renderInsights();
+                    } else {
+                        console.warn('⚠️ Insight not found in stack');
+                        showErrorMessage('Item not found in stack.');
+                    }
+                } else {
+                    console.warn('⚠️ Stack not found');
+                    showErrorMessage('Stack not found.');
+                }
+            } else {
+                throw new Error(response.message || 'Failed to remove item from stack');
+            }
+        } catch (error) {
+            console.error('❌ Failed to remove item from stack:', error);
+            
+            // Fallback to local storage if API is not implemented
+            if (error.message.includes('404') || error.message.includes('Not Found')) {
+                console.log('📝 Stack API not implemented, using local storage fallback');
+                
+                // Get the stack data
+                const stackData = stacks.get(stackId);
+                if (stackData) {
+                    // Find and remove the insight from the stack
+                    const insightIndex = stackData.cards.findIndex(card => card.id === insightId);
+                    if (insightIndex !== -1) {
+                        const removedInsight = stackData.cards[insightIndex];
+                        
+                        // Remove from stack
+                        stackData.cards.splice(insightIndex, 1);
+                        
+                        // Add back to currentInsights
+                        currentInsights.push(removedInsight);
+                        
+                        // Update stack metadata
+                        stackData.modifiedAt = new Date().toISOString();
+                        
+                        // If stack has 1 or fewer items, dissolve it
+                        if (stackData.cards.length <= 1) {
+                            // Move the remaining item back to insights if there is one
+                            if (stackData.cards.length === 1) {
+                                currentInsights.push(stackData.cards[0]);
+                            }
+                            stacks.delete(stackId);
+                            showSuccessMessage('Item removed from stack. Stack dissolved (only 1 item remaining). (Local storage)');
+                        } else {
+                            // Update stack count in localStorage
+                            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
+                            showSuccessMessage('Item removed from stack. (Local storage)');
+                        }
+                        
+                        // Re-render content
+                        renderInsights();
+                    } else {
+                        console.warn('⚠️ Insight not found in stack');
+                        showErrorMessage('Item not found in stack.');
+                    }
+                } else {
+                    console.warn('⚠️ Stack not found');
+                    showErrorMessage('Stack not found.');
+                }
+            } else {
+                showErrorMessage('Failed to remove item from stack. Please try again.');
+            }
+        }
+    }
+}
+
 // Delete a stack
 async function deleteStack(stackId) {
     if (confirm('Are you sure you want to delete this stack? All items will be moved back to your space.')) {
         try {
             const stackData = stacks.get(stackId);
             if (stackData) {
-                // Delete stack via API
-                const response = await api.deleteStack(stackId);
+                // Remove stack_id from all insights in the stack via insights API
+                const removePromises = stackData.cards.map(card => 
+                    api.removeItemFromStack(stackId, card.id)
+                );
                 
-                if (response.success) {
+                const responses = await Promise.all(removePromises);
+                
+                // Check if all updates were successful
+                const allSuccessful = responses.every(response => response.success);
+                
+                if (allSuccessful) {
                     // Move all cards back to insights
                     currentInsights.push(...stackData.cards);
                     stacks.delete(stackId);
@@ -3947,12 +4357,26 @@ async function deleteStack(stackId) {
                     renderInsights();
                     showSuccessMessage('Stack deleted and items restored.');
                 } else {
-                    throw new Error(response.message || 'Failed to delete stack');
+                    throw new Error('Failed to remove stack_id from insights');
                 }
             }
         } catch (error) {
             console.error('❌ Failed to delete stack via API:', error);
-            showErrorMessage('Failed to delete stack. Please try again.');
+            
+            // Fallback to local storage if API is not implemented
+            if (error.message.includes('404') || error.message.includes('Not Found')) {
+                console.log('📝 Stack API not implemented, using local storage fallback');
+                
+                // Move all cards back to insights
+                currentInsights.push(...stackData.cards);
+                stacks.delete(stackId);
+                
+                // Re-render content
+                renderInsights();
+                showSuccessMessage('Stack deleted and items restored. (Local storage)');
+            } else {
+                showErrorMessage('Failed to delete stack. Please try again.');
+            }
         }
     }
 }
@@ -4250,10 +4674,34 @@ async function moveCardToStack(insight, newStackId) {
         } else {
             throw new Error(response.message || 'Failed to move card');
         }
-    } catch (error) {
-        console.error('❌ Failed to move card via API:', error);
-        showErrorMessage('Failed to move card. Please try again.');
-    }
+            } catch (error) {
+            console.error('❌ Failed to move card via API:', error);
+            
+            // Fallback to local storage if API is not implemented
+            if (error.message.includes('404') || error.message.includes('Not Found')) {
+                console.log('📝 Stack API not implemented, using local storage fallback');
+                
+                // Remove from current stack
+                currentStack.cards = currentStack.cards.filter(card => card.id !== insight.id);
+                
+                // Add to target stack
+                targetStack.cards.push(insight);
+                targetStack.modifiedAt = new Date().toISOString();
+                
+                // If current stack is empty, delete it
+                if (currentStack.cards.length === 0) {
+                    stacks.delete(currentStack.id);
+                    showSuccessMessage('Card moved to new stack. Empty stack deleted. (Local storage)');
+                } else {
+                    showSuccessMessage('Card moved to new stack successfully. (Local storage)');
+                }
+                
+                // Re-render content
+                renderInsights();
+            } else {
+                showErrorMessage('Failed to move card. Please try again.');
+            }
+        }
 }
 
 // Remove card from stack
@@ -4306,10 +4754,51 @@ async function removeCardFromStack(insight, stackId) {
         } else {
             throw new Error(response.message || 'Failed to remove card from stack');
         }
-    } catch (error) {
-        console.error('❌ Failed to remove card from stack via API:', error);
-        showErrorMessage('Failed to remove card from stack. Please try again.');
-    }
+            } catch (error) {
+            console.error('❌ Failed to remove card from stack via API:', error);
+            
+            // Fallback to local storage if API is not implemented
+            if (error.message.includes('404') || error.message.includes('Not Found')) {
+                console.log('📝 Stack API not implemented, using local storage fallback');
+                
+                // Remove card from local stack data
+                stackData.cards = stackData.cards.filter(card => card.id !== insight.id);
+                stackData.modifiedAt = new Date().toISOString();
+                
+                // Add card back to main insights (safe because of one-to-one constraint)
+                currentInsights.push(insight);
+                
+                // If stack has only one card left, dissolve the stack
+                if (stackData.cards.length <= 1) {
+                    if (stackData.cards.length === 1) {
+                        currentInsights.push(stackData.cards[0]);
+                    }
+                    stacks.delete(stackId);
+                    closeStackExpansion();
+                    showSuccessMessage('Stack dissolved - cards moved back to your space. (Local storage)');
+                } else {
+                    // Update stack display
+                    const stackCardsGrid = document.getElementById('stackCardsGrid');
+                    const cardElement = stackCardsGrid.querySelector(`[data-insight-id="${insight.id}"]`);
+                    if (cardElement) {
+                        cardElement.remove();
+                    }
+                    
+                    // Update stack info
+                    const stackCountEl = document.querySelector('.stack-count');
+                    if (stackCountEl) {
+                        stackCountEl.textContent = `${stackData.cards.length} items`;
+                    }
+                    
+                    showSuccessMessage('Card removed from stack. (Local storage)');
+                }
+                
+                // Re-render main view
+                renderInsights();
+            } else {
+                showErrorMessage('Failed to remove card from stack. Please try again.');
+            }
+        }
 }
 
 // Close stack expansion modal (legacy)
@@ -4402,7 +4891,37 @@ async function editStackName(stackId) {
             }
         } catch (error) {
             console.error('❌ Failed to update stack name via API:', error);
-            showErrorMessage('Failed to update stack name. Please try again.');
+            
+            // Fallback to local storage if API is not implemented
+            if (error.message.includes('404') || error.message.includes('Not Found')) {
+                console.log('📝 Stack API not implemented, using local storage fallback');
+                
+                // Update local data
+                stackData.name = newName.trim();
+                stackData.modifiedAt = new Date().toISOString();
+                
+                // Update UI
+                const stackNameEl = document.querySelector('.stack-name');
+                if (stackNameEl) {
+                    stackNameEl.textContent = stackData.name;
+                }
+        
+                // Update stack dates
+                const stackDatesEl = document.querySelector('.stack-dates');
+                if (stackDatesEl) {
+                    stackDatesEl.innerHTML = `
+                        Created: ${formatDate(stackData.createdAt)} • 
+                        Modified: ${formatDate(stackData.modifiedAt)}
+                    `;
+                }
+        
+                // Re-render main view to update stack card
+                renderInsights();
+        
+                showSuccessMessage('Stack name updated successfully! (Local storage)');
+            } else {
+                showErrorMessage('Failed to update stack name. Please try again.');
+            }
         }
     }
 }
@@ -4477,9 +4996,13 @@ function toggleStackEditModeHorizontal(stackId) {
         editBtn.classList.remove('active');
         editBtnText.textContent = 'Edit';
         
-        // Remove shake from cards
+        // Remove shake from cards and hide delete buttons
         stackCard.querySelectorAll('.stack-horizontal-card').forEach(card => {
             card.classList.remove('shake');
+            const deleteBtn = card.querySelector('.content-card-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.style.display = 'none';
+            }
         });
     } else {
         // Enter edit mode
@@ -4487,9 +5010,13 @@ function toggleStackEditModeHorizontal(stackId) {
         editBtn.classList.add('active');
         editBtnText.textContent = 'Done';
         
-        // Add shake to cards
+        // Add shake to cards and show delete buttons
         stackCard.querySelectorAll('.stack-horizontal-card').forEach(card => {
             card.classList.add('shake');
+            const deleteBtn = card.querySelector('.content-card-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.style.display = 'block';
+            }
         });
     }
 }
@@ -4505,10 +5032,11 @@ function createStackHorizontalCard(insight, stackId) {
     const editDeleteBtn = document.createElement('button');
     editDeleteBtn.className = 'content-card-delete-btn';
     editDeleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    editDeleteBtn.title = 'Delete';
+    editDeleteBtn.title = 'Remove from Stack';
+    editDeleteBtn.style.display = 'none'; // Hidden by default, shown in edit mode
     editDeleteBtn.onclick = (e) => {
         e.stopPropagation();
-        deleteInsight(insight.id);
+        removeItemFromStack(stackId, insight.id);
     };
     card.appendChild(editDeleteBtn);
     
@@ -4674,31 +5202,58 @@ async function openTagEditModal(insight) {
         // Get current tags for this insight
         const currentTags = insight.tags || [];
         
+        console.log('🔍 Current insight tags:', currentTags);
+        console.log('🔍 Available tags:', allTags);
+        
         // Create modal HTML
         const modal = document.createElement('div');
         modal.className = 'tag-edit-modal';
         modal.innerHTML = `
             <div class="tag-edit-modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title">Edit Tags</h2>
+                    <h2 class="modal-title">Edit Tag</h2>
                     <button class="modal-close" id="closeTagEditModal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-description">Select tags for: <strong>${insight.title || 'Content'}</strong></p>
+                    <p class="modal-description">Select a tag for: <strong>${insight.title || 'Content'}</strong></p>
                     <div class="tag-options">
-                        ${allTags.map(tag => `
-                            <label class="tag-option">
-                                <input type="checkbox" value="${tag.id}" 
-                                    ${currentTags.some(ct => (ct.id || ct) === (tag.id || tag.name)) ? 'checked' : ''}
-                                    data-tag-name="${tag.name}">
-                                <span class="tag-option-label" style="background-color: ${tag.color || '#8B5CF6'}">${tag.name}</span>
-                            </label>
-                        `).join('')}
+                        ${allTags.map(tag => {
+                            // Check if this tag is currently selected for the insight
+                            const isSelected = currentTags.some(ct => {
+                                // Handle different tag data structures
+                                const currentTagId = ct.id || ct;
+                                const currentTagName = ct.name || ct;
+                                const availableTagId = tag.id || tag.name;
+                                const availableTagName = tag.name;
+                                
+                                const matches = currentTagId === availableTagId || currentTagName === availableTagName;
+                                
+                                if (matches) {
+                                    console.log('✅ Tag match found:', {
+                                        current: { id: currentTagId, name: currentTagName },
+                                        available: { id: availableTagId, name: availableTagName }
+                                    });
+                                }
+                                
+                                return matches;
+                            });
+                            
+                            console.log(`🏷️ Tag "${tag.name}" selected: ${isSelected}`);
+                            
+                            return `
+                                <label class="tag-option">
+                                    <input type="radio" name="selectedTag" value="${tag.id}" 
+                                        ${isSelected ? 'checked' : ''}
+                                        data-tag-name="${tag.name}">
+                                    <span class="tag-option-label" style="background-color: ${tag.color || '#8B5CF6'}">${tag.name}</span>
+                                </label>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="modal-btn modal-btn-secondary" id="cancelTagEdit">Cancel</button>
-                    <button type="button" class="modal-btn modal-btn-primary" id="saveTagEdit">Save Tags</button>
+                    <button type="button" class="modal-btn modal-btn-primary" id="saveTagEdit">Save Tag</button>
                 </div>
             </div>
         `;
@@ -4733,41 +5288,57 @@ function closeTagEditModal(modal) {
 // Function to save insight tags
 async function saveInsightTags(insight, modal) {
     try {
-        const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
-        const selectedTags = Array.from(checkboxes).map(cb => ({
-            id: cb.value,
-            name: cb.dataset.tagName
-        }));
+        const radio = modal.querySelector('input[type="radio"]:checked');
+        let selectedTags = [];
         
-        console.log('💾 Saving tags for insight:', insight.id, selectedTags);
+        if (radio) {
+            selectedTags = [{
+                id: radio.value,
+                name: radio.dataset.tagName
+            }];
+        }
         
-        // Update insight with new tags (you may need to adjust this API call based on your backend)
-        const response = await api.updateInsight(insight.id, {
+        console.log('💾 Saving tag for insight:', insight.id, selectedTags);
+        console.log('💾 Current insight data:', insight);
+        
+        // Prepare the update data - backend expects tag_ids, not tags
+        const updateData = {
             ...insight,
-            tags: selectedTags
-        });
+            tag_ids: selectedTags.map(tag => tag.id)
+        };
+        
+        console.log('💾 Sending update data to API:', updateData);
+        
+        // Update insight with new tag (single selection)
+        const response = await api.updateInsight(insight.id, updateData);
         
         if (response.success) {
-            console.log('✅ Tags updated successfully');
+            console.log('✅ Tag updated successfully');
+            console.log('🔄 Clearing cache and reloading insights from backend...');
             
-            // Update the insight in memory
-            const insightIndex = currentInsights.findIndex(i => i.id === insight.id);
-            if (insightIndex !== -1) {
-                currentInsights[insightIndex].tags = selectedTags;
+            // Clear cache for insights endpoint to ensure fresh data
+            if (window.apiCache) {
+                const insightsUrl = `${api.baseUrl}/api/v1/insights/all?include_tags=true`;
+                window.apiCache.delete(insightsUrl);
+                console.log('🗑️ Cleared insights cache');
             }
             
-            // Re-render the insights to show updated tags
+            // Reload insights from backend to ensure we have the latest data
+            await loadUserInsights();
+            
+            // Force re-render to show updated tags
+            console.log('🔄 Force re-rendering insights to show updated tags...');
             renderInsights();
             
             closeTagEditModal(modal);
-            showSuccessMessage('Tags updated successfully!');
+            showSuccessMessage('Tag updated successfully!');
         } else {
-            throw new Error(response.message || 'Failed to update tags');
+            throw new Error(response.message || 'Failed to update tag');
         }
         
     } catch (error) {
-        console.error('❌ Failed to save tags:', error);
-        showErrorMessage(`Failed to save tags: ${error.message}`);
+        console.error('❌ Failed to save tag:', error);
+        showErrorMessage(`Failed to save tag: ${error.message}`);
     }
 }
 

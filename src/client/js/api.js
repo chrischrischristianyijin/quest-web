@@ -17,6 +17,15 @@ class ApiService {
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
         
+        // Check cache for GET requests
+        if ((options.method || 'GET') === 'GET' && window.apiCache) {
+            const cached = window.apiCache.get(url);
+            if (cached) {
+                logger.log(`📦 Cache hit: ${url}`);
+                return cached;
+            }
+        }
+        
         // 设置默认headers
         const headers = {
             'Content-Type': 'application/json',
@@ -40,10 +49,10 @@ class ApiService {
         };
 
         try {
-            console.log(`📡 API请求: ${config.method} ${url}`);
+            logger.log(`📡 API请求: ${config.method} ${url}`);
             const response = await fetch(url, config);
             
-            console.log(`📡 API响应: ${response.status} ${response.statusText}`);
+            logger.log(`📡 API响应: ${response.status} ${response.statusText}`);
             
             // 处理认证错误
             if (response.status === 401 || response.status === 403) {
@@ -68,7 +77,13 @@ class ApiService {
             }
 
             const data = await response.json();
-            console.log('✅ API响应成功:', data);
+            logger.log('✅ API响应成功:', data);
+            
+            // Cache successful GET responses
+            if ((options.method || 'GET') === 'GET' && window.apiCache) {
+                window.apiCache.set(url, data);
+            }
+            
             return data;
         } catch (error) {
             console.error('❌ API请求错误:', error);
@@ -237,11 +252,20 @@ class ApiService {
         if (userId) params.append('user_id', userId);
         if (search) params.append('search', search);
         
+        // Add parameter to include tags in the response
+        params.append('include_tags', 'true');
+        
         if (params.toString()) {
             endpoint += `?${params.toString()}`;
         }
         
+        console.log('📡 Fetching insights with endpoint:', endpoint);
         return await this.request(endpoint);
+    }
+
+    // 获取单个insight
+    async getInsight(insightId) {
+        return await this.request(`${API_CONFIG.INSIGHTS.GET}/${insightId}`);
     }
 
     // 获取分页insights
@@ -256,11 +280,6 @@ class ApiService {
         
         endpoint += `?${params.toString()}`;
         return await this.request(endpoint);
-    }
-
-    // 获取单个insight
-    async getInsight(insightId) {
-        return await this.request(`${API_CONFIG.INSIGHTS.GET}/${insightId}`);
     }
 
     // 创建insight

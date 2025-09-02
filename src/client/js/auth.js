@@ -223,6 +223,17 @@ class AuthManager {
                 const sessionAge = now - session.timestamp;
                 
                 // 检查会话是否过期（24小时）
+                console.log('🔍 会话年龄检查:', {
+                    sessionAge: sessionAge,
+                    sessionAgeHours: sessionAge / (1000 * 60 * 60),
+                    maxAge: 24 * 60 * 60 * 1000,
+                    maxAgeHours: 24,
+                    isExpired: sessionAge >= 24 * 60 * 60 * 1000,
+                    sessionTimestamp: session.timestamp,
+                    currentTime: now,
+                    timeDiff: now - session.timestamp
+                });
+                
                 if (sessionAge < 24 * 60 * 60 * 1000) {
                     console.log('🔄 恢复会话状态...');
                     this.user = session.user;
