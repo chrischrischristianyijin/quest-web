@@ -3738,6 +3738,41 @@ body .tag-selector-dropdown.open .tag-selector-options {
     display: flex;
 }
 
+/* Stack horizontal card delete button styling */
+.stack-horizontal-card .content-card-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 32px;
+    height: 32px;
+    background: #ff0000;
+    border: 3px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+.stack-horizontal-card .content-card-delete-btn:hover {
+    background: #cc0000;
+    transform: scale(1.1);
+}
+
+.stack-horizontal-card .content-card-delete-btn svg {
+    width: 16px;
+    height: 16px;
+    color: white;
+}
+
+/* Show delete button when stack is in edit mode */
+.stack-edit-mode-horizontal .stack-horizontal-card .content-card-delete-btn {
+    display: flex;
+}
+
 
 
 /* Make content cards relative positioned for delete button positioning */
@@ -3949,18 +3984,36 @@ body .tag-selector-dropdown.open .tag-selector-options {
 
 .stack-expanded-card {
     background: white;
-    border-radius: 12px;
-    border: 1px solid var(--border-light);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: var(--transition-normal);
+    border-radius: 16px;
+    border: 2px solid rgba(139, 92, 246, 0.1);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.stack-expanded-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--quest-purple), var(--quest-blue));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stack-expanded-card:hover::before {
+    opacity: 1;
 }
 
 .stack-expanded-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
+    border-color: var(--quest-purple);
 }
 
 .stack-expanded-card.shake {
@@ -3980,35 +4033,53 @@ body .tag-selector-dropdown.open .tag-selector-options {
 
 .stack-card-image-container {
     width: 100%;
-    height: 150px;
+    height: 180px;
     overflow: hidden;
-    background: #f5f5f5;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+}
+
+.stack-card-image-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stack-expanded-card:hover .stack-card-image-container::before {
+    opacity: 1;
 }
 
 .stack-card-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stack-expanded-card:hover .stack-card-image {
-    transform: scale(1.05);
+    transform: scale(1.08);
 }
 
 .stack-card-content {
-    padding: 16px;
+    padding: 20px;
 }
 
 .stack-card-title {
-    margin: 0 0 8px 0;
-    font-size: 1rem;
-    font-weight: 600;
+    margin: 0 0 12px 0;
+    font-size: 1.125rem;
+    font-weight: 700;
     color: var(--text-primary);
     line-height: 1.3;
+    letter-spacing: -0.01em;
 }
 
 .stack-card-description {
@@ -4340,20 +4411,52 @@ body .tag-selector-dropdown.open .tag-selector-options {
     width: 100%;
     max-width: none;
     border: 2px solid var(--quest-purple);
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.1) 100%);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, rgba(139, 92, 246, 0.08) 100%);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 32px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.stack-expanded::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--quest-purple), var(--quest-blue), var(--quest-purple));
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { background-position: 200% 0; }
+    50% { background-position: -200% 0; }
 }
 
 .stack-expanded-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-light);
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid rgba(139, 92, 246, 0.1);
+    position: relative;
+}
+
+.stack-expanded-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--quest-purple);
+    border-radius: 1px;
 }
 
 .stack-info-horizontal {
@@ -4361,46 +4464,90 @@ body .tag-selector-dropdown.open .tag-selector-options {
 }
 
 .stack-name-horizontal {
-    margin: 0 0 12px 0;
-    font-size: 1.5rem;
-    font-weight: 700;
+    margin: 0 0 16px 0;
+    font-size: 1.75rem;
+    font-weight: 800;
     color: var(--quest-purple);
     line-height: 1.2;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--quest-purple), var(--quest-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .stack-meta-horizontal {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+}
+
+.stack-created,
+.stack-modified {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stack-created::before,
+.stack-modified::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--quest-purple);
+    opacity: 0.6;
 }
 
 .stack-actions-horizontal {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: 16px;
 }
 
 .stack-edit-name-btn-horizontal {
-    padding: 6px 12px;
-    border: 1px solid var(--quest-purple);
-    border-radius: 6px;
+    padding: 10px 16px;
+    border: 2px solid var(--quest-purple);
+    border-radius: 12px;
     background: white;
     color: var(--quest-purple);
-    font-size: 0.8125rem;
-    font-weight: 500;
+    font-size: 0.875rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: var(--transition-normal);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stack-edit-name-btn-horizontal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.stack-edit-name-btn-horizontal:hover::before {
+    left: 100%;
 }
 
 .stack-edit-name-btn-horizontal:hover {
     background: var(--quest-purple);
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
 }
 
 .stack-collapse-btn {
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--quest-purple);
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--quest-purple);
     border-radius: 50%;
     background: white;
     color: var(--quest-purple);
@@ -4408,57 +4555,117 @@ body .tag-selector-dropdown.open .tag-selector-options {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: var(--transition-normal);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stack-collapse-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: var(--quest-purple);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    transform: translate(-50%, -50%);
+}
+
+.stack-collapse-btn:hover::before {
+    width: 100%;
+    height: 100%;
 }
 
 .stack-collapse-btn:hover {
-    background: var(--quest-purple);
     color: white;
-    transform: scale(1.1);
+    transform: scale(1.1) rotate(180deg);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+}
+
+.stack-collapse-btn svg {
+    position: relative;
+    z-index: 1;
+    transition: transform 0.3s ease;
 }
 
 .stack-cards-horizontal {
     display: flex;
-    gap: 16px;
+    gap: 20px;
     overflow-x: auto;
-    padding: 8px 0;
-    margin: 16px 0;
+    padding: 12px 0 20px 0;
+    margin: 20px 0;
     scrollbar-width: thin;
     scrollbar-color: var(--quest-purple) transparent;
+    position: relative;
+}
+
+.stack-cards-horizontal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.2), transparent);
 }
 
 .stack-cards-horizontal::-webkit-scrollbar {
-    height: 8px;
+    height: 12px;
 }
 
 .stack-cards-horizontal::-webkit-scrollbar-track {
-    background: rgba(139, 92, 246, 0.1);
-    border-radius: 4px;
+    background: rgba(139, 92, 246, 0.08);
+    border-radius: 6px;
+    margin: 0 20px;
 }
 
 .stack-cards-horizontal::-webkit-scrollbar-thumb {
-    background: var(--quest-purple);
-    border-radius: 4px;
+    background: linear-gradient(90deg, var(--quest-purple), var(--quest-blue));
+    border-radius: 6px;
+    border: 2px solid rgba(139, 92, 246, 0.08);
+}
+
+.stack-cards-horizontal::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, var(--quest-blue), var(--quest-purple));
 }
 
 .stack-horizontal-card {
-    flex: 0 0 350px;
-    /* Use exact same styles as normal content cards */
+    flex: 0 0 380px;
     background: white;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-light);
-    box-shadow: var(--shadow-light);
-    transition: var(--transition-normal);
+    border-radius: 16px;
+    border: 2px solid rgba(139, 92, 246, 0.1);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    overflow: hidden;
+    overflow: visible;
     position: relative;
     display: flex;
     flex-direction: column;
+    backdrop-filter: blur(10px);
+}
+
+.stack-horizontal-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--quest-purple), var(--quest-blue));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stack-horizontal-card:hover::before {
+    opacity: 1;
 }
 
 .stack-horizontal-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-medium);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
+    border-color: var(--quest-purple);
 }
 
 .stack-horizontal-card.shake {
@@ -4479,36 +4686,67 @@ body .tag-selector-dropdown.open .tag-selector-options {
 .stack-footer-horizontal {
     display: flex;
     justify-content: center;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-light);
+    padding-top: 24px;
+    border-top: 2px solid rgba(139, 92, 246, 0.1);
+    position: relative;
+}
+
+.stack-footer-horizontal::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 2px;
+    background: var(--quest-purple);
+    border-radius: 1px;
 }
 
 .stack-edit-mode-btn-horizontal {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border: 1px solid var(--quest-light-purple);
+    gap: 8px;
+    padding: 12px 24px;
+    border: 2px solid var(--quest-light-purple);
     background: white;
     color: var(--quest-purple);
-    border-radius: 20px;
+    border-radius: 25px;
     cursor: pointer;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    transition: var(--transition-normal);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stack-edit-mode-btn-horizontal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.stack-edit-mode-btn-horizontal:hover::before {
+    left: 100%;
 }
 
 .stack-edit-mode-btn-horizontal:hover {
     border-color: var(--quest-purple);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-light);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2);
 }
 
 .stack-edit-mode-btn-horizontal.active {
     background: var(--quest-purple);
     color: white;
     border-color: var(--quest-purple);
-    box-shadow: var(--shadow-medium);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+    transform: translateY(-2px);
 }
 
 .stack-edit-mode-btn-horizontal svg {
@@ -4653,8 +4891,8 @@ body .tag-selector-dropdown.open .tag-selector-options {
     background: white;
     border-radius: 12px;
     padding: 0;
-    max-width: 500px;
-    width: 90%;
+    max-width: 600px;
+    width: 95%;
     max-height: 80vh;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -4697,7 +4935,7 @@ body .tag-selector-dropdown.open .tag-selector-options {
 }
 
 .tag-edit-modal .modal-body {
-    padding: 24px;
+    padding: 24px 32px;
 }
 
 .tag-edit-modal .modal-description {
@@ -4708,9 +4946,33 @@ body .tag-selector-dropdown.open .tag-selector-options {
 
 .tag-options {
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
+    flex-wrap: nowrap;
+    gap: 16px;
     margin-bottom: 20px;
+    justify-content: center;
+    overflow-x: auto;
+    padding: 8px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+    min-height: 60px;
+    align-items: center;
+}
+
+.tag-options::-webkit-scrollbar {
+    height: 6px;
+}
+
+.tag-options::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tag-options::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 3px;
+}
+
+.tag-options::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.5);
 }
 
 .tag-option {
@@ -4718,26 +4980,84 @@ body .tag-selector-dropdown.open .tag-selector-options {
     align-items: center;
     cursor: pointer;
     margin: 0;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
-.tag-option input[type="checkbox"] {
+.tag-option:hover {
+    transform: translateY(-2px);
+}
+
+.tag-option input[type="checkbox"],
+.tag-option input[type="radio"] {
     display: none;
 }
 
 .tag-option-label {
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.875rem;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 0.9rem;
     font-weight: 500;
     color: white;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     border: 2px solid transparent;
+    cursor: pointer;
+    min-width: 90px;
+    max-width: 130px;
+    text-align: center;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
-.tag-option input[type="checkbox"]:checked + .tag-option-label {
+.tag-option input[type="checkbox"]:checked + .tag-option-label,
+.tag-option input[type="radio"]:checked + .tag-option-label {
     border-color: white;
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 0 6px rgba(139, 92, 246, 0.4);
+    transform: scale(1.1);
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: tagPulse 2s infinite;
+}
+
+@keyframes tagPulse {
+    0% {
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 0 6px rgba(139, 92, 246, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 8px rgba(139, 92, 246, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 0 6px rgba(139, 92, 246, 0.4);
+    }
+}
+
+.tag-option input[type="checkbox"]:checked + .tag-option-label::before,
+.tag-option input[type="radio"]:checked + .tag-option-label::before {
+    content: '✓';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--quest-purple);
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tag-option:hover .tag-option-label {
     transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .tag-edit-modal .modal-actions {
