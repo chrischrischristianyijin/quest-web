@@ -82,13 +82,35 @@ class AuthManager {
                     if (profileResult && profileResult.success && profileResult.data) {
                         this.user = profileResult.data;
                         console.log('✅ 获取到完整用户信息:', this.user);
+                        // 更新本地存储的会话数据
+                        this.saveSession(this.user, result.token);
                     } else {
-                        // 如果获取资料失败，使用登录返回的基本信息
-                        console.warn('⚠️ 获取用户资料失败，使用基本登录信息');
-                        this.user = result.user;
+                        // 如果获取资料失败，尝试使用不同的响应格式
+                        console.warn('⚠️ 获取用户资料失败，尝试其他响应格式');
+                        console.warn('⚠️ Profile API response structure:', {
+                            hasSuccess: !!profileResult?.success,
+                            hasData: !!profileResult?.data,
+                            fullResponse: profileResult
+                        });
+                        
+                        // 尝试直接使用 profileResult 作为用户数据（某些API可能直接返回用户数据）
+                        if (profileResult && (profileResult.id || profileResult.email)) {
+                            console.log('✅ 使用直接返回的用户数据');
+                            this.user = profileResult;
+                            // 更新本地存储的会话数据
+                            this.saveSession(this.user, result.token);
+                        } else {
+                            // 最后回退到登录返回的基本信息
+                            console.warn('⚠️ 使用基本登录信息作为回退');
+                            this.user = result.user;
+                        }
                     }
                 } catch (profileError) {
                     console.warn('⚠️ 获取用户资料时出错，使用基本登录信息:', profileError);
+                    console.warn('⚠️ Profile API error details:', {
+                        error: profileError.message,
+                        stack: profileError.stack
+                    });
                     this.user = result.user;
                 }
                 
@@ -243,6 +265,7 @@ class AuthManager {
                     if (session.token) {
                         console.log('🔑 从会话恢复 token...');
                         api.setAuthToken(session.token);
+                        console.log('✅ Token恢复成功，当前API token状态:', api.authToken ? '已设置' : '未设置');
                     } else {
                         console.log('⚠️ 会话中没有token，清除会话');
                         this.clearSession();
@@ -369,6 +392,37 @@ class AuthManager {
         }
         
         return true;
+    }
+    
+    // 刷新用户资料数据
+    async refreshUserProfile() {
+        try {
+            console.log('🔄 刷新用户资料数据...');
+            const profileResult = await api.getUserProfile();
+            console.log('📡 刷新用户资料 API 响应:', profileResult);
+            
+            if (profileResult && profileResult.success && profileResult.data) {
+                this.user = profileResult.data;
+                console.log('✅ 用户资料刷新成功:', this.user);
+                // 更新本地存储
+                this.saveSession(this.user, this.getCurrentToken());
+                this.notifyListeners();
+                return true;
+            } else if (profileResult && (profileResult.id || profileResult.email)) {
+                this.user = profileResult;
+                console.log('✅ 用户资料刷新成功 (直接格式):', this.user);
+                // 更新本地存储
+                this.saveSession(this.user, this.getCurrentToken());
+                this.notifyListeners();
+                return true;
+            } else {
+                console.warn('⚠️ 用户资料刷新失败，响应格式异常');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ 刷新用户资料失败:', error);
+            return false;
+        }
     }
 
     // 移除邮箱检查方法，改由注册接口内部校验

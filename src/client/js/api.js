@@ -17,6 +17,16 @@ class ApiService {
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
         
+        // Debug: Log token status for non-GET requests
+        if ((options.method || 'GET') !== 'GET') {
+            console.log('🔍 API Request Debug:', {
+                endpoint,
+                method: options.method || 'GET',
+                hasToken: !!this.authToken,
+                tokenPreview: this.authToken ? `${this.authToken.substring(0, 20)}...` : 'None'
+            });
+        }
+        
         // Check cache for GET requests
         if ((options.method || 'GET') === 'GET' && window.apiCache) {
             const cached = window.apiCache.get(url);
@@ -35,6 +45,8 @@ class ApiService {
         // 添加认证token
         if (this.authToken) {
             headers['Authorization'] = `Bearer ${this.authToken}`;
+        } else {
+            console.warn('⚠️ No auth token available for request:', endpoint);
         }
 
         // 如果是FormData，移除Content-Type让浏览器自动设置
@@ -61,7 +73,19 @@ class ApiService {
                 this.setAuthToken(null);
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('quest_user_session');
-                throw new Error('认证已过期，请重新登录');
+                
+                // Try to get more specific error message from response
+                let errorMessage = '认证已过期，请重新登录';
+                try {
+                    const errorData = await response.json();
+                    if (errorData.detail) {
+                        errorMessage = errorData.detail;
+                    }
+                } catch (e) {
+                    // If we can't parse the error response, use default message
+                }
+                
+                throw new Error(errorMessage);
             }
 
             if (!response.ok) {
