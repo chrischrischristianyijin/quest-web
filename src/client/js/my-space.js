@@ -77,7 +77,7 @@ let hasLoadedInsightsOnce = false;
 let currentPage = 1;
 let totalPages = 1;
 let totalInsights = 0;
-let insightsPerPage = 9; // 每页显示9个insights
+let insightsPerPage = 6; // 每页显示6个insights
 
 // 页面缓存机制
 let pageCache = new Map(); // 缓存每个页面的数据
