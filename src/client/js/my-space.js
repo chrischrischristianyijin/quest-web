@@ -197,6 +197,32 @@ async function goToPage(pageNum) {
         // 显示加载状态
         showLoadingState();
         
+        // 检查是否需要加载更多数据
+        if (insightsHasMore && currentInsights.length < totalInsights) {
+            console.log('🔄 检测到翻页，开始加载更多数据...');
+            
+            // 第一步：立即加载目标页面数据
+            const targetPageResponse = await api.getInsightsPaginated(pageNum, insightsPerPage, null, '', true);
+            if (targetPageResponse?.success) {
+                const { items } = normalizePaginatedInsightsResponse(targetPageResponse);
+                const targetPageInsights = (items || []).filter(x => !x.stack_id);
+                
+                // 将目标页面数据添加到现有数据中
+                currentInsights = currentInsights.concat(targetPageInsights);
+                window.currentInsights = currentInsights;
+                
+                // 更新已渲染的ID
+                targetPageInsights.forEach(i => renderedInsightIds.add(i.id));
+                
+                console.log(`📄 已加载第${pageNum}页，当前共${currentInsights.length}个insights`);
+            }
+            
+            // 第二步：在后台加载其他剩余数据
+            setTimeout(() => {
+                loadRemainingInsightsInBackground(pageNum);
+            }, 100);
+        }
+        
         // 重新渲染insights（只显示当前页面的数据）
         renderInsights();
         
@@ -294,7 +320,10 @@ async function loadUserInsightsWithPagination() {
             
             // 第二步：在后台加载所有数据（如果有多页）
             if (totalPages > 1) {
-                loadAllInsightsInBackground();
+                // 使用setTimeout确保第一页渲染完成后再开始后台加载
+                setTimeout(() => {
+                    loadAllInsightsInBackground();
+                }, 100);
             }
         } else {
             // 尝试从localStorage加载备份
@@ -309,17 +338,17 @@ async function loadUserInsightsWithPagination() {
     }
 }
 
-// 在后台加载所有insights数据
+// 加载所有insights数据
 async function loadAllInsightsInBackground() {
     try {
-        console.log('🔄 开始在后台加载所有insights数据...');
+        console.log('🔄 开始加载所有insights数据...');
         
         let allInsights = [...currentInsights]; // 从第一页开始
         let page = 2; // 从第二页开始加载
-        const limit = 100; // 使用较大的limit来减少API调用次数
         
+        // 使用分页API逐页加载
         while (page <= totalPages) {
-            const response = await api.getInsightsPaginated(page, limit, null, '', true);
+            const response = await api.getInsightsPaginated(page, insightsPerPage, null, '', true);
             
             if (response?.success) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -327,13 +356,81 @@ async function loadAllInsightsInBackground() {
                 
                 if (batchInsights.length > 0) {
                     allInsights = allInsights.concat(batchInsights);
+                    console.log(`📄 已加载第${page}页，当前共${allInsights.length}个insights`);
                 }
                 
                 if (!hasMore) break;
                 page++;
             } else {
+                console.warn(`⚠️ 第${page}页加载失败`);
                 break;
             }
+        }
+        
+        // 更新所有insights数据
+        currentInsights = allInsights;
+        window.currentInsights = currentInsights;
+        insightsHasMore = false; // 已经加载了所有数据
+        
+        // 更新所有insights的ID
+        renderedInsightIds.clear();
+        allInsights.forEach(i => renderedInsightIds.add(i.id));
+        
+        // 保存到localStorage
+        try {
+            const insightsBackup = {
+                data: currentInsights,
+                timestamp: Date.now(),
+                version: '1.0'
+            };
+            localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
+        } catch (storageError) {
+            console.warn('⚠️ Failed to save insights to localStorage:', storageError);
+        }
+        
+        console.log('✅ 加载完成，共加载了', allInsights.length, '个insights');
+        
+    } catch (error) {
+        console.error('❌ 加载insights失败:', error);
+        throw error; // 重新抛出错误，让调用者处理
+    }
+}
+
+// 在后台加载剩余insights数据
+async function loadRemainingInsightsInBackground(currentLoadedPage) {
+    try {
+        console.log('🔄 开始在后台加载剩余数据...');
+        
+        let allInsights = [...currentInsights]; // 从当前已加载的数据开始
+        let page = 1; // 从第1页开始检查
+        
+        // 加载所有缺失的页面
+        while (page <= totalPages) {
+            // 检查这一页是否已经加载
+            const pageStartIndex = (page - 1) * insightsPerPage;
+            const pageEndIndex = pageStartIndex + insightsPerPage;
+            const existingInsights = allInsights.slice(pageStartIndex, pageEndIndex);
+            
+            if (existingInsights.length < insightsPerPage) {
+                // 这一页数据不完整，需要加载
+                const response = await api.getInsightsPaginated(page, insightsPerPage, null, '', true);
+                
+                if (response?.success) {
+                    const { items } = normalizePaginatedInsightsResponse(response);
+                    const pageInsights = (items || []).filter(x => !x.stack_id);
+                    
+                    if (pageInsights.length > 0) {
+                        // 替换这一页的数据
+                        const beforePage = allInsights.slice(0, pageStartIndex);
+                        const afterPage = allInsights.slice(pageEndIndex);
+                        allInsights = beforePage.concat(pageInsights, afterPage);
+                        
+                        console.log(`📄 后台加载第${page}页，当前共${allInsights.length}个insights`);
+                    }
+                }
+            }
+            
+            page++;
         }
         
         // 更新所有insights数据
