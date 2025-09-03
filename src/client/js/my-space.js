@@ -577,20 +577,23 @@ async function initPage() {
             // Token校验失败，继续以降级模式加载My Space UI
         }
         
-        // 并行加载所有数据以提高性能
-        const [profileResult, insightsResult, tagsResult, stacksResult] = await Promise.allSettled([
+        // 优先加载核心数据，stacks延迟加载
+        const [profileResult, insightsResult, tagsResult] = await Promise.allSettled([
             loadUserProfile(),
             loadUserInsightsWithPagination(),
-            loadUserTags(),
-            loadUserStacks()
+            loadUserTags()
         ]);
+        
+        // 延迟加载stacks，不阻塞首次渲染
+        setTimeout(() => {
+            loadUserStacks().catch(error => {
+                console.error('❌ 延迟加载stacks失败:', error);
+            });
+        }, 100);
         
         // 检查每个加载结果并记录错误
         if (profileResult.status === 'rejected') {
             console.error('❌ 用户资料加载失败:', profileResult.reason);
-        }
-        if (stacksResult.status === 'rejected') {
-            console.error('❌ 用户stacks加载失败:', stacksResult.reason);
         }
         if (insightsResult.status === 'rejected') {
             console.error('❌ 用户insights加载失败:', insightsResult.reason);
@@ -646,12 +649,13 @@ async function loadUserStacks() {
             return;
         }
         
-        // Load all insights using pagination API and group them by stack_id
+        // 只加载前几页数据来快速构建stacks，避免加载所有数据
         let allInsights = [];
         let page = 1;
-        const limit = insightsPerPage; // 使用分页大小，避免一次性加载过多数据
+        const limit = 50; // 使用较大的限制来减少请求次数
+        const maxPages = 3; // 最多加载前3页来构建stacks
         
-        while (true) {
+        while (page <= maxPages) {
             const response = await api.getInsightsPaginated(page, limit, null, '', true);
             
             if (response.success && response.data) {
@@ -662,10 +666,10 @@ async function loadUserStacks() {
                 
                 if (!hasMore) break;
                 page++;
-                } else {
+            } else {
                 break;
             }
-                }
+        }
                 
                 stacks.clear(); // 清空现有stacks
                 
