@@ -4686,9 +4686,6 @@ function createStackHorizontalCard(insight, stackId) {
     // Setup drag functionality for horizontal cards
     setupStackHorizontalCardDrag(card, insight, stackId);
     
-    // 使卡片可点击 (same as normal card)
-    makeCardClickable(card, insight);
-    
     return card;
 }
 
