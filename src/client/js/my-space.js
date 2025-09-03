@@ -197,31 +197,14 @@ async function goToPage(pageNum) {
         // 显示加载状态
         showLoadingState();
         
-        // 获取指定页面的数据
-        const response = await api.getInsightsPaginated(pageNum, insightsPerPage, null, '', true);
+        // 重新渲染insights（只显示当前页面的数据）
+        renderInsights();
         
-        if (response.success) {
-            const { items, hasMore } = normalizePaginatedInsightsResponse(response);
-            const pageInsights = (items || []).filter(x => !x.stack_id);
-            
-            // 更新当前insights数据
-            currentInsights = pageInsights;
-            window.currentInsights = currentInsights;
-            
-            // 更新分页信息
-            updatePaginationInfo(response.data);
-            
-            // 重新渲染insights
-            renderInsights();
-            
-            // 更新UI
-            updatePaginationUI();
-            
-            // 滚动到顶部
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            throw new Error('Failed to load page data');
-        }
+        // 更新UI
+        updatePaginationUI();
+        
+        // 滚动到顶部
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
         console.error('❌ Failed to go to page:', error);
         showErrorMessage('Failed to load page. Please try again.');
@@ -269,34 +252,24 @@ async function loadUserInsightsWithPagination() {
         insightsLoading = true;
         showLoadingState();
         
-        const response = await api.getInsightsPaginated(1, insightsPerPage, null, '', true);
+        // 第一步：快速加载第一页
+        const firstPageResponse = await api.getInsightsPaginated(1, insightsPerPage, null, '', true);
         
-        if (response?.success) {
-            const { items, hasMore } = normalizePaginatedInsightsResponse(response);
-            const firstBatch = (items || []).filter(x => !x.stack_id);
+        if (firstPageResponse?.success) {
+            const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
+            const firstPageInsights = (items || []).filter(x => !x.stack_id);
             
-            currentInsights = firstBatch;
+            // 先设置第一页数据
+            currentInsights = firstPageInsights;
             window.currentInsights = currentInsights;
             insightsPage = 1;
             insightsHasMore = hasMore;
             renderedInsightIds.clear();
-            firstBatch.forEach(i => renderedInsightIds.add(i.id));
+            firstPageInsights.forEach(i => renderedInsightIds.add(i.id));
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
-            // 更新分页信息
-            updatePaginationInfo(response.data);
-            
-            // 保存到localStorage
-            try {
-                const insightsBackup = {
-                    data: currentInsights,
-                    timestamp: Date.now(),
-                    version: '1.0'
-                };
-                localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
-            } catch (storageError) {
-                console.warn('⚠️ Failed to save insights to localStorage:', storageError);
-            }
+            // 从API响应中获取分页信息
+            updatePaginationInfo(firstPageResponse.data);
             
             // 标准化标签结构
             currentInsights.forEach(insight => {
@@ -315,8 +288,14 @@ async function loadUserInsightsWithPagination() {
                 await loadTagsForInsights(insightsWithoutTags);
             }
             
+            // 立即渲染第一页
             renderInsights();
             updatePaginationUI();
+            
+            // 第二步：在后台加载所有数据（如果有多页）
+            if (totalPages > 1) {
+                loadAllInsightsInBackground();
+            }
         } else {
             // 尝试从localStorage加载备份
             loadFromBackup();
@@ -327,6 +306,62 @@ async function loadUserInsightsWithPagination() {
     } finally {
         insightsLoading = false;
         hideLoadingState();
+    }
+}
+
+// 在后台加载所有insights数据
+async function loadAllInsightsInBackground() {
+    try {
+        console.log('🔄 开始在后台加载所有insights数据...');
+        
+        let allInsights = [...currentInsights]; // 从第一页开始
+        let page = 2; // 从第二页开始加载
+        const limit = 100; // 使用较大的limit来减少API调用次数
+        
+        while (page <= totalPages) {
+            const response = await api.getInsightsPaginated(page, limit, null, '', true);
+            
+            if (response?.success) {
+                const { items, hasMore } = normalizePaginatedInsightsResponse(response);
+                const batchInsights = (items || []).filter(x => !x.stack_id);
+                
+                if (batchInsights.length > 0) {
+                    allInsights = allInsights.concat(batchInsights);
+                }
+                
+                if (!hasMore) break;
+                page++;
+            } else {
+                break;
+            }
+        }
+        
+        // 更新所有insights数据
+        currentInsights = allInsights;
+        window.currentInsights = currentInsights;
+        insightsHasMore = false; // 已经加载了所有数据
+        
+        // 更新所有insights的ID
+        renderedInsightIds.clear();
+        allInsights.forEach(i => renderedInsightIds.add(i.id));
+        
+        // 保存到localStorage
+        try {
+            const insightsBackup = {
+                data: currentInsights,
+                timestamp: Date.now(),
+                version: '1.0'
+            };
+            localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
+        } catch (storageError) {
+            console.warn('⚠️ Failed to save insights to localStorage:', storageError);
+        }
+        
+        console.log('✅ 后台加载完成，共加载了', allInsights.length, '个insights');
+        
+    } catch (error) {
+        console.error('❌ 后台加载insights失败:', error);
+        // 不影响当前页面显示，静默失败
     }
 }
 
@@ -491,99 +526,99 @@ async function loadUserStacks() {
                 
                 if (!hasMore) break;
                 page++;
-            } else {
+                } else {
                 break;
             }
-        }
-        
-        stacks.clear(); // 清空现有stacks
-        
-        // Group insights by stack_id
-        const stackGroups = {};
-        allInsights.forEach(insight => {
-            if (insight.stack_id) {
-                if (!stackGroups[insight.stack_id]) {
-                    stackGroups[insight.stack_id] = [];
                 }
-                stackGroups[insight.stack_id].push(insight);
-            }
-        });
-        
-        // Create stack objects from grouped insights
-        Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
-            if (stackInsights.length > 0) {
-                const stackData = {
-                    id: stackId,
-                    name: 'Stack',
-                    cards: stackInsights,
-                    createdAt: stackInsights[0].created_at || new Date().toISOString(),
-                    modifiedAt: stackInsights[0].modified_at || new Date().toISOString(),
-                    isExpanded: false
-                };
                 
-                stacks.set(stackId, stackData);
-            }
-        });
-        
-        // Always try to load metadata from localStorage to preserve user preferences
-        const savedStacks = localStorage.getItem('quest_stacks');
-        if (savedStacks) {
-            try {
-                const stackEntries = JSON.parse(savedStacks);
-                stackEntries.forEach(([stackId, stackData]) => {
-                    if (stacks.has(stackId)) {
-                        // Merge metadata from localStorage with database data
-                        const existingStack = stacks.get(stackId);
-                        if (existingStack && stackData.name) {
-                            existingStack.name = stackData.name;
-                            existingStack.isExpanded = stackData.isExpanded || false;
+                stacks.clear(); // 清空现有stacks
+                
+                // Group insights by stack_id
+                const stackGroups = {};
+                allInsights.forEach(insight => {
+                    if (insight.stack_id) {
+                        if (!stackGroups[insight.stack_id]) {
+                            stackGroups[insight.stack_id] = [];
                         }
-                    } else {
-                        // Load stack from localStorage if not found in database
+                        stackGroups[insight.stack_id].push(insight);
+                    }
+                });
+                
+                // Create stack objects from grouped insights
+                Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
+                    if (stackInsights.length > 0) {
+                        const stackData = {
+                            id: stackId,
+                            name: 'Stack',
+                            cards: stackInsights,
+                            createdAt: stackInsights[0].created_at || new Date().toISOString(),
+                            modifiedAt: stackInsights[0].modified_at || new Date().toISOString(),
+                            isExpanded: false
+                        };
+                        
                         stacks.set(stackId, stackData);
                     }
                 });
-            } catch (error) {
-                console.error('❌ Failed to parse saved stacks:', error);
-            }
-        }
-        
-        // 更新stackIdCounter
-        if (Object.keys(stackGroups).length > 0) {
-            const maxTimestamp = Math.max(...Object.keys(stackGroups).map(id => {
-                const timestamp = id.split('_')[1];
-                return timestamp ? parseInt(timestamp) : 0;
-            }));
-            stackIdCounter = maxTimestamp + 1;
-        }
-        
-        // 验证one-to-one约束 (现在由数据库保证)
-        const allInsightIds = new Set();
-        let hasDuplicates = false;
-        
-        stacks.forEach(stack => {
-            stack.cards.forEach(card => {
-                if (allInsightIds.has(card.id)) {
-                    console.warn('⚠️ 发现重复的insight ID:', card.id, '违反one-to-one约束');
-                    hasDuplicates = true;
+                
+                // Always try to load metadata from localStorage to preserve user preferences
+                const savedStacks = localStorage.getItem('quest_stacks');
+                if (savedStacks) {
+                    try {
+                        const stackEntries = JSON.parse(savedStacks);
+                        stackEntries.forEach(([stackId, stackData]) => {
+                            if (stacks.has(stackId)) {
+                                // Merge metadata from localStorage with database data
+                                const existingStack = stacks.get(stackId);
+                                if (existingStack && stackData.name) {
+                                    existingStack.name = stackData.name;
+                                    existingStack.isExpanded = stackData.isExpanded || false;
+                                }
+                            } else {
+                                // Load stack from localStorage if not found in database
+                                stacks.set(stackId, stackData);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('❌ Failed to parse saved stacks:', error);
+                    }
                 }
-                allInsightIds.add(card.id);
+                
+                // 更新stackIdCounter
+                if (Object.keys(stackGroups).length > 0) {
+                    const maxTimestamp = Math.max(...Object.keys(stackGroups).map(id => {
+                        const timestamp = id.split('_')[1];
+                        return timestamp ? parseInt(timestamp) : 0;
+                    }));
+                    stackIdCounter = maxTimestamp + 1;
+                }
+            
+            // 验证one-to-one约束 (现在由数据库保证)
+            const allInsightIds = new Set();
+            let hasDuplicates = false;
+            
+            stacks.forEach(stack => {
+                stack.cards.forEach(card => {
+                    if (allInsightIds.has(card.id)) {
+                    console.warn('⚠️ 发现重复的insight ID:', card.id, '违反one-to-one约束');
+                        hasDuplicates = true;
+                    }
+                    allInsightIds.add(card.id);
+                });
             });
-        });
-        
-        if (hasDuplicates) {
-            console.error('❌ 数据违反one-to-one约束，请检查后端数据');
-        }
-        
-        if (stacks.size > 0) hasLoadedStacksOnce = true;
-    } catch (error) {
-        console.error('❌ 加载用户stacks失败:', error);
-        // 如果stacks端点不存在，继续使用本地存储
-        if (error.message.includes('404') || error.message.includes('Not Found')) {
+            
+            if (hasDuplicates) {
+                console.error('❌ 数据违反one-to-one约束，请检查后端数据');
+            }
+            
+                        if (stacks.size > 0) hasLoadedStacksOnce = true;
+        } catch (error) {
+            console.error('❌ 加载用户stacks失败:', error);
+            // 如果stacks端点不存在，继续使用本地存储
+            if (error.message.includes('404') || error.message.includes('Not Found')) {
             // Stacks API端点尚未实现，使用本地存储模式
+            }
+            // 不抛出错误，允许页面继续加载
         }
-        // 不抛出错误，允许页面继续加载
-    }
 }
 
 
@@ -898,10 +933,28 @@ function renderInsights() {
         // 根据筛选条件排序
         let sortedInsights = getFilteredInsights();
         
-        sortedInsights.forEach(insight => {
+        // 只显示当前页面的insights
+        const startIndex = (currentPage - 1) * insightsPerPage;
+        const endIndex = startIndex + insightsPerPage;
+        const pageInsights = sortedInsights.slice(startIndex, endIndex);
+        
+        pageInsights.forEach(insight => {
             const card = createInsightCard(insight);
             fragment.appendChild(card);
         });
+        
+        // 如果当前页没有足够的insights，显示加载提示
+        if (pageInsights.length < insightsPerPage && insightsHasMore) {
+            const loadingCard = document.createElement('div');
+            loadingCard.className = 'content-card loading-card';
+            loadingCard.innerHTML = `
+                <div class="loading-indicator">
+                    <div class="loading-spinner"></div>
+                    <p>Loading more content...</p>
+                </div>
+            `;
+            fragment.appendChild(loadingCard);
+        }
     }
     
     // 渲染stacks
@@ -2793,17 +2846,17 @@ function openProfileEditModal() {
     }
     
     // 预填充当前用户信息
-    const usernameInput = document.getElementById('profileUsername');
-    const emailInput = document.getElementById('profileEmail');
-    
-    if (usernameInput && currentUser) {
+        const usernameInput = document.getElementById('profileUsername');
+        const emailInput = document.getElementById('profileEmail');
+        
+        if (usernameInput && currentUser) {
         const usernameValue = currentUser.nickname || currentUser.email || '';
         usernameInput.value = usernameValue;
-    }
+        }
     
-    if (emailInput && currentUser) {
-        emailInput.value = currentUser.email || '';
-    }
+        if (emailInput && currentUser) {
+            emailInput.value = currentUser.email || '';
+        }
     
     // 设置当前头像
     if (avatarPreviewImg && currentUser) {
