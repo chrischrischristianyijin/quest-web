@@ -3,19 +3,43 @@ import { api } from './api.js';
 import { API_CONFIG } from './config.js';
 import { PATHS, navigateTo } from './paths.js';
 
-// DOM 元素
-const profileAvatar = document.getElementById('profileAvatar');
-const usernamePlaceholder = document.getElementById('usernamePlaceholder');
-const contentCards = document.getElementById('contentCards');
-const headerLogout = document.getElementById('headerLogout');
-const headerEditProfile = document.getElementById('headerEditProfile');
-const headerAvatar = document.getElementById('headerAvatar');
-const addContentForm = document.getElementById('addContentForm');
-const addContentModal = document.getElementById('addContentModal');
-const closeAddModal = document.getElementById('closeAddModal');
-const cancelAddBtn = document.getElementById('cancelAddBtn');
+// DOM Element Cache for Performance Optimization
+const DOM_CACHE = new Map();
 
-const filterButtons = document.getElementById('filterButtons');
+function getCachedElement(selector) {
+    if (!DOM_CACHE.has(selector)) {
+        const element = document.querySelector(selector);
+        if (element) {
+            DOM_CACHE.set(selector, element);
+        }
+    }
+    return DOM_CACHE.get(selector);
+}
+
+function getCachedElementById(id) {
+    const selector = `#${id}`;
+    if (!DOM_CACHE.has(selector)) {
+        const element = document.getElementById(id);
+        if (element) {
+            DOM_CACHE.set(selector, element);
+        }
+    }
+    return DOM_CACHE.get(selector);
+}
+
+// DOM 元素 - Using cached access for better performance
+const profileAvatar = getCachedElementById('profileAvatar');
+const usernamePlaceholder = getCachedElementById('usernamePlaceholder');
+const contentCards = getCachedElementById('contentCards');
+const headerLogout = getCachedElementById('headerLogout');
+const headerEditProfile = getCachedElementById('headerEditProfile');
+const headerAvatar = getCachedElementById('headerAvatar');
+const addContentForm = getCachedElementById('addContentForm');
+const addContentModal = getCachedElementById('addContentModal');
+const closeAddModal = getCachedElementById('closeAddModal');
+const cancelAddBtn = getCachedElementById('cancelAddBtn');
+
+const filterButtons = getCachedElementById('filterButtons');
 
 // 页面状态
 let currentUser = null;
@@ -108,6 +132,9 @@ async function initPage() {
         // 绑定编辑模式按钮事件
         bindEditModeEvents();
         
+        // Set up event delegation for card interactions (performance optimization)
+        setupCardEventDelegation();
+        
         console.log('✅ My Space页面初始化完成');
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
@@ -189,21 +216,35 @@ async function loadUserStacks() {
                     }
                 });
                 
-                // If no stacks found in database, try loading from localStorage
-                if (Object.keys(stackGroups).length === 0) {
-                    console.log('🔍 No stacks found in database, checking localStorage...');
-                    const savedStacks = localStorage.getItem('quest_stacks');
-                    if (savedStacks) {
-                        try {
-                            const stackEntries = JSON.parse(savedStacks);
-                            stackEntries.forEach(([stackId, stackData]) => {
+                // Always try to load metadata from localStorage to preserve user preferences
+                console.log('🔍 Loading stack metadata from localStorage...');
+                const savedStacks = localStorage.getItem('quest_stacks');
+                if (savedStacks) {
+                    try {
+                        const stackEntries = JSON.parse(savedStacks);
+                        stackEntries.forEach(([stackId, stackData]) => {
+                            if (stacks.has(stackId)) {
+                                // Merge metadata from localStorage with database data
+                                const existingStack = stacks.get(stackId);
+                                if (existingStack && stackData.name) {
+                                    existingStack.name = stackData.name;
+                                    existingStack.isExpanded = stackData.isExpanded || false;
+                                    console.log('🔍 Merged stack metadata from localStorage:', stackId);
+                                }
+                            } else {
+                                // Load stack from localStorage if not found in database
                                 stacks.set(stackId, stackData);
                                 console.log('🔍 Loaded stack from localStorage:', stackId);
-                            });
-                        } catch (error) {
-                            console.error('❌ Failed to parse saved stacks:', error);
-                        }
+                            }
+                        });
+                    } catch (error) {
+                        console.error('❌ Failed to parse saved stacks:', error);
                     }
+                }
+                
+                // If no stacks found in database, try loading from localStorage
+                if (Object.keys(stackGroups).length === 0 && stacks.size === 0) {
+                    console.log('🔍 No stacks found in database or localStorage');
                 }
                 
                 // 更新stackIdCounter
@@ -288,29 +329,47 @@ async function loadUserProfile() {
         
         console.log('👤 开始加载用户资料...');
         
-        // 尝试从本地存储获取用户信息
-        const localUser = auth.getCurrentUser();
-        if (localUser) {
-            currentUser = localUser;
-            console.log('✅ 使用本地存储的用户信息:', currentUser);
-            updateUserProfileUI();
-            return;
-        }
-        
-        // 如果本地没有，尝试从 API 获取
+        // 总是尝试从 API 获取最新的用户资料
         try {
+            console.log('🔍 从后端获取最新用户资料...');
             const response = await api.getUserProfile();
+            console.log('📡 用户资料 API 响应:', response);
             
             if (response.success && response.data) {
                 currentUser = response.data;
-                console.log('✅ 用户资料加载成功:', currentUser);
+                console.log('✅ 从后端获取到完整用户资料:', currentUser);
+                // 更新auth管理器中的用户数据
+                auth.user = currentUser;
+                auth.saveSession(currentUser, auth.getCurrentToken());
                 updateUserProfileUI();
+                return;
+            } else if (response && (response.id || response.email)) {
+                // 如果API直接返回用户数据而不是包装在success/data中
+                currentUser = response;
+                console.log('✅ 从后端获取到直接用户数据:', currentUser);
+                // 更新auth管理器中的用户数据
+                auth.user = currentUser;
+                auth.saveSession(currentUser, auth.getCurrentToken());
+                updateUserProfileUI();
+                return;
             } else {
+                console.warn('⚠️ 后端用户资料格式异常，尝试使用本地存储');
                 throw new Error('API 返回格式错误');
             }
         } catch (profileError) {
-            console.warn('⚠️ Profile API 调用失败，使用默认用户信息:', profileError);
-            // 使用默认用户信息
+            console.warn('⚠️ Profile API 调用失败，使用本地存储作为回退:', profileError);
+            
+            // 回退到本地存储
+            const localUser = auth.getCurrentUser();
+            if (localUser) {
+                currentUser = localUser;
+                console.log('✅ 使用本地存储的用户信息作为回退:', currentUser);
+                updateUserProfileUI();
+                return;
+            }
+            
+            // 最后的回退：使用默认用户信息
+            console.warn('⚠️ 本地存储也没有用户信息，使用默认用户信息');
             currentUser = {
                 id: 'user_' + Date.now(),
                 email: 'user@example.com',
@@ -357,8 +416,14 @@ function updateUserProfileUI() {
     if (userAvatar) {
         if (currentUser.avatar_url) {
             userAvatar.src = currentUser.avatar_url;
+            userAvatar.style.display = 'block';
+            console.log('✅ 设置用户头像:', currentUser.avatar_url);
+        } else {
+            // 如果没有头像URL，使用默认头像或隐藏
+            console.log('⚠️ 用户没有头像URL，使用默认显示');
+            userAvatar.style.display = 'block';
+            // 可以设置一个默认头像或者保持当前状态
         }
-        userAvatar.style.display = 'block';
     }
     
     // 更新用户名
@@ -372,7 +437,13 @@ function updateUserProfileUI() {
             allKeys: Object.keys(currentUser)
         });
         
-        const displayName = currentUser.nickname || currentUser.email || 'User';
+        // 尝试多种可能的显示名称字段
+        const displayName = currentUser.nickname || 
+                           currentUser.username || 
+                           currentUser.name || 
+                           currentUser.display_name ||
+                           currentUser.email || 
+                           'User';
         console.log('🔍 选择的显示名称:', displayName);
         
         actualUsername.textContent = displayName;
@@ -383,13 +454,21 @@ function updateUserProfileUI() {
     if (headerAvatar) {
         if (currentUser.avatar_url) {
             headerAvatar.src = currentUser.avatar_url;
+            console.log('✅ 设置header头像:', currentUser.avatar_url);
+        } else {
+            console.log('⚠️ 用户没有头像URL，header头像保持默认');
         }
     }
     
     // 更新header欢迎消息
     const welcomeMessage = document.querySelector('.WelcomeToYourPersonalSpacePlaceholder');
     if (welcomeMessage) {
-        const displayName = currentUser.nickname || currentUser.email || 'User';
+        const displayName = currentUser.nickname || 
+                           currentUser.username || 
+                           currentUser.name || 
+                           currentUser.display_name ||
+                           currentUser.email || 
+                           'User';
         welcomeMessage.textContent = `Welcome, ${displayName}!`;
     }
     
@@ -400,11 +479,19 @@ function updateUserProfileUI() {
 async function loadUserInsights() {
     try {
         console.log('📚 开始加载用户insights...');
+        console.log('🔍 Auth status before API call:', auth.checkAuth());
+        console.log('🔍 Current user:', auth.getCurrentUser());
         
         // 使用新的API方法获取insights
         const response = await api.getInsights();
         
         console.log('📡 API响应:', response);
+        console.log('🔍 Response structure:', {
+            success: response?.success,
+            hasData: !!response?.data,
+            dataKeys: response?.data ? Object.keys(response.data) : 'no data',
+            insightsCount: response?.data?.insights?.length || 0
+        });
         
         if (response.success && response.data && response.data.insights) {
             // Filter out insights that are already in stacks
@@ -412,6 +499,19 @@ async function loadUserInsights() {
             currentInsights = allInsights.filter(insight => !insight.stack_id);
             console.log('✅ 用户insights加载成功:', allInsights.length, '条');
             console.log('📚 过滤掉已在stacks中的insights后:', currentInsights.length, '条');
+            
+            // Save insights to localStorage as backup with timestamp
+            try {
+                const insightsBackup = {
+                    data: currentInsights,
+                    timestamp: Date.now(),
+                    version: '1.0'
+                };
+                localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
+                console.log('💾 Insights saved to localStorage backup');
+            } catch (storageError) {
+                console.warn('⚠️ Failed to save insights to localStorage:', storageError);
+            }
             
             // 检查每个insight的标签数据
             currentInsights.forEach((insight, index) => {
@@ -467,11 +567,58 @@ async function loadUserInsights() {
                 dataKeys: response.data ? Object.keys(response.data) : 'no data',
                 insightsField: response.data ? response.data.insights : 'no insights field'
             });
-            currentInsights = [];
+            
+            // Try loading from localStorage backup
+            console.log('📦 Attempting to load insights from localStorage backup...');
+            const backupInsights = localStorage.getItem('quest_insights_backup');
+            if (backupInsights) {
+                try {
+                    const backup = JSON.parse(backupInsights);
+                    // Check if backup is recent (within 24 hours)
+                    const isRecent = backup.timestamp && (Date.now() - backup.timestamp < 24 * 60 * 60 * 1000);
+                    if (isRecent && backup.data) {
+                        currentInsights = backup.data;
+                        console.log('📦 Loaded recent insights from localStorage backup:', currentInsights.length);
+                    } else {
+                        console.log('📦 Backup is too old or invalid, using empty array');
+                        currentInsights = [];
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to parse backup insights:', error);
+                    currentInsights = [];
+                }
+            } else {
+                currentInsights = [];
+            }
             renderInsights();
         }
     } catch (error) {
         console.error('❌ 加载用户insights失败:', error);
+        
+        // Try loading from localStorage backup before showing error
+        console.log('📦 Attempting to load insights from localStorage backup after error...');
+        const backupInsights = localStorage.getItem('quest_insights_backup');
+        if (backupInsights) {
+            try {
+                const backup = JSON.parse(backupInsights);
+                // Check if backup is recent (within 24 hours)
+                const isRecent = backup.timestamp && (Date.now() - backup.timestamp < 24 * 60 * 60 * 1000);
+                if (isRecent && backup.data) {
+                    currentInsights = backup.data;
+                    console.log('📦 Loaded recent insights from localStorage backup after error:', currentInsights.length);
+                    renderInsights();
+                    return; // Don't show error if we successfully loaded from backup
+                } else {
+                    console.log('📦 Backup is too old or invalid after error, using empty array');
+                    currentInsights = [];
+                }
+            } catch (parseError) {
+                console.error('❌ Failed to parse backup insights:', parseError);
+                currentInsights = [];
+            }
+        } else {
+            currentInsights = [];
+        }
         
         // 检查是否是后端服务问题
         if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
@@ -486,17 +633,26 @@ async function loadUserInsights() {
             showErrorMessage('Failed to load insights. Please refresh and try again.');
         }
         
-        currentInsights = [];
         renderInsights();
     }
 }
 
 // 渲染见解列表
 function renderInsights() {
-    if (!contentCards) return;
+    console.log('🎨 renderInsights called with:', {
+        contentCards: !!contentCards,
+        currentInsightsLength: currentInsights.length,
+        stacksSize: stacks.size,
+        currentInsights: currentInsights.slice(0, 3) // Show first 3 for debugging
+    });
+    
+    if (!contentCards) {
+        console.error('❌ contentCards element not found!');
+        return;
+    }
     
     // Hide loading skeleton
-    const loadingSkeleton = document.getElementById('loadingSkeleton');
+    const loadingSkeleton = getCachedElementById('loadingSkeleton');
     if (loadingSkeleton) {
         loadingSkeleton.style.display = 'none';
     }
@@ -506,9 +662,15 @@ function renderInsights() {
     
     // Clear existing content cards (but keep skeleton for next time)
     const existingCards = contentCards.querySelectorAll('.content-card, .empty-state');
+    console.log('🧹 Clearing existing cards:', existingCards.length);
     existingCards.forEach(card => card.remove());
     
-    if (currentInsights.length === 0) {
+    // Check if we have any content to render (insights OR stacks)
+    const hasInsights = currentInsights.length > 0;
+    const hasStacks = stacks.size > 0;
+    
+    if (!hasInsights && !hasStacks) {
+        console.log('📭 No insights or stacks to render, showing empty state');
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-state';
         emptyState.innerHTML = `
@@ -523,19 +685,37 @@ function renderInsights() {
         return;
     }
     
-    // 根据筛选条件排序
-    let sortedInsights = getFilteredInsights();
-    
-    sortedInsights.forEach(insight => {
-        const card = createInsightCard(insight);
-        contentCards.appendChild(card);
+    console.log('🎨 Rendering content:', {
+        insights: currentInsights.length,
+        stacks: stacks.size,
+        hasInsights,
+        hasStacks
     });
+    
+    // Use DocumentFragment for batch DOM operations to reduce reflows
+    const fragment = document.createDocumentFragment();
+    
+    // Render individual insights if we have any
+    if (hasInsights) {
+        // 根据筛选条件排序
+        let sortedInsights = getFilteredInsights();
+        
+        sortedInsights.forEach(insight => {
+            const card = createInsightCard(insight);
+            fragment.appendChild(card);
+        });
+    }
     
     // 渲染stacks
-    stacks.forEach(stackData => {
-        const stackCard = createStackCard(stackData);
-        contentCards.appendChild(stackCard);
-    });
+    if (hasStacks) {
+        stacks.forEach(stackData => {
+            const stackCard = createStackCard(stackData);
+            fragment.appendChild(stackCard);
+        });
+    }
+    
+    // Single append to DOM for all cards (reduces reflows from N to 1)
+    contentCards.appendChild(fragment);
     
     // Update edit mode state after rendering cards
     updateEditModeState();
@@ -629,10 +809,7 @@ function createInsightCard(insight) {
     editDeleteBtn.className = 'content-card-delete-btn';
     editDeleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     editDeleteBtn.title = 'Delete';
-    editDeleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        deleteInsight(insight.id);
-    };
+    editDeleteBtn.dataset.insightId = insight.id; // Store ID for event delegation
     card.appendChild(editDeleteBtn);
     
     // Add drag and drop functionality
@@ -1232,6 +1409,10 @@ async function deleteInsight(id) {
         }
         
         await loadUserInsights();
+        
+        // Also save to localStorage backup
+        saveInsightsToLocalStorage();
+        
         alert('Content deleted successfully!');
     } catch (error) {
         console.error('删除内容失败:', error);
@@ -1464,6 +1645,9 @@ function bindEvents() {
                         
                         await loadUserInsights();
                         console.log('✅ 内容重新加载完成');
+                        
+                        // Also save to localStorage backup
+                        saveInsightsToLocalStorage();
                     } catch (error) {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
@@ -1544,6 +1728,36 @@ function bindEvents() {
         
         // 绑定内容详情模态框事件
         bindContentDetailModalEvents();
+}
+
+// Event delegation for card interactions (performance optimization)
+function setupCardEventDelegation() {
+    if (!contentCards) return;
+    
+    // Single event listener for all card interactions
+    contentCards.addEventListener('click', (e) => {
+        // Handle delete button clicks
+        if (e.target.matches('.content-card-delete-btn') || e.target.closest('.content-card-delete-btn')) {
+            e.stopPropagation();
+            const deleteBtn = e.target.matches('.content-card-delete-btn') ? e.target : e.target.closest('.content-card-delete-btn');
+            const insightId = deleteBtn.dataset.insightId;
+            if (insightId) {
+                deleteInsight(insightId);
+            }
+            return;
+        }
+        
+        // Handle card clicks for details
+        const card = e.target.closest('.content-card');
+        if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn')) {
+            const insightId = card.dataset.insightId;
+            if (insightId) {
+                showInsightDetails(insightId);
+            }
+        }
+    });
+    
+    console.log('✅ Card event delegation set up');
 }
 
 // 加载用户标签
@@ -4067,7 +4281,22 @@ async function createStack(card1, card2) {
             stackIdCounter = Math.max(stackIdCounter, parseInt(stackId.split('_')[1]) + 1);
             
             // Save to localStorage for persistence
-            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
+            saveStacksToLocalStorage();
+            saveInsightsToLocalStorage();
+            
+            // Also try to create the stack in the backend database
+            try {
+                console.log('🔍 Attempting to create stack in backend database...');
+                const stackCreateResponse = await api.createStack({
+                    id: stackId,
+                    name: 'Stack',
+                    created_at: localStackData.createdAt,
+                    modified_at: localStackData.modifiedAt
+                });
+                console.log('📡 Stack creation API response:', stackCreateResponse);
+            } catch (stackCreateError) {
+                console.warn('⚠️ Failed to create stack in backend database (this is OK, stack_id approach still works):', stackCreateError);
+            }
             
             // Re-render content
             renderInsights();
@@ -4103,7 +4332,7 @@ async function createStack(card1, card2) {
             );
             
             // Save to localStorage for persistence
-            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
+            saveStacksToLocalStorage();
             
             // Re-render content
             renderInsights();
@@ -4122,6 +4351,38 @@ async function createStack(card1, card2) {
 function getInsightById(id) {
     return currentInsights.find(insight => insight.id === id);
 }
+
+// Save stacks to localStorage (called periodically to prevent data loss)
+function saveStacksToLocalStorage() {
+    try {
+        const stacksData = Array.from(stacks.entries());
+        localStorage.setItem('quest_stacks', JSON.stringify(stacksData));
+        console.log('💾 Saved stacks to localStorage:', stacksData.length, 'stacks');
+    } catch (error) {
+        console.error('❌ Failed to save stacks to localStorage:', error);
+    }
+}
+
+// Save insights to localStorage backup
+function saveInsightsToLocalStorage() {
+    try {
+        const insightsBackup = {
+            data: currentInsights,
+            timestamp: Date.now(),
+            version: '1.0'
+        };
+        localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
+        console.log('💾 Saved insights to localStorage backup:', currentInsights.length, 'insights');
+    } catch (error) {
+        console.error('❌ Failed to save insights to localStorage:', error);
+    }
+}
+
+// Auto-save stacks and insights every 30 seconds to prevent data loss
+setInterval(() => {
+    saveStacksToLocalStorage();
+    saveInsightsToLocalStorage();
+}, 30000);
 
 // Get stack by insight ID (one-to-one relationship)
 function getStackByInsightId(insightId) {
@@ -4250,6 +4511,9 @@ async function removeItemFromStack(stackId, insightId) {
                         // Update stack metadata
                         stackData.modifiedAt = new Date().toISOString();
                         
+                        // Save to localStorage
+                        saveInsightsToLocalStorage();
+                        
                         // If stack has 1 or fewer items, dissolve it
                         if (stackData.cards.length <= 1) {
                             // Move the remaining item back to insights if there is one
@@ -4257,10 +4521,12 @@ async function removeItemFromStack(stackId, insightId) {
                                 currentInsights.push(stackData.cards[0]);
                             }
                             stacks.delete(stackId);
+                            saveStacksToLocalStorage();
+                            saveInsightsToLocalStorage();
                             showSuccessMessage('Item removed from stack. Stack dissolved (only 1 item remaining).');
                         } else {
                             // Update stack count in localStorage
-                            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
+                            saveStacksToLocalStorage();
                             showSuccessMessage('Item removed from stack.');
                         }
                         
@@ -4301,6 +4567,9 @@ async function removeItemFromStack(stackId, insightId) {
                         // Update stack metadata
                         stackData.modifiedAt = new Date().toISOString();
                         
+                        // Save to localStorage
+                        saveInsightsToLocalStorage();
+                        
                         // If stack has 1 or fewer items, dissolve it
                         if (stackData.cards.length <= 1) {
                             // Move the remaining item back to insights if there is one
@@ -4308,10 +4577,12 @@ async function removeItemFromStack(stackId, insightId) {
                                 currentInsights.push(stackData.cards[0]);
                             }
                             stacks.delete(stackId);
+                            saveStacksToLocalStorage();
+                            saveInsightsToLocalStorage();
                             showSuccessMessage('Item removed from stack. Stack dissolved (only 1 item remaining). (Local storage)');
                         } else {
                             // Update stack count in localStorage
-                            localStorage.setItem('quest_stacks', JSON.stringify(Array.from(stacks.entries())));
+                            saveStacksToLocalStorage();
                             showSuccessMessage('Item removed from stack. (Local storage)');
                         }
                         
@@ -4336,6 +4607,33 @@ async function removeItemFromStack(stackId, insightId) {
 async function deleteStack(stackId) {
     if (confirm('Are you sure you want to delete this stack? All items will be moved back to your space.')) {
         try {
+            // Debug: Check authentication state before making API calls
+            console.log('🔍 Debug: Checking auth before delete stack...');
+            console.log('🔍 Auth status:', auth.checkAuth());
+            console.log('🔍 Current user:', auth.getCurrentUser());
+            console.log('🔍 Has valid token:', auth.hasValidToken());
+            console.log('🔍 Current token:', auth.getCurrentToken() ? 'Present' : 'Missing');
+            
+            // Ensure we have a valid session before proceeding
+            if (!auth.checkAuth()) {
+                console.log('⚠️ No valid session, attempting to restore...');
+                const restored = auth.restoreSession();
+                if (!restored) {
+                    showErrorMessage('Please sign in to delete stacks.');
+                    return;
+                }
+            }
+            
+            // Validate token before making API calls
+            console.log('🔍 Validating token before API calls...');
+            const tokenValid = await auth.validateToken();
+            if (!tokenValid) {
+                console.log('❌ Token validation failed, clearing session');
+                auth.clearSession();
+                showErrorMessage('Your session has expired. Please sign in again.');
+                return;
+            }
+            
             const stackData = stacks.get(stackId);
             if (stackData) {
                 // Remove stack_id from all insights in the stack via insights API
@@ -4349,9 +4647,14 @@ async function deleteStack(stackId) {
                 const allSuccessful = responses.every(response => response.success);
                 
                 if (allSuccessful) {
-                    // Move all cards back to insights
-                    currentInsights.push(...stackData.cards);
+                    // Don't add cards back to currentInsights - they'll be loaded from backend on next refresh
+                    // This prevents duplication issues
+                    console.log('✅ Stack deleted, cards will be available in main space on next refresh');
                     stacks.delete(stackId);
+                    
+                    // Update localStorage to remove the deleted stack
+                    saveStacksToLocalStorage();
+                    saveInsightsToLocalStorage();
                     
                     // Re-render content
                     renderInsights();
@@ -4367,9 +4670,13 @@ async function deleteStack(stackId) {
             if (error.message.includes('404') || error.message.includes('Not Found')) {
                 console.log('📝 Stack API not implemented, using local storage fallback');
                 
-                // Move all cards back to insights
-                currentInsights.push(...stackData.cards);
+                // Don't add cards back to currentInsights - they'll be loaded from backend on next refresh
+                // This prevents duplication issues
+                console.log('✅ Stack deleted (local storage), cards will be available in main space on next refresh');
                 stacks.delete(stackId);
+                
+                // Update localStorage to remove the deleted stack
+                saveStacksToLocalStorage();
                 
                 // Re-render content
                 renderInsights();
@@ -4664,6 +4971,7 @@ async function moveCardToStack(insight, newStackId) {
             // If current stack is empty, delete it
             if (currentStack.cards.length === 0) {
                 stacks.delete(currentStack.id);
+                saveStacksToLocalStorage();
                 showSuccessMessage('Card moved to new stack. Empty stack deleted.');
             } else {
                 showSuccessMessage('Card moved to new stack successfully.');
@@ -4691,6 +4999,7 @@ async function moveCardToStack(insight, newStackId) {
                 // If current stack is empty, delete it
                 if (currentStack.cards.length === 0) {
                     stacks.delete(currentStack.id);
+                    saveStacksToLocalStorage();
                     showSuccessMessage('Card moved to new stack. Empty stack deleted. (Local storage)');
                 } else {
                     showSuccessMessage('Card moved to new stack successfully. (Local storage)');
@@ -4721,6 +5030,9 @@ async function removeCardFromStack(insight, stackId) {
             // Add card back to main insights (safe because of one-to-one constraint)
             currentInsights.push(insight);
             
+            // Save to localStorage
+            saveInsightsToLocalStorage();
+            
             // If stack has only one card left, dissolve the stack
             if (stackData.cards.length <= 1) {
                 if (stackData.cards.length === 1) {
@@ -4730,6 +5042,8 @@ async function removeCardFromStack(insight, stackId) {
                     currentInsights.push(lastCard);
                 }
                 stacks.delete(stackId);
+                saveStacksToLocalStorage();
+                saveInsightsToLocalStorage();
                 closeStackExpansion();
                 showSuccessMessage('Stack dissolved - cards moved back to your space.');
             } else {
@@ -4774,6 +5088,8 @@ async function removeCardFromStack(insight, stackId) {
                         currentInsights.push(stackData.cards[0]);
                     }
                     stacks.delete(stackId);
+                    saveStacksToLocalStorage();
+                    saveInsightsToLocalStorage();
                     closeStackExpansion();
                     showSuccessMessage('Stack dissolved - cards moved back to your space. (Local storage)');
                 } else {
@@ -5325,6 +5641,9 @@ async function saveInsightTags(insight, modal) {
             
             // Reload insights from backend to ensure we have the latest data
             await loadUserInsights();
+            
+            // Also save to localStorage backup
+            saveInsightsToLocalStorage();
             
             // Force re-render to show updated tags
             console.log('🔄 Force re-rendering insights to show updated tags...');
