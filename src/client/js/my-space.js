@@ -651,7 +651,7 @@ async function loadUserStacks() {
         // Load all insights using pagination API and group them by stack_id
         let allInsights = [];
         let page = 1;
-        const limit = 100; // Use larger limit to get more data per request
+        const limit = insightsPerPage; // 使用分页大小，避免一次性加载过多数据
         
         while (true) {
             const response = await api.getInsightsPaginated(page, limit, null, '', true);
@@ -896,7 +896,7 @@ async function loadUserInsights() {
     try {
         // 使用分页API方法获取insights
         insightsLoading = true;
-        const response = await api.getInsightsPaginated(1, PAGE_SIZE, null, '', true);
+        const response = await api.getInsightsPaginated(1, insightsPerPage, null, '', true);
         
         if (response?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -1071,13 +1071,18 @@ function renderInsights() {
         // 根据筛选条件排序
         let sortedInsights = getFilteredInsights();
         
-        // 直接显示当前页面的insights（已经是分页后的数据）
-        sortedInsights.forEach(insight => {
+        // 限制每页显示的数量
+        const startIndex = 0; // 当前页面数据已经是从API获取的分页数据
+        const endIndex = Math.min(sortedInsights.length, insightsPerPage);
+        const pageInsights = sortedInsights.slice(startIndex, endIndex);
+        
+        // 显示当前页面的insights（限制数量）
+        pageInsights.forEach(insight => {
             const card = createInsightCard(insight);
             fragment.appendChild(card);
         });
         
-        console.log(`📊 渲染第${currentPage}页: ${sortedInsights.length}个insights`);
+        console.log(`📊 渲染第${currentPage}页: ${pageInsights.length}/${sortedInsights.length}个insights (限制${insightsPerPage}个)`);
     }
     
     // 渲染stacks
@@ -1202,7 +1207,7 @@ async function loadMoreInsights() {
     try {
         insightsLoading = true;
         const nextPage = insightsPage + 1;
-        const resp = await api.getInsightsPaginated(nextPage, PAGE_SIZE, null, '', true);
+        const resp = await api.getInsightsPaginated(nextPage, insightsPerPage, null, '', true);
         if (!resp?.success) return;
 
         const { items, hasMore } = normalizePaginatedInsightsResponse(resp);
