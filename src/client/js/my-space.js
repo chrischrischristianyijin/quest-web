@@ -831,7 +831,7 @@ async function loadTagsForInsights(insights) {
                 
                 if (insightResponse.success && insightResponse.data) {
                     const fullInsight = insightResponse.data;
-                    
+                        
                     if (fullInsight.tags && fullInsight.tags.length > 0) {
                         // Normalize tag structure - backend returns {tag_id, name, color}, frontend expects {id, name, color}
                         const normalizedTags = fullInsight.tags.map(tag => ({
@@ -1016,9 +1016,6 @@ function createInsightCard(insight) {
     
     // 组装完整卡片
     card.appendChild(cardContent);
-    
-    // 使卡片可点击
-    makeCardClickable(card, insight);
     
     return card;
 }
@@ -3218,7 +3215,7 @@ function bindEditModeEvents() {
 }
 
 function toggleEditMode() {
-    isEditMode = !isEditMode;
+            isEditMode = !isEditMode;
     const editModeBtn = document.getElementById('editModeBtn');
     const editBtnText = editModeBtn.querySelector('.edit-btn-text');
     
