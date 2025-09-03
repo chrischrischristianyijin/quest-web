@@ -44,6 +44,12 @@ const filterButtons = getCachedElementById('filterButtons');
 // 页面状态
 let currentUser = null;
 let currentInsights = [];
+// Make currentInsights globally accessible for event handlers
+window.currentInsights = currentInsights;
+// Cache for user tags to reduce API calls
+let cachedUserTags = null;
+let userTagsCacheTime = 0;
+const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
     latest: 'latest',  // 时间排序
     tags: null         // 标签筛选
@@ -54,6 +60,10 @@ let dragOffset = { x: 0, y: 0 };
 let stackHoverTimeout = null;
 let stacks = new Map(); // Store stacks data
 let stackIdCounter = 1;
+
+// Guard flags to prevent autosave from overwriting with empty data
+let hasLoadedStacksOnce = false;
+let hasLoadedInsightsOnce = false;
 
 
 // 页面初始化
@@ -83,13 +93,13 @@ async function initPage() {
             
             if (!restored) {
                 console.log('❌ 无会话可恢复，保持在当前页并提示登录');
-                showErrorMessage('Please sign in to use My Space.');
+                showErrorMessage('Please sign in. Showing last local backup.');
                 
                 // 即使未认证，也绑定基础UI事件（如用户资料编辑）
                 console.log('🔧 未认证状态下绑定基础UI事件...');
                 bindProfileEditEvents();
                 
-                return;
+                // 不要return，允许加载本地备份数据
             }
         }
         
@@ -154,9 +164,23 @@ async function loadUserStacks() {
     try {
         console.log('📚 开始加载用户stacks...');
         
-        // 检查认证状态
-        if (!auth.checkAuth()) {
-            console.warn('⚠️ 用户未认证，跳过stacks加载');
+        // 允许在未认证时也从 localStorage 加载，避免数据丢失
+        const unauthenticated = !auth.checkAuth();
+        if (unauthenticated) {
+            console.warn('⚠️ 用户未认证，使用 localStorage 降级模式加载 stacks');
+            const saved = localStorage.getItem('quest_stacks');
+            if (saved) {
+                try {
+                    const entries = JSON.parse(saved);
+                    stacks.clear();
+                    entries.forEach(([id, data]) => stacks.set(id, data));
+                    console.log('✅ 从 localStorage 加载 stacks（未认证模式）:', stacks.size);
+                    if (stacks.size > 0) hasLoadedStacksOnce = true;
+                } catch (e) {
+                    console.error('❌ 解析本地 stacks 失败:', e);
+                }
+            }
+            // 在未认证时不要继续调用后端
             return;
         }
         
@@ -275,6 +299,7 @@ async function loadUserStacks() {
             }
             
                 console.log('✅ 用户stacks加载成功:', stacks.size, '个stacks');
+                if (stacks.size > 0) hasLoadedStacksOnce = true;
             } else {
                 console.warn('⚠️ 没有stacks数据或API返回格式错误，尝试从localStorage加载');
                 // Try loading from localStorage as fallback
@@ -286,6 +311,7 @@ async function loadUserStacks() {
                             stacks.set(stackId, stackData);
                             console.log('🔍 Loaded stack from localStorage:', stackId);
                         });
+                        if (stacks.size > 0) hasLoadedStacksOnce = true;
                     } catch (error) {
                         console.error('❌ Failed to parse saved stacks:', error);
                     }
@@ -303,6 +329,7 @@ async function loadUserStacks() {
                         stacks.set(stackId, stackData);
                         console.log('🔍 Loaded stack from localStorage:', stackId);
                     });
+                    if (stacks.size > 0) hasLoadedStacksOnce = true;
                 } catch (error) {
                     console.error('❌ Failed to parse saved stacks:', error);
                 }
@@ -497,8 +524,10 @@ async function loadUserInsights() {
             // Filter out insights that are already in stacks
             const allInsights = response.data.insights;
             currentInsights = allInsights.filter(insight => !insight.stack_id);
+            window.currentInsights = currentInsights;
             console.log('✅ 用户insights加载成功:', allInsights.length, '条');
             console.log('📚 过滤掉已在stacks中的insights后:', currentInsights.length, '条');
+            if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
             // Save insights to localStorage as backup with timestamp
             try {
@@ -576,19 +605,29 @@ async function loadUserInsights() {
                     const backup = JSON.parse(backupInsights);
                     // Check if backup is recent (within 24 hours)
                     const isRecent = backup.timestamp && (Date.now() - backup.timestamp < 24 * 60 * 60 * 1000);
-                    if (isRecent && backup.data) {
+                    // For unexpected response format, prefer backup if present (even if stale)
+                    if (Array.isArray(backup.data)) {
                         currentInsights = backup.data;
-                        console.log('📦 Loaded recent insights from localStorage backup:', currentInsights.length);
+                        window.currentInsights = currentInsights;
+                        if (isRecent) {
+                            console.log('📦 Loaded recent insights from localStorage backup:', currentInsights.length);
+                        } else {
+                            console.warn('📦 Loaded stale insights from localStorage backup (may be outdated):', currentInsights.length);
+                        }
+                        if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
                     } else {
-                        console.log('📦 Backup is too old or invalid, using empty array');
+                        console.log('📦 Backup data is invalid, using empty array');
                         currentInsights = [];
+                        window.currentInsights = currentInsights;
                     }
                 } catch (error) {
                     console.error('❌ Failed to parse backup insights:', error);
                     currentInsights = [];
+                    window.currentInsights = currentInsights;
                 }
             } else {
                 currentInsights = [];
+                window.currentInsights = currentInsights;
             }
             renderInsights();
         }
@@ -598,26 +637,35 @@ async function loadUserInsights() {
         // Try loading from localStorage backup before showing error
         console.log('📦 Attempting to load insights from localStorage backup after error...');
         const backupInsights = localStorage.getItem('quest_insights_backup');
+        const isAuthErr = /401|403|unauthor/i.test(error?.message || '');
+        const isNetErr = (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+                        /Failed to fetch|NetworkError/i.test(error?.message || '');
         if (backupInsights) {
             try {
                 const backup = JSON.parse(backupInsights);
                 // Check if backup is recent (within 24 hours)
                 const isRecent = backup.timestamp && (Date.now() - backup.timestamp < 24 * 60 * 60 * 1000);
-                if (isRecent && backup.data) {
+                // 认证/网络错误时允许使用"过期"备份，避免空数据
+                if ((isRecent || isAuthErr || isNetErr) && Array.isArray(backup.data)) {
                     currentInsights = backup.data;
-                    console.log('📦 Loaded recent insights from localStorage backup after error:', currentInsights.length);
+                    window.currentInsights = currentInsights;
+                    console.warn('📦 Using local insights backup (may be stale).');
+                    if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
                     renderInsights();
                     return; // Don't show error if we successfully loaded from backup
                 } else {
                     console.log('📦 Backup is too old or invalid after error, using empty array');
                     currentInsights = [];
+                    window.currentInsights = currentInsights;
                 }
             } catch (parseError) {
                 console.error('❌ Failed to parse backup insights:', parseError);
                 currentInsights = [];
+                window.currentInsights = currentInsights;
             }
         } else {
             currentInsights = [];
+            window.currentInsights = currentInsights;
         }
         
         // 检查是否是后端服务问题
@@ -727,7 +775,7 @@ async function loadTagsForInsights(insights) {
         console.log('🏷️ Loading tags for insights without tags...');
         
         // Get all user tags first
-        const tagsResponse = await api.getUserTags();
+        const tagsResponse = await getCachedUserTags();
         const allTags = tagsResponse.success ? tagsResponse.data : [];
         
         console.log('🏷️ Available tags:', allTags);
@@ -963,7 +1011,7 @@ function createInsightCard(insight) {
 async function loadUserTagsForFilter(dropdownOptions) {
     try {
         console.log('🔍 开始为标签筛选器加载用户标签...');
-        const response = await api.getUserTags();
+        const response = await getCachedUserTags();
         const tags = response.success ? response.data : [];
         
         console.log('🏷️ 获取到用户标签:', tags);
@@ -1001,7 +1049,7 @@ async function initFilterButtons() {
         console.log('🏷️ 开始初始化筛选按钮...');
         
         // 获取用户标签
-        const response = await api.getUserTags();
+        const response = await getCachedUserTags();
         const userTags = response.success ? response.data : [];
         
         console.log('🏷️ 获取到用户标签:', userTags);
@@ -1752,7 +1800,13 @@ function setupCardEventDelegation() {
         if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn')) {
             const insightId = card.dataset.insightId;
             if (insightId) {
-                showInsightDetails(insightId);
+                // Find the insight data and open the modal
+                const insight = window.currentInsights?.find(i => i.id === insightId);
+                if (insight) {
+                    openContentDetailModal(insight);
+                } else {
+                    console.error('❌ Insight not found for ID:', insightId);
+                }
             }
         }
     });
@@ -1760,13 +1814,43 @@ function setupCardEventDelegation() {
     console.log('✅ Card event delegation set up');
 }
 
+// Cached version of getUserTags to reduce API calls
+async function getCachedUserTags() {
+    const now = Date.now();
+    
+    // Return cached data if it's still fresh
+    if (cachedUserTags && (now - userTagsCacheTime) < USER_TAGS_CACHE_DURATION) {
+        console.log('📦 Using cached user tags');
+        return { success: true, data: cachedUserTags };
+    }
+    
+    // Fetch fresh data
+    console.log('🔄 Fetching fresh user tags from API');
+    const response = await api.getUserTags();
+    
+    if (response.success && response.data) {
+        cachedUserTags = response.data;
+        userTagsCacheTime = now;
+        console.log('💾 Cached user tags:', cachedUserTags.length);
+    }
+    
+    return response;
+}
+
+// Clear user tags cache (call this when tags are updated)
+function clearUserTagsCache() {
+    cachedUserTags = null;
+    userTagsCacheTime = 0;
+    console.log('🗑️ Cleared user tags cache');
+}
+
 // 加载用户标签
 async function loadUserTags() {
     try {
         console.log('🏷️ 开始加载用户标签...');
         
-        // 使用新的API方法获取标签
-        const response = await api.getUserTags();
+        // 使用缓存的API方法获取标签
+        const response = await getCachedUserTags();
         
         if (response.success && response.data) {
             const tags = response.data;
@@ -2316,7 +2400,7 @@ function showEditTagsModal() {
 // 加载标签用于编辑
 async function loadTagsForEditing() {
     try {
-        const response = await api.getUserTags();
+        const response = await getCachedUserTags();
         const tags = response.success ? response.data : [];
         
         const tagsList = document.getElementById('tagsList');
@@ -4355,7 +4439,9 @@ function getInsightById(id) {
 // Save stacks to localStorage (called periodically to prevent data loss)
 function saveStacksToLocalStorage() {
     try {
+        if (!hasLoadedStacksOnce) return;           // only after an initial load
         const stacksData = Array.from(stacks.entries());
+        if (stacksData.length === 0) return;        // never overwrite with empty
         localStorage.setItem('quest_stacks', JSON.stringify(stacksData));
         console.log('💾 Saved stacks to localStorage:', stacksData.length, 'stacks');
     } catch (error) {
@@ -4366,6 +4452,8 @@ function saveStacksToLocalStorage() {
 // Save insights to localStorage backup
 function saveInsightsToLocalStorage() {
     try {
+        if (!hasLoadedInsightsOnce) return;          // only after an initial load
+        if (!Array.isArray(currentInsights) || currentInsights.length === 0) return;
         const insightsBackup = {
             data: currentInsights,
             timestamp: Date.now(),
@@ -4379,10 +4467,12 @@ function saveInsightsToLocalStorage() {
 }
 
 // Auto-save stacks and insights every 30 seconds to prevent data loss
-setInterval(() => {
-    saveStacksToLocalStorage();
-    saveInsightsToLocalStorage();
-}, 30000);
+if (!window.__QUEST_AUTOSAVE_ID__) {
+    window.__QUEST_AUTOSAVE_ID__ = setInterval(() => {
+        saveStacksToLocalStorage();
+        saveInsightsToLocalStorage();
+    }, 30000);
+}
 
 // Get stack by insight ID (one-to-one relationship)
 function getStackByInsightId(insightId) {
@@ -5512,7 +5602,7 @@ async function openTagEditModal(insight) {
         console.log('🏷️ Opening tag edit modal for insight:', insight.id);
         
         // Get all available tags
-        const response = await api.getUserTags();
+        const response = await getCachedUserTags();
         const allTags = response.success ? response.data : [];
         
         // Get current tags for this insight
@@ -5657,7 +5747,13 @@ async function saveInsightTags(insight, modal) {
         
     } catch (error) {
         console.error('❌ Failed to save tag:', error);
-        showErrorMessage(`Failed to save tag: ${error.message}`);
+        
+        // Handle specific backend service errors
+        if (error.message.includes('update_insight') || error.message.includes('500')) {
+            showErrorMessage('Tag update feature is temporarily unavailable. The backend service needs to be updated. Please try again later or contact support.');
+        } else {
+            showErrorMessage(`Failed to save tag: ${error.message}`);
+        }
     }
 }
 
@@ -5674,7 +5770,7 @@ async function replaceAllTagsWithDefaults() {
         console.log('🔄 Starting tag replacement process...');
         
         // First, get all existing tags
-        const response = await api.getUserTags();
+        const response = await getCachedUserTags();
         const existingTags = response.success ? response.data : [];
         
         console.log('📋 Found existing tags:', existingTags.length);
