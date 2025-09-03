@@ -669,11 +669,6 @@ function renderInsightsInitial() {
     
     // For initial render, show all insights (getFilteredInsights handles stack filtering)
     const filtered = getFilteredInsights();
-    console.log('🎨 Rendering initial insights:', {
-        totalInsights: currentInsights.length,
-        filteredInsights: filtered.length,
-        container: container
-    });
     
     filtered.forEach(i => container.appendChild(createInsightCardEl(i)));
     ensureInsightsSentinel(container);
@@ -3603,7 +3598,6 @@ function saveStacksToLocalStorage() {
         const stacksData = Array.from(stacks.entries());
         if (stacksData.length === 0) return;        // never overwrite with empty
         localStorage.setItem('quest_stacks', JSON.stringify(stacksData));
-        console.log('💾 Saved stacks to localStorage:', stacksData.length, 'stacks');
     } catch (error) {
         console.error('❌ Failed to save stacks to localStorage:', error);
     }
@@ -3620,7 +3614,6 @@ function saveInsightsToLocalStorage() {
             version: '1.0'
         };
         localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
-        console.log('💾 Saved insights to localStorage backup:', currentInsights.length, 'insights');
     } catch (error) {
         console.error('❌ Failed to save insights to localStorage:', error);
     }
@@ -3738,8 +3731,6 @@ function createStackCard(stackData) {
 async function removeItemFromStack(stackId, insightId) {
     if (confirm('Are you sure you want to remove this item from the stack?')) {
         try {
-            console.log('🗑️ Removing item from stack:', { stackId, insightId });
-            
             // Remove stack_id from the insight via API
             const response = await api.removeItemFromStack(stackId, insightId);
             
@@ -3798,8 +3789,6 @@ async function removeItemFromStack(stackId, insightId) {
             
             // Fallback to local storage if API is not implemented
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('📝 Stack API not implemented, using local storage fallback');
-                
                 // Get the stack data
                 const stackData = stacks.get(stackId);
                 if (stackData) {
@@ -3908,11 +3897,8 @@ async function deleteStack(stackId) {
             
             // Fallback to local storage if API is not implemented
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('📝 Stack API not implemented, using local storage fallback');
-                
                 // Don't add cards back to currentInsights - they'll be loaded from backend on next refresh
                 // This prevents duplication issues
-                console.log('✅ Stack deleted (local storage), cards will be available in main space on next refresh');
                 stacks.delete(stackId);
                 
                 // Update localStorage to remove the deleted stack
@@ -4088,8 +4074,6 @@ function setupStackCardDrag(card, insight, stackId) {
 
 // Start dragging a card from stack
 function startStackCardDrag(card, event, insight, stackId) {
-    console.log('🎯 Starting stack card drag:', insight.id);
-    
     draggedCard = card;
     const rect = card.getBoundingClientRect();
     
@@ -4227,8 +4211,6 @@ async function moveCardToStack(insight, newStackId) {
             
             // Fallback to local storage if API is not implemented
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('📝 Stack API not implemented, using local storage fallback');
-                
                 // Remove from current stack
                 currentStack.cards = currentStack.cards.filter(card => card.id !== insight.id);
                 
@@ -4313,8 +4295,6 @@ async function removeCardFromStack(insight, stackId) {
             
             // Fallback to local storage if API is not implemented
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('📝 Stack API not implemented, using local storage fallback');
-                
                 // Remove card from local stack data
                 stackData.cards = stackData.cards.filter(card => card.id !== insight.id);
                 stackData.modifiedAt = new Date().toISOString();
