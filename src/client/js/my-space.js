@@ -217,7 +217,7 @@ async function goToPage(pageNum) {
             console.log(`🔄 从API加载第${pageNum}页数据...`);
             
             // 使用分页API加载目标页面
-            const targetPageResponse = await api.getInsightsPaginated(pageNum, insightsPerPage, null, '', true);
+            const targetPageResponse = await api.getInsightsPaginated(pageNum, insightsPerPage, null, '', false);
             if (targetPageResponse?.success) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(targetPageResponse);
                 const targetPageInsights = (items || []).filter(x => !x.stack_id);
@@ -320,7 +320,11 @@ async function loadUserInsightsWithPagination() {
         clearPageCache();
         
         // 第一步：快速加载第一页
-        const firstPageResponse = await api.getInsightsPaginated(1, insightsPerPage, null, '', true);
+        console.log('🚀 开始请求第一页数据...');
+        const startTime = Date.now();
+        const firstPageResponse = await api.getInsightsPaginated(1, insightsPerPage, null, '', false);
+        const endTime = Date.now();
+        console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
         
         if (firstPageResponse?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
@@ -357,15 +361,23 @@ async function loadUserInsightsWithPagination() {
                 }
             });
             
-            // 检查是否需要加载标签
-            const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
-            if (insightsWithoutTags.length > 0) {
-                await loadTagsForInsights(insightsWithoutTags);
-            }
-            
-            // 立即渲染第一页
+            // 立即渲染第一页（不等待标签加载）
             renderInsights();
             updatePaginationUI();
+            
+            // 异步加载标签，不阻塞渲染
+            setTimeout(async () => {
+                const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
+                if (insightsWithoutTags.length > 0) {
+                    try {
+                        await loadTagsForInsights(insightsWithoutTags);
+                        // 标签加载完成后重新渲染
+                        renderInsights();
+                    } catch (error) {
+                        console.warn('⚠️ 标签加载失败:', error);
+                    }
+                }
+            }, 10);
             
             console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
             console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
@@ -392,7 +404,7 @@ async function loadAllInsightsInBackground() {
         
         // 使用分页API逐页加载
         while (page <= totalPages) {
-            const response = await api.getInsightsPaginated(page, insightsPerPage, null, '', true);
+            const response = await api.getInsightsPaginated(page, insightsPerPage, null, '', false);
             
             if (response?.success) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -457,7 +469,7 @@ async function loadRemainingInsightsInBackground(currentLoadedPage) {
             
             if (existingInsights.length < insightsPerPage) {
                 // 这一页数据不完整，需要加载
-                const response = await api.getInsightsPaginated(page, insightsPerPage, null, '', true);
+                const response = await api.getInsightsPaginated(page, insightsPerPage, null, '', false);
                 
                 if (response?.success) {
                     const { items } = normalizePaginatedInsightsResponse(response);
@@ -539,6 +551,22 @@ function loadFromBackup() {
     updatePaginationUI();
 }
 
+// 在页面加载时立即开始API预热
+(async function warmupAPI() {
+    console.log('🔥 开始预热API服务器...');
+    const warmupStart = Date.now();
+    try {
+        await fetch(`${API_CONFIG.API_BASE_URL}/health`, { 
+            method: 'GET',
+            mode: 'cors'
+        });
+        const warmupEnd = Date.now();
+        console.log(`🔥 API服务器预热完成: ${warmupEnd - warmupStart}ms`);
+    } catch (error) {
+        console.log('⚠️ API服务器预热失败:', error.message);
+    }
+})();
+
 // 在页面初始化时调用翻页初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 其他初始化代码...
@@ -576,6 +604,8 @@ async function initPage() {
         if (!tokenOk) {
             // Token校验失败，继续以降级模式加载My Space UI
         }
+        
+        // API服务器已在页面加载时预热
         
         // 优先加载核心数据，stacks延迟加载
         const [profileResult, insightsResult, tagsResult] = await Promise.allSettled([
@@ -656,7 +686,7 @@ async function loadUserStacks() {
         const maxPages = 3; // 最多加载前3页来构建stacks
         
         while (page <= maxPages) {
-            const response = await api.getInsightsPaginated(page, limit, null, '', true);
+            const response = await api.getInsightsPaginated(page, limit, null, '', false);
             
             if (response.success && response.data) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -666,10 +696,10 @@ async function loadUserStacks() {
                 
                 if (!hasMore) break;
                 page++;
-            } else {
+                } else {
                 break;
             }
-        }
+                }
                 
                 stacks.clear(); // 清空现有stacks
                 
@@ -898,7 +928,7 @@ async function loadUserInsights() {
     try {
         // 使用分页API方法获取insights
         insightsLoading = true;
-        const response = await api.getInsightsPaginated(1, insightsPerPage, null, '', true);
+        const response = await api.getInsightsPaginated(1, insightsPerPage, null, '', false);
         
         if (response?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -1201,7 +1231,7 @@ async function loadMoreInsights() {
     try {
         insightsLoading = true;
         const nextPage = insightsPage + 1;
-        const resp = await api.getInsightsPaginated(nextPage, insightsPerPage, null, '', true);
+        const resp = await api.getInsightsPaginated(nextPage, insightsPerPage, null, '', false);
         if (!resp?.success) return;
 
         const { items, hasMore } = normalizePaginatedInsightsResponse(resp);
