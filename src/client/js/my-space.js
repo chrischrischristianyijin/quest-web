@@ -1065,13 +1065,9 @@ async function initFilterButtons() {
     if (!filterButtons) return;
     
     try {
-        console.log('🏷️ 开始初始化筛选按钮...');
-        
         // 获取用户标签
         const response = await getCachedUserTags();
         const userTags = response.success ? response.data : [];
-        
-        console.log('🏷️ 获取到用户标签:', userTags);
         
         // 清空现有按钮
         filterButtons.innerHTML = '';
@@ -1331,7 +1327,6 @@ function showFilterStatus() {
 
     
     const statusText = statusParts.length > 0 ? statusParts.join(' | ') : '显示所有内容';
-    console.log('📊 筛选状态:', statusText);
     
     // 可以在这里添加UI显示筛选状态
     // 比如在页面顶部显示一个小提示
@@ -1444,7 +1439,6 @@ async function deleteInsight(id) {
         // Clear cache for insights endpoint to ensure fresh data
         if (window.apiCache) {
             window.apiCache.clearPattern('/api/v1/insights');
-            console.log('🗑️ Cleared insights cache after deletion');
         }
         
         await loadUserInsights();
@@ -1471,8 +1465,6 @@ const scrollManager = {
         document.body.style.position = 'fixed';
         document.body.style.top = `-${this.scrollPosition}px`;
         document.body.style.width = '100%';
-        
-        console.log('📱 滚动已禁用，保存位置:', this.scrollPosition);
     },
     
     enable() {
@@ -1488,7 +1480,6 @@ const scrollManager = {
             window.scrollTo(0, this.scrollPosition);
         }
         
-        console.log('📱 滚动已恢复，恢复位置:', this.scrollPosition);
         this.scrollPosition = undefined;
     }
 };
@@ -1535,8 +1526,6 @@ function bindEvents() {
     // Header logout button
     if (headerLogout) {
         headerLogout.addEventListener('click', () => {
-            console.log('🚪 用户点击登出...');
-            
             // 直接清除本地状态
             auth.clearSession();
             
@@ -1548,8 +1537,6 @@ function bindEvents() {
     // Header edit profile button
     if (headerEditProfile) {
         headerEditProfile.addEventListener('click', () => {
-            console.log('✏️ 用户点击编辑资料...');
-            
             // 触发编辑资料模态框
             const profileContainer = document.getElementById('profileContainer');
             if (profileContainer) {
@@ -1762,8 +1749,6 @@ function setupCardEventDelegation() {
             }
         }
     });
-    
-    console.log('✅ Card event delegation set up');
 }
 
 // Cached version of getUserTags to reduce API calls
@@ -1772,18 +1757,15 @@ async function getCachedUserTags() {
     
     // Return cached data if it's still fresh
     if (cachedUserTags && (now - userTagsCacheTime) < USER_TAGS_CACHE_DURATION) {
-        console.log('📦 Using cached user tags');
         return { success: true, data: cachedUserTags };
     }
     
     // Fetch fresh data
-    console.log('🔄 Fetching fresh user tags from API');
     const response = await api.getUserTags();
     
     if (response.success && response.data) {
         cachedUserTags = response.data;
         userTagsCacheTime = now;
-        console.log('💾 Cached user tags:', cachedUserTags.length);
     }
     
     return response;
@@ -1793,7 +1775,6 @@ async function getCachedUserTags() {
 function clearUserTagsCache() {
     cachedUserTags = null;
     userTagsCacheTime = 0;
-    console.log('🗑️ Cleared user tags cache');
 }
 
 // Utility to normalize various response shapes
@@ -1821,14 +1802,11 @@ function normalizePaginatedInsightsResponse(response) {
 // 加载用户标签
 async function loadUserTags() {
     try {
-        console.log('🏷️ 开始加载用户标签...');
-        
         // 使用缓存的API方法获取标签
         const response = await getCachedUserTags();
         
         if (response.success && response.data) {
             const tags = response.data;
-            console.log('✅ 用户标签加载成功:', tags.length, '个');
             
             // 更新标签选择器
             renderTagSelector(tags);
@@ -2116,8 +2094,6 @@ async function editTagInManagement(userTagId, currentName, currentColor) {
         });
         
         if (response.success && response.data) {
-            console.log('✅ Tag updated successfully:', response.data);
-            
             // Reload tags
             await loadUserTags();
             
@@ -2141,13 +2117,9 @@ async function deleteTagInManagement(userTagId) {
     }
     
     try {
-        console.log('🗑️ Deleting tag:', userTagId);
-        
         const response = await api.deleteUserTag(userTagId);
         
         if (response.success) {
-            console.log('✅ Tag deleted successfully');
-            
             // Reload tags
             await loadUserTags();
             
@@ -2399,14 +2371,10 @@ async function deleteUserTag(userTagId) {
     }
     
     try {
-        console.log('🗑️ 删除标签:', userTagId);
-        
         // 使用新的API方法删除标签
         const response = await api.deleteUserTag(userTagId);
         
         if (response.success) {
-            console.log('✅ 标签删除成功');
-            
             // 重新加载标签
             await loadUserTags();
             
@@ -2509,8 +2477,6 @@ window.bulkDeleteTags = bulkDeleteTags;
 
 // 绑定用户资料编辑事件
 function bindProfileEditEvents() {
-    console.log('🔧 绑定用户资料编辑事件...');
-    
     // 重新获取DOM元素（确保元素存在）
     const profileContainer = document.getElementById('profileContainer');
     const profileEditModal = document.getElementById('profileEditModal');
@@ -2520,96 +2486,45 @@ function bindProfileEditEvents() {
     const profileAvatarUpload = document.getElementById('profileAvatarUpload');
     const avatarEditBtn = document.getElementById('avatarEditBtn');
     
-    console.log('🔍 检查DOM元素:', {
-        profileContainer: !!profileContainer,
-        profileEditModal: !!profileEditModal,
-        closeProfileModal: !!closeProfileModal,
-        cancelProfileEdit: !!cancelProfileEdit,
-        avatarEditBtn: !!avatarEditBtn
-    });
-    
     // 点击头像区域打开编辑模态框
     if (profileContainer) {
-        // 添加多种事件测试
-        profileContainer.addEventListener('mousedown', function(e) {
-            console.log('🖱️ 鼠标按下事件触发', e.target);
-        });
-        
-        profileContainer.addEventListener('mouseup', function(e) {
-            console.log('🖱️ 鼠标抬起事件触发', e.target);
-        });
-        
         profileContainer.addEventListener('click', function(e) {
-            console.log('🖱️ 用户点击了用户资料区域');
-            console.log('  - 事件目标:', e.target);
-            console.log('  - 当前目标:', e.currentTarget);
-            console.log('  - 事件类型:', e.type);
             e.preventDefault();
             e.stopPropagation();
             openProfileEditModal();
         }, true); // 使用捕获阶段
-        
-        // 也添加普通的点击事件作为备用
-        profileContainer.addEventListener('click', function(e) {
-            console.log('🖱️ 备用点击事件触发');
-            openProfileEditModal();
-        });
-        
-        console.log('✅ 用户资料容器点击事件已绑定');
-        console.log('  - 元素信息:', profileContainer);
-        console.log('  - 元素样式:', window.getComputedStyle(profileContainer));
-    } else {
-        console.error('❌ 找不到profileContainer元素');
     }
     
     // 关闭编辑模态框
     if (closeProfileModal) {
         closeProfileModal.addEventListener('click', function() {
-            console.log('🖱️ 用户点击了关闭按钮');
             closeProfileEditModal();
         });
-        console.log('✅ 关闭按钮事件已绑定');
-    } else {
-        console.error('❌ 找不到closeProfileModal元素');
     }
     
     if (cancelProfileEdit) {
         cancelProfileEdit.addEventListener('click', function() {
-            console.log('🖱️ 用户点击了取消按钮');
             closeProfileEditModal();
         });
-        console.log('✅ 取消按钮事件已绑定');
-    } else {
-        console.error('❌ 找不到cancelProfileEdit元素');
     }
     
     // 点击模态框外部关闭
     if (profileEditModal) {
         profileEditModal.addEventListener('click', function(e) {
             if (e.target === profileEditModal) {
-                console.log('🖱️ 用户点击了模态框外部');
                 closeProfileEditModal();
             }
         });
-        console.log('✅ 模态框外部点击事件已绑定');
-    } else {
-        console.error('❌ 找不到profileEditModal元素');
     }
     
     // 表单提交
     if (profileEditForm) {
         profileEditForm.addEventListener('submit', handleProfileUpdate);
-        console.log('✅ 表单提交事件已绑定');
-    } else {
-        console.error('❌ 找不到profileEditForm元素');
     }
     
     // 头像预览
     if (profileAvatarUpload) {
         profileAvatarUpload.addEventListener('change', handleAvatarPreview);
-        console.log('✅ 头像预览事件已绑定');
-    } else {
-        console.error('❌ 找不到profileAvatarUpload元素');
     }
     
     // 头像编辑按钮
@@ -2619,24 +2534,16 @@ function bindProfileEditEvents() {
                 profileAvatarUpload.click();
             }
         });
-        console.log('✅ 头像编辑按钮事件已绑定');
-    } else {
-        console.error('❌ 找不到avatarEditBtn元素');
     }
-    
-    console.log('✅ 用户资料编辑事件绑定完成');
 }
 
 // 打开用户资料编辑模态框
 function openProfileEditModal() {
-    console.log('📝 打开用户资料编辑模态框...');
-    
     const profileEditModal = document.getElementById('profileEditModal');
     const profileAvatarUpload = document.getElementById('profileAvatarUpload');
     const avatarPreviewImg = document.getElementById('avatarPreviewImg');
     
     if (!profileEditModal) {
-        console.error('❌ 找不到用户资料编辑模态框');
         return;
     }
     
@@ -2754,15 +2661,11 @@ function handleAvatarPreview(event) {
         }
     };
     reader.readAsDataURL(file);
-    
-    console.log('✅ 头像预览已更新');
 }
 
 // 处理用户资料更新
 async function handleProfileUpdate(event) {
     event.preventDefault();
-    
-    console.log('💾 开始更新用户资料...');
     
     // 检查认证状态
     if (!auth.checkAuth()) {
@@ -2821,8 +2724,6 @@ async function handleProfileUpdate(event) {
         const profileAvatarUpload = document.getElementById('profileAvatarUpload');
         const avatarFile = profileAvatarUpload?.files[0];
         if (avatarFile) {
-            console.log('📸 上传新头像...');
-            
             // 显示上传进度
             const saveBtn = document.getElementById('saveProfileEdit');
             const originalText = saveBtn?.innerHTML;
@@ -2833,7 +2734,6 @@ async function handleProfileUpdate(event) {
             
             try {
                 avatarUrl = await uploadAvatar(avatarFile);
-                console.log('✅ 头像上传成功:', avatarUrl);
                 
                 // 恢复按钮状态
                 if (saveBtn) {
@@ -2916,7 +2816,6 @@ async function handleProfileUpdate(event) {
                     // Update only the user data, preserve token and timestamp
                     sessionData.user = currentUser;
                     localStorage.setItem('quest_user_session', JSON.stringify(sessionData));
-                    console.log('💾 已保存到localStorage (保持session结构)');
                 } else {
                     console.warn('⚠️ 没有找到现有session数据');
                 }
@@ -2931,7 +2830,6 @@ async function handleProfileUpdate(event) {
             // 显示警告消息
             showSuccessMessage('Profile updated locally (server may be temporarily unavailable)');
             
-            console.log('✅ 用户资料本地更新成功');
             return; // Exit early since we handled it locally
         } catch (localError) {
             console.error('❌ 本地更新也失败:', localError);
@@ -2965,8 +2863,6 @@ async function handleProfileUpdate(event) {
 
 // 上传头像
 async function uploadAvatar(file) {
-    console.log('📸 开始上传头像文件...');
-    
     // 检查用户是否已登录
     if (!currentUser || !currentUser.id) {
         throw new Error('User not logged in');
@@ -2976,23 +2872,13 @@ async function uploadAvatar(file) {
     formData.append('avatar', file);
     formData.append('user_id', currentUser.id);  // 添加必需的 user_id 参数
     
-    console.log('📤 上传数据:', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        userId: currentUser.id
-    });
-    
     try {
         const response = await api.request(API_CONFIG.USER.UPLOAD_AVATAR, {
             method: 'POST',
             body: formData
         });
         
-        console.log('📡 服务器响应:', response);
-        
         if (response.success && response.data && response.data.avatar_url) {
-            console.log('✅ 头像上传成功:', response.data.avatar_url);
             return response.data.avatar_url;
         } else {
             throw new Error(response.message || 'Avatar upload failed: Invalid response format');
@@ -3071,25 +2957,21 @@ function makeCardClickable(card, insight) {
             return;
         }
         
-        console.log('🖱️ 用户点击了内容卡片:', insight.title || insight.url);
         openContentDetailModal(insight);
     });
 }
 
 // 打开内容详情模态框
 function openContentDetailModal(insight) {
-    console.log('📖 打开内容详情模态框:', insight);
-    
     currentDetailInsight = insight;
     const modal = document.getElementById('contentDetailModal');
     
     if (!modal) {
-        console.error('❌ 找不到内容详情模态框元素');
         return;
     }
     
     // 填充模态框内容
-    populateModalContent(insight);
+        populateModalContent(insight);
     
     // 显示模态框
     modal.style.display = 'flex';
@@ -3099,14 +2981,10 @@ function openContentDetailModal(insight) {
     
     // 防止页面滚动
     document.body.style.overflow = 'hidden';
-    
-    console.log('✅ 内容详情模态框已打开');
 }
 
 // 关闭内容详情模态框
 function closeContentDetailModal() {
-    console.log('❌ 关闭内容详情模态框');
-    
     const modal = document.getElementById('contentDetailModal');
     if (!modal) return;
     
@@ -3121,7 +2999,6 @@ function closeContentDetailModal() {
 
 // 填充模态框内容
 function populateModalContent(insight) {
-    console.log('📝 填充模态框内容:', insight);
     
     // 标题
     const titleElement = document.getElementById('modalContentTitle');
@@ -3170,21 +3047,17 @@ function populateModalContent(insight) {
         aiSummaryDate.textContent = date;
     }
     
-    // 绑定编辑标签按钮事件
-    const editTagsBtn = document.getElementById('modalEditTagsBtn');
-    if (editTagsBtn) {
-        // Remove any existing event listeners
-        editTagsBtn.onclick = null;
-        // Add new event listener
-        editTagsBtn.onclick = () => {
-            console.log('🏷️ Modal edit tags button clicked');
-            closeContentDetailModal(); // Close current modal first
-            openTagEditModal(insight);  // Open tag edit modal
-        };
-        console.log('✅ Modal edit tags button event bound');
-    } else {
-        console.error('❌ Modal edit tags button not found');
-    }
+            // 绑定编辑标签按钮事件
+        const editTagsBtn = document.getElementById('modalEditTagsBtn');
+        if (editTagsBtn) {
+            // Remove any existing event listeners
+            editTagsBtn.onclick = null;
+            // Add new event listener
+            editTagsBtn.onclick = () => {
+                closeContentDetailModal(); // Close current modal first
+                openTagEditModal(insight);  // Open tag edit modal
+            };
+        }
     
     // 更新标签显示
     const projectTag = document.querySelector('.project-tag');
@@ -3347,8 +3220,6 @@ function bindContentDetailModalEvents() {
             closeContentDetailModal();
         }
     });
-    
-    console.log('✅ 内容详情模态框事件监听器已绑定');
 }
 
 // 暴露全局函数
@@ -3362,7 +3233,6 @@ function bindEditModeEvents() {
     const editModeBtn = document.getElementById('editModeBtn');
     if (editModeBtn) {
         editModeBtn.addEventListener('click', toggleEditMode);
-        console.log('✅ Edit mode button event bound');
     }
 }
 
@@ -3382,8 +3252,6 @@ function toggleEditMode() {
         contentCards.forEach(card => {
             card.classList.add('shake');
         });
-        
-        console.log('✅ Entered edit mode');
     } else {
         // Exit edit mode
         editModeBtn.classList.remove('active');
@@ -3395,8 +3263,6 @@ function toggleEditMode() {
         contentCards.forEach(card => {
             card.classList.remove('shake');
         });
-        
-        console.log('✅ Exited edit mode');
     }
 }
 
@@ -3496,8 +3362,6 @@ function startDrag(card, event) {
     document.addEventListener('mouseup', handleDragEnd);
     document.addEventListener('touchmove', handleDragMove);
     document.addEventListener('touchend', handleDragEnd);
-    
-    console.log('🎯 Started dragging card:', card.dataset.insightId);
 }
 
 // Handle drag move
@@ -3551,8 +3415,6 @@ function checkForStackHover(event) {
             createStack(draggedCard, targetCard);
         }, 1500); // 1.5 seconds hover time
         
-        console.log('🎯 Hovering over card for stack creation:', targetCard.dataset.insightId);
-        
     } else {
         // Clear hover effects
         document.querySelectorAll('.content-card.stack-hover').forEach(card => {
@@ -3600,12 +3462,10 @@ function handleDragEnd(e) {
     document.removeEventListener('touchend', handleDragEnd);
     
     draggedCard = null;
-    console.log('🎯 Ended dragging');
 }
 
 // Create a stack from two cards
 async function createStack(card1, card2) {
-    console.log('📚 Creating stack with cards:', card1.dataset.insightId, card2.dataset.insightId);
     
     // Get insight data for both cards (moved outside try block for scope)
     const insight1 = getInsightById(card1.dataset.insightId);
@@ -3695,8 +3555,6 @@ async function createStack(card1, card2) {
             console.error('❌ Failed to create stack via API:', error);
             
             // Fallback to local storage if API doesn't support stack_id
-            console.log('📝 Stack API not working, using local storage fallback');
-            
             // Create stack locally
             const stackId = `stack_${stackIdCounter++}`;
             const localStackData = {
