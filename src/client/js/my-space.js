@@ -475,147 +475,115 @@ async function loadUserStacks() {
             return;
         }
         
-        try {
-            // Load all insights using pagination API and group them by stack_id
-            let allInsights = [];
-            let page = 1;
-            const limit = 100; // Use larger limit to get more data per request
+        // Load all insights using pagination API and group them by stack_id
+        let allInsights = [];
+        let page = 1;
+        const limit = 100; // Use larger limit to get more data per request
+        
+        while (true) {
+            const response = await api.getInsightsPaginated(page, limit, null, '', true);
             
-            while (true) {
-                const response = await api.getInsightsPaginated(page, limit, null, '', true);
-                
-                if (response.success && response.data) {
-                    const { items, hasMore } = normalizePaginatedInsightsResponse(response);
-                    if (items && items.length > 0) {
-                        allInsights = allInsights.concat(items);
-                    }
-                    
-                    if (!hasMore) break;
-                    page++;
-                } else {
-                    break;
-                }
-            }
-                
-                stacks.clear(); // 清空现有stacks
-                
-                // Group insights by stack_id
-                const stackGroups = {};
-                allInsights.forEach(insight => {
-                    if (insight.stack_id) {
-                        if (!stackGroups[insight.stack_id]) {
-                            stackGroups[insight.stack_id] = [];
-                        }
-                        stackGroups[insight.stack_id].push(insight);
-                    }
-                });
-                
-                // Create stack objects from grouped insights
-                Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
-                    if (stackInsights.length > 0) {
-                        const stackData = {
-                            id: stackId,
-                            name: 'Stack',
-                            cards: stackInsights,
-                            createdAt: stackInsights[0].created_at || new Date().toISOString(),
-                            modifiedAt: stackInsights[0].modified_at || new Date().toISOString(),
-                            isExpanded: false
-                        };
-                        
-                        stacks.set(stackId, stackData);
-                    }
-                });
-                
-                // Always try to load metadata from localStorage to preserve user preferences
-                const savedStacks = localStorage.getItem('quest_stacks');
-                if (savedStacks) {
-                    try {
-                        const stackEntries = JSON.parse(savedStacks);
-                        stackEntries.forEach(([stackId, stackData]) => {
-                            if (stacks.has(stackId)) {
-                                // Merge metadata from localStorage with database data
-                                const existingStack = stacks.get(stackId);
-                                if (existingStack && stackData.name) {
-                                    existingStack.name = stackData.name;
-                                    existingStack.isExpanded = stackData.isExpanded || false;
-                                }
-                            } else {
-                                // Load stack from localStorage if not found in database
-                                stacks.set(stackId, stackData);
-                            }
-                        });
-                    } catch (error) {
-                        console.error('❌ Failed to parse saved stacks:', error);
-                    }
+            if (response.success && response.data) {
+                const { items, hasMore } = normalizePaginatedInsightsResponse(response);
+                if (items && items.length > 0) {
+                    allInsights = allInsights.concat(items);
                 }
                 
-                // 更新stackIdCounter
-                if (Object.keys(stackGroups).length > 0) {
-                    const maxTimestamp = Math.max(...Object.keys(stackGroups).map(id => {
-                        const timestamp = id.split('_')[1];
-                        return timestamp ? parseInt(timestamp) : 0;
-                    }));
-                    stackIdCounter = maxTimestamp + 1;
-                }
-            
-            // 验证one-to-one约束 (现在由数据库保证)
-            const allInsightIds = new Set();
-            let hasDuplicates = false;
-            
-            stacks.forEach(stack => {
-                stack.cards.forEach(card => {
-                    if (allInsightIds.has(card.id)) {
-                        console.warn('⚠️ 发现重复的insight ID:', card.id, '违反one-to-one约束');
-                        hasDuplicates = true;
-                    }
-                    allInsightIds.add(card.id);
-                });
-            });
-            
-            if (hasDuplicates) {
-                console.error('❌ 数据违反one-to-one约束，请检查后端数据');
-            }
-            
-                if (stacks.size > 0) hasLoadedStacksOnce = true;
+                if (!hasMore) break;
+                page++;
             } else {
-                // Try loading from localStorage as fallback
-                const savedStacks = localStorage.getItem('quest_stacks');
-                if (savedStacks) {
-                    try {
-                        const stackEntries = JSON.parse(savedStacks);
-                        stackEntries.forEach(([stackId, stackData]) => {
-                            stacks.set(stackId, stackData);
-                        });
-                        if (stacks.size > 0) hasLoadedStacksOnce = true;
-                    } catch (error) {
-                        console.error('❌ Failed to parse saved stacks:', error);
-                    }
-                }
+                break;
             }
-        } catch (apiError) {
-            console.error('❌ API调用失败:', apiError);
-            // 如果API调用失败，继续使用本地存储
-            const savedStacks = localStorage.getItem('quest_stacks');
-            if (savedStacks) {
-                try {
-                    const stackEntries = JSON.parse(savedStacks);
-                    stackEntries.forEach(([stackId, stackData]) => {
+        }
+        
+        stacks.clear(); // 清空现有stacks
+        
+        // Group insights by stack_id
+        const stackGroups = {};
+        allInsights.forEach(insight => {
+            if (insight.stack_id) {
+                if (!stackGroups[insight.stack_id]) {
+                    stackGroups[insight.stack_id] = [];
+                }
+                stackGroups[insight.stack_id].push(insight);
+            }
+        });
+        
+        // Create stack objects from grouped insights
+        Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
+            if (stackInsights.length > 0) {
+                const stackData = {
+                    id: stackId,
+                    name: 'Stack',
+                    cards: stackInsights,
+                    createdAt: stackInsights[0].created_at || new Date().toISOString(),
+                    modifiedAt: stackInsights[0].modified_at || new Date().toISOString(),
+                    isExpanded: false
+                };
+                
+                stacks.set(stackId, stackData);
+            }
+        });
+        
+        // Always try to load metadata from localStorage to preserve user preferences
+        const savedStacks = localStorage.getItem('quest_stacks');
+        if (savedStacks) {
+            try {
+                const stackEntries = JSON.parse(savedStacks);
+                stackEntries.forEach(([stackId, stackData]) => {
+                    if (stacks.has(stackId)) {
+                        // Merge metadata from localStorage with database data
+                        const existingStack = stacks.get(stackId);
+                        if (existingStack && stackData.name) {
+                            existingStack.name = stackData.name;
+                            existingStack.isExpanded = stackData.isExpanded || false;
+                        }
+                    } else {
+                        // Load stack from localStorage if not found in database
                         stacks.set(stackId, stackData);
-                    });
-                    if (stacks.size > 0) hasLoadedStacksOnce = true;
-                } catch (error) {
-                    console.error('❌ Failed to parse saved stacks:', error);
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Failed to parse saved stacks:', error);
+            }
+        }
+        
+        // 更新stackIdCounter
+        if (Object.keys(stackGroups).length > 0) {
+            const maxTimestamp = Math.max(...Object.keys(stackGroups).map(id => {
+                const timestamp = id.split('_')[1];
+                return timestamp ? parseInt(timestamp) : 0;
+            }));
+            stackIdCounter = maxTimestamp + 1;
+        }
+        
+        // 验证one-to-one约束 (现在由数据库保证)
+        const allInsightIds = new Set();
+        let hasDuplicates = false;
+        
+        stacks.forEach(stack => {
+            stack.cards.forEach(card => {
+                if (allInsightIds.has(card.id)) {
+                    console.warn('⚠️ 发现重复的insight ID:', card.id, '违反one-to-one约束');
+                    hasDuplicates = true;
                 }
-            }
+                allInsightIds.add(card.id);
+            });
+        });
+        
+        if (hasDuplicates) {
+            console.error('❌ 数据违反one-to-one约束，请检查后端数据');
         }
-        } catch (error) {
-            console.error('❌ 加载用户stacks失败:', error);
-            // 如果stacks端点不存在，继续使用本地存储
-            if (error.message.includes('404') || error.message.includes('Not Found')) {
-                // Stacks API端点尚未实现，使用本地存储模式
-            }
-            // 不抛出错误，允许页面继续加载
+        
+        if (stacks.size > 0) hasLoadedStacksOnce = true;
+    } catch (error) {
+        console.error('❌ 加载用户stacks失败:', error);
+        // 如果stacks端点不存在，继续使用本地存储
+        if (error.message.includes('404') || error.message.includes('Not Found')) {
+            // Stacks API端点尚未实现，使用本地存储模式
         }
+        // 不抛出错误，允许页面继续加载
+    }
 }
 
 
