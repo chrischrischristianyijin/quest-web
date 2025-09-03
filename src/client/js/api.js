@@ -293,7 +293,7 @@ class ApiService {
     }
 
     // 获取分页insights
-    async getInsightsPaginated(page = 1, limit = 9, userId = null, search = '', includeTags = true) {
+    async getInsightsPaginated(page = 1, limit = 9, userId = null, search = '', includeTags = false) {
         let endpoint = API_CONFIG.INSIGHTS.LIST;
         const params = new URLSearchParams();
         
