@@ -79,6 +79,10 @@ let totalPages = 1;
 let totalInsights = 0;
 let insightsPerPage = 9; // 每页显示9个insights
 
+// 页面缓存机制
+let pageCache = new Map(); // 缓存每个页面的数据
+let loadedPages = new Set(); // 记录已加载的页面
+
 // 初始化翻页功能
 function initPagination() {
     const prevBtn = document.getElementById('prevPageBtn');
@@ -197,9 +201,20 @@ async function goToPage(pageNum) {
         // 显示加载状态
         showLoadingState();
         
-        // 检查是否需要加载目标页面数据
-        if (insightsHasMore) {
-            console.log(`🔄 加载第${pageNum}页数据...`);
+        // 检查缓存中是否已有该页面数据
+        if (pageCache.has(pageNum)) {
+            console.log(`📋 从缓存加载第${pageNum}页数据`);
+            const cachedData = pageCache.get(pageNum);
+            currentInsights = cachedData.insights;
+            window.currentInsights = currentInsights;
+            insightsHasMore = cachedData.hasMore;
+            
+            // 更新已渲染的ID
+            renderedInsightIds.clear();
+            currentInsights.forEach(i => renderedInsightIds.add(i.id));
+        } else {
+            // 缓存中没有，调用API加载
+            console.log(`🔄 从API加载第${pageNum}页数据...`);
             
             // 使用分页API加载目标页面
             const targetPageResponse = await api.getInsightsPaginated(pageNum, insightsPerPage, null, '', true);
@@ -216,7 +231,15 @@ async function goToPage(pageNum) {
                 renderedInsightIds.clear();
                 targetPageInsights.forEach(i => renderedInsightIds.add(i.id));
                 
-                console.log(`📄 第${pageNum}页加载完成: ${targetPageInsights.length}个insights`);
+                // 缓存该页面数据
+                pageCache.set(pageNum, {
+                    insights: [...targetPageInsights],
+                    hasMore: hasMore,
+                    timestamp: Date.now()
+                });
+                loadedPages.add(pageNum);
+                
+                console.log(`📄 第${pageNum}页加载完成并缓存: ${targetPageInsights.length}个insights`);
             } else {
                 throw new Error(`Failed to load page ${pageNum}`);
             }
@@ -271,6 +294,22 @@ function hideLoadingState() {
     }
 }
 
+// 清除页面缓存
+function clearPageCache() {
+    pageCache.clear();
+    loadedPages.clear();
+    console.log('🗑️ 页面缓存已清除');
+}
+
+// 获取缓存状态信息
+function getCacheStatus() {
+    return {
+        cachedPages: Array.from(loadedPages),
+        cacheSize: pageCache.size,
+        totalPages: totalPages
+    };
+}
+
 // 修改loadUserInsights函数以支持翻页
 async function loadUserInsightsWithPagination() {
     try {
@@ -292,6 +331,14 @@ async function loadUserInsightsWithPagination() {
             renderedInsightIds.clear();
             firstPageInsights.forEach(i => renderedInsightIds.add(i.id));
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
+            
+            // 缓存第一页数据
+            pageCache.set(1, {
+                insights: [...firstPageInsights],
+                hasMore: hasMore,
+                timestamp: Date.now()
+            });
+            loadedPages.add(1);
             
             // 从API响应中获取分页信息
             updatePaginationInfo(firstPageResponse.data);
@@ -318,6 +365,7 @@ async function loadUserInsightsWithPagination() {
             updatePaginationUI();
             
             console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
+        console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
         } else {
             // 尝试从localStorage加载备份
             loadFromBackup();
@@ -1822,6 +1870,7 @@ async function deleteInsight(id) {
             window.apiCache.clearPattern('/api/v1/insights');
         }
         
+        clearPageCache(); // 清除缓存，因为数据已变化
         await loadUserInsightsWithPagination();
         
         // Also save to localStorage backup
@@ -2012,6 +2061,7 @@ function bindEvents() {
                             window.apiCache.clearPattern('/api/v1/insights');
                         }
                         
+                        clearPageCache(); // 清除缓存，因为数据已变化
                         await loadUserInsightsWithPagination();
                         
                         // Also save to localStorage backup
@@ -5197,6 +5247,7 @@ async function saveInsightTags(insight, modal) {
                 window.apiCache.clearPattern('/api/v1/insights');
             }
             
+            clearPageCache(); // 清除缓存，因为数据已变化
             // Reload insights from backend to ensure we have the latest data
             await loadUserInsightsWithPagination();
             
