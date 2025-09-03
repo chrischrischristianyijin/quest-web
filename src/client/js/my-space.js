@@ -786,12 +786,6 @@ async function loadMoreInsights() {
 
         insightsPage = nextPage;
         insightsHasMore = hasMore;
-        
-        console.log('✅ LoadMoreInsights completed:', {
-            page: insightsPage,
-            hasMore: insightsHasMore,
-            totalRendered: currentInsights.length
-        });
     } catch (e) {
         console.error('loadMoreInsights failed:', e);
     } finally {
@@ -3878,7 +3872,6 @@ async function deleteStack(stackId) {
                 if (allSuccessful) {
                     // Don't add cards back to currentInsights - they'll be loaded from backend on next refresh
                     // This prevents duplication issues
-                    console.log('✅ Stack deleted, cards will be available in main space on next refresh');
                     stacks.delete(stackId);
                     
                     // Update localStorage to remove the deleted stack
@@ -4430,8 +4423,6 @@ async function editStackName(stackId) {
             
             // Fallback to local storage if API is not implemented
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('📝 Stack API not implemented, using local storage fallback');
-                
                 // Update local data
                 stackData.name = newName.trim();
                 stackData.modifiedAt = new Date().toISOString();
@@ -4729,17 +4720,12 @@ function setupStackHorizontalCardDrag(card, insight, stackId) {
 // Function to open tag edit modal for an insight
 async function openTagEditModal(insight) {
     try {
-        console.log('🏷️ Opening tag edit modal for insight:', insight.id);
-        
         // Get all available tags
         const response = await getCachedUserTags();
         const allTags = response.success ? response.data : [];
         
         // Get current tags for this insight
         const currentTags = insight.tags || [];
-        
-        console.log('🔍 Current insight tags:', currentTags);
-        console.log('🔍 Available tags:', allTags);
         
         // Create modal HTML
         const modal = document.createElement('div');
@@ -4764,17 +4750,8 @@ async function openTagEditModal(insight) {
                                 
                                 const matches = currentTagId === availableTagId || currentTagName === availableTagName;
                                 
-                                if (matches) {
-                                    console.log('✅ Tag match found:', {
-                                        current: { id: currentTagId, name: currentTagName },
-                                        available: { id: availableTagId, name: availableTagName }
-                                    });
-                                }
-                                
                                 return matches;
                             });
-                            
-                            console.log(`🏷️ Tag "${tag.name}" selected: ${isSelected}`);
                             
                             return `
                                 <label class="tag-option">
@@ -4834,28 +4811,19 @@ async function saveInsightTags(insight, modal) {
             }];
         }
         
-        console.log('💾 Saving tag for insight:', insight.id, selectedTags);
-        console.log('💾 Current insight data:', insight);
-        
         // Prepare the update data - backend expects tag_ids, not tags
         const updateData = {
             ...insight,
             tag_ids: selectedTags.map(tag => tag.id)
         };
         
-        console.log('💾 Sending update data to API:', updateData);
-        
         // Update insight with new tag (single selection)
         const response = await api.updateInsight(insight.id, updateData);
         
         if (response.success) {
-            console.log('✅ Tag updated successfully');
-            console.log('🔄 Clearing cache and reloading insights from backend...');
-            
             // Clear cache for insights endpoint to ensure fresh data
             if (window.apiCache) {
                 window.apiCache.clearPattern('/api/v1/insights');
-                console.log('🗑️ Cleared insights cache');
             }
             
             // Reload insights from backend to ensure we have the latest data
@@ -4865,7 +4833,6 @@ async function saveInsightTags(insight, modal) {
             saveInsightsToLocalStorage();
             
             // Force re-render to show updated tags
-            console.log('🔄 Force re-rendering insights to show updated tags...');
             renderInsights();
             
             closeTagEditModal(modal);
@@ -4896,18 +4863,13 @@ async function replaceAllTagsWithDefaults() {
     ];
 
     try {
-        console.log('🔄 Starting tag replacement process...');
-        
         // First, get all existing tags
         const response = await getCachedUserTags();
         const existingTags = response.success ? response.data : [];
         
-        console.log('📋 Found existing tags:', existingTags.length);
-        
         // Delete all existing tags
         for (const tag of existingTags) {
             try {
-                console.log('🗑️ Deleting tag:', tag.name || tag.id);
                 await api.deleteUserTag(tag.id);
             } catch (error) {
                 console.warn('⚠️ Failed to delete tag:', tag.name, error.message);
@@ -4925,16 +4887,13 @@ async function replaceAllTagsWithDefaults() {
         }
         
         // Reload tags and update UI
-        console.log('🔄 Reloading tags and updating UI...');
         await loadUserTags();
         await initFilterButtons();
         
         // Verify the tags were created correctly
         const verifyResponse = await api.getUserTags();
         const finalTags = verifyResponse.success ? verifyResponse.data : [];
-        console.log('✅ Final tags after replacement:', finalTags.map(t => t.name));
         
-        console.log('✅ Tag replacement completed successfully');
         showSuccessMessage('Tags updated successfully! Now using: Project, Area, Resource, Archive');
         
     } catch (error) {
