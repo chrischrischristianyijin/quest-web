@@ -77,34 +77,23 @@ let hasLoadedInsightsOnce = false;
 // 页面初始化
 async function initPage() {
     try {
-        console.log('🚀 初始化My Space页面...');
-        console.log('🔍 Debug: auth module available:', typeof auth);
-        console.log('🔍 Debug: api module available:', typeof api);
-        
         // 恢复会话状态
         try {
             auth.restoreSession();
-            console.log('✅ Session restore completed');
         } catch (sessionError) {
             console.error('❌ Session restore failed:', sessionError);
         }
         
         // 检查认证状态（放宽：先尝试恢复会话后再判断，避免闪跳）
-        console.log('🔍 Debug: Checking auth status...');
         const isAuthenticated = auth.checkAuth();
-        console.log('🔍 Debug: Auth status:', isAuthenticated);
         
         if (!isAuthenticated) {
-            console.log('⚠️ 未检测到会话，尝试恢复...');
             const restored = auth.restoreSession();
-            console.log('🔍 Debug: Session restoration result:', restored);
             
             if (!restored) {
-                console.log('❌ 无会话可恢复，保持在当前页并提示登录');
                 showErrorMessage('Please sign in. Showing last local backup.');
                 
                 // 即使未认证，也绑定基础UI事件（如用户资料编辑）
-                console.log('🔧 未认证状态下绑定基础UI事件...');
                 bindProfileEditEvents();
                 
                 // 不要return，允许加载本地备份数据
@@ -114,10 +103,8 @@ async function initPage() {
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
         const tokenOk = await auth.checkAndHandleTokenExpiration();
         if (!tokenOk) {
-            console.log('⏰ Token校验失败，继续以降级模式加载My Space UI');
+            // Token校验失败，继续以降级模式加载My Space UI
         }
-        
-        console.log('✅ 认证状态正常，继续初始化...');
         
         // 并行加载所有数据以提高性能
         const [profileResult, insightsResult, tagsResult, stacksResult] = await Promise.allSettled([
@@ -153,12 +140,9 @@ async function initPage() {
         // Set up event delegation for card interactions (performance optimization)
         setupCardEventDelegation();
         
-        console.log('✅ My Space页面初始化完成');
-        
         // Fallback: Ensure infinite scroll is set up even if loadUserInsights didn't call it
         setTimeout(() => {
             if (!insightsObserver) {
-                console.log('🔄 Fallback: Setting up infinite scroll...');
                 setupInsightsInfiniteScroll();
             }
         }, 1000);
@@ -178,19 +162,15 @@ async function initPage() {
 // 加载用户stacks
 async function loadUserStacks() {
     try {
-        console.log('📚 开始加载用户stacks...');
-        
         // 允许在未认证时也从 localStorage 加载，避免数据丢失
         const unauthenticated = !auth.checkAuth();
         if (unauthenticated) {
-            console.warn('⚠️ 用户未认证，使用 localStorage 降级模式加载 stacks');
             const saved = localStorage.getItem('quest_stacks');
             if (saved) {
                 try {
                     const entries = JSON.parse(saved);
                     stacks.clear();
                     entries.forEach(([id, data]) => stacks.set(id, data));
-                    console.log('✅ 从 localStorage 加载 stacks（未认证模式）:', stacks.size);
                     if (stacks.size > 0) hasLoadedStacksOnce = true;
                 } catch (e) {
                     console.error('❌ 解析本地 stacks 失败:', e);
@@ -203,8 +183,6 @@ async function loadUserStacks() {
         try {
             // Load all insights and group them by stack_id
             const response = await api.getInsights();
-            
-            console.log('🔍 Stack loading API response:', response);
             
             if (response.success && response.data) {
                 // Handle different response structures
@@ -222,23 +200,16 @@ async function loadUserStacks() {
                 
                 stacks.clear(); // 清空现有stacks
                 
-                console.log('🔍 All insights loaded:', allInsights.length);
-                console.log('🔍 Sample insight fields:', allInsights[0] ? Object.keys(allInsights[0]) : 'No insights');
-                console.log('🔍 Insights with stack_id:', allInsights.filter(i => i.stack_id));
-                
                 // Group insights by stack_id
                 const stackGroups = {};
                 allInsights.forEach(insight => {
                     if (insight.stack_id) {
-                        console.log('🔍 Found insight with stack_id:', insight.id, '->', insight.stack_id);
                         if (!stackGroups[insight.stack_id]) {
                             stackGroups[insight.stack_id] = [];
                         }
                         stackGroups[insight.stack_id].push(insight);
                     }
                 });
-                
-                console.log('🔍 Stack groups found:', Object.keys(stackGroups));
                 
                 // Create stack objects from grouped insights
                 Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
@@ -257,7 +228,6 @@ async function loadUserStacks() {
                 });
                 
                 // Always try to load metadata from localStorage to preserve user preferences
-                console.log('🔍 Loading stack metadata from localStorage...');
                 const savedStacks = localStorage.getItem('quest_stacks');
                 if (savedStacks) {
                     try {
@@ -269,22 +239,15 @@ async function loadUserStacks() {
                                 if (existingStack && stackData.name) {
                                     existingStack.name = stackData.name;
                                     existingStack.isExpanded = stackData.isExpanded || false;
-                                    console.log('🔍 Merged stack metadata from localStorage:', stackId);
                                 }
                             } else {
                                 // Load stack from localStorage if not found in database
                                 stacks.set(stackId, stackData);
-                                console.log('🔍 Loaded stack from localStorage:', stackId);
                             }
                         });
                     } catch (error) {
                         console.error('❌ Failed to parse saved stacks:', error);
                     }
-                }
-                
-                // If no stacks found in database, try loading from localStorage
-                if (Object.keys(stackGroups).length === 0 && stacks.size === 0) {
-                    console.log('🔍 No stacks found in database or localStorage');
                 }
                 
                 // 更新stackIdCounter
@@ -314,10 +277,8 @@ async function loadUserStacks() {
                 console.error('❌ 数据违反one-to-one约束，请检查后端数据');
             }
             
-                console.log('✅ 用户stacks加载成功:', stacks.size, '个stacks');
                 if (stacks.size > 0) hasLoadedStacksOnce = true;
             } else {
-                console.warn('⚠️ 没有stacks数据或API返回格式错误，尝试从localStorage加载');
                 // Try loading from localStorage as fallback
                 const savedStacks = localStorage.getItem('quest_stacks');
                 if (savedStacks) {
@@ -325,7 +286,6 @@ async function loadUserStacks() {
                         const stackEntries = JSON.parse(savedStacks);
                         stackEntries.forEach(([stackId, stackData]) => {
                             stacks.set(stackId, stackData);
-                            console.log('🔍 Loaded stack from localStorage:', stackId);
                         });
                         if (stacks.size > 0) hasLoadedStacksOnce = true;
                     } catch (error) {
@@ -336,14 +296,12 @@ async function loadUserStacks() {
         } catch (apiError) {
             console.error('❌ API调用失败:', apiError);
             // 如果API调用失败，继续使用本地存储
-            console.log('🔍 API failed, trying localStorage fallback...');
             const savedStacks = localStorage.getItem('quest_stacks');
             if (savedStacks) {
                 try {
                     const stackEntries = JSON.parse(savedStacks);
                     stackEntries.forEach(([stackId, stackData]) => {
                         stacks.set(stackId, stackData);
-                        console.log('🔍 Loaded stack from localStorage:', stackId);
                     });
                     if (stacks.size > 0) hasLoadedStacksOnce = true;
                 } catch (error) {
@@ -355,7 +313,7 @@ async function loadUserStacks() {
             console.error('❌ 加载用户stacks失败:', error);
             // 如果stacks端点不存在，继续使用本地存储
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('📝 Stacks API端点尚未实现，使用本地存储模式');
+                // Stacks API端点尚未实现，使用本地存储模式
             }
             // 不抛出错误，允许页面继续加载
         }
@@ -370,17 +328,12 @@ async function loadUserProfile() {
             throw new Error('用户未认证');
         }
         
-        console.log('👤 开始加载用户资料...');
-        
         // 总是尝试从 API 获取最新的用户资料
         try {
-            console.log('🔍 从后端获取最新用户资料...');
             const response = await api.getUserProfile();
-            console.log('📡 用户资料 API 响应:', response);
             
             if (response.success && response.data) {
                 currentUser = response.data;
-                console.log('✅ 从后端获取到完整用户资料:', currentUser);
                 // 更新auth管理器中的用户数据
                 auth.user = currentUser;
                 auth.saveSession(currentUser, auth.getCurrentToken());
@@ -389,7 +342,6 @@ async function loadUserProfile() {
             } else if (response && (response.id || response.email)) {
                 // 如果API直接返回用户数据而不是包装在success/data中
                 currentUser = response;
-                console.log('✅ 从后端获取到直接用户数据:', currentUser);
                 // 更新auth管理器中的用户数据
                 auth.user = currentUser;
                 auth.saveSession(currentUser, auth.getCurrentToken());
@@ -406,13 +358,11 @@ async function loadUserProfile() {
             const localUser = auth.getCurrentUser();
             if (localUser) {
                 currentUser = localUser;
-                console.log('✅ 使用本地存储的用户信息作为回退:', currentUser);
                 updateUserProfileUI();
                 return;
             }
             
             // 最后的回退：使用默认用户信息
-            console.warn('⚠️ 本地存储也没有用户信息，使用默认用户信息');
             currentUser = {
                 id: 'user_' + Date.now(),
                 email: 'user@example.com',
@@ -460,10 +410,8 @@ function updateUserProfileUI() {
         if (currentUser.avatar_url) {
             userAvatar.src = currentUser.avatar_url;
             userAvatar.style.display = 'block';
-            console.log('✅ 设置用户头像:', currentUser.avatar_url);
         } else {
             // 如果没有头像URL，使用默认头像或隐藏
-            console.log('⚠️ 用户没有头像URL，使用默认显示');
             userAvatar.style.display = 'block';
             // 可以设置一个默认头像或者保持当前状态
         }
@@ -471,15 +419,6 @@ function updateUserProfileUI() {
     
     // 更新用户名
     if (actualUsername) {
-        console.log('🔍 用户数据显示调试:', {
-            currentUser: currentUser,
-            nickname: currentUser.nickname,
-            email: currentUser.email,
-            username: currentUser.username,
-            name: currentUser.name,
-            allKeys: Object.keys(currentUser)
-        });
-        
         // 尝试多种可能的显示名称字段
         const displayName = currentUser.nickname || 
                            currentUser.username || 
@@ -487,7 +426,6 @@ function updateUserProfileUI() {
                            currentUser.display_name ||
                            currentUser.email || 
                            'User';
-        console.log('🔍 选择的显示名称:', displayName);
         
         actualUsername.textContent = displayName;
         actualUsername.style.display = 'inline';
@@ -497,9 +435,6 @@ function updateUserProfileUI() {
     if (headerAvatar) {
         if (currentUser.avatar_url) {
             headerAvatar.src = currentUser.avatar_url;
-            console.log('✅ 设置header头像:', currentUser.avatar_url);
-        } else {
-            console.log('⚠️ 用户没有头像URL，header头像保持默认');
         }
     }
     
@@ -514,28 +449,14 @@ function updateUserProfileUI() {
                            'User';
         welcomeMessage.textContent = `Welcome, ${displayName}!`;
     }
-    
-    console.log('✅ 用户资料UI已更新');
 }
 
 // 加载用户见解
 async function loadUserInsights() {
     try {
-        console.log('📚 开始加载用户insights...');
-        console.log('🔍 Auth status before API call:', auth.checkAuth());
-        console.log('🔍 Current user:', auth.getCurrentUser());
-        
         // 使用分页API方法获取insights
         insightsLoading = true;
         const response = await api.getInsightsPaginated(1, PAGE_SIZE, null, '', true);
-        
-        console.log('📡 API响应:', response);
-        console.log('🔍 Response structure:', {
-            success: response?.success,
-            hasData: !!response?.data,
-            dataKeys: response?.data ? Object.keys(response.data) : 'no data',
-            insightsCount: response?.data?.insights?.length || 0
-        });
         
         if (response?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -547,8 +468,6 @@ async function loadUserInsights() {
             insightsHasMore = hasMore;
             renderedInsightIds.clear();
             firstBatch.forEach(i => renderedInsightIds.add(i.id));
-            console.log('✅ 用户insights加载成功:', firstBatch.length, '条');
-            console.log('📚 过滤掉已在stacks中的insights后:', firstBatch.length, '条');
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
             // Save insights to localStorage as backup with timestamp
@@ -559,36 +478,9 @@ async function loadUserInsights() {
                     version: '1.0'
                 };
                 localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
-                console.log('💾 Insights saved to localStorage backup');
             } catch (storageError) {
                 console.warn('⚠️ Failed to save insights to localStorage:', storageError);
             }
-            
-            // 检查每个insight的标签数据
-            currentInsights.forEach((insight, index) => {
-                console.log(`📖 Insight ${index + 1}:`, {
-                    id: insight.id,
-                    title: insight.title || insight.url,
-                    tags: insight.tags,
-                    tagsType: typeof insight.tags,
-                    tagsLength: insight.tags ? insight.tags.length : 'null/undefined',
-                    tagIds: insight.tag_ids,
-                    allFields: Object.keys(insight)
-                });
-                
-                // 详细检查标签数据结构
-                if (insight.tags && insight.tags.length > 0) {
-                    insight.tags.forEach((tag, tagIndex) => {
-                        console.log(`  🏷️ Tag ${tagIndex + 1}:`, {
-                            tag: tag,
-                            type: typeof tag,
-                            isObject: tag && typeof tag === 'object',
-                            hasId: tag && tag.id,
-                            hasName: tag && tag.name
-                        });
-                    });
-                }
-            });
             
             // Normalize tag structure for all insights first
             currentInsights.forEach(insight => {
@@ -605,25 +497,13 @@ async function loadUserInsights() {
             // Check if insights have tags, if not, try to load them separately
             const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
             if (insightsWithoutTags.length > 0) {
-                console.log('⚠️ Found insights without tags, attempting to load tags separately...');
                 await loadTagsForInsights(insightsWithoutTags);
             }
             
-            console.log('🎨 Calling renderInsightsInitial...');
             renderInsightsInitial();      // new: only clears once and renders current batch
-            console.log('🚀 Calling setupInsightsInfiniteScroll...');
             setupInsightsInfiniteScroll();// new: attaches observer/sentinel
         } else {
-            console.warn('⚠️ API返回格式不正确:', response);
-            console.log('🔍 响应数据结构:', {
-                success: response.success,
-                hasData: !!response.data,
-                dataKeys: response.data ? Object.keys(response.data) : 'no data',
-                insightsField: response.data ? response.data.insights : 'no insights field'
-            });
-            
             // Try loading from localStorage backup
-            console.log('📦 Attempting to load insights from localStorage backup...');
             const backupInsights = localStorage.getItem('quest_insights_backup');
             if (backupInsights) {
                 try {
@@ -634,14 +514,8 @@ async function loadUserInsights() {
                     if (Array.isArray(backup.data)) {
                         currentInsights = backup.data;
                         window.currentInsights = currentInsights;
-                        if (isRecent) {
-                            console.log('📦 Loaded recent insights from localStorage backup:', currentInsights.length);
-                        } else {
-                            console.warn('📦 Loaded stale insights from localStorage backup (may be outdated):', currentInsights.length);
-                        }
                         if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
                     } else {
-                        console.log('📦 Backup data is invalid, using empty array');
                         currentInsights = [];
                         window.currentInsights = currentInsights;
                     }
@@ -660,7 +534,6 @@ async function loadUserInsights() {
         console.error('❌ 加载用户insights失败:', error);
         
         // Try loading from localStorage backup before showing error
-        console.log('📦 Attempting to load insights from localStorage backup after error...');
         const backupInsights = localStorage.getItem('quest_insights_backup');
         const isAuthErr = /401|403|unauthor/i.test(error?.message || '');
         const isNetErr = (typeof navigator !== 'undefined' && navigator.onLine === false) ||
@@ -674,12 +547,10 @@ async function loadUserInsights() {
                 if ((isRecent || isAuthErr || isNetErr) && Array.isArray(backup.data)) {
                     currentInsights = backup.data;
                     window.currentInsights = currentInsights;
-                    console.warn('📦 Using local insights backup (may be stale).');
                     if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
                     renderInsights();
                     return; // Don't show error if we successfully loaded from backup
                 } else {
-                    console.log('📦 Backup is too old or invalid after error, using empty array');
                     currentInsights = [];
                     window.currentInsights = currentInsights;
                 }
@@ -715,13 +586,6 @@ async function loadUserInsights() {
 
 // 渲染见解列表
 function renderInsights() {
-    console.log('🎨 renderInsights called with:', {
-        contentCards: !!contentCards,
-        currentInsightsLength: currentInsights.length,
-        stacksSize: stacks.size,
-        currentInsights: currentInsights.slice(0, 3) // Show first 3 for debugging
-    });
-    
     if (!contentCards) {
         console.error('❌ contentCards element not found!');
         return;
@@ -738,7 +602,6 @@ function renderInsights() {
     
     // Clear existing content cards (but keep skeleton for next time)
     const existingCards = contentCards.querySelectorAll('.content-card, .empty-state');
-    console.log('🧹 Clearing existing cards:', existingCards.length);
     existingCards.forEach(card => card.remove());
     
     // Check if we have any content to render (insights OR stacks)
@@ -746,7 +609,6 @@ function renderInsights() {
     const hasStacks = stacks.size > 0;
     
     if (!hasInsights && !hasStacks) {
-        console.log('📭 No insights or stacks to render, showing empty state');
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-state';
         emptyState.innerHTML = `
@@ -760,13 +622,6 @@ function renderInsights() {
         contentCards.appendChild(emptyState);
         return;
     }
-    
-    console.log('🎨 Rendering content:', {
-        insights: currentInsights.length,
-        stacks: stacks.size,
-        hasInsights,
-        hasStacks
-    });
     
     // Use DocumentFragment for batch DOM operations to reduce reflows
     const fragment = document.createDocumentFragment();
@@ -844,107 +699,62 @@ function appendInsightsBatch(newItems) {
 }
 
 function ensureInsightsSentinel(container) {
-    console.log('🔧 ensureInsightsSentinel called with container:', container);
     let sentinel = document.getElementById('insightsSentinel');
     if (!sentinel) {
-        console.log('🆕 Creating new sentinel element');
         sentinel = document.createElement('div');
         sentinel.id = 'insightsSentinel';
         sentinel.style.height = '1px';
         sentinel.style.width = '100%';
         sentinel.style.opacity = '0';
         // sentinel.style.backgroundColor = 'red'; // Make it visible for debugging
-    } else {
-        console.log('♻️ Reusing existing sentinel element');
     }
     container.appendChild(sentinel); // keep it as last child
-    console.log('✅ Sentinel appended to container, returning:', sentinel);
     return sentinel;
 }
 
 function elementScrolls(el) {
     const s = getComputedStyle(el);
     const scrolls = /(auto|scroll)/.test(s.overflowY);
-    console.log('🔍 elementScrolls check:', {
-        element: el,
-        overflowY: s.overflowY,
-        scrolls: scrolls
-    });
     return scrolls;
 }
 
 function setupInsightsInfiniteScroll() {
-    console.log('🚀 setupInsightsInfiniteScroll called');
     const container = document.getElementById('contentCards');
-    console.log('📦 Container found:', container);
     if (!container) {
-        console.log('❌ No contentCards container found!');
         return;
     }
 
     const sentinel = ensureInsightsSentinel(container);
-    console.log('🎯 Sentinel obtained:', sentinel);
 
     if (insightsObserver) {
-        console.log('🔄 Disconnecting existing observer');
         insightsObserver.disconnect();
     }
 
     const rootEl = elementScrolls(container) ? container : null;
-    console.log('🌳 Root element determined:', rootEl);
-
-    console.log('👁️ Creating IntersectionObserver with config:', {
-        root: rootEl,
-        rootMargin: '300px 0px',
-        threshold: 0.01
-    });
 
     insightsObserver = new IntersectionObserver(async (entries) => {
-        console.log('👀 Observer callback triggered with entries:', entries);
         const entry = entries[0];
-        console.log('👀 sentinel intersecting', entry.isIntersecting, {
-            hasMore: insightsHasMore,
-            loading: insightsLoading,
-            page: insightsPage,
-            intersectionRatio: entry.intersectionRatio,
-            boundingClientRect: entry.boundingClientRect
-        });
         if (!entry.isIntersecting) return;
         if (!insightsHasMore || insightsLoading) return;
-        console.log('🚀 Calling loadMoreInsights...');
         await loadMoreInsights();
     }, { root: rootEl, rootMargin: '300px 0px', threshold: 0.01 });
 
-    console.log('👁️ Observing sentinel:', sentinel);
     insightsObserver.observe(sentinel);
-    console.log('✅ Observer setup complete');
 
     // Fallback: if list is too short to scroll, keep prefetching until it fills
-    console.log('⏰ Scheduling maybePrefetchIfShort');
     requestAnimationFrame(maybePrefetchIfShort);
 }
 
 async function maybePrefetchIfShort() {
-    console.log('🔍 maybePrefetchIfShort called');
     const container = document.getElementById('contentCards');
     if (!container) {
-        console.log('❌ No container in maybePrefetchIfShort');
         return;
     }
     const rootEl = insightsObserver?.root || null;
     const visibleH = rootEl ? rootEl.clientHeight : window.innerHeight;
     const contentH = container.scrollHeight;
-    
-    console.log('📏 Prefetch check:', {
-        visibleH,
-        contentH,
-        hasMore: insightsHasMore,
-        loading: insightsLoading,
-        shouldPrefetch: contentH <= visibleH + 16 && insightsHasMore && !insightsLoading
-    });
 
     if (contentH <= visibleH + 16 && insightsHasMore && !insightsLoading) {
-        console.log('🚀 Prefetching more content...');
         await loadMoreInsights();       // already implemented here: calls API, appends, updates flags
         requestAnimationFrame(maybePrefetchIfShort);
     }
@@ -1013,184 +823,33 @@ function forceLoadMore() {
     return Promise.resolve();
 }
 
-// Comprehensive debug function
-function debugInfiniteScroll() {
-    const container = document.getElementById('contentCards');
-    const sentinel = document.getElementById('insightsSentinel');
-    const rootEl = insightsObserver?.root || null;
-    
-    console.log('🔍 INFINITE SCROLL DEBUG REPORT');
-    console.log('================================');
-    
-    // Container info
-    console.log('📦 Container (#contentCards):', {
-        exists: !!container,
-        element: container,
-        scrollHeight: container?.scrollHeight,
-        clientHeight: container?.clientHeight,
-        overflowY: container ? getComputedStyle(container).overflowY : 'N/A'
-    });
-    
-    // Sentinel info
-    console.log('🎯 Sentinel (#insightsSentinel):', {
-        exists: !!sentinel,
-        element: sentinel,
-        parent: sentinel?.parentElement,
-        isLastChild: sentinel?.parentElement?.lastElementChild === sentinel,
-        boundingRect: sentinel?.getBoundingClientRect()
-    });
-    
-    // Observer info
-    console.log('👁️ Observer:', {
-        exists: !!insightsObserver,
-        root: rootEl,
-        rootType: rootEl ? 'container' : 'window'
-    });
-    
-    // Pagination state
-    console.log('📊 Pagination State:', {
-        page: insightsPage,
-        hasMore: insightsHasMore,
-        loading: insightsLoading,
-        totalInsights: currentInsights.length,
-        renderedIds: renderedInsightIds.size
-    });
-    
-    // Scroll detection
-    if (container) {
-        const scrolls = elementScrolls(container);
-        console.log('🔄 Scroll Detection:', {
-            containerScrolls: scrolls,
-            expectedRoot: scrolls ? container : null
-        });
-    }
-    
-    // Manual tests
-    console.log('🧪 Manual Tests:');
-    console.log('- Run: window.testScrollDetection()');
-    console.log('- Run: window.testSentinelVisibility()');
-    console.log('- Run: window.forceLoadMore()');
-    
-    return {
-        container: !!container,
-        sentinel: !!sentinel,
-        observer: !!insightsObserver,
-        hasMore: insightsHasMore,
-        loading: insightsLoading
-    };
-}
 
-// Test functions
-window.testScrollDetection = () => {
-    const container = document.getElementById('contentCards');
-    if (!container) {
-        console.log('❌ No container found');
-        return;
-    }
-    
-    const style = getComputedStyle(container);
-    console.log('🔍 Container scroll properties:', {
-        overflowY: style.overflowY,
-        overflowX: style.overflowX,
-        height: style.height,
-        maxHeight: style.maxHeight,
-        scrolls: elementScrolls(container)
-    });
-    
-    // Test if container is scrollable
-    const isScrollable = container.scrollHeight > container.clientHeight;
-    console.log('📏 Scrollability test:', {
-        scrollHeight: container.scrollHeight,
-        clientHeight: container.clientHeight,
-        isScrollable: isScrollable
-    });
-};
 
-window.testSentinelVisibility = () => {
-    const sentinel = document.getElementById('insightsSentinel');
-    if (!sentinel) {
-        console.log('❌ No sentinel found');
-        return;
-    }
-    
-    const rect = sentinel.getBoundingClientRect();
-    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-    
-    console.log('🎯 Sentinel visibility test:', {
-        boundingRect: rect,
-        isVisible: isVisible,
-        inViewport: rect.top >= 0 && rect.bottom <= window.innerHeight,
-        belowViewport: rect.top > window.innerHeight,
-        aboveViewport: rect.bottom < 0
-    });
-    
-    // Make sentinel temporarily visible for visual debugging
-    sentinel.style.backgroundColor = 'red';
-    sentinel.style.height = '10px';
-    sentinel.style.opacity = '1';
-    
-    setTimeout(() => {
-        sentinel.style.backgroundColor = '';
-        sentinel.style.height = '1px';
-        sentinel.style.opacity = '0';
-    }, 3000);
-    
-    console.log('👁️ Sentinel made visible for 3 seconds (red bar)');
-};
 
-// Expose debugging functions globally
-window.forceLoadMore = forceLoadMore;
-window.debugPaginationState = () => ({
-    page: insightsPage,
-    hasMore: insightsHasMore,
-    loading: insightsLoading,
-    totalInsights: currentInsights.length,
-    renderedIds: renderedInsightIds.size,
-    observer: insightsObserver ? 'active' : 'null',
-    sentinel: document.getElementById('insightsSentinel') ? 'exists' : 'missing'
-});
-window.debugInfiniteScroll = debugInfiniteScroll;
 
 // Load tags for insights that don't have them
 async function loadTagsForInsights(insights) {
     try {
-        console.log('🏷️ Loading tags for insights without tags...');
-        
         // Get all user tags first
         const tagsResponse = await getCachedUserTags();
         const allTags = tagsResponse.success ? tagsResponse.data : [];
         
-        console.log('🏷️ Available tags:', allTags);
-        
         // For each insight without tags, try to find its tags
         for (const insight of insights) {
             try {
-                console.log(`🔍 Checking insight ${insight.id} for tags...`);
-                
                 // Try to get the insight individually to see if it has tags
                 const insightResponse = await api.getInsight(insight.id);
-                console.log(`📡 Individual insight response for ${insight.id}:`, insightResponse);
                 
                 if (insightResponse.success && insightResponse.data) {
                     const fullInsight = insightResponse.data;
-                    console.log(`📖 Full insight data for ${insight.id}:`, {
-                        id: fullInsight.id,
-                        title: fullInsight.title,
-                        tags: fullInsight.tags,
-                        tag_ids: fullInsight.tag_ids,
-                        allFields: Object.keys(fullInsight)
-                    });
                     
                     if (fullInsight.tags && fullInsight.tags.length > 0) {
-                        console.log(`✅ Found tags for insight ${insight.id}:`, fullInsight.tags);
-                        
                         // Normalize tag structure - backend returns {tag_id, name, color}, frontend expects {id, name, color}
                         const normalizedTags = fullInsight.tags.map(tag => ({
                             id: tag.tag_id || tag.id,
                             name: tag.name,
                             color: tag.color
                         }));
-                        console.log(`🔄 Normalized tags:`, normalizedTags);
                         
                         // Update the insight in currentInsights
                         const insightIndex = currentInsights.findIndex(i => i.id === insight.id);
@@ -1198,21 +857,17 @@ async function loadTagsForInsights(insights) {
                             currentInsights[insightIndex].tags = normalizedTags;
                         }
                     } else if (fullInsight.tag_ids && fullInsight.tag_ids.length > 0) {
-                        console.log(`🔍 Found tag_ids for insight ${insight.id}:`, fullInsight.tag_ids);
                         // Convert tag_ids to tag objects
                         const tagObjects = fullInsight.tag_ids.map(tagId => {
                             const tag = allTags.find(t => t.id === tagId);
                             return tag || { id: tagId, name: 'Unknown Tag' };
                         });
-                        console.log(`✅ Converted tag_ids to tag objects:`, tagObjects);
                         
                         // Update the insight in currentInsights
                         const insightIndex = currentInsights.findIndex(i => i.id === insight.id);
                         if (insightIndex !== -1) {
                             currentInsights[insightIndex].tags = tagObjects;
                         }
-                    } else {
-                        console.log(`⚠️ No tags or tag_ids found for insight ${insight.id}`);
                     }
                 } else {
                     console.warn(`⚠️ Failed to get individual insight ${insight.id}:`, insightResponse);
@@ -1221,8 +876,6 @@ async function loadTagsForInsights(insights) {
                 console.warn(`⚠️ Failed to load tags for insight ${insight.id}:`, error.message);
             }
         }
-        
-        console.log('✅ Finished loading tags for insights');
     } catch (error) {
         console.error('❌ Failed to load tags for insights:', error);
     }
@@ -1304,14 +957,6 @@ function createInsightCard(insight) {
     const title = document.createElement('div');
     title.className = 'content-card-title';
     
-    // Debug: 检查title数据
-    console.log('🔍 创建卡片标题:', {
-        insightTitle: insight.title,
-        insightUrl: insight.url,
-        hostname: new URL(insight.url).hostname,
-        finalTitle: insight.title || new URL(insight.url).hostname
-    });
-    
     // Extract clean title (remove source name if it's concatenated)
     let cleanTitle = insight.title || 'Untitled';
     const sourceNameForTitle = getSourceName(insight.url);
@@ -1392,12 +1037,8 @@ function createInsightCard(insight) {
 // 为标签筛选器加载用户标签
 async function loadUserTagsForFilter(dropdownOptions) {
     try {
-        console.log('🔍 开始为标签筛选器加载用户标签...');
         const response = await getCachedUserTags();
         const tags = response.success ? response.data : [];
-        
-        console.log('🏷️ 获取到用户标签:', tags);
-        console.log('🏷️ 标签数量:', tags.length);
         
         if (tags.length > 0) {
             // 为每个标签创建选项
@@ -1412,11 +1053,7 @@ async function loadUserTagsForFilter(dropdownOptions) {
                     </span>
                 `;
                 dropdownOptions.appendChild(tagOption);
-                console.log(`✅ 添加标签选项: ${tag.name} (ID: ${tag.id})`);
             });
-            console.log('✅ 标签筛选器选项加载完成');
-        } else {
-            console.log('🔍 没有用户标签可用');
         }
     } catch (error) {
         console.error('❌ 加载用户标签失败:', error);
@@ -1521,7 +1158,6 @@ async function initFilterButtons() {
                         const filterKey = option.dataset.filter;
                         const filterType = filterConfig.key; // latest, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
-                        console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
                         setFilter(filterType, filterKey, optionLabel);
                         
                         // 关闭所有下拉框
@@ -1569,7 +1205,6 @@ async function initFilterButtons() {
                         const filterKey = option.dataset.filter;
                         const filterType = filterConfig.key; // latest, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
-                        console.log('🔍 用户选择筛选选项:', filterKey, '类型:', filterType, '标签:', optionLabel);
                         setFilter(filterType, filterKey, optionLabel);
                         
                         // 关闭所有下拉框
@@ -1590,15 +1225,9 @@ async function initFilterButtons() {
                 buttonContainer.appendChild(dropdownOptions);
             }
             filterButtons.appendChild(buttonContainer);
-            
-            console.log('✅ 创建筛选按钮:', filterConfig.key, filterConfig.label);
         });
         
         // Edit Tags按钮已移到标签选择器旁边，不再需要在这里添加
-        
-
-        
-        console.log('✅ 筛选按钮初始化完成，共', mainFilterButtons.length, '个主要按钮');
         
     } catch (error) {
         console.error('❌ 初始化筛选按钮失败:', error);
@@ -1626,9 +1255,6 @@ async function initFilterButtons() {
 function setFilter(filterType, filterValue, optionLabel = null) {
     // 更新对应的筛选条件
     currentFilters[filterType] = filterValue;
-    
-    console.log('🔍 设置筛选条件:', filterType, '=', filterValue, '标签:', optionLabel);
-    console.log('🔍 当前所有筛选条件:', currentFilters);
     
     // 更新按钮显示文本
     updateFilterButtonDisplay(filterType, filterValue, optionLabel);
@@ -1725,19 +1351,13 @@ function getFilteredInsights() {
     
     filteredInsights = filteredInsights.filter(insight => !cardsInStacks.has(insight.id));
     
-    console.log('🔍 当前筛选条件:', currentFilters);
-    console.log('📚 当前文章数据:', currentInsights);
-    console.log('📚 过滤掉已在stacks中的卡片后:', filteredInsights.length);
-    
     // 1. 排序逻辑（始终应用）
     if (currentFilters.latest === 'latest') {
         // 按最新时间排序
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        console.log('📅 按最新时间排序');
     } else if (currentFilters.latest === 'oldest') {
         // 按最旧时间排序
         filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        console.log('📅 按最旧时间排序');
     } else if (currentFilters.latest === 'alphabetical') {
         // 按标题首字母A-Z排序
         filteredInsights.sort((a, b) => {
@@ -1745,18 +1365,15 @@ function getFilteredInsights() {
             const titleB = (b.title || b.url || '').toLowerCase();
             return titleA.localeCompare(titleB);
         });
-        console.log('🔤 按标题首字母A-Z排序');
     } else {
         // 默认按最新时间排序
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        console.log('📅 默认按最新时间排序');
     }
     
     // 2. 标签筛选
     if (currentFilters.tags && currentFilters.tags !== 'all') {
         if (currentFilters.tags.startsWith('tag_')) {
             const tagId = currentFilters.tags.replace('tag_', '');
-            console.log('🏷️ 筛选标签ID:', tagId);
             
             filteredInsights = filteredInsights.filter(insight => {
                 if (insight.tags && insight.tags.length > 0) {
@@ -1775,16 +1392,9 @@ function getFilteredInsights() {
                 }
                 return false;
             });
-            
-            console.log('🎯 标签筛选后的文章数量:', filteredInsights.length);
         }
-    } else {
-        console.log('🏷️ 显示所有标签的内容');
     }
     
-
-    
-    console.log('🎯 最终筛选后的文章数量:', filteredInsights.length);
     return filteredInsights;
 }
 
@@ -1885,9 +1495,6 @@ const scrollManager = {
 
 // 显示添加内容模态框
 function showAddContentModal() {
-    console.log('🔍 显示添加内容模态框...');
-    console.log('🔍 弹窗元素:', addContentModal);
-    
     if (addContentModal) {
         // 确保弹窗可见
         addContentModal.style.display = 'flex';
@@ -1899,14 +1506,6 @@ function showAddContentModal() {
         
         // 使用滚动管理器禁用滚动
         scrollManager.disable();
-        
-        console.log('✅ 弹窗样式已设置');
-        console.log('🔍 弹窗当前样式:', {
-            display: addContentModal.style.display,
-            alignItems: addContentModal.style.alignItems,
-            justifyContent: addContentModal.style.justifyContent,
-            classList: addContentModal.classList.toString()
-        });
         
         // 加载用户标签
         loadUserTags();
@@ -1928,8 +1527,6 @@ function hideAddContentModal() {
         
         // 使用滚动管理器恢复滚动
         scrollManager.enable();
-        
-        console.log('✅ 模态框已关闭，页面滚动已恢复');
     }
 }
 
@@ -1989,13 +1586,6 @@ function bindEvents() {
                     return;
                 }
                 
-                // 调试token状态
-                console.log('🔍 当前认证状态:', {
-                    isAuthenticated: auth.checkAuth(),
-                    hasUser: !!auth.getCurrentUser(),
-                    sessionToken: !!localStorage.getItem('quest_user_session')
-                });
-                
                 // 验证token是否有效
                 const tokenValid = await auth.validateToken();
                 if (!tokenValid) {
@@ -2003,19 +1593,14 @@ function bindEvents() {
                     return;
                 }
                 
-                console.log('✅ Token验证通过，开始添加内容...');
-                
                 // 显示加载状态
                 const submitBtn = document.getElementById('addContentBtn');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Adding...';
                 submitBtn.disabled = true;
                 
-                console.log('🔍 开始从URL创建insight...');
-                
                 // 获取选中的标签
                 const selectedTags = getSelectedTags();
-                console.log('🏷️ 选中的标签:', selectedTags);
                 
                 // 构建insight数据
                 const insightData = {
@@ -2038,18 +1623,8 @@ function bindEvents() {
                 if (customTitle) insightData.title = customTitle;
                 if (customThought) insightData.thought = customThought;
                 
-                console.log('📝 创建insight，数据:', insightData);
-                console.log('🔍 tag_ids类型:', typeof insightData.tag_ids, '长度:', insightData.tag_ids ? insightData.tag_ids.length : 0);
-                
                 // 使用正确的API端点创建insight
                 const result = await api.createInsight(insightData);
-                console.log('✅ 创建见解成功:', result);
-                console.log('🔍 检查返回的insight数据:', {
-                    title: result.data?.title,
-                    customTitle: customTitle,
-                    url: result.data?.url,
-                    fullData: result.data
-                });
                 
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
@@ -2063,16 +1638,13 @@ function bindEvents() {
                 
                 // 等待一下再重新加载内容，确保后端处理完成
                 setTimeout(async () => {
-                    console.log('🔄 开始重新加载内容...');
                     try {
                         // Clear cache for insights endpoint to ensure fresh data
                         if (window.apiCache) {
                             window.apiCache.clearPattern('/api/v1/insights');
-                            console.log('🗑️ Cleared insights cache after creation');
                         }
                         
                         await loadUserInsights();
-                        console.log('✅ 内容重新加载完成');
                         
                         // Also save to localStorage backup
                         saveInsightsToLocalStorage();
@@ -2289,8 +1861,6 @@ async function loadUserTags() {
 
 // 渲染标签选择器
 function renderTagSelector(tags) {
-    console.log('🔍 开始渲染标签选择器...');
-    
     const tagSelectorOptions = document.getElementById('tagSelectorOptions');
     if (!tagSelectorOptions) {
         console.error('❌ 标签选择器选项容器未找到');
@@ -2300,13 +1870,9 @@ function renderTagSelector(tags) {
     tagSelectorOptions.innerHTML = '';
     
     if (tags.length === 0) {
-        console.log('🔍 没有标签可用');
         tagSelectorOptions.innerHTML = '<div class="no-tags">No tags available. Create some tags first!</div>';
         return;
     }
-    
-    console.log('🏷️ 渲染标签选择器，标签数量:', tags.length);
-    console.log('🏷️ 标签数据:', tags);
     
     // 创建标签选项
     tags.forEach((tag, index) => {
@@ -2323,24 +1889,10 @@ function renderTagSelector(tags) {
             </div>
         `;
         
-        console.log(`🔍 创建标签选项 ${index + 1}:`, {
-            id: tag.id,
-            name: tag.name,
-            color: tag.color,
-            element: tagOption
-        });
-        
         // 绑定点击事件
         tagOption.addEventListener('click', (e) => {
-            console.log('🔍 标签选项被点击:', {
-                tagId: tag.id,
-                tagName: tag.name,
-                target: e.target
-            });
-            
             // 防止点击radio时触发两次
             if (e.target.type === 'radio') {
-                console.log('🔍 点击的是单选按钮，跳过处理');
                 return;
             }
             
@@ -2357,15 +1909,11 @@ function renderTagSelector(tags) {
             radio.checked = true;
             tagOption.classList.add('selected');
             
-            console.log('✅ 标签已选中:', tag.name);
-            
             updateSelectedTagsDisplay();
         });
         
         tagSelectorOptions.appendChild(tagOption);
     });
-    
-    console.log('✅ 标签选择器渲染完成');
 }
 
 // 更新已选标签显示
@@ -2425,15 +1973,8 @@ function bindFilterButtonOutsideClick() {
 
 // 绑定标签选择器事件
 function bindTagSelectorEvents() {
-    console.log('🔍 开始绑定标签选择器事件...');
-    
     const tagSelectorTrigger = document.getElementById('tagSelectorTrigger');
     const tagSelectorDropdown = document.getElementById('tagSelectorDropdown');
-    
-    console.log('🔍 标签选择器元素:', {
-        trigger: tagSelectorTrigger,
-        dropdown: tagSelectorDropdown
-    });
     
     if (!tagSelectorTrigger || !tagSelectorDropdown) {
         console.error('❌ 标签选择器元素未找到');
@@ -2442,12 +1983,10 @@ function bindTagSelectorEvents() {
     
     // 点击触发器显示/隐藏下拉选项
     tagSelectorTrigger.addEventListener('click', (e) => {
-        console.log('🔍 标签选择器触发器被点击');
         e.stopPropagation();
         tagSelectorDropdown.classList.toggle('open');
         
         const isOpen = tagSelectorDropdown.classList.contains('open');
-        console.log('🔍 下拉框状态:', isOpen ? '展开' : '收缩');
         
         // 更新箭头方向
         const arrow = tagSelectorTrigger.querySelector('.tag-selector-arrow');
@@ -2471,12 +2010,9 @@ function bindTagSelectorEvents() {
     const tagSelectorOptions = document.getElementById('tagSelectorOptions');
     if (tagSelectorOptions) {
         tagSelectorOptions.addEventListener('click', (e) => {
-            console.log('🔍 标签选项被点击:', e.target);
             e.stopPropagation();
         });
     }
-    
-    console.log('✅ 标签选择器事件绑定完成');
 }
 
 // 更新过滤器按钮
@@ -2490,8 +2026,6 @@ function getSelectedTags() {
     const selectedTags = [];
     const radio = document.querySelector('#tagSelectorOptions .tag-radio:checked');
     
-    console.log('🔍 查找选中的标签，找到单选按钮:', radio ? '是' : '否');
-    
     if (radio) {
         const tagId = radio.value;
         const tagOption = radio.closest('.tag-option');
@@ -2499,8 +2033,6 @@ function getSelectedTags() {
         if (tagOption) {
             const tagName = tagOption.dataset.tagName || 'Unknown Tag';
             const tagColor = tagOption.dataset.tagColor || '#667eea';
-            
-            console.log(`🔍 选中的标签:`, { id: tagId, name: tagName, color: tagColor });
             
             selectedTags.push({ 
                 id: tagId, 
@@ -2510,16 +2042,12 @@ function getSelectedTags() {
         }
     }
     
-    console.log('✅ 最终选中的标签:', selectedTags);
     return selectedTags;
 }
 
 // 显示创建标签模态框
 function showCreateTagModal() {
-    console.log('🔍 显示创建标签模态框...');
-    
     const modal = document.getElementById('createTagModal');
-    console.log('🔍 创建标签模态框元素:', modal);
     
     if (modal) {
         modal.style.display = 'flex';
@@ -2534,13 +2062,10 @@ function showCreateTagModal() {
         modal.style.height = '100%';
         modal.style.zIndex = '1000';
         
-        console.log('✅ 创建标签模态框已显示');
-        
         // 聚焦到输入框
         const tagNameInput = document.getElementById('newTagName');
         if (tagNameInput) {
             tagNameInput.focus();
-            console.log('✅ 标签名称输入框已聚焦');
         } else {
             console.error('❌ 找不到标签名称输入框');
         }
@@ -2714,10 +2239,7 @@ function bindTagEvents() {
 
 // 创建新标签
 async function createNewTag() {
-    console.log('🔍 开始创建新标签...');
-    
     const tagNameInput = document.getElementById('newTagName');
-    console.log('🔍 标签名称输入框:', tagNameInput);
     
     if (!tagNameInput) {
         console.error('❌ 找不到标签名称输入框');
@@ -2726,10 +2248,8 @@ async function createNewTag() {
     }
     
     const tagName = tagNameInput.value.trim();
-    console.log('🔍 标签名称值:', `"${tagName}"`);
     
     if (!tagName) {
-        console.log('❌ 标签名称为空');
         showErrorMessage('Please enter a tag name');
         return;
     }
@@ -2737,8 +2257,6 @@ async function createNewTag() {
     const defaultColor = '#8B5CF6'; // 默认紫色
     
     try {
-        console.log('🏷️ Creating new tag:', { name: tagName, color: defaultColor });
-        
         // 使用API方法创建标签
         const response = await api.createUserTag({
             name: tagName,
@@ -2746,8 +2264,6 @@ async function createNewTag() {
         });
         
         if (response.success && response.data) {
-            console.log('✅ Tag created successfully:', response.data);
-            
             // 清空表单
             tagNameInput.value = '';
             
@@ -2976,592 +2492,16 @@ window.bulkEditTags = bulkEditTags;
 window.bulkDeleteTags = bulkDeleteTags;
     // applySelectedTagFilter 已删除
 
-// 测试insight数据格式
-function testInsightDataFormat() {
-    console.log('🧪 测试insight数据格式...');
-    
-    // 模拟数据（使用新的API格式）
-    const testData = {
-        url: 'https://example.com/article',
-        thought: '测试想法',
-        tag_ids: ['550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002']
-    };
-    
-    console.log('📝 测试数据:', testData);
-    console.log('🔍 数据验证:');
-    console.log('- URL长度:', testData.url.length, '<= 500:', testData.url.length <= 500);
-    console.log('- 想法长度:', testData.thought.length, '<= 2000:', testData.thought.length <= 2000);
-    console.log('- 标签ID数量:', testData.tag_ids.length);
-    console.log('- 标签ID格式:', Array.isArray(testData.tag_ids) ? '正确' : '错误');
-    console.log('📝 注意: title和description由后端自动从网页提取，无需前端传递');
-    
-    return testData;
-}
 
-// 将测试函数暴露到全局，方便在控制台调用
-window.testInsightDataFormat = testInsightDataFormat;
 
-// 测试标签筛选功能
-function testTagFiltering() {
-    console.log('🧪 测试标签筛选功能...');
-    
-    console.log('🔍 当前筛选条件:', currentFilter);
-    console.log('📚 当前insights数量:', currentInsights.length);
-    console.log('🏷️ 当前标签数据:', currentInsights.map(insight => ({
-        title: insight.title || insight.url,
-        tags: insight.tags
-    })));
-    
-    // 测试筛选逻辑
-    const filtered = getFilteredInsights();
-    console.log('🎯 筛选后的insights数量:', filtered.length);
-    
-    return {
-        currentFilter,
-        totalInsights: currentInsights.length,
-        filteredInsights: filtered.length,
-        filterLogic: 'working'
-    };
-}
 
-// 将测试函数暴露到全局
-window.testTagFiltering = testTagFiltering;
 
-// 测试图片显示功能
-function testImageDisplay() {
-    console.log('🖼️ 测试图片显示功能...');
-    
-    // 检查当前insights的图片数据
-    const insightsWithImages = currentInsights.filter(insight => insight.image_url);
-    const insightsWithoutImages = currentInsights.filter(insight => !insight.image_url);
-    
-    console.log('📊 图片数据统计:');
-    console.log('- 有图片的insights:', insightsWithImages.length);
-    console.log('- 无图片的insights:', insightsWithoutImages.length);
-    
-    if (insightsWithImages.length > 0) {
-        console.log('🖼️ 有图片的insights示例:');
-        insightsWithImages.slice(0, 3).forEach((insight, index) => {
-            console.log(`${index + 1}. ${insight.title || insight.url}`);
-            console.log(`   图片URL: ${insight.image_url}`);
-        });
-    }
-    
-    if (insightsWithoutImages.length > 0) {
-        console.log('📷 无图片的insights示例:');
-        insightsWithoutImages.slice(0, 3).forEach((insight, index) => {
-            console.log(`${index + 1}. ${insight.title || insight.url}`);
-            console.log(`   图片URL: ${insight.image_url || '无'}`);
-        });
-    }
-    
-    return {
-        totalInsights: currentInsights.length,
-        withImages: insightsWithImages.length,
-        withoutImages: insightsWithoutImages.length,
-        imageDisplay: 'working'
-    };
-}
 
-// 将测试函数暴露到全局
-window.testImageDisplay = testImageDisplay;
 
-// 调试标签功能
-function debugTags() {
-    console.log('🔍 调试标签功能...');
-    
-    console.log('📊 当前insights数据:');
-    currentInsights.forEach((insight, index) => {
-        console.log(`${index + 1}. ${insight.title || insight.url}`);
-        console.log(`   标签数据:`, insight.tags);
-        console.log(`   标签类型:`, typeof insight.tags);
-        console.log(`   标签长度:`, insight.tags ? insight.tags.length : 'null/undefined');
-        if (insight.tags && insight.tags.length > 0) {
-            insight.tags.forEach((tag, tagIndex) => {
-                console.log(`     - 标签${tagIndex + 1}:`, tag);
-                console.log(`       类型:`, typeof tag);
-                console.log(`       内容:`, tag);
-            });
-        }
-        console.log('---');
-    });
-    
-    // 检查筛选按钮
-    if (filterButtons) {
-        const tagButtons = filterButtons.querySelectorAll('[data-filter^="tag_"]');
-        console.log('🏷️ 标签筛选按钮数量:', tagButtons.length);
-        tagButtons.forEach((btn, index) => {
-            console.log(`   按钮${index + 1}:`, {
-                filter: btn.dataset.filter,
-                text: btn.textContent,
-                tag: btn.dataset.tag
-            });
-        });
-    }
-    
-    return {
-        insightsCount: currentInsights.length,
-        insightsWithTags: currentInsights.filter(i => i.tags && i.tags.length > 0).length,
-        insightsWithoutTags: currentInsights.filter(i => !i.tags || i.tags.length === 0).length,
-        tagButtonsCount: filterButtons ? filterButtons.querySelectorAll('[data-filter^="tag_"]').length : 0
-    };
-}
 
-// 将调试函数暴露到全局
-window.debugTags = debugTags;
 
-// 分析标签数据结构
-function analyzeTagStructure() {
-    console.log('🔬 分析标签数据结构...');
-    
-    if (currentInsights.length === 0) {
-        console.log('⚠️ 没有insights数据可分析');
-        return;
-    }
-    
-    // 分析第一个有标签的insight
-    const insightWithTags = currentInsights.find(insight => insight.tags && insight.tags.length > 0);
-    
-    if (insightWithTags) {
-        console.log('📖 分析有标签的insight:', insightWithTags.title || insightWithTags.url);
-        console.log('🏷️ 标签数组:', insightWithTags.tags);
-        console.log('🏷️ 标签数组类型:', Array.isArray(insightWithTags.tags) ? 'Array' : typeof insightWithTags.tags);
-        console.log('🏷️ 标签数组长度:', insightWithTags.tags.length);
-        
-        insightWithTags.tags.forEach((tag, index) => {
-            console.log(`🏷️ 标签${index + 1}详细分析:`);
-            console.log(`   类型:`, typeof tag);
-            console.log(`   值:`, tag);
-            console.log(`   是否为对象:`, tag && typeof tag === 'object');
-            if (tag && typeof tag === 'object') {
-                console.log(`   对象键:`, Object.keys(tag));
-                console.log(`   对象值:`, Object.values(tag));
-                console.log(`   id字段:`, tag.id);
-                console.log(`   tag_id字段:`, tag.tag_id);
-                console.log(`   user_tag_id字段:`, tag.user_tag_id);
-                console.log(`   name字段:`, tag.name);
-                console.log(`   color字段:`, tag.color);
-            }
-            console.log('   ---');
-        });
-    } else {
-        console.log('⚠️ 没有找到包含标签的insight');
-    }
-    
-    // 分析筛选按钮的标签数据
-    if (filterButtons) {
-        const tagButtons = filterButtons.querySelectorAll('[data-filter^="tag_"]');
-        console.log('🏷️ 筛选按钮标签数据:');
-        tagButtons.forEach((btn, index) => {
-            const filterKey = btn.dataset.filter;
-            const tagId = filterKey.replace('tag_', '');
-            console.log(`   按钮${index + 1}:`, {
-                filter: filterKey,
-                tagId: tagId,
-                text: btn.textContent,
-                buttonElement: btn
-            });
-        });
-    }
-    
-    return {
-        insightsWithTags: currentInsights.filter(i => i.tags && i.tags.length > 0).length,
-        totalInsights: currentInsights.length,
-        tagButtonsCount: filterButtons ? filterButtons.querySelectorAll('[data-filter^="tag_"]').length : 0
-    };
-}
 
-// 将分析函数暴露到全局
-window.analyzeTagStructure = analyzeTagStructure;
 
-// 测试收缩框功能
-function testTagSelector() {
-    console.log('🧪 测试标签选择器收缩框功能...');
-    
-    const tagSelectorTrigger = document.getElementById('tagSelectorTrigger');
-    const tagSelectorDropdown = document.getElementById('tagSelectorDropdown');
-    const tagSelectorOptions = document.getElementById('tagSelectorOptions');
-    
-    console.log('🔍 标签选择器元素检查:');
-    console.log('- 触发器:', tagSelectorTrigger ? '✅ 存在' : '❌ 不存在');
-    console.log('- 下拉框:', tagSelectorDropdown ? '✅ 存在' : '❌ 不存在');
-    console.log('- 选项容器:', tagSelectorOptions ? '✅ 存在' : '❌ 不存在');
-    
-    if (tagSelectorTrigger && tagSelectorDropdown) {
-        console.log('🔍 当前状态:', tagSelectorDropdown.classList.contains('open') ? '展开' : '收缩');
-        
-        // 测试点击事件
-        console.log('🖱️ 测试点击事件绑定...');
-        const clickEvent = new Event('click');
-        tagSelectorTrigger.dispatchEvent(clickEvent);
-        
-        setTimeout(() => {
-            console.log('🔍 点击后状态:', tagSelectorDropdown.classList.contains('open') ? '展开' : '收缩');
-            
-            // 再次点击关闭
-            tagSelectorTrigger.dispatchEvent(clickEvent);
-            setTimeout(() => {
-                console.log('🔍 再次点击后状态:', tagSelectorDropdown.classList.contains('open') ? '展开' : '收缩');
-            }, 100);
-        }, 100);
-    }
-    
-    // 检查标签选项
-    if (tagSelectorOptions) {
-        const tagOptions = tagSelectorOptions.querySelectorAll('.tag-option');
-        console.log('🏷️ 标签选项数量:', tagOptions.length);
-        
-        tagOptions.forEach((option, index) => {
-            const checkbox = option.querySelector('.tag-checkbox');
-            const tagName = option.dataset.tagName;
-            const tagColor = option.dataset.tagColor;
-            
-            console.log(`   标签${index + 1}:`, {
-                name: tagName,
-                color: tagColor,
-                hasCheckbox: !!checkbox,
-                checkboxChecked: checkbox ? checkbox.checked : 'N/A'
-            });
-        });
-    }
-    
-    return {
-        triggerExists: !!tagSelectorTrigger,
-        dropdownExists: !!tagSelectorDropdown,
-        optionsExist: !!tagSelectorOptions,
-        isOpen: tagSelectorDropdown ? tagSelectorDropdown.classList.contains('open') : false,
-        tagOptionsCount: tagSelectorOptions ? tagSelectorOptions.querySelectorAll('.tag-option').length : 0
-    };
-}
-
-// 将测试函数暴露到全局
-window.testTagSelector = testTagSelector;
-
-// 测试insight卡片渲染
-function testInsightCardRendering() {
-    console.log('🧪 测试insight卡片渲染...');
-    
-    if (currentInsights.length === 0) {
-        console.log('⚠️ 没有insights数据可测试');
-        return;
-    }
-    
-    // 测试第一个insight的标签渲染
-    const firstInsight = currentInsights[0];
-    console.log('📖 测试insight:', firstInsight.title || firstInsight.url);
-    console.log('🏷️ 标签数据:', firstInsight.tags);
-    
-    try {
-        // 尝试创建卡片
-        const card = createInsightCard(firstInsight);
-        console.log('✅ 卡片创建成功:', card);
-        
-        // 检查标签元素
-        const tags = card.querySelector('.content-card-tags');
-        if (tags) {
-            const tagElements = tags.querySelectorAll('.content-card-tag');
-            console.log('🏷️ 渲染的标签数量:', tagElements.length);
-            
-            tagElements.forEach((tagEl, index) => {
-                console.log(`   标签${index + 1}:`, {
-                    text: tagEl.textContent,
-                    className: tagEl.className,
-                    hasColor: !!tagEl.style.backgroundColor
-                });
-            });
-        }
-        
-        return { success: true, card: card };
-    } catch (error) {
-        console.error('❌ 卡片创建失败:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-// 将测试函数暴露到全局
-window.testInsightCardRendering = testInsightCardRendering;
-
-// 测试insight卡片标签渲染
-function testInsightCardTags() {
-    console.log('🧪 测试insight卡片标签渲染...');
-    
-    if (currentInsights.length === 0) {
-        console.log('⚠️ 没有insights数据可测试');
-        return;
-    }
-    
-    // 检查每个insight的标签状态
-    currentInsights.forEach((insight, index) => {
-        console.log(`📖 Insight ${index + 1}:`, insight.title || insight.url);
-        console.log(`🏷️ 标签数据:`, insight.tags);
-        console.log(`🔍 是否有标签:`, insight.tags && insight.tags.length > 0 ? '是' : '否');
-        
-        try {
-            // 尝试创建卡片
-            const card = createInsightCard(insight);
-            const tagsContainer = card.querySelector('.content-card-tags');
-            
-            if (tagsContainer) {
-                console.log(`✅ 标签容器存在，标签数量:`, tagsContainer.querySelectorAll('.content-card-tag').length);
-            } else {
-                console.log(`✅ 无标签容器（正确，因为没有标签）`);
-            }
-            
-            console.log('---');
-        } catch (error) {
-            console.error(`❌ Insight ${index + 1} 卡片创建失败:`, error);
-        }
-    });
-    
-    return {
-        totalInsights: currentInsights.length,
-        withTags: currentInsights.filter(i => i.tags && i.tags.length > 0).length,
-        withoutTags: currentInsights.filter(i => !i.tags || i.tags.length === 0).length
-    };
-}
-
-// 将测试函数暴露到全局
-window.testInsightCardTags = testInsightCardTags;
-
-// 测试筛选功能
-function testFiltering() {
-    console.log('🧪 测试筛选功能...');
-    console.log('当前筛选条件:', currentFilters);
-    
-    // 测试各种排序方式
-    console.log('测试排序功能...');
-    
-    // 测试字母排序
-    setFilter('latest', 'alphabetical', 'Alphabetical');
-    
-    setTimeout(() => {
-        console.log('测试最旧优先...');
-        setFilter('latest', 'oldest', 'Oldest');
-    }, 1000);
-    
-    setTimeout(() => {
-        console.log('测试最新优先...');
-        setFilter('latest', 'latest', 'Latest');
-    }, 2000);
-    
-
-    
-    setTimeout(() => {
-        console.log('测试所有标签...');
-        setFilter('tags', 'all', 'All Tags');
-    }, 4000);
-}
-
-// 测试排序功能
-function testSorting() {
-    console.log('🔤 测试排序功能...');
-    console.log('当前排序方式:', currentFilters.latest);
-    
-    const insights = [...currentInsights];
-    console.log('原始文章顺序:', insights.map(i => i.title || i.url).slice(0, 5));
-    
-    // 测试字母排序
-    const alphabetical = [...insights].sort((a, b) => {
-        const titleA = (a.title || a.url || '').toLowerCase();
-        const titleB = (b.title || b.url || '').toLowerCase();
-        return titleA.localeCompare(titleB);
-    });
-    console.log('字母排序后:', alphabetical.map(i => i.title || i.url).slice(0, 5));
-}
-
-// 将测试函数暴露到全局
-window.testFiltering = testFiltering;
-window.testSorting = testSorting;
-
-// 测试标签选择器功能
-function testTagSelectorFunctionality() {
-    console.log('🧪 测试标签选择器功能...');
-    
-    // 检查DOM元素
-    const trigger = document.getElementById('tagSelectorTrigger');
-    const dropdown = document.getElementById('tagSelectorDropdown');
-    const options = document.getElementById('tagSelectorOptions');
-    
-    console.log('🔍 DOM元素检查:', {
-        trigger: trigger ? '✅ 存在' : '❌ 不存在',
-        dropdown: dropdown ? '✅ 存在' : '❌ 不存在',
-        options: options ? '✅ 存在' : '❌ 不存在'
-    });
-    
-    // 检查CSS类
-    if (dropdown) {
-        console.log('🔍 下拉框CSS类:', dropdown.classList.toString());
-        console.log('🔍 是否展开:', dropdown.classList.contains('open'));
-    }
-    
-    // 检查标签数据
-    const tagOptions = options ? options.querySelectorAll('.tag-option') : [];
-    console.log('🔍 标签选项数量:', tagOptions.length);
-    
-    // 检查复选框
-    const checkboxes = options ? options.querySelectorAll('.tag-checkbox') : [];
-    console.log('🔍 复选框数量:', checkboxes.length);
-    
-    // 测试点击事件
-    if (trigger) {
-        console.log('🔍 测试点击触发器...');
-        trigger.click();
-        
-        setTimeout(() => {
-            console.log('🔍 点击后状态:', dropdown.classList.contains('open') ? '展开' : '收缩');
-            
-            // 再次点击关闭
-            trigger.click();
-            setTimeout(() => {
-                console.log('🔍 再次点击后状态:', dropdown.classList.contains('open') ? '展开' : '收缩');
-            }, 100);
-        }, 100);
-    }
-    
-    return {
-        elementsExist: {
-            trigger: !!trigger,
-            dropdown: !!dropdown,
-            options: !!options
-        },
-        tagOptionsCount: tagOptions.length,
-        checkboxesCount: checkboxes.length,
-        isOpen: dropdown ? dropdown.classList.contains('open') : false
-    };
-}
-
-// 将测试函数暴露到全局
-window.testTagSelectorFunctionality = testTagSelectorFunctionality;
-
-// 更新标签选择UI
-function updateTagSelectionUI(tagItem, isSelected) {
-    if (isSelected) {
-        tagItem.classList.add('selected');
-    } else {
-        tagItem.classList.remove('selected');
-    }
-    
-    // 更新选中标签数量
-    updateSelectedTagsCount();
-    
-    // 更新批量操作按钮状态
-    updateBulkActionsState();
-}
-
-// 更新选中标签数量
-function updateSelectedTagsCount() {
-    const selectedCount = document.querySelectorAll('.manage-tag-checkbox:checked').length;
-    const selectedTagsCountElement = document.getElementById('selectedTagsCount');
-    if (selectedTagsCountElement) {
-        selectedTagsCountElement.textContent = selectedCount;
-    }
-}
-
-// 更新批量操作按钮状态
-function updateBulkActionsState() {
-    const selectedCount = document.querySelectorAll('.manage-tag-checkbox:checked').length;
-    const bulkEditBtn = document.querySelector('.bulk-edit-btn');
-    const bulkDeleteBtn = document.querySelector('.bulk-delete-btn');
-    
-    if (bulkEditBtn) {
-        bulkEditBtn.disabled = selectedCount === 0;
-    }
-    if (bulkDeleteBtn) {
-        bulkDeleteBtn.disabled = selectedCount === 0;
-    }
-}
-
-// 全选标签
-function selectAllTags() {
-    const checkboxes = document.querySelectorAll('.manage-tag-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-        const tagItem = checkbox.closest('.manage-tag-item');
-        if (tagItem) {
-            updateTagSelectionUI(tagItem, true);
-        }
-    });
-}
-
-// 取消全选标签
-function deselectAllTags() {
-    const checkboxes = document.querySelectorAll('.manage-tag-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-        const tagItem = checkbox.closest('.manage-tag-item');
-        if (tagItem) {
-            updateTagSelectionUI(tagItem, false);
-        }
-    });
-}
-
-// 批量编辑标签
-function bulkEditTags() {
-    const selectedTags = getSelectedTagsForManagement();
-    if (selectedTags.length === 0) {
-        showErrorMessage('Please select tags to edit');
-        return;
-    }
-    
-    if (selectedTags.length === 1) {
-        // 单个标签编辑
-        const tag = selectedTags[0];
-        editTagInManagement(tag.id, tag.name, tag.color);
-    } else {
-        // 多个标签编辑
-        showErrorMessage('Bulk edit for multiple tags is not yet implemented');
-    }
-}
-
-// 批量删除标签
-function bulkDeleteTags() {
-    const selectedTags = getSelectedTagsForManagement();
-    if (selectedTags.length === 0) {
-        showErrorMessage('Please select tags to delete');
-        return;
-    }
-    
-    const tagNames = selectedTags.map(tag => tag.name).join(', ');
-    if (confirm(`Are you sure you want to delete these tags: ${tagNames}?`)) {
-        // 执行批量删除
-        Promise.all(selectedTags.map(tag => deleteTagInManagement(tag.id)))
-            .then(() => {
-                showSuccessMessage(`Successfully deleted ${selectedTags.length} tags`);
-            })
-            .catch(error => {
-                showErrorMessage(`Failed to delete some tags: ${error.message}`);
-            });
-    }
-}
-
-// 获取选中的标签（用于管理）
-function getSelectedTagsForManagement() {
-    const selectedTags = [];
-    const checkboxes = document.querySelectorAll('.manage-tag-checkbox:checked');
-    
-    checkboxes.forEach(checkbox => {
-        const tagItem = checkbox.closest('.manage-tag-item');
-        if (tagItem) {
-            selectedTags.push({
-                id: tagItem.dataset.tagId,
-                name: tagItem.dataset.tagName,
-                color: tagItem.dataset.tagColor
-            });
-        }
-    });
-    
-    return selectedTags;
-}
-
-// 标签选择统计函数已删除
-
-// 标签筛选函数已删除
-
-// 测试标签选择功能已删除
-
-// testTagSelection 已删除
-
-// 测试弹窗功能已删除
 
 // ===== PROFILE EDIT FUNCTIONALITY =====
 
@@ -3705,18 +2645,7 @@ function openProfileEditModal() {
     const emailInput = document.getElementById('profileEmail');
     
     if (usernameInput && currentUser) {
-        console.log('🔍 预填充用户信息调试:', {
-            currentUser: currentUser,
-            nickname: currentUser.nickname,
-            email: currentUser.email,
-            username: currentUser.username,
-            name: currentUser.name,
-            allKeys: Object.keys(currentUser)
-        });
-        
         const usernameValue = currentUser.nickname || currentUser.email || '';
-        console.log('🔍 设置的用户名输入值:', usernameValue);
-        
         usernameInput.value = usernameValue;
     }
     
@@ -3757,14 +2686,10 @@ function openProfileEditModal() {
     
     // 使用滚动管理器禁用滚动
     scrollManager.disable();
-    
-    console.log('✅ 用户资料编辑模态框已打开');
 }
 
 // 关闭用户资料编辑模态框
 function closeProfileEditModal() {
-    console.log('❌ 关闭用户资料编辑模态框...');
-    
     const profileEditModal = document.getElementById('profileEditModal');
     const profileEditForm = document.getElementById('profileEditForm');
     const avatarPreviewImg = document.getElementById('avatarPreviewImg');
@@ -3786,8 +2711,6 @@ function closeProfileEditModal() {
     if (profileEditForm) {
         profileEditForm.reset();
     }
-    
-    console.log('✅ 用户资料编辑模态框已关闭');
 }
 
 // 处理头像预览
@@ -3942,18 +2865,11 @@ async function handleProfileUpdate(event) {
             profileData.avatar_url = avatarUrl;
         }
         
-        console.log('📡 发送用户资料更新请求:', profileData);
-        
         const response = await api.updateUserProfile(profileData);
         
         if (response.success) {
             // 更新本地用户数据
-            console.log('🔍 API更新成功，更新前的用户数据:', currentUser);
-            console.log('🔍 要合并的profileData:', profileData);
-            
             currentUser = { ...currentUser, ...profileData };
-            
-            console.log('🔍 API更新成功，更新后的用户数据:', currentUser);
             
             // 更新本地存储
             if (auth.getCurrentUser()) {
@@ -3964,7 +2880,6 @@ async function handleProfileUpdate(event) {
                     // Update only the user data, preserve token and timestamp
                     sessionData.user = currentUser;
                     localStorage.setItem('quest_user_session', JSON.stringify(sessionData));
-                    console.log('💾 API更新成功，已保存到localStorage (保持session结构)');
                 } else {
                     console.warn('⚠️ 没有找到现有session数据');
                 }
@@ -3978,8 +2893,6 @@ async function handleProfileUpdate(event) {
             
             // 显示成功消息
             showSuccessMessage('Profile updated successfully!');
-            
-            console.log('✅ 用户资料更新成功');
         } else {
             throw new Error(response.message || 'Failed to update profile');
         }
@@ -3992,12 +2905,7 @@ async function handleProfileUpdate(event) {
         
         try {
             // 更新本地用户数据
-            console.log('🔍 更新前的用户数据:', currentUser);
-            console.log('🔍 要更新的数据:', { nickname: username, email: email });
-            
             currentUser = { ...currentUser, nickname: username, email: email };
-            
-            console.log('🔍 更新后的用户数据:', currentUser);
             
             // 更新本地存储
             if (auth.getCurrentUser()) {
@@ -4726,18 +3634,12 @@ async function createStack(card1, card2) {
         const stackId = `stack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         // Add insights to the stack via insights API (using stack_id field)
-        console.log('🔍 Attempting to update insights with stack_id:', stackId);
-        console.log('🔍 Insight 1 ID:', insight1.id);
-        console.log('🔍 Insight 2 ID:', insight2.id);
-        
         const updatePromises = [
             api.addItemToStack(stackId, insight1.id),
             api.addItemToStack(stackId, insight2.id)
         ];
         
         const responses = await Promise.all(updatePromises);
-        
-        console.log('🔍 API responses for stack updates:', responses);
         
         // Check if all updates were successful
         const allSuccessful = responses.every(response => response.success);
@@ -4772,14 +3674,12 @@ async function createStack(card1, card2) {
             
             // Also try to create the stack in the backend database
             try {
-                console.log('🔍 Attempting to create stack in backend database...');
                 const stackCreateResponse = await api.createStack({
                     id: stackId,
                     name: 'Stack',
                     created_at: localStackData.createdAt,
                     modified_at: localStackData.modifiedAt
                 });
-                console.log('📡 Stack creation API response:', stackCreateResponse);
             } catch (stackCreateError) {
                 console.warn('⚠️ Failed to create stack in backend database (this is OK, stack_id approach still works):', stackCreateError);
             }
@@ -5099,16 +3999,8 @@ async function removeItemFromStack(stackId, insightId) {
 async function deleteStack(stackId) {
     if (confirm('Are you sure you want to delete this stack? All items will be moved back to your space.')) {
         try {
-            // Debug: Check authentication state before making API calls
-            console.log('🔍 Debug: Checking auth before delete stack...');
-            console.log('🔍 Auth status:', auth.checkAuth());
-            console.log('🔍 Current user:', auth.getCurrentUser());
-            console.log('🔍 Has valid token:', auth.hasValidToken());
-            console.log('🔍 Current token:', auth.getCurrentToken() ? 'Present' : 'Missing');
-            
             // Ensure we have a valid session before proceeding
             if (!auth.checkAuth()) {
-                console.log('⚠️ No valid session, attempting to restore...');
                 const restored = auth.restoreSession();
                 if (!restored) {
                     showErrorMessage('Please sign in to delete stacks.');
@@ -5117,10 +4009,8 @@ async function deleteStack(stackId) {
             }
             
             // Validate token before making API calls
-            console.log('🔍 Validating token before API calls...');
             const tokenValid = await auth.validateToken();
             if (!tokenValid) {
-                console.log('❌ Token validation failed, clearing session');
                 auth.clearSession();
                 showErrorMessage('Your session has expired. Please sign in again.');
                 return;
