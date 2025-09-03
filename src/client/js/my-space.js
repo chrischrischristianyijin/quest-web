@@ -197,30 +197,29 @@ async function goToPage(pageNum) {
         // 显示加载状态
         showLoadingState();
         
-        // 检查是否需要加载更多数据
-        if (insightsHasMore && currentInsights.length < totalInsights) {
-            console.log('🔄 检测到翻页，开始加载更多数据...');
+        // 检查是否需要加载目标页面数据
+        if (insightsHasMore) {
+            console.log(`🔄 加载第${pageNum}页数据...`);
             
-            // 第一步：立即加载目标页面数据
+            // 使用分页API加载目标页面
             const targetPageResponse = await api.getInsightsPaginated(pageNum, insightsPerPage, null, '', true);
             if (targetPageResponse?.success) {
-                const { items } = normalizePaginatedInsightsResponse(targetPageResponse);
+                const { items, hasMore } = normalizePaginatedInsightsResponse(targetPageResponse);
                 const targetPageInsights = (items || []).filter(x => !x.stack_id);
                 
-                // 将目标页面数据添加到现有数据中
-                currentInsights = currentInsights.concat(targetPageInsights);
+                // 更新当前页面数据
+                currentInsights = targetPageInsights;
                 window.currentInsights = currentInsights;
+                insightsHasMore = hasMore;
                 
                 // 更新已渲染的ID
+                renderedInsightIds.clear();
                 targetPageInsights.forEach(i => renderedInsightIds.add(i.id));
                 
-                console.log(`📄 已加载第${pageNum}页，当前共${currentInsights.length}个insights`);
+                console.log(`📄 第${pageNum}页加载完成: ${targetPageInsights.length}个insights`);
+            } else {
+                throw new Error(`Failed to load page ${pageNum}`);
             }
-            
-            // 第二步：在后台加载其他剩余数据
-            setTimeout(() => {
-                loadRemainingInsightsInBackground(pageNum);
-            }, 100);
         }
         
         // 重新渲染insights（只显示当前页面的数据）
@@ -318,13 +317,7 @@ async function loadUserInsightsWithPagination() {
             renderInsights();
             updatePaginationUI();
             
-            // 第二步：在后台加载所有数据（如果有多页）
-            if (totalPages > 1) {
-                // 使用setTimeout确保第一页渲染完成后再开始后台加载
-                setTimeout(() => {
-                    loadAllInsightsInBackground();
-                }, 100);
-            }
+            console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
         } else {
             // 尝试从localStorage加载备份
             loadFromBackup();
@@ -1030,28 +1023,13 @@ function renderInsights() {
         // 根据筛选条件排序
         let sortedInsights = getFilteredInsights();
         
-        // 只显示当前页面的insights
-        const startIndex = (currentPage - 1) * insightsPerPage;
-        const endIndex = startIndex + insightsPerPage;
-        const pageInsights = sortedInsights.slice(startIndex, endIndex);
-        
-        pageInsights.forEach(insight => {
+        // 直接显示当前页面的insights（已经是分页后的数据）
+        sortedInsights.forEach(insight => {
             const card = createInsightCard(insight);
             fragment.appendChild(card);
         });
         
-        // 如果当前页没有足够的insights，显示加载提示
-        if (pageInsights.length < insightsPerPage && insightsHasMore) {
-            const loadingCard = document.createElement('div');
-            loadingCard.className = 'content-card loading-card';
-            loadingCard.innerHTML = `
-                <div class="loading-indicator">
-                    <div class="loading-spinner"></div>
-                    <p>Loading more content...</p>
-                </div>
-            `;
-            fragment.appendChild(loadingCard);
-        }
+        console.log(`📊 渲染第${currentPage}页: ${sortedInsights.length}个insights`);
     }
     
     // 渲染stacks
