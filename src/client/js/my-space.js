@@ -316,6 +316,9 @@ async function loadUserInsightsWithPagination() {
         insightsLoading = true;
         showLoadingState();
         
+        // 清除之前的缓存
+        clearPageCache();
+        
         // 第一步：快速加载第一页
         const firstPageResponse = await api.getInsightsPaginated(1, insightsPerPage, null, '', true);
         
@@ -365,7 +368,7 @@ async function loadUserInsightsWithPagination() {
             updatePaginationUI();
             
             console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
-        console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
+            console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
         } else {
             // 尝试从localStorage加载备份
             loadFromBackup();
@@ -608,12 +611,7 @@ async function initPage() {
         // Set up event delegation for card interactions (performance optimization)
         setupCardEventDelegation();
         
-        // Fallback: Ensure infinite scroll is set up even if loadUserInsights didn't call it
-        setTimeout(() => {
-            if (!insightsObserver) {
-                setupInsightsInfiniteScroll();
-            }
-        }, 1000);
+        // 分页模式：不需要无限滚动
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
         
@@ -940,8 +938,7 @@ async function loadUserInsights() {
                 await loadTagsForInsights(insightsWithoutTags);
             }
             
-            renderInsightsInitial();      // new: only clears once and renders current batch
-            setupInsightsInfiniteScroll();// new: attaches observer/sentinel
+            renderInsightsInitial();      // 只渲染当前页面的数据
         } else {
             // Try loading from localStorage backup
             const backupInsights = localStorage.getItem('quest_insights_backup');
@@ -1018,7 +1015,6 @@ async function loadUserInsights() {
         }
         
         renderInsightsInitial();
-        setupInsightsInfiniteScroll();
     } finally {
         insightsLoading = false;
     }
@@ -1068,21 +1064,13 @@ function renderInsights() {
     
     // Render individual insights if we have any
     if (hasInsights) {
-        // 根据筛选条件排序
-        let sortedInsights = getFilteredInsights();
-        
-        // 限制每页显示的数量
-        const startIndex = 0; // 当前页面数据已经是从API获取的分页数据
-        const endIndex = Math.min(sortedInsights.length, insightsPerPage);
-        const pageInsights = sortedInsights.slice(startIndex, endIndex);
-        
-        // 显示当前页面的insights（限制数量）
-        pageInsights.forEach(insight => {
+        // 直接显示当前页面的insights（已经是分页后的数据）
+        currentInsights.forEach(insight => {
             const card = createInsightCard(insight);
             fragment.appendChild(card);
         });
         
-        console.log(`📊 渲染第${currentPage}页: ${pageInsights.length}/${sortedInsights.length}个insights (限制${insightsPerPage}个)`);
+        console.log(`📊 渲染第${currentPage}页: ${currentInsights.length}个insights`);
     }
     
     // 渲染stacks
@@ -1115,11 +1103,13 @@ function renderInsightsInitial() {
     
     container.innerHTML = '';
     
-    // For initial render, show all insights (getFilteredInsights handles stack filtering)
-    const filtered = getFilteredInsights();
+    // 使用分页逻辑：只显示当前页面的数据
+    currentInsights.forEach(insight => {
+        const card = createInsightCardEl(insight);
+        container.appendChild(card);
+    });
     
-    filtered.forEach(i => container.appendChild(createInsightCardEl(i)));
-    ensureInsightsSentinel(container);
+    console.log(`📊 初始渲染第${currentPage}页: ${currentInsights.length}个insights`);
     
     // Update edit mode state after rendering cards
     updateEditModeState();
