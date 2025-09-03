@@ -2439,15 +2439,7 @@ window.updateUserTag = updateUserTag;
 window.deleteUserTag = deleteUserTag;
 window.editTagInManagement = editTagInManagement;
 window.deleteTagInManagement = deleteTagInManagement;
-    // showTagsManagementModal 已删除
-    // loadTagsForManagement 已删除
 window.createNewTag = createNewTag;
-    // createNewTagFromManagement 已删除
-window.selectAllTags = selectAllTags;
-window.deselectAllTags = deselectAllTags;
-window.bulkEditTags = bulkEditTags;
-window.bulkDeleteTags = bulkDeleteTags;
-    // applySelectedTagFilter 已删除
 
 
 
