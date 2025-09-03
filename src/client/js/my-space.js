@@ -61,6 +61,14 @@ let stackHoverTimeout = null;
 let stacks = new Map(); // Store stacks data
 let stackIdCounter = 1;
 
+// Pagination state for insights
+const PAGE_SIZE = 9;
+let insightsPage = 1;
+let insightsHasMore = true;
+let insightsLoading = false;
+const renderedInsightIds = new Set();
+let insightsObserver = null;
+
 // Guard flags to prevent autosave from overwriting with empty data
 let hasLoadedStacksOnce = false;
 let hasLoadedInsightsOnce = false;
@@ -146,6 +154,14 @@ async function initPage() {
         setupCardEventDelegation();
         
         console.log('✅ My Space页面初始化完成');
+        
+        // Fallback: Ensure infinite scroll is set up even if loadUserInsights didn't call it
+        setTimeout(() => {
+            if (!insightsObserver) {
+                console.log('🔄 Fallback: Setting up infinite scroll...');
+                setupInsightsInfiniteScroll();
+            }
+        }, 1000);
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
         
@@ -509,8 +525,9 @@ async function loadUserInsights() {
         console.log('🔍 Auth status before API call:', auth.checkAuth());
         console.log('🔍 Current user:', auth.getCurrentUser());
         
-        // 使用新的API方法获取insights
-        const response = await api.getInsights();
+        // 使用分页API方法获取insights
+        insightsLoading = true;
+        const response = await api.getInsightsPaginated(1, PAGE_SIZE, null, '', true);
         
         console.log('📡 API响应:', response);
         console.log('🔍 Response structure:', {
@@ -520,13 +537,18 @@ async function loadUserInsights() {
             insightsCount: response?.data?.insights?.length || 0
         });
         
-        if (response.success && response.data && response.data.insights) {
-            // Filter out insights that are already in stacks
-            const allInsights = response.data.insights;
-            currentInsights = allInsights.filter(insight => !insight.stack_id);
+        if (response?.success) {
+            const { items, hasMore } = normalizePaginatedInsightsResponse(response);
+            const firstBatch = (items || []).filter(x => !x.stack_id);
+            // normalize tags to {id,name,color} (you already do this later; keep it)
+            currentInsights = firstBatch;
             window.currentInsights = currentInsights;
-            console.log('✅ 用户insights加载成功:', allInsights.length, '条');
-            console.log('📚 过滤掉已在stacks中的insights后:', currentInsights.length, '条');
+            insightsPage = 1;
+            insightsHasMore = hasMore;
+            renderedInsightIds.clear();
+            firstBatch.forEach(i => renderedInsightIds.add(i.id));
+            console.log('✅ 用户insights加载成功:', firstBatch.length, '条');
+            console.log('📚 过滤掉已在stacks中的insights后:', firstBatch.length, '条');
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
             // Save insights to localStorage as backup with timestamp
@@ -587,7 +609,10 @@ async function loadUserInsights() {
                 await loadTagsForInsights(insightsWithoutTags);
             }
             
-            renderInsights();
+            console.log('🎨 Calling renderInsightsInitial...');
+            renderInsightsInitial();      // new: only clears once and renders current batch
+            console.log('🚀 Calling setupInsightsInfiniteScroll...');
+            setupInsightsInfiniteScroll();// new: attaches observer/sentinel
         } else {
             console.warn('⚠️ API返回格式不正确:', response);
             console.log('🔍 响应数据结构:', {
@@ -681,7 +706,10 @@ async function loadUserInsights() {
             showErrorMessage('Failed to load insights. Please refresh and try again.');
         }
         
-        renderInsights();
+        renderInsightsInitial();
+        setupInsightsInfiniteScroll();
+    } finally {
+        insightsLoading = false;
     }
 }
 
@@ -768,6 +796,360 @@ function renderInsights() {
     // Update edit mode state after rendering cards
     updateEditModeState();
 }
+
+// Create insight card element (using original structure)
+function createInsightCardEl(insight) {
+    // Use the original createInsightCard function
+    return createInsightCard(insight);
+}
+
+function renderInsightsInitial() {
+    const container = document.getElementById('contentCards');
+    if (!container) {
+        console.error('❌ contentCards element not found!');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    // For initial render, show all insights (getFilteredInsights handles stack filtering)
+    const filtered = getFilteredInsights();
+    console.log('🎨 Rendering initial insights:', {
+        totalInsights: currentInsights.length,
+        filteredInsights: filtered.length,
+        container: container
+    });
+    
+    filtered.forEach(i => container.appendChild(createInsightCardEl(i)));
+    ensureInsightsSentinel(container);
+    
+    // Update edit mode state after rendering cards
+    updateEditModeState();
+}
+
+function appendInsightsBatch(newItems) {
+    const container = document.getElementById('contentCards');
+    if (!container) {
+        console.error('❌ contentCards element not found!');
+        return;
+    }
+    
+    // Only append the new items, not all insights
+    newItems.forEach(i => container.appendChild(createInsightCardEl(i)));
+    // keep sentinel at the end
+    ensureInsightsSentinel(container);
+    
+    // Update edit mode state after rendering cards
+    updateEditModeState();
+}
+
+function ensureInsightsSentinel(container) {
+    console.log('🔧 ensureInsightsSentinel called with container:', container);
+    let sentinel = document.getElementById('insightsSentinel');
+    if (!sentinel) {
+        console.log('🆕 Creating new sentinel element');
+        sentinel = document.createElement('div');
+        sentinel.id = 'insightsSentinel';
+        sentinel.style.height = '1px';
+        sentinel.style.width = '100%';
+        sentinel.style.opacity = '0';
+        // sentinel.style.backgroundColor = 'red'; // Make it visible for debugging
+    } else {
+        console.log('♻️ Reusing existing sentinel element');
+    }
+    container.appendChild(sentinel); // keep it as last child
+    console.log('✅ Sentinel appended to container, returning:', sentinel);
+    return sentinel;
+}
+
+function elementScrolls(el) {
+    const s = getComputedStyle(el);
+    const scrolls = /(auto|scroll)/.test(s.overflowY);
+    console.log('🔍 elementScrolls check:', {
+        element: el,
+        overflowY: s.overflowY,
+        scrolls: scrolls
+    });
+    return scrolls;
+}
+
+function setupInsightsInfiniteScroll() {
+    console.log('🚀 setupInsightsInfiniteScroll called');
+    const container = document.getElementById('contentCards');
+    console.log('📦 Container found:', container);
+    if (!container) {
+        console.log('❌ No contentCards container found!');
+        return;
+    }
+
+    const sentinel = ensureInsightsSentinel(container);
+    console.log('🎯 Sentinel obtained:', sentinel);
+
+    if (insightsObserver) {
+        console.log('🔄 Disconnecting existing observer');
+        insightsObserver.disconnect();
+    }
+
+    const rootEl = elementScrolls(container) ? container : null;
+    console.log('🌳 Root element determined:', rootEl);
+
+    console.log('👁️ Creating IntersectionObserver with config:', {
+        root: rootEl,
+        rootMargin: '300px 0px',
+        threshold: 0.01
+    });
+
+    insightsObserver = new IntersectionObserver(async (entries) => {
+        console.log('👀 Observer callback triggered with entries:', entries);
+        const entry = entries[0];
+        console.log('👀 sentinel intersecting', entry.isIntersecting, {
+            hasMore: insightsHasMore,
+            loading: insightsLoading,
+            page: insightsPage,
+            intersectionRatio: entry.intersectionRatio,
+            boundingClientRect: entry.boundingClientRect
+        });
+        if (!entry.isIntersecting) return;
+        if (!insightsHasMore || insightsLoading) return;
+        console.log('🚀 Calling loadMoreInsights...');
+        await loadMoreInsights();
+    }, { root: rootEl, rootMargin: '300px 0px', threshold: 0.01 });
+
+    console.log('👁️ Observing sentinel:', sentinel);
+    insightsObserver.observe(sentinel);
+    console.log('✅ Observer setup complete');
+
+    // Fallback: if list is too short to scroll, keep prefetching until it fills
+    console.log('⏰ Scheduling maybePrefetchIfShort');
+    requestAnimationFrame(maybePrefetchIfShort);
+}
+
+async function maybePrefetchIfShort() {
+    console.log('🔍 maybePrefetchIfShort called');
+    const container = document.getElementById('contentCards');
+    if (!container) {
+        console.log('❌ No container in maybePrefetchIfShort');
+        return;
+    }
+    const rootEl = insightsObserver?.root || null;
+    const visibleH = rootEl ? rootEl.clientHeight : window.innerHeight;
+    const contentH = container.scrollHeight;
+    
+    console.log('📏 Prefetch check:', {
+        visibleH,
+        contentH,
+        hasMore: insightsHasMore,
+        loading: insightsLoading,
+        shouldPrefetch: contentH <= visibleH + 16 && insightsHasMore && !insightsLoading
+    });
+
+    if (contentH <= visibleH + 16 && insightsHasMore && !insightsLoading) {
+        console.log('🚀 Prefetching more content...');
+        await loadMoreInsights();       // already implemented here: calls API, appends, updates flags
+        requestAnimationFrame(maybePrefetchIfShort);
+    }
+}
+
+async function loadMoreInsights() {
+    try {
+        insightsLoading = true;
+        const nextPage = insightsPage + 1;
+        const resp = await api.getInsightsPaginated(nextPage, PAGE_SIZE, null, '', true);
+        if (!resp?.success) return;
+
+        const { items, hasMore } = normalizePaginatedInsightsResponse(resp);
+        const batch = (items || []).filter(x => !x.stack_id);
+
+        // normalize tags like you already do elsewhere
+        batch.forEach(insight => {
+            if (Array.isArray(insight.tags) && insight.tags.length > 0) {
+                insight.tags = insight.tags.map(tag => ({
+                    id: tag.tag_id || tag.id,
+                    name: tag.name,
+                    color: tag.color
+                }));
+            }
+        });
+
+        // de-dup
+        const toAppend = batch.filter(i => !renderedInsightIds.has(i.id));
+        toAppend.forEach(i => renderedInsightIds.add(i.id));
+
+        currentInsights = currentInsights.concat(toAppend);
+        window.currentInsights = currentInsights;
+        appendInsightsBatch(toAppend);
+
+        insightsPage = nextPage;
+        insightsHasMore = hasMore;
+        
+        console.log('✅ LoadMoreInsights completed:', {
+            page: insightsPage,
+            hasMore: insightsHasMore,
+            totalRendered: currentInsights.length
+        });
+    } catch (e) {
+        console.error('loadMoreInsights failed:', e);
+    } finally {
+        insightsLoading = false;
+    }
+}
+
+function resetInsightsPaginationAndRerender() {
+    // Do NOT refetch page 1 from server here (keeps it snappy); just re-render what we have.
+    const container = document.getElementById('contentCards');
+    if (container) {
+        container.innerHTML = '';
+        renderedInsightIds.clear();
+        currentInsights.forEach(i => renderedInsightIds.add(i.id));
+        renderInsightsInitial();
+    }
+}
+
+// Manual trigger for debugging
+function forceLoadMore() {
+    if (!insightsLoading && insightsHasMore) {
+        return loadMoreInsights();
+    }
+    return Promise.resolve();
+}
+
+// Comprehensive debug function
+function debugInfiniteScroll() {
+    const container = document.getElementById('contentCards');
+    const sentinel = document.getElementById('insightsSentinel');
+    const rootEl = insightsObserver?.root || null;
+    
+    console.log('🔍 INFINITE SCROLL DEBUG REPORT');
+    console.log('================================');
+    
+    // Container info
+    console.log('📦 Container (#contentCards):', {
+        exists: !!container,
+        element: container,
+        scrollHeight: container?.scrollHeight,
+        clientHeight: container?.clientHeight,
+        overflowY: container ? getComputedStyle(container).overflowY : 'N/A'
+    });
+    
+    // Sentinel info
+    console.log('🎯 Sentinel (#insightsSentinel):', {
+        exists: !!sentinel,
+        element: sentinel,
+        parent: sentinel?.parentElement,
+        isLastChild: sentinel?.parentElement?.lastElementChild === sentinel,
+        boundingRect: sentinel?.getBoundingClientRect()
+    });
+    
+    // Observer info
+    console.log('👁️ Observer:', {
+        exists: !!insightsObserver,
+        root: rootEl,
+        rootType: rootEl ? 'container' : 'window'
+    });
+    
+    // Pagination state
+    console.log('📊 Pagination State:', {
+        page: insightsPage,
+        hasMore: insightsHasMore,
+        loading: insightsLoading,
+        totalInsights: currentInsights.length,
+        renderedIds: renderedInsightIds.size
+    });
+    
+    // Scroll detection
+    if (container) {
+        const scrolls = elementScrolls(container);
+        console.log('🔄 Scroll Detection:', {
+            containerScrolls: scrolls,
+            expectedRoot: scrolls ? container : null
+        });
+    }
+    
+    // Manual tests
+    console.log('🧪 Manual Tests:');
+    console.log('- Run: window.testScrollDetection()');
+    console.log('- Run: window.testSentinelVisibility()');
+    console.log('- Run: window.forceLoadMore()');
+    
+    return {
+        container: !!container,
+        sentinel: !!sentinel,
+        observer: !!insightsObserver,
+        hasMore: insightsHasMore,
+        loading: insightsLoading
+    };
+}
+
+// Test functions
+window.testScrollDetection = () => {
+    const container = document.getElementById('contentCards');
+    if (!container) {
+        console.log('❌ No container found');
+        return;
+    }
+    
+    const style = getComputedStyle(container);
+    console.log('🔍 Container scroll properties:', {
+        overflowY: style.overflowY,
+        overflowX: style.overflowX,
+        height: style.height,
+        maxHeight: style.maxHeight,
+        scrolls: elementScrolls(container)
+    });
+    
+    // Test if container is scrollable
+    const isScrollable = container.scrollHeight > container.clientHeight;
+    console.log('📏 Scrollability test:', {
+        scrollHeight: container.scrollHeight,
+        clientHeight: container.clientHeight,
+        isScrollable: isScrollable
+    });
+};
+
+window.testSentinelVisibility = () => {
+    const sentinel = document.getElementById('insightsSentinel');
+    if (!sentinel) {
+        console.log('❌ No sentinel found');
+        return;
+    }
+    
+    const rect = sentinel.getBoundingClientRect();
+    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+    
+    console.log('🎯 Sentinel visibility test:', {
+        boundingRect: rect,
+        isVisible: isVisible,
+        inViewport: rect.top >= 0 && rect.bottom <= window.innerHeight,
+        belowViewport: rect.top > window.innerHeight,
+        aboveViewport: rect.bottom < 0
+    });
+    
+    // Make sentinel temporarily visible for visual debugging
+    sentinel.style.backgroundColor = 'red';
+    sentinel.style.height = '10px';
+    sentinel.style.opacity = '1';
+    
+    setTimeout(() => {
+        sentinel.style.backgroundColor = '';
+        sentinel.style.height = '1px';
+        sentinel.style.opacity = '0';
+    }, 3000);
+    
+    console.log('👁️ Sentinel made visible for 3 seconds (red bar)');
+};
+
+// Expose debugging functions globally
+window.forceLoadMore = forceLoadMore;
+window.debugPaginationState = () => ({
+    page: insightsPage,
+    hasMore: insightsHasMore,
+    loading: insightsLoading,
+    totalInsights: currentInsights.length,
+    renderedIds: renderedInsightIds.size,
+    observer: insightsObserver ? 'active' : 'null',
+    sentinel: document.getElementById('insightsSentinel') ? 'exists' : 'missing'
+});
+window.debugInfiniteScroll = debugInfiniteScroll;
 
 // Load tags for insights that don't have them
 async function loadTagsForInsights(insights) {
@@ -1258,7 +1640,7 @@ function setFilter(filterType, filterValue, optionLabel = null) {
     showFilterStatus();
     
     // 重新渲染
-    renderInsights();
+    resetInsightsPaginationAndRerender();
 }
 
 // 更新筛选按钮显示文本
@@ -1451,8 +1833,7 @@ async function deleteInsight(id) {
         
         // Clear cache for insights endpoint to ensure fresh data
         if (window.apiCache) {
-            const insightsUrl = `${api.baseUrl}/api/v1/insights/all?include_tags=true`;
-            window.apiCache.delete(insightsUrl);
+            window.apiCache.clearPattern('/api/v1/insights');
             console.log('🗑️ Cleared insights cache after deletion');
         }
         
@@ -1686,8 +2067,7 @@ function bindEvents() {
                     try {
                         // Clear cache for insights endpoint to ensure fresh data
                         if (window.apiCache) {
-                            const insightsUrl = `${api.baseUrl}/api/v1/insights/all?include_tags=true`;
-                            window.apiCache.delete(insightsUrl);
+                            window.apiCache.clearPattern('/api/v1/insights');
                             console.log('🗑️ Cleared insights cache after creation');
                         }
                         
@@ -1842,6 +2222,28 @@ function clearUserTagsCache() {
     cachedUserTags = null;
     userTagsCacheTime = 0;
     console.log('🗑️ Cleared user tags cache');
+}
+
+// Utility to normalize various response shapes
+function normalizePaginatedInsightsResponse(response) {
+    const d = response?.data || {};
+    let items = [];
+    if (Array.isArray(d)) items = d;
+    else if (Array.isArray(d.insights)) items = d.insights;
+    else if (Array.isArray(d.data)) items = d.data;
+    else if (Array.isArray(d.items)) items = d.items; // <— add this line
+
+    // basic pagination hints (support multiple back-end styles safely)
+    const page = d.page ?? d.current_page ?? insightsPage;
+    const perPage = d.limit ?? d.per_page ?? PAGE_SIZE;
+    const total = d.total ?? d.total_items ?? d.count;
+    const totalPages = d.total_pages ?? (total && perPage ? Math.ceil(total / perPage) : undefined);
+    const hasMore = (d.has_next !== undefined) ? d.has_next
+                   : (d.next_page !== undefined) ? Boolean(d.next_page)
+                   : (totalPages !== undefined) ? page < totalPages
+                   : (items.length === perPage); // fallback heuristic
+
+    return { items, hasMore };
 }
 
 // 加载用户标签
@@ -5724,8 +6126,7 @@ async function saveInsightTags(insight, modal) {
             
             // Clear cache for insights endpoint to ensure fresh data
             if (window.apiCache) {
-                const insightsUrl = `${api.baseUrl}/api/v1/insights/all?include_tags=true`;
-                window.apiCache.delete(insightsUrl);
+                window.apiCache.clearPattern('/api/v1/insights');
                 console.log('🗑️ Cleared insights cache');
             }
             
