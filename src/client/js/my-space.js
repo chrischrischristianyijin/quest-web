@@ -2927,17 +2927,7 @@ function showNotification(message, type = 'success') {
 
 let currentDetailInsight = null;
 
-// 使卡片可点击
-function makeCardClickable(card, insight) {
-    card.addEventListener('click', (e) => {
-        // 防止点击操作按钮时打开模态框
-        if (e.target.closest('.action-btn') || e.target.closest('.content-card-actions')) {
-            return;
-        }
-        
-        openContentDetailModal(insight);
-    });
-}
+
 
 // 打开内容详情模态框
 function openContentDetailModal(insight) {
