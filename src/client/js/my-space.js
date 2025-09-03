@@ -73,6 +73,301 @@ let insightsObserver = null;
 let hasLoadedStacksOnce = false;
 let hasLoadedInsightsOnce = false;
 
+// 翻页功能相关变量
+let currentPage = 1;
+let totalPages = 1;
+let totalInsights = 0;
+let insightsPerPage = 9; // 每页显示9个insights
+
+// 初始化翻页功能
+function initPagination() {
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const paginationPages = document.getElementById('paginationPages');
+    
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    }
+    
+    updatePaginationUI();
+}
+
+// 更新翻页UI
+function updatePaginationUI() {
+    const currentPageEl = document.getElementById('currentPage');
+    const totalPagesEl = document.getElementById('totalPages');
+    const totalInsightsEl = document.getElementById('totalInsights');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const paginationPages = document.getElementById('paginationPages');
+    
+    if (currentPageEl) currentPageEl.textContent = currentPage;
+    if (totalPagesEl) totalPagesEl.textContent = totalPages;
+    if (totalInsightsEl) totalInsightsEl.textContent = totalInsights;
+    
+    // 更新按钮状态
+    if (prevBtn) {
+        prevBtn.disabled = currentPage <= 1;
+    }
+    
+    if (nextBtn) {
+        nextBtn.disabled = currentPage >= totalPages;
+    }
+    
+    // 生成页码按钮
+    if (paginationPages) {
+        paginationPages.innerHTML = '';
+        generatePageNumbers(paginationPages);
+    }
+}
+
+// 生成页码按钮
+function generatePageNumbers(container) {
+    const maxVisiblePages = 5; // 最多显示5个页码按钮
+    
+    if (totalPages <= maxVisiblePages) {
+        // 如果总页数不多，显示所有页码
+        for (let i = 1; i <= totalPages; i++) {
+            createPageButton(container, i);
+        }
+    } else {
+        // 如果总页数很多，显示智能分页
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        // 调整起始页，确保显示maxVisiblePages个按钮
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        // 第一页
+        if (startPage > 1) {
+            createPageButton(container, 1);
+            if (startPage > 2) {
+                createEllipsis(container);
+            }
+        }
+        
+        // 中间页码
+        for (let i = startPage; i <= endPage; i++) {
+            createPageButton(container, i);
+        }
+        
+        // 最后一页
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                createEllipsis(container);
+            }
+            createPageButton(container, totalPages);
+        }
+    }
+}
+
+// 创建页码按钮
+function createPageButton(container, pageNum) {
+    const pageBtn = document.createElement('button');
+    pageBtn.className = `pagination-page ${pageNum === currentPage ? 'active' : ''}`;
+    pageBtn.textContent = pageNum;
+    pageBtn.addEventListener('click', () => goToPage(pageNum));
+    container.appendChild(pageBtn);
+}
+
+// 创建省略号
+function createEllipsis(container) {
+    const ellipsis = document.createElement('span');
+    ellipsis.className = 'pagination-page ellipsis';
+    ellipsis.textContent = '...';
+    container.appendChild(ellipsis);
+}
+
+// 跳转到指定页面
+async function goToPage(pageNum) {
+    if (pageNum < 1 || pageNum > totalPages || pageNum === currentPage) {
+        return;
+    }
+    
+    try {
+        currentPage = pageNum;
+        insightsPage = pageNum; // 更新全局变量
+        
+        // 显示加载状态
+        showLoadingState();
+        
+        // 获取指定页面的数据
+        const response = await api.getInsightsPaginated(pageNum, insightsPerPage, null, '', true);
+        
+        if (response.success) {
+            const { items, hasMore } = normalizePaginatedInsightsResponse(response);
+            const pageInsights = (items || []).filter(x => !x.stack_id);
+            
+            // 更新当前insights数据
+            currentInsights = pageInsights;
+            window.currentInsights = currentInsights;
+            
+            // 更新分页信息
+            updatePaginationInfo(response.data);
+            
+            // 重新渲染insights
+            renderInsights();
+            
+            // 更新UI
+            updatePaginationUI();
+            
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            throw new Error('Failed to load page data');
+        }
+    } catch (error) {
+        console.error('❌ Failed to go to page:', error);
+        showErrorMessage('Failed to load page. Please try again.');
+    } finally {
+        hideLoadingState();
+    }
+}
+
+// 更新分页信息
+function updatePaginationInfo(data) {
+    const pagination = data.pagination || {};
+    totalPages = pagination.total_pages || 1;
+    totalInsights = pagination.total || 0;
+    currentPage = pagination.page || 1;
+}
+
+// 显示加载状态
+function showLoadingState() {
+    const container = document.getElementById('contentCards');
+    if (container) {
+        container.innerHTML = `
+            <div class="loading-skeleton" id="loadingSkeleton">
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+            </div>
+        `;
+    }
+}
+
+// 隐藏加载状态
+function hideLoadingState() {
+    const loadingSkeleton = document.getElementById('loadingSkeleton');
+    if (loadingSkeleton) {
+        loadingSkeleton.remove();
+    }
+}
+
+// 修改loadUserInsights函数以支持翻页
+async function loadUserInsightsWithPagination() {
+    try {
+        insightsLoading = true;
+        showLoadingState();
+        
+        const response = await api.getInsightsPaginated(1, insightsPerPage, null, '', true);
+        
+        if (response?.success) {
+            const { items, hasMore } = normalizePaginatedInsightsResponse(response);
+            const firstBatch = (items || []).filter(x => !x.stack_id);
+            
+            currentInsights = firstBatch;
+            window.currentInsights = currentInsights;
+            insightsPage = 1;
+            insightsHasMore = hasMore;
+            renderedInsightIds.clear();
+            firstBatch.forEach(i => renderedInsightIds.add(i.id));
+            if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
+            
+            // 更新分页信息
+            updatePaginationInfo(response.data);
+            
+            // 保存到localStorage
+            try {
+                const insightsBackup = {
+                    data: currentInsights,
+                    timestamp: Date.now(),
+                    version: '1.0'
+                };
+                localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
+            } catch (storageError) {
+                console.warn('⚠️ Failed to save insights to localStorage:', storageError);
+            }
+            
+            // 标准化标签结构
+            currentInsights.forEach(insight => {
+                if (insight.tags && insight.tags.length > 0) {
+                    insight.tags = insight.tags.map(tag => ({
+                        id: tag.tag_id || tag.id,
+                        name: tag.name,
+                        color: tag.color
+                    }));
+                }
+            });
+            
+            // 检查是否需要加载标签
+            const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
+            if (insightsWithoutTags.length > 0) {
+                await loadTagsForInsights(insightsWithoutTags);
+            }
+            
+            renderInsights();
+            updatePaginationUI();
+        } else {
+            // 尝试从localStorage加载备份
+            loadFromBackup();
+        }
+    } catch (error) {
+        console.error('❌ 加载用户insights失败:', error);
+        loadFromBackup();
+    } finally {
+        insightsLoading = false;
+        hideLoadingState();
+    }
+}
+
+// 从备份加载数据
+function loadFromBackup() {
+    const backupInsights = localStorage.getItem('quest_insights_backup');
+    if (backupInsights) {
+        try {
+            const backup = JSON.parse(backupInsights);
+            if (Array.isArray(backup.data)) {
+                currentInsights = backup.data;
+                window.currentInsights = currentInsights;
+                if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
+            } else {
+                currentInsights = [];
+                window.currentInsights = currentInsights;
+            }
+        } catch (error) {
+            console.error('❌ Failed to parse backup insights:', error);
+            currentInsights = [];
+            window.currentInsights = currentInsights;
+        }
+    } else {
+        currentInsights = [];
+        window.currentInsights = currentInsights;
+    }
+    
+    // 设置默认分页信息
+    totalPages = 1;
+    totalInsights = currentInsights.length;
+    currentPage = 1;
+    
+    renderInsights();
+    updatePaginationUI();
+}
+
+// 在页面初始化时调用翻页初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 其他初始化代码...
+    initPagination();
+});
 
 // 页面初始化
 async function initPage() {
@@ -109,7 +404,7 @@ async function initPage() {
         // 并行加载所有数据以提高性能
         const [profileResult, insightsResult, tagsResult, stacksResult] = await Promise.allSettled([
             loadUserProfile(),
-            loadUserInsights(),
+            loadUserInsightsWithPagination(),
             loadUserTags(),
             loadUserStacks()
         ]);
@@ -181,22 +476,26 @@ async function loadUserStacks() {
         }
         
         try {
-            // Load all insights and group them by stack_id
-            const response = await api.getInsights();
+            // Load all insights using pagination API and group them by stack_id
+            let allInsights = [];
+            let page = 1;
+            const limit = 100; // Use larger limit to get more data per request
             
-            if (response.success && response.data) {
-                // Handle different response structures
-                let allInsights;
-                if (Array.isArray(response.data)) {
-                    allInsights = response.data;
-                } else if (response.data.insights && Array.isArray(response.data.insights)) {
-                    allInsights = response.data.insights;
-                } else if (response.data.data && Array.isArray(response.data.data)) {
-                    allInsights = response.data.data;
+            while (true) {
+                const response = await api.getInsightsPaginated(page, limit, null, '', true);
+                
+                if (response.success && response.data) {
+                    const { items, hasMore } = normalizePaginatedInsightsResponse(response);
+                    if (items && items.length > 0) {
+                        allInsights = allInsights.concat(items);
+                    }
+                    
+                    if (!hasMore) break;
+                    page++;
                 } else {
-                    console.warn('⚠️ Unexpected API response structure:', response.data);
-                    allInsights = [];
+                    break;
                 }
+            }
                 
                 stacks.clear(); // 清空现有stacks
                 
@@ -1427,7 +1726,7 @@ async function deleteInsight(id) {
             window.apiCache.clearPattern('/api/v1/insights');
         }
         
-        await loadUserInsights();
+        await loadUserInsightsWithPagination();
         
         // Also save to localStorage backup
         saveInsightsToLocalStorage();
@@ -1617,7 +1916,7 @@ function bindEvents() {
                             window.apiCache.clearPattern('/api/v1/insights');
                         }
                         
-                        await loadUserInsights();
+                        await loadUserInsightsWithPagination();
                         
                         // Also save to localStorage backup
                         saveInsightsToLocalStorage();
@@ -4803,7 +5102,7 @@ async function saveInsightTags(insight, modal) {
             }
             
             // Reload insights from backend to ensure we have the latest data
-            await loadUserInsights();
+            await loadUserInsightsWithPagination();
             
             // Also save to localStorage backup
             saveInsightsToLocalStorage();
