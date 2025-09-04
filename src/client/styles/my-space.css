@@ -436,6 +436,40 @@ body {
     color: var(--text-primary);
 }
 
+.filter-option-info {
+    font-size: 0.75rem;
+    color: var(--quest-purple);
+    cursor: help;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    font-weight: bold;
+}
+
+.filter-option-info:hover {
+    opacity: 1;
+}
+
+/* PARA category specific colors */
+.filter-option[data-filter="project"] .filter-option-label {
+    color: #8B5CF6;
+    font-weight: 500;
+}
+
+.filter-option[data-filter="area"] .filter-option-label {
+    color: #10B981;
+    font-weight: 500;
+}
+
+.filter-option[data-filter="resource"] .filter-option-label {
+    color: #3B82F6;
+    font-weight: 500;
+}
+
+.filter-option[data-filter="archive"] .filter-option-label {
+    color: #F59E0B;
+    font-weight: 500;
+}
+
 .tag-color-dot {
     width: 12px;
     height: 12px;
