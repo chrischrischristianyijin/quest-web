@@ -13,9 +13,14 @@ function updateNavigation(isLoggedIn, user = null) {
     if (!navLinks || !authButtons) return;
     
     if (isLoggedIn && user) {
-        // User is logged in - show My Space link and logout button
+        // User is logged in - show section links + My Space link and logout button
         navLinks.innerHTML = `
-            <a href="${PATHS.MY_SPACE}" class="nav-link">My Space</a>
+            <a href="#home" class="nav-link">HOME</a>
+            <a href="#extension" class="nav-link">EXTENSION</a>
+            <a href="#explore" class="nav-link">EXPLORE</a>
+            <a href="#join" class="nav-link">JOIN</a>
+            <a href="#more" class="nav-link">MORE</a>
+            <a href="${PATHS.MY_SPACE}" class="nav-link">MY SPACE</a>
         `;
         
         authButtons.innerHTML = `
@@ -24,8 +29,14 @@ function updateNavigation(isLoggedIn, user = null) {
             </button>
         `;
     } else {
-        // User is not logged in - show only auth buttons (no nav links)
-        navLinks.innerHTML = '';
+        // User is not logged in - show section links and auth buttons
+        navLinks.innerHTML = `
+            <a href="#home" class="nav-link">HOME</a>
+            <a href="#extension" class="nav-link">EXTENSION</a>
+            <a href="#explore" class="nav-link">EXPLORE</a>
+            <a href="#join" class="nav-link">JOIN</a>
+            <a href="#more" class="nav-link">MORE</a>
+        `;
         
         authButtons.innerHTML = `
             <a href="${PATHS.LOGIN}" class="auth-btn auth-btn-secondary">Login</a>
@@ -258,13 +269,77 @@ function initNavbarScrollEffect() {
         if (!navbar) return;
         
         if (window.scrollY > 50) {
-            navbar.style.background = 'rgba(255, 255, 255, 0.99)';
+            navbar.style.background = 'rgba(234, 234, 234, 0.50)';
+            navbar.style.backdropFilter = 'blur(7.5px)';
             navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.12)';
             navbar.style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.06)';
         } else {
-            navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+            navbar.style.background = 'rgba(234, 234, 234, 0.50)';
+            navbar.style.backdropFilter = 'blur(7.5px)';
             navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.08)';
             navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.02)';
+        }
+    });
+}
+
+// Waitlist functionality
+function initWaitlist() {
+    const waitlistEmail = document.getElementById('waitlistEmail');
+    const waitlistButton = document.getElementById('waitlistButton');
+    
+    if (!waitlistEmail || !waitlistButton) return;
+    
+    // Handle waitlist submission
+    function handleWaitlistSubmit() {
+        const email = waitlistEmail.value.trim();
+        
+        if (!email) {
+            alert('Please enter your email address');
+            return;
+        }
+        
+        if (!isValidEmail(email)) {
+            alert('Please enter a valid email address');
+            return;
+        }
+        
+        // Simulate API call
+        waitlistButton.textContent = 'Joining...';
+        waitlistButton.disabled = true;
+        
+        setTimeout(() => {
+            alert('Thank you for joining our waitlist! We\'ll notify you when Quest launches.');
+            waitlistEmail.value = '';
+            waitlistButton.textContent = 'Done';
+            waitlistButton.disabled = false;
+        }, 1500);
+    }
+    
+    // Email validation
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    // Event listeners
+    waitlistButton.addEventListener('click', handleWaitlistSubmit);
+    
+    waitlistEmail.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleWaitlistSubmit();
+        }
+    });
+    
+    // Focus effects
+    waitlistEmail.addEventListener('focus', function() {
+        this.style.borderColor = '#54497D';
+        this.style.color = '#332564';
+    });
+    
+    waitlistEmail.addEventListener('blur', function() {
+        if (!this.value) {
+            this.style.borderColor = 'rgba(0, 0, 0, 0.25)';
+            this.style.color = '#AAAAAA';
         }
     });
 }
@@ -290,22 +365,92 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize other features
     initExtensionCarousel();
     initNavbarScrollEffect();
+    initWaitlist();
 });
 
-// Smooth scrolling for anchor links
+// Smooth scrolling for anchor links with active state management
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle navigation link clicks
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {
+                // Add smooth scroll animation
                 target.scrollIntoView({
-                    behavior: 'smooth'
+                    behavior: 'smooth',
+                    block: 'start'
                 });
+                
+                // Update active state
+                updateActiveNavLink(this.getAttribute('href'));
             }
         });
     });
+    
+    // Initialize scroll spy for active navigation
+    initScrollSpy();
 });
+
+// Update active navigation link
+function updateActiveNavLink(targetId) {
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === targetId) {
+            link.classList.add('active');
+        }
+    });
+}
+
+// Scroll spy functionality
+function initScrollSpy() {
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+    
+    // Throttle function for better performance
+    function throttle(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        }
+    }
+    
+    // Check which section is in view
+    function checkSectionInView() {
+        let current = '';
+        const scrollPosition = window.scrollY + 100; // Offset for better UX
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.offsetHeight;
+            
+            if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                current = section.getAttribute('id');
+            }
+        });
+        
+        // Update active navigation link
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === `#${current}`) {
+                link.classList.add('active');
+            }
+        });
+    }
+    
+    // Add scroll event listener with throttling
+    window.addEventListener('scroll', throttle(checkSectionInView, 100));
+    
+    // Initial check
+    checkSectionInView();
+}
 
 // Expose functions to global scope
 window.handleLogout = handleLogout;
