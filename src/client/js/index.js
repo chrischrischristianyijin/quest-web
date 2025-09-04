@@ -282,6 +282,68 @@ function initNavbarScrollEffect() {
     });
 }
 
+// Waitlist functionality
+function initWaitlist() {
+    const waitlistEmail = document.getElementById('waitlistEmail');
+    const waitlistButton = document.getElementById('waitlistButton');
+    
+    if (!waitlistEmail || !waitlistButton) return;
+    
+    // Handle waitlist submission
+    function handleWaitlistSubmit() {
+        const email = waitlistEmail.value.trim();
+        
+        if (!email) {
+            alert('Please enter your email address');
+            return;
+        }
+        
+        if (!isValidEmail(email)) {
+            alert('Please enter a valid email address');
+            return;
+        }
+        
+        // Simulate API call
+        waitlistButton.textContent = 'Joining...';
+        waitlistButton.disabled = true;
+        
+        setTimeout(() => {
+            alert('Thank you for joining our waitlist! We\'ll notify you when Quest launches.');
+            waitlistEmail.value = '';
+            waitlistButton.textContent = 'Done';
+            waitlistButton.disabled = false;
+        }, 1500);
+    }
+    
+    // Email validation
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    // Event listeners
+    waitlistButton.addEventListener('click', handleWaitlistSubmit);
+    
+    waitlistEmail.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleWaitlistSubmit();
+        }
+    });
+    
+    // Focus effects
+    waitlistEmail.addEventListener('focus', function() {
+        this.style.borderColor = '#54497D';
+        this.style.color = '#332564';
+    });
+    
+    waitlistEmail.addEventListener('blur', function() {
+        if (!this.value) {
+            this.style.borderColor = 'rgba(0, 0, 0, 0.25)';
+            this.style.color = '#AAAAAA';
+        }
+    });
+}
+
 // Check login status on page load
 document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication status
@@ -303,6 +365,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize other features
     initExtensionCarousel();
     initNavbarScrollEffect();
+    initWaitlist();
 });
 
 // Smooth scrolling for anchor links with active state management

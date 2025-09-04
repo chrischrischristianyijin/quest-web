@@ -246,35 +246,33 @@ body {
 
 /* Home 区域 */
 .home-section {
-    min-height: 80vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 2rem 2rem 4rem;
-    background: transparent;
+    padding: 2rem;
+    background: white;
     position: relative;
     z-index: 10;
     overflow: hidden;
 }
 
-.home-section::before {
-    content: '';
+.hero-background-blur {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(ellipse at center, 
-        rgba(65, 35, 115, 0.25) 0%, 
-        rgba(85, 55, 145, 0.18) 20%, 
-        rgba(105, 75, 175, 0.12) 40%, 
-        rgba(125, 95, 205, 0.08) 60%, 
-        rgba(145, 115, 235, 0.04) 80%, 
-        transparent 100%);
+    width: 1233px;
+    height: 590px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(180.61, 163.24, 241.74, 0.25);
+    box-shadow: 100px 100px 100px rgba(0, 0, 0, 0.1);
+    border-radius: 9999px;
+    filter: blur(50px);
     z-index: 1;
     pointer-events: none;
 }
+
 
 .hero-content {
     max-width: 1200px;
@@ -284,63 +282,129 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.2rem;
-    padding: 1.5rem 3rem;
-    border-radius: 24px;
-    backdrop-filter: blur(20px);
+    gap: 0;
+    padding: 0;
 }
 
 .hero-title {
-    font-size: clamp(3.5rem, 7vw, 6.5rem);
+    font-size: 96.01px;
     font-family: 'Rubik', sans-serif;
-    background: linear-gradient(135deg, var(--quest-purple) 0%, var(--quest-light-purple) 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0;
-    line-height: 1.4;
-    text-shadow: 0 2px 8px rgba(75, 38, 79, 0.15);
-    animation: titleFloat 6s ease-in-out infinite;
+    color: #332564;
+    font-weight: 800;
+    line-height: 96.01px;
+    margin-bottom: 0.5rem;
+    text-align: center;
     position: relative;
     z-index: 20;
-    text-align: center;
     white-space: nowrap;
 }
 
-@keyframes titleFloat {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-8px);
-    }
-}
-
 .hero-subtitle {
-    font-size: clamp(1.1rem, 2.8vw, 1.8rem);
+    font-size: 59.57px;
     font-family: 'Rubik', sans-serif;
-    color: var(--quest-orange);
-    font-weight: 600;
-    margin-bottom: 0;
-    letter-spacing: 1.2px;
-    text-shadow: 0 2px 12px rgba(215, 110, 19, 0.4);
-    animation: subtitlePulse 3s ease-in-out infinite;
-    line-height: 1.3;
+    color: #D76E13;
+    font-style: italic;
+    font-weight: 800;
+    line-height: 59.57px;
+    margin-bottom: 4rem;
     text-align: center;
-    opacity: 0.95;
     position: relative;
     z-index: 20;
+    white-space: nowrap;
 }
 
-@keyframes subtitlePulse {
-    0%, 100% {
-        text-shadow: 0 2px 12px rgba(215, 110, 19, 0.4);
-        letter-spacing: 2px;
-    }
-    50% {
-        text-shadow: 0 4px 20px rgba(215, 110, 19, 0.6);
-        letter-spacing: 3px;
-    }
+.hero-date {
+    font-size: 44.97px;
+    font-family: 'Rubik', sans-serif;
+    color: black;
+    font-weight: 300;
+    line-height: 56.21px;
+    margin-bottom: 0;
+    text-align: center;
+    position: relative;
+    z-index: 20;
+    white-space: nowrap;
+}
+
+.waitlist-container {
+    position: relative;
+    z-index: 20;
+    margin-top: 3rem;
+}
+
+.waitlist-input-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    position: relative;
+}
+
+.waitlist-input {
+    width: 323px;
+    height: 60px;
+    border-radius: 100px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    padding: 0 20px;
+    font-size: 20px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    color: #AAAAAA;
+    background: white;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.waitlist-input::placeholder {
+    color: #AAAAAA;
+}
+
+.waitlist-input:focus {
+    border-color: #54497D;
+    color: #332564;
+}
+
+.waitlist-button {
+    width: 120px;
+    height: 60px;
+    background: #54497D;
+    border-radius: 100px;
+    border: none;
+    color: white;
+    font-size: 24px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    line-height: 24px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(84, 73, 125, 0.2);
+}
+
+.waitlist-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+}
+
+.waitlist-button:hover::before {
+    left: 100%;
+}
+
+.waitlist-button:hover {
+    background: #4a3f6b;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(84, 73, 125, 0.4);
+}
+
+.waitlist-button:active {
+    transform: translateY(-1px) scale(0.98);
 }
 
 .hero-description {
@@ -407,6 +471,37 @@ body {
     }
 }
 
+/* Back Image Section */
+.back-image-section {
+    width: 100%;
+    height: 500px;
+    background: white;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-image-container {
+    width: 1512px;
+    height: 500px;
+    position: relative;
+    background: white;
+    overflow: hidden;
+}
+
+.back-image-item {
+    width: 350px;
+    height: 117px;
+    position: absolute;
+    object-fit: cover;
+    border-radius: 8px;
+    pointer-events: none;
+    user-select: none;
+}
+
+
 /* Extension Section */
 .extension-section {
     min-height: 120vh;
@@ -416,7 +511,7 @@ body {
     overflow: hidden;
     display: flex;
     align-items: center;
-    margin-top: -50px;
+    margin-top: 0;
 }
 
 .extension-section::before {
@@ -445,9 +540,10 @@ body {
 }
 
 .showcase-content {
-    padding-right: 40px;
+    padding-right: 0;
+    padding-left: 40px;
     padding-top: 0;
-    margin-top: -40px;
+    margin-top: 0;
     position: relative;
 }
 
@@ -458,8 +554,8 @@ body {
     color: #332564;
     margin-bottom: 4rem;
     line-height: 125%;
-    text-shadow: 0 4px 12px rgba(75, 38, 79, 0.3);
-    margin-top: -60px;
+    text-shadow: 2px 2px 8px rgba(75, 38, 79, 0.4);
+    margin-top: 0;
 }
 
 .showcase-description {
@@ -473,7 +569,7 @@ body {
 }
 
 .showcase-highlight {
-    color: #F30D11;
+    color: #D76E13;
     font-weight: 500;
 }
 
@@ -1242,16 +1338,146 @@ body {
     }
 }
 
+@media (max-width: 1200px) {
+    .back-image-container {
+        width: 100vw;
+        height: 400px;
+        transform: scale(0.8);
+    }
+    
+    .back-image-item {
+        width: 280px;
+        height: 94px;
+    }
+    
+    .back-image-overlay {
+        width: 170px;
+        height: 96px;
+    }
+    
+    .hero-background-blur {
+        width: 80vw;
+        height: 40vh;
+    }
+    
+    .hero-title {
+        font-size: 72px;
+        line-height: 72px;
+    }
+    
+    .hero-subtitle {
+        font-size: 45px;
+        line-height: 45px;
+    }
+    
+    .hero-date {
+        font-size: 34px;
+        line-height: 42px;
+    }
+    
+    .waitlist-input {
+        width: 280px;
+        height: 50px;
+        font-size: 18px;
+    }
+    
+    .waitlist-button {
+        width: 100px;
+        height: 50px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .back-image-section {
+        height: 300px;
+    }
+    
+    .back-image-container {
+        width: 100vw;
+        height: 300px;
+        transform: scale(0.6);
+    }
+    
+    .back-image-item {
+        width: 210px;
+        height: 70px;
+    }
+    
+    .back-image-overlay {
+        width: 127px;
+        height: 72px;
+    }
+    
+    .hero-background-blur {
+        width: 90vw;
+        height: 35vh;
+    }
+    
+    .hero-title {
+        font-size: 48px;
+        line-height: 48px;
+    }
+    
+    .hero-subtitle {
+        font-size: 32px;
+        line-height: 32px;
+    }
+    
+    .hero-date {
+        font-size: 24px;
+        line-height: 30px;
+    }
+    
+    .waitlist-input {
+        width: 250px;
+        height: 45px;
+        font-size: 16px;
+    }
+    
+    .waitlist-button {
+        width: 90px;
+        height: 45px;
+        font-size: 18px;
+    }
+}
+
 @media (max-width: 480px) {
     .home-section {
         padding: 1.5rem 1rem 2rem;
-        min-height: 60vh;
+        min-height: 100vh;
     }
     
-    .hero-content {
-        padding: 1rem 1.5rem;
-        border-radius: 20px;
-        gap: 0.8rem;
+    .hero-background-blur {
+        width: 95vw;
+        height: 30vh;
+    }
+    
+    .hero-title {
+        font-size: 36px;
+        line-height: 36px;
+    }
+    
+    .hero-subtitle {
+        font-size: 24px;
+        line-height: 24px;
+    }
+    
+    .hero-date {
+        font-size: 18px;
+        line-height: 22px;
+    }
+    
+    .waitlist-input {
+        width: 200px;
+        height: 40px;
+        font-size: 14px;
+    }
+    
+    .waitlist-button {
+        width: 80px;
+        height: 40px;
+        font-size: 16px;
     }
 }
 
