@@ -1880,6 +1880,12 @@ body .add-content-modal-content {
     to { transform: rotate(360deg); }
 }
 
+/* Keep the grid stable */
+#contentCards { 
+    position: relative; 
+    min-height: 540px; 
+}
+
 /* Loading Skeleton Styles */
 .loading-skeleton {
     display: grid;
@@ -1888,15 +1894,38 @@ body .add-content-modal-content {
     margin-top: var(--spacing-xl);
 }
 
-.skeleton-card {
-    background: var(--bg-primary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-light);
-    overflow: hidden;
-    position: relative;
-    height: 400px;
-    animation: skeleton-pulse 1.5s ease-in-out infinite alternate;
+/* Skeleton overlay */
+.loading-overlay { 
+    position: absolute; 
+    inset: 0; 
+    display: grid; 
+    place-items: center;
+    background: transparent; 
+    pointer-events: none; 
 }
+
+.skeleton-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    padding: 8px;
+}
+
+.skeleton-card {
+    height: 220px; 
+    border-radius: 16px;
+    background: linear-gradient(90deg, #eee 25%, #f7f7f7 37%, #eee 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.2s infinite linear;
+}
+
+@keyframes shimmer { 
+    0% { background-position: 100% 0 } 
+    100% { background-position: 0 0 } 
+}
+
+/* Old skeleton-card rule removed - using new shimmer animation above */
 
 .skeleton-card::before {
     content: '';
