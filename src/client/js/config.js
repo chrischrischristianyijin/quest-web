@@ -72,6 +72,14 @@ export const API_CONFIG = {
         ITEMS: '/api/v1/stacks/items'
     },
     
+    // 等待列表接口
+    WAITLIST: {
+        JOIN: '/api/v1/waitlist/join',
+        UNSUBSCRIBE: '/api/v1/waitlist/unsubscribe',
+        STATS: '/api/v1/waitlist/stats',
+        LIST: '/api/v1/waitlist/list'
+    },
+    
     // 系统接口
     SYSTEM: {
         HEALTH: '/health',

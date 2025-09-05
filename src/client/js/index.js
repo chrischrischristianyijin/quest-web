@@ -1,5 +1,6 @@
 import { auth } from './auth.js';
 import { PATHS, navigateTo } from './paths.js';
+import { api } from './api.js';
 
 // DOM elements
 const welcomeTitle = document.getElementById('welcomeTitle');
@@ -280,6 +281,51 @@ function initNavbarScrollEffect() {
     });
 }
 
+// Message display function
+function showMessage(message, type = 'info') {
+    // Create message element
+    const messageEl = document.createElement('div');
+    messageEl.className = `message message-${type}`;
+    messageEl.textContent = message;
+    
+    // Style the message
+    messageEl.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        ${type === 'success' ? 'background: #10b981;' : ''}
+        ${type === 'error' ? 'background: #ef4444;' : ''}
+        ${type === 'info' ? 'background: #3b82f6;' : ''}
+    `;
+    
+    // Add to page
+    document.body.appendChild(messageEl);
+    
+    // Animate in
+    setTimeout(() => {
+        messageEl.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        messageEl.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
+            }
+        }, 300);
+    }, 5000);
+}
+
 // Waitlist functionality
 function initWaitlist() {
     const waitlistEmail = document.getElementById('waitlistEmail');
@@ -288,29 +334,45 @@ function initWaitlist() {
     if (!waitlistEmail || !waitlistButton) return;
     
     // Handle waitlist submission
-    function handleWaitlistSubmit() {
+    async function handleWaitlistSubmit() {
         const email = waitlistEmail.value.trim();
         
         if (!email) {
-            alert('Please enter your email address');
+            showMessage('Please enter your email address', 'error');
             return;
         }
         
         if (!isValidEmail(email)) {
-            alert('Please enter a valid email address');
+            showMessage('Please enter a valid email address', 'error');
             return;
         }
         
-        // Simulate API call
+        // Show loading state
         waitlistButton.textContent = 'Joining...';
         waitlistButton.disabled = true;
         
-        setTimeout(() => {
-            alert('Thank you for joining our waitlist! We\'ll notify you when Quest launches.');
-            waitlistEmail.value = '';
+        try {
+            console.log('🚀 Attempting to join waitlist with email:', email);
+            
+            // Call real API
+            const response = await api.joinWaitlist(email);
+            
+            console.log('📡 API Response:', response);
+            
+            if (response.success) {
+                showMessage(response.message, 'success');
+                waitlistEmail.value = '';
+            } else {
+                showMessage(response.message || 'Failed to join waitlist', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Waitlist error:', error);
+            showMessage('Failed to join waitlist. Please try again.', 'error');
+        } finally {
+            // Reset button state
             waitlistButton.textContent = 'Done';
             waitlistButton.disabled = false;
-        }, 1500);
+        }
     }
     
     // Email validation
