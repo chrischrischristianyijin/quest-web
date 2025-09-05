@@ -773,155 +773,236 @@ body {
 
 /* Explore 区域 */
 .explore-section {
-    padding: 40px 2rem 120px 2rem;
-    background: rgba(248, 246, 250, 0.5);
+    width: 100%;
+    height: 882px;
+    background: white;
     position: relative;
-    z-index: 5;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .explore-container {
-    max-width: 1400px;
-    margin: 0 auto;
-}
-
-.section-header {
-    text-align: center;
-    margin-bottom: 50px;
+    width: 1512px;
+    height: 882px;
     position: relative;
-    padding: 50px 30px;
-    background: linear-gradient(135deg, rgba(248, 246, 250, 0.85) 0%, rgba(240, 235, 245, 0.95) 50%, rgba(235, 230, 240, 0.9) 100%);
-    border-radius: 32px;
-    box-shadow: var(--shadow-medium);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(248, 246, 250, 0.6);
+    background: white;
     overflow: hidden;
-    margin-top: 20px;
 }
 
-.section-title {
-    font-size: clamp(2.4rem, 5vw, 3.8rem);
-    font-family: 'Rubik', sans-serif;
-    background: linear-gradient(135deg, var(--quest-light-purple) 0%, var(--quest-purple) 50%, var(--quest-orange) 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-size: 200% 200%;
-    animation: gradientShift 4s ease-in-out infinite;
-    font-weight: 700;
-    margin-bottom: 2rem;
-    letter-spacing: 2px;
-    text-shadow: 0 4px 16px rgba(75, 38, 79, 0.2);
-    text-transform: uppercase;
-    line-height: 1.2;
-}
-
-@keyframes gradientShift {
-    0%, 100% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-}
-
-.section-title::after {
-    content: '';
+/* Explore Page 1 - 第一页样式 */
+.explore-page-1 .explore-background-blur {
     position: absolute;
-    bottom: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 150px;
-    height: 4px;
-    background: linear-gradient(90deg, transparent 0%, var(--quest-orange) 20%, var(--quest-light-purple) 50%, var(--quest-purple) 80%, transparent 100%);
-    border-radius: 2px;
-    animation: pulseGlow 2s ease-in-out infinite;
+    width: 562px;
+    height: 357px;
+    left: 96px;
+    top: 338px;
+    background: rgba(180.61, 163.24, 241.74, 0.25);
+    box-shadow: 100px 100px 100px rgba(0, 0, 0, 0.1);
+    border-radius: 9999px;
+    filter: blur(50px);
+    z-index: 1;
+    pointer-events: none;
 }
 
-@keyframes pulseGlow {
-    0%, 100% {
-        opacity: 0.7;
-        transform: translateX(-50%) scaleX(1);
-    }
-    50% {
-        opacity: 1;
-        transform: translateX(-50%) scaleX(1.1);
-    }
+.explore-page-1 .explore-main-image {
+    position: absolute;
+    width: 1009px;
+    height: 602px;
+    left: 706px;
+    top: 127px;
+    z-index: 2;
+    pointer-events: none;
 }
 
-.section-description {
-    font-size: clamp(1.15rem, 2.5vw, 1.35rem);
-    color: var(--quest-purple);
-    max-width: 700px;
-    margin: 0 auto;
-    line-height: 1.8;
-    font-weight: 400;
-    text-align: center;
-    opacity: 0.95;
-}
-
-.features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 100px;
-    align-items: start;
-}
-
-.feature {
+.explore-page-1 .explore-content {
+    position: absolute;
+    left: 111px;
+    top: 169px;
+    width: 547px;
+    height: 400px;
+    z-index: 3;
     display: flex;
     flex-direction: column;
-    gap: 50px;
+    justify-content: flex-start;
 }
 
-.feature-content {
-    flex: 1;
-}
-
-.feature-title {
-    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+.explore-page-1 .explore-title {
+    width: 561.66px;
+    height: 106px;
+    color: black;
+    font-size: 66.08px;
     font-family: 'Rubik', sans-serif;
-    color: var(--quest-purple);
     font-weight: 700;
-    margin-bottom: 1.5rem;
-    line-height: 1.3;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+    line-height: 1.1;
+    margin: 0 0 20px 0;
+    position: relative;
+    top: 0;
+    left: 0;
 }
 
-.feature-text {
-    font-size: clamp(1rem, 2vw, 1.1rem);
-    color: var(--quest-purple);
-    line-height: 1.8;
+.explore-page-1 .explore-subtitle {
+    width: 416px;
+    height: 52px;
+    color: black;
+    font-size: 36px;
     font-family: 'Rubik', sans-serif;
     font-weight: 400;
-    opacity: 0.9;
+    line-height: 1.2;
+    margin: 0 0 30px 0;
+    position: relative;
+    top: 0;
+    left: 0;
 }
 
-.feature-highlight {
-    color: var(--quest-orange);
-    font-weight: 600;
-    background: linear-gradient(135deg, var(--quest-orange) 0%, var(--quest-light-purple) 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.explore-page-1 .explore-description {
+    width: 547px;
+    color: black;
+    font-size: 24px;
+    font-family: 'Rubik', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    text-align: justify;
+    margin: 0;
+    position: relative;
+    top: 0;
+    left: 0;
+    word-wrap: break-word;
 }
 
-.feature-image {
+.explore-page-1 .explore-small-image {
+    position: absolute;
+    width: 135px;
+    height: 45px;
+    right: 20px;
+    bottom: 20px;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.explore-page-1 .explore-small-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* Explore Page 2 - 第二页样式 */
+.explore-page-2 .explore-main-image {
+    position: absolute;
+    width: 902px;
+    height: 538px;
+    left: 305px;
+    top: 249px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.explore-page-2 .explore-title {
+    position: absolute;
+    width: 881px;
+    height: 166.27px;
+    left: 315px;
+    top: 23px;
+    color: black;
+    font-size: 103.65px;
+    font-family: 'Rubik', sans-serif;
+    font-weight: 700;
+    line-height: 1.1;
+    text-shadow: 0px 30px 10px rgba(0, 0, 0, 0.25);
+    margin: 0;
+    z-index: 3;
     display: flex;
+    flex-direction: column;
     justify-content: center;
-    align-items: center;
+    word-wrap: break-word;
 }
 
-.feature-image img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 16px;
-    box-shadow: var(--shadow-medium);
-    transition: var(--transition-normal);
+.explore-page-2 .explore-left-subtitle {
+    position: absolute;
+    width: 218px;
+    height: 52px;
+    left: 97px;
+    top: 220px;
+    color: black;
+    font-size: 36px;
+    font-family: 'Rubik', sans-serif;
+    font-weight: 400;
+    line-height: 1.2;
+    margin: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: justify;
+    word-wrap: break-word;
 }
 
-.feature-image img:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-heavy);
+.explore-page-2 .explore-right-subtitle {
+    position: absolute;
+    width: 218px;
+    height: 52px;
+    left: 1199px;
+    top: 220px;
+    color: black;
+    font-size: 36px;
+    font-family: 'Rubik', sans-serif;
+    font-weight: 400;
+    line-height: 1.2;
+    margin: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: justify;
+    word-wrap: break-word;
+}
+
+.explore-page-2 .explore-left-description {
+    position: absolute;
+    width: 202px;
+    height: 257px;
+    left: 103px;
+    top: 290px;
+    color: black;
+    font-size: 24px;
+    font-family: 'Rubik', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    margin: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    word-wrap: break-word;
+}
+
+.explore-page-2 .explore-right-description {
+    position: absolute;
+    width: 202px;
+    height: 257px;
+    left: 1207px;
+    top: 290px;
+    color: black;
+    font-size: 24px;
+    font-family: 'Rubik', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    margin: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    word-wrap: break-word;
+}
+
+/* 通用图片样式 */
+.explore-main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
 }
 
 /* Join 区域 */
@@ -1350,9 +1431,24 @@ body {
         height: 94px;
     }
     
-    .back-image-overlay {
-        width: 170px;
-        height: 96px;
+    .explore-container {
+        width: 100vw;
+        height: 600px;
+        transform: scale(0.8);
+    }
+    
+    .explore-title {
+        font-size: 83px;
+    }
+    
+    .explore-left-subtitle,
+    .explore-right-subtitle {
+        font-size: 29px;
+    }
+    
+    .explore-left-description,
+    .explore-right-description {
+        font-size: 19px;
     }
     
     .hero-background-blur {
@@ -1404,9 +1500,28 @@ body {
         height: 70px;
     }
     
-    .back-image-overlay {
-        width: 127px;
-        height: 72px;
+    .explore-section {
+        height: 500px;
+    }
+    
+    .explore-container {
+        width: 100vw;
+        height: 500px;
+        transform: scale(0.6);
+    }
+    
+    .explore-title {
+        font-size: 62px;
+    }
+    
+    .explore-left-subtitle,
+    .explore-right-subtitle {
+        font-size: 22px;
+    }
+    
+    .explore-left-description,
+    .explore-right-description {
+        font-size: 14px;
     }
     
     .hero-background-blur {
@@ -1605,5 +1720,142 @@ body {
         width: 70px;
         height: 30px;
         font-size: 12px;
+    }
+}
+
+/* Explore Section 响应式设计 */
+@media (max-width: 1200px) {
+    .explore-container {
+        width: 100%;
+        max-width: 1200px;
+    }
+    
+    /* Explore Page 1 响应式 */
+    .explore-page-1 .explore-main-image {
+        width: 80%;
+        height: auto;
+        left: 20%;
+        top: 15%;
+    }
+    
+    .explore-page-1 .explore-content {
+        left: 5%;
+        width: 45%;
+        top: 15%;
+    }
+    
+    .explore-page-1 .explore-title {
+        font-size: 50px;
+        width: 100%;
+        margin-bottom: 15px;
+    }
+    
+    .explore-page-1 .explore-subtitle {
+        font-size: 28px;
+        width: 100%;
+        margin-bottom: 25px;
+    }
+    
+    .explore-page-1 .explore-description {
+        font-size: 20px;
+        width: 100%;
+        line-height: 1.5;
+    }
+    
+    /* Explore Page 2 响应式 */
+    .explore-page-2 .explore-main-image {
+        width: 80%;
+        height: auto;
+        left: 10%;
+        top: 20%;
+    }
+    
+    .explore-page-2 .explore-title {
+        font-size: 80px;
+        left: 10%;
+        width: 80%;
+    }
+    
+    .explore-page-2 .explore-left-subtitle,
+    .explore-page-2 .explore-right-subtitle {
+        font-size: 28px;
+        top: 180px;
+    }
+    
+    .explore-page-2 .explore-left-description,
+    .explore-page-2 .explore-right-description {
+        font-size: 20px;
+        top: 240px;
+        line-height: 1.5;
+    }
+    
+    .explore-small-image {
+        width: 100px;
+        height: 33px;
+        right: 15px;
+        bottom: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Explore Page 1 移动端 */
+    .explore-page-1 .explore-content {
+        left: 5%;
+        width: 90%;
+        top: 10%;
+    }
+    
+    .explore-page-1 .explore-title {
+        font-size: 36px;
+        margin-bottom: 10px;
+    }
+    
+    .explore-page-1 .explore-subtitle {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+    
+    .explore-page-1 .explore-description {
+        font-size: 18px;
+        line-height: 1.4;
+    }
+    
+    .explore-page-1 .explore-main-image {
+        width: 90%;
+        left: 5%;
+        top: 50%;
+    }
+    
+    /* Explore Page 2 移动端 */
+    .explore-page-2 .explore-title {
+        font-size: 60px;
+        left: 5%;
+        width: 90%;
+    }
+    
+    .explore-page-2 .explore-left-subtitle,
+    .explore-page-2 .explore-right-subtitle {
+        font-size: 24px;
+        top: 150px;
+    }
+    
+    .explore-page-2 .explore-left-description,
+    .explore-page-2 .explore-right-description {
+        font-size: 18px;
+        top: 200px;
+        line-height: 1.4;
+    }
+    
+    .explore-page-2 .explore-main-image {
+        width: 90%;
+        left: 5%;
+        top: 30%;
+    }
+    
+    .explore-small-image {
+        width: 80px;
+        height: 27px;
+        right: 10px;
+        bottom: 10px;
     }
 }
