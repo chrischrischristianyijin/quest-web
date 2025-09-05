@@ -350,26 +350,26 @@ function updatePaginationInfo(data) {
 // 显示加载状态
 function showLoadingState() {
     const container = document.getElementById('contentCards');
-    if (container) {
-        container.innerHTML = `
-            <div class="loading-skeleton" id="loadingSkeleton">
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-            </div>
-        `;
+    if (!container) return;
+    // don't clear existing content; add an overlay instead
+    let overlay = document.getElementById('loadingSkeleton');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingSkeleton';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="skeleton-grid">
+                <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+                <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+            </div>`;
+        container.appendChild(overlay);
     }
 }
 
 // 隐藏加载状态
 function hideLoadingState() {
-    const loadingSkeleton = document.getElementById('loadingSkeleton');
-    if (loadingSkeleton) {
-        loadingSkeleton.remove();
-    }
+    const overlay = document.getElementById('loadingSkeleton');
+    if (overlay) overlay.remove();
 }
 
 // 清除页面缓存
