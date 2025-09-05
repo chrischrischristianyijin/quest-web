@@ -72,6 +72,32 @@ const renderedInsightIds = new Set();
 let hasLoadedStacksOnce = false;
 let hasLoadedInsightsOnce = false;
 
+// Keep a reference if you're using autosave elsewhere
+const saveOnUnload = () => {
+  try {
+    if (typeof saveStacksToLocalStorage === 'function') saveStacksToLocalStorage();
+    if (typeof saveInsightsToLocalStorage === 'function') saveInsightsToLocalStorage();
+  } catch (_) {}
+};
+window.addEventListener('beforeunload', saveOnUnload);
+
+// 🔐 Global auth-expired handler: immediate logout + redirect
+window.addEventListener('quest-auth-expired', async (e) => {
+  console.warn('🔒 Auth expired; logging out...', e?.detail);
+  try {
+    // stop autosave if running
+    if (window.__QUEST_AUTOSAVE_ID__) {
+      clearInterval(window.__QUEST_AUTOSAVE_ID__);
+      window.__QUEST_AUTOSAVE_ID__ = null;
+    }
+    window.removeEventListener('beforeunload', saveOnUnload);
+    // clear local session via auth manager
+    await auth.logout();
+  } catch (_) {}
+  // hard redirect to login
+  navigateTo(PATHS.LOGIN);
+});
+
 // 翻页功能相关变量
 let currentPage = 1;
 let totalPages = 1;
@@ -225,11 +251,18 @@ async function goToPage(pageNum, { force = false } = {}) {
         // 显示加载状态
         showLoadingState();
         
+        // If force is true, skip cache and fetch fresh data
+        if (force) {
+            pageCache.delete(pageNum);
+        }
+        
         // 检查缓存中是否已有该页面数据
-        if (pageCache.has(pageNum)) {
+        if (!force && pageCache.has(pageNum)) {
             console.log(`📋 从缓存加载第${pageNum}页数据`);
             const cachedData = pageCache.get(pageNum);
-            currentInsights = cachedData.insights;
+            // Defensive normalization for nested array issue
+            const maybeNested = cachedData.insights;
+            currentInsights = Array.isArray(maybeNested?.[0]) ? maybeNested[0] : maybeNested;
             window.currentInsights = currentInsights;
             insightsHasMore = cachedData.hasMore;
             
@@ -242,29 +275,49 @@ async function goToPage(pageNum, { force = false } = {}) {
             
             // 使用分页API加载目标页面 (over-fetch on page 1 to account for stacked insights)
             const effectiveLimit = effectiveFetchLimitForPage(pageNum);
-            const targetPageResponse = await api.getInsightsPaginated(pageNum, effectiveLimit, null, '', true);
+            const uid = (auth?.user?.id || currentUser?.id || undefined);
+            const targetPageResponse = await api.getInsightsPaginated(pageNum, effectiveLimit, uid, '', true);
             if (targetPageResponse?.success) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(targetPageResponse);
                 const targetPageInsights = (items || []).filter(x => !x.stack_id);
                 
+                // De-dupe page 2+ against what page 1 actually rendered
+                let adjusted = targetPageInsights;
+                
+                // Only de-dupe when not filtering by tag (stacks hidden under filters)
+                const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
+                if (!hasActiveTagFilter && pageNum > 1) {
+                    const prevVisible = getVisibleIdsForPage(pageNum - 1);
+                    
+                    if (prevVisible.size > 0) {
+                        adjusted = adjusted.filter(i => !prevVisible.has(i.id));
+                    } else if (pageNum === 2) {
+                        // Fallback: if page 1 isn't cached yet, drop the items page 1 over-fetched
+                        let stackedInsightsCount = 0;
+                        stacks.forEach(s => { stackedInsightsCount += (s.cards?.length || 0); });
+                        const borrowed = Math.max(0, stackedInsightsCount - stacks.size); // ht zow many extra we pulled on page 1
+                        adjusted = adjusted.slice(borrowed);
+                    }
+                }
+                
                 // 更新当前页面数据
-                currentInsights = targetPageInsights;
+                currentInsights = adjusted;
                 window.currentInsights = currentInsights;
                 insightsHasMore = hasMore;
                 
-                // 更新已渲染的ID
+                // 更新已渲染的ID（基于 adjusted）
                 renderedInsightIds.clear();
-                targetPageInsights.forEach(i => renderedInsightIds.add(i.id));
+                adjusted.forEach(i => renderedInsightIds.add(i.id));
                 
-                // 缓存该页面数据
+                // 缓存该页面数据（保存 adjusted，而不是原始）
                 pageCache.set(pageNum, {
-                    insights: [...targetPageInsights],
-                    hasMore: hasMore,
+                    insights: adjusted,        // ❗ was [...adjusted]
+                    hasMore,
                     timestamp: Date.now()
                 });
                 loadedPages.add(pageNum);
                 
-                console.log(`📄 第${pageNum}页加载完成并缓存: ${targetPageInsights.length}个insights`);
+                console.log(`📄 第${pageNum}页加载完成并缓存: ${adjusted.length}个insights (原始: ${targetPageInsights.length})`);
             } else {
                 throw new Error(`Failed to load page ${pageNum}`);
             }
@@ -297,26 +350,26 @@ function updatePaginationInfo(data) {
 // 显示加载状态
 function showLoadingState() {
     const container = document.getElementById('contentCards');
-    if (container) {
-        container.innerHTML = `
-            <div class="loading-skeleton" id="loadingSkeleton">
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-            </div>
-        `;
+    if (!container) return;
+    // don't clear existing content; add an overlay instead
+    let overlay = document.getElementById('loadingSkeleton');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingSkeleton';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="skeleton-grid">
+                <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+                <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+            </div>`;
+        container.appendChild(overlay);
     }
 }
 
 // 隐藏加载状态
 function hideLoadingState() {
-    const loadingSkeleton = document.getElementById('loadingSkeleton');
-    if (loadingSkeleton) {
-        loadingSkeleton.remove();
-    }
+    const overlay = document.getElementById('loadingSkeleton');
+    if (overlay) overlay.remove();
 }
 
 // 清除页面缓存
@@ -348,13 +401,30 @@ async function loadUserInsightsWithPagination() {
         console.log('🚀 开始请求第一页数据...');
         const startTime = Date.now();
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, null, '', true);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         const endTime = Date.now();
         console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
         
         if (firstPageResponse?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
-            const firstPageInsights = (items || []).filter(x => !x.stack_id);
+            let firstPageInsights = (items || []).filter(x => !x.stack_id);
+            
+            // Retry once if page 1 returns 0 items and we now have a user ID
+            if (firstPageInsights.length === 0 && uid) {
+                console.log('🔄 Page 1 returned 0 items, retrying with user ID...');
+                // Clear any stale cached responses before retrying
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                }
+                
+                const retryResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
+                if (retryResponse?.success) {
+                    const { items: retryItems, hasMore: retryHasMore } = normalizePaginatedInsightsResponse(retryResponse);
+                    firstPageInsights = (retryItems || []).filter(x => !x.stack_id);
+                    console.log(`🔄 Retry returned ${firstPageInsights.length} insights`);
+                }
+            }
             
             // 先设置第一页数据
             currentInsights = firstPageInsights;
@@ -365,9 +435,10 @@ async function loadUserInsightsWithPagination() {
             firstPageInsights.forEach(i => renderedInsightIds.add(i.id));
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
-            // 缓存第一页数据
+            // 缓存第一页数据 (store only what we actually display)
+            const displayedInsights = firstPageInsights.slice(0, effectiveLimitForPage(1));
             pageCache.set(1, {
-                insights: [...firstPageInsights],
+                insights: displayedInsights,  // ✅ Store only what we display
                 hasMore: hasMore,
                 timestamp: Date.now()
             });
@@ -631,7 +702,8 @@ async function loadUserStacks() {
         // 只加载当前页面的数据来构建stacks，避免加载额外数据
         let allInsights = [];
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const response = await api.getInsightsPaginated(1, effectiveLimit, null, '', true);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response.success && response.data) {
             const { items } = normalizePaginatedInsightsResponse(response);
@@ -875,7 +947,8 @@ async function loadUserInsights() {
         // 使用分页API方法获取insights
         insightsLoading = true;
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const response = await api.getInsightsPaginated(1, effectiveLimit, null, '', true);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -1001,6 +1074,20 @@ async function loadUserInsights() {
     }
 }
 
+// Helper to get visible IDs of a page (for de-duplication)
+function getVisibleIdsForPage(pageNum) {
+    const cached = pageCache.get(pageNum);
+    if (!cached) return new Set();
+
+    // defensive: normalize cache shape
+    const raw = cached.insights;
+    const arr = Array.isArray(raw?.[0]) ? raw[0] : raw;
+
+    // Cache now stores exactly what was displayed, so no need to slice
+    const visible = arr || [];
+    return new Set(visible.map(i => i.id));
+}
+
 // Helper function to calculate effective limit for a page
 function effectiveLimitForPage(pageNum) {
     // If we have an active tag filter, don't account for stacks since they're hidden
@@ -1057,6 +1144,8 @@ function renderInsights() {
     // Get filtered insights for rendering
     const filteredInsights = getFilteredInsights();
     console.log('🎯 Rendering with filtered insights:', filteredInsights.length);
+    console.log('🎯 Stacks count:', stacks.size);
+    console.log('🎯 Effective limit for page', currentPage, ':', effectiveLimitForPage(currentPage));
     
     // Check if we have any content to render (insights OR stacks)
     const hasInsights = filteredInsights.length > 0;
@@ -1101,7 +1190,8 @@ function renderInsights() {
         } else {
             // When not filtering, use normal pagination with stack accounting
             const limit = effectiveLimitForPage(currentPage);
-            const list = filteredInsights.slice(0, limit);
+            // Only slice for page 1 (to account for stacks), other pages use full array
+            const list = currentPage === 1 ? filteredInsights.slice(0, limit) : filteredInsights;
             for (const insight of list) {
                 fragment.appendChild(createInsightCard(insight));
             }
@@ -1309,21 +1399,29 @@ function createInsightCard(insight) {
     const title = document.createElement('div');
     title.className = 'content-card-title';
     
-    // Extract clean title (remove source name if it's concatenated)
+    // Extract clean title
     let cleanTitle = insight.title || 'Untitled';
-    const sourceNameForTitle = getSourceName(insight.url);
     
-    // If title contains source name, try to clean it
-    if (cleanTitle.includes(sourceNameForTitle)) {
-        cleanTitle = cleanTitle.replace(sourceNameForTitle, '').trim();
-    }
-    
-    // For Wikipedia URLs, extract just the article title
+    // For Wikipedia URLs, extract just the article title from URL
     if (insight.url.includes('wikipedia.org')) {
-        const urlPath = new URL(insight.url).pathname;
-        const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
-        if (articleTitle && articleTitle !== cleanTitle) {
-            cleanTitle = articleTitle;
+        try {
+            const urlPath = new URL(insight.url).pathname;
+            const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+            if (articleTitle && articleTitle !== 'Main_Page') {
+                cleanTitle = articleTitle;
+            }
+        } catch (e) {
+            // If URL parsing fails, keep original title
+        }
+    } else {
+        // For other sources, remove source name if it's at the beginning
+        const sourceNameForTitle = getSourceName(insight.url);
+        if (cleanTitle.startsWith(sourceNameForTitle)) {
+            cleanTitle = cleanTitle.substring(sourceNameForTitle.length).trim();
+            // Remove leading comma and space if present
+            if (cleanTitle.startsWith(',')) {
+                cleanTitle = cleanTitle.substring(1).trim();
+            }
         }
     }
     
@@ -1977,7 +2075,7 @@ async function deleteInsight(id) {
         await loadUserInsightsWithPagination();
         
         // Also save to localStorage backup
-        saveInsightsToLocalStorage();
+        saveInsightsToLocalStorage({ force: true });
         
         alert('Content deleted successfully!');
     } catch (error) {
@@ -2175,7 +2273,7 @@ function bindEvents() {
                         await loadUserInsightsWithPagination();
                         
                         // Also save to localStorage backup
-                        saveInsightsToLocalStorage();
+                        saveInsightsToLocalStorage({ force: true });
                     } catch (error) {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
@@ -2256,6 +2354,9 @@ function bindEvents() {
         
         // 绑定内容详情模态框事件
         bindContentDetailModalEvents();
+        
+        // 绑定标题编辑事件
+        bindTitleEditEvents();
 }
 
 // Event delegation for card interactions (performance optimization)
@@ -3082,15 +3183,10 @@ function openProfileEditModal() {
     
     // 预填充当前用户信息
         const usernameInput = document.getElementById('profileUsername');
-        const emailInput = document.getElementById('profileEmail');
         
         if (usernameInput && currentUser) {
         const usernameValue = currentUser.nickname || currentUser.email || '';
         usernameInput.value = usernameValue;
-        }
-    
-        if (emailInput && currentUser) {
-            emailInput.value = currentUser.email || '';
         }
     
     // 设置当前头像
@@ -3207,38 +3303,19 @@ async function handleProfileUpdate(event) {
     }
     
     const usernameInput = document.getElementById('profileUsername');
-    const emailInput = document.getElementById('profileEmail');
-    const passwordInput = document.getElementById('profilePassword');
-    const confirmPasswordInput = document.getElementById('profileConfirmPassword');
     const saveBtn = document.getElementById('saveProfileEdit');
     const saveBtnText = document.getElementById('saveProfileBtnText');
     
-    if (!usernameInput || !emailInput) {
-        showErrorMessage('Username or email input not found');
+    if (!usernameInput) {
+        showErrorMessage('Username input not found');
         return;
     }
     
     const username = usernameInput.value.trim();
-    const email = emailInput.value.trim();
-    const password = passwordInput ? passwordInput.value : '';
-    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
     
     // Validate inputs
-    if (!username || !email) {
-        showErrorMessage('Username and email are required');
-        return;
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showErrorMessage('Please enter a valid email address');
-        return;
-    }
-    
-    // Validate password match if password is provided
-    if (password && password !== confirmPassword) {
-        showErrorMessage('Passwords do not match');
+    if (!username) {
+        showErrorMessage('Username is required');
         return;
     }
 
@@ -3284,14 +3361,8 @@ async function handleProfileUpdate(event) {
         
         // 更新用户资料
         const profileData = {
-            nickname: username,
-            email: email
+            nickname: username
         };
-        
-        // 只有当密码提供时才包含它
-        if (password) {
-            profileData.password = password;
-        }
         
         // 只有当头像URL有变化时才包含它
         if (avatarUrl && avatarUrl !== currentUser.avatar_url) {
@@ -3599,6 +3670,167 @@ function populateModalContent(insight) {
     
     // 设置按钮事件
     setupModalActions(insight);
+    
+    // Setup comment UX with elegant clamping
+    setupCommentUX({ maxLines: 4 });
+}
+
+// 绑定标题编辑事件
+function bindTitleEditEvents() {
+    // 标题点击编辑
+    const titleElement = document.getElementById('modalContentTitle');
+    const editTitleBtn = document.getElementById('modalEditTitleBtn');
+    
+    if (titleElement) {
+        titleElement.addEventListener('click', startTitleEdit);
+    }
+    
+    if (editTitleBtn) {
+        editTitleBtn.addEventListener('click', startTitleEdit);
+    }
+}
+
+// 开始标题编辑
+function startTitleEdit() {
+    if (!currentDetailInsight) return;
+    
+    const titleContainer = document.querySelector('.title-container');
+    const titleElement = document.getElementById('modalContentTitle');
+    
+    if (!titleContainer || !titleElement) return;
+    
+    // 进入编辑模式
+    titleContainer.classList.add('title-edit-mode');
+    
+    // 创建输入框
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'title-edit-input';
+    input.value = titleElement.textContent;
+    input.placeholder = 'Enter title...';
+    
+    // 创建操作按钮
+    const actions = document.createElement('div');
+    actions.className = 'title-edit-actions';
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'title-edit-save';
+    saveBtn.innerHTML = '✓';
+    saveBtn.title = 'Save';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'title-edit-cancel';
+    cancelBtn.innerHTML = '✕';
+    cancelBtn.title = 'Cancel';
+    
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancelBtn);
+    
+    // 添加到容器
+    titleContainer.appendChild(input);
+    titleContainer.appendChild(actions);
+    
+    // 聚焦并选中文本
+    input.focus();
+    input.select();
+    
+    // 绑定事件
+    const saveTitle = () => {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== titleElement.textContent) {
+            updateInsightTitle(currentDetailInsight.id, newTitle);
+        }
+        cancelTitleEdit();
+    };
+    
+    const cancelTitle = () => {
+        cancelTitleEdit();
+    };
+    
+    saveBtn.addEventListener('click', saveTitle);
+    cancelBtn.addEventListener('click', cancelTitle);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveTitle();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelTitle();
+        }
+    });
+    
+    // 点击外部取消编辑
+    const handleOutsideClick = (e) => {
+        if (!titleContainer.contains(e.target)) {
+            cancelTitle();
+            document.removeEventListener('click', handleOutsideClick);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', handleOutsideClick);
+    }, 100);
+}
+
+// 取消标题编辑
+function cancelTitleEdit() {
+    const titleContainer = document.querySelector('.title-container');
+    if (!titleContainer) return;
+    
+    // 移除编辑模式
+    titleContainer.classList.remove('title-edit-mode');
+    
+    // 移除输入框和按钮
+    const input = titleContainer.querySelector('.title-edit-input');
+    const actions = titleContainer.querySelector('.title-edit-actions');
+    
+    if (input) input.remove();
+    if (actions) actions.remove();
+}
+
+// 更新洞察标题
+async function updateInsightTitle(insightId, newTitle) {
+    try {
+        // 检查认证状态
+        if (!auth.checkAuth()) {
+            showErrorMessage('Please log in to update content');
+            return;
+        }
+        
+        // 调用API更新标题
+        const response = await api.updateInsight(insightId, { title: newTitle });
+        
+        if (response.success) {
+            // 更新本地数据
+            if (currentDetailInsight && currentDetailInsight.id === insightId) {
+                currentDetailInsight.title = newTitle;
+            }
+            
+            // 更新当前页面数据
+            if (window.currentInsights) {
+                const insight = window.currentInsights.find(i => i.id === insightId);
+                if (insight) {
+                    insight.title = newTitle;
+                }
+            }
+            
+            // 更新显示
+            const titleElement = document.getElementById('modalContentTitle');
+            if (titleElement) {
+                titleElement.textContent = newTitle;
+            }
+            
+            // 重新渲染页面以更新卡片标题
+            renderInsights();
+            
+            showSuccessMessage('Title updated successfully!');
+        } else {
+            throw new Error(response.message || 'Failed to update title');
+        }
+    } catch (error) {
+        console.error('❌ Failed to update title:', error);
+        showErrorMessage('Failed to update title. Please try again.');
+    }
 }
 
 // 填充Quest建议
@@ -3644,6 +3876,96 @@ function populateQuestSuggestions() {
     });
 }
 
+// Best-UX clamping for the comment text inside the modal
+function setupCommentUX({
+  textSelector = '#modalCommentText',
+  afterElSelector = '#editCommentBtn',  // place the toggle near your Edit button
+  maxLines = 4
+} = {}) {
+  const textEl = document.querySelector(textSelector);
+  if (!textEl) return;
+
+  // Ensure clamping class reflects the configured line count
+  textEl.classList.add('clamped');
+  textEl.style.setProperty('-webkit-line-clamp', String(maxLines));
+
+  // Create or reuse the toggle button
+  let toggle = document.querySelector('.comment-toggle');
+  if (!toggle) {
+    toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'comment-toggle';
+    toggle.id = 'commentToggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.style.display = 'none'; // shown only when needed
+
+    // Insert after the chosen element (Edit button), or after the text if not found
+    const anchor = document.querySelector(afterElSelector) || textEl;
+    anchor.parentElement.insertBefore(toggle, anchor.nextSibling);
+  }
+
+  const updateToggleVisibility = () => {
+    // Temporarily remove clamp to measure real height
+    const wasClamped = textEl.classList.contains('clamped');
+    if (wasClamped) textEl.classList.remove('clamped');
+
+    // Force wrap for long tokens
+    textEl.style.whiteSpace = 'pre-wrap';
+
+    const overflowing = textEl.scrollHeight > textEl.clientHeight + 1;
+
+    // Restore clamp if it was on
+    if (wasClamped) textEl.classList.add('clamped');
+
+    if (overflowing) {
+      toggle.style.display = 'inline-flex';
+      toggle.textContent = wasClamped ? 'Show more' : 'Show less';
+      toggle.setAttribute('aria-expanded', String(!wasClamped));
+    } else {
+      toggle.style.display = 'none';
+    }
+  };
+
+  // Initial check (after current frame so layout is correct)
+  requestAnimationFrame(updateToggleVisibility);
+
+  // Toggle behavior
+  toggle.onclick = () => {
+    const clamped = textEl.classList.toggle('clamped'); // toggle
+    toggle.textContent = clamped ? 'Show more' : 'Show less';
+    toggle.setAttribute('aria-expanded', String(!clamped));
+  };
+
+  // Re-evaluate on window resize (layout changes)
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateToggleVisibility, 100);
+  });
+
+  // Keep in sync with your existing edit/save flow if present
+  const editBtn = document.querySelector('#editCommentBtn');
+  const saveBtn = document.querySelector('#saveCommentBtn');
+  const cancelBtn = document.querySelector('#cancelCommentBtn');
+
+  // Hide toggle while editing
+  if (editBtn) editBtn.addEventListener('click', () => {
+    toggle.style.display = 'none';
+  });
+
+  // After save/cancel, clamp again and recompute
+  const postEdit = () => {
+    textEl.classList.add('clamped');
+    requestAnimationFrame(updateToggleVisibility);
+  };
+  if (saveBtn) saveBtn.addEventListener('click', postEdit);
+  if (cancelBtn) cancelBtn.addEventListener('click', postEdit);
+
+  // Optional: normalize pasted monster strings before saving
+  window.normalizeComment = (s) =>
+    s.replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+}
+
 // 设置模态框操作按钮
 function setupModalActions(insight) {
     // 设置评论编辑功能
@@ -3670,6 +3992,23 @@ function setupModalActions(insight) {
     }
 }
 
+// 更新页面缓存中的洞察数据
+function updatePageCacheWithInsight(insightId, updateData) {
+    // 更新所有页面缓存中的该洞察
+    for (const [pageNum, cacheData] of pageCache.entries()) {
+        if (cacheData && cacheData.insights) {
+            const insightIndex = cacheData.insights.findIndex(i => i.id === insightId);
+            if (insightIndex !== -1) {
+                // 更新缓存中的洞察数据
+                Object.assign(cacheData.insights[insightIndex], updateData);
+                // 更新缓存时间戳
+                cacheData.timestamp = Date.now();
+                pageCache.set(pageNum, cacheData);
+            }
+        }
+    }
+}
+
 // 设置评论编辑功能
 function setupCommentEditing() {
     const editCommentBtn = document.getElementById('editCommentBtn');
@@ -3689,17 +4028,58 @@ function setupCommentEditing() {
     });
     
     // 保存按钮点击事件
-    saveCommentBtn.addEventListener('click', () => {
+    saveCommentBtn.addEventListener('click', async () => {
         const newComment = commentTextarea.value.trim();
-        if (newComment) {
-            // 更新显示的评论
-            const commentText = document.getElementById('modalCommentText');
-            if (commentText) {
-                commentText.textContent = newComment;
+        
+        try {
+            // 检查认证状态
+            if (!auth.checkAuth()) {
+                showErrorMessage('Please log in to save comments');
+                return;
             }
             
-            // TODO: Save comment to backend
-            console.log('Saving comment:', newComment);
+            // 获取当前洞察的ID
+            const currentInsight = currentDetailInsight;
+            if (!currentInsight || !currentInsight.id) {
+                showErrorMessage('Unable to identify content to update');
+                return;
+            }
+            
+            // 调用API更新评论
+            const response = await api.updateInsight(currentInsight.id, { 
+                thought: newComment 
+            });
+            
+            if (response.success) {
+                // 更新显示的评论
+                const commentText = document.getElementById('modalCommentText');
+                if (commentText) {
+                    commentText.textContent = newComment || 'No comment added yet.';
+                }
+                
+                // 更新本地数据
+                if (currentInsight) {
+                    currentInsight.thought = newComment;
+                }
+                
+                // 更新全局insights数组
+                if (window.currentInsights) {
+                    const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
+                    if (insightIndex !== -1) {
+                        window.currentInsights[insightIndex].thought = newComment;
+                    }
+                }
+                
+                // 更新页面缓存
+                updatePageCacheWithInsight(currentInsight.id, { thought: newComment });
+                
+                showSuccessMessage('Comment saved successfully!');
+            } else {
+                showErrorMessage(response.message || 'Failed to save comment');
+            }
+        } catch (error) {
+            console.error('Error saving comment:', error);
+            showErrorMessage('Failed to save comment. Please try again.');
         }
         
         // 切换回显示模式
@@ -4056,7 +4436,7 @@ async function createStack(card1, card2) {
             
             // Save to localStorage for persistence
             saveStacksToLocalStorage();
-            saveInsightsToLocalStorage();
+            saveInsightsToLocalStorage({ force: true });
             
             // Also try to create the stack in the backend database
             try {
@@ -4070,15 +4450,25 @@ async function createStack(card1, card2) {
                 console.warn('⚠️ Failed to create stack in backend database (this is OK, stack_id approach still works):', stackCreateError);
             }
             
-            // Invalidate page-1 cache so the effective limit recomputes cleanly
-            pageCache.delete(1);
-            loadedPages.delete(1);
+            // Invalidate ALL page caches since pagination has changed
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
             
             // Update pagination counts
             updatePaginationCounts();
             
             // Refill page 1 using the over-fetch rule
+            console.log('🔄 About to refill page 1 after stack creation...');
+            console.log('🔄 Current stacks count:', stacks.size);
+            console.log('🔄 Current insights before refill:', currentInsights.length);
             await goToPage(1, { force: true });
+            console.log('🔄 After refill - current insights:', currentInsights.length);
             
             showSuccessMessage('Stack created successfully!');
         } else {
@@ -4114,9 +4504,15 @@ async function createStack(card1, card2) {
             // Save to localStorage for persistence
             saveStacksToLocalStorage();
             
-            // Invalidate page-1 cache so the effective limit recomputes cleanly
-            pageCache.delete(1);
-            loadedPages.delete(1);
+            // Invalidate ALL page caches since pagination has changed
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
             
             // Update pagination counts
             updatePaginationCounts();
@@ -4188,21 +4584,38 @@ function clearStacksFromLocalStorage() {
     }
 }
 
-// Save insights to localStorage backup
-function saveInsightsToLocalStorage() {
+// Save insights to localStorage backup (safe version that prevents data loss)
+function saveInsightsToLocalStorage({ force = false } = {}) {
     try {
-        // Always save insights to prevent data loss - removed conditional checks
-        const insightsBackup = {
-            data: currentInsights || [],
-            timestamp: Date.now(),
-            version: '1.0'
-        };
-        localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
-        console.log('💾 Saved insights to localStorage backup:', currentInsights?.length || 0, 'insights');
-    } catch (error) {
-        console.error('❌ Failed to save insights to localStorage:', error);
-        // Show user notification about storage issue
-        showErrorMessage('Warning: Unable to save data locally. Your data may be lost if you refresh the page.');
+        const cur = Array.isArray(currentInsights) ? currentInsights : [];
+        const curLen = cur.length;
+
+        if (!force) {
+            // Don't auto-save before we've actually loaded anything
+            if (!hasLoadedInsightsOnce || curLen === 0) {
+                console.log('↩︎ skip auto-save: no insights yet');
+                return;
+            }
+            // Don't shrink a non-empty backup unintentionally
+            const prevRaw = localStorage.getItem('quest_insights_backup');
+            const prevLen = (() => {
+                try { 
+                    const prev = prevRaw ? JSON.parse(prevRaw) : null; 
+                    return Array.isArray(prev?.data) ? prev.data.length : 0; 
+                } catch { return 0; }
+            })();
+            if (prevLen && curLen < prevLen) {
+                console.log(`↩︎ skip auto-save: would shrink backup ${prevLen}→${curLen}`);
+                return;
+            }
+        }
+
+        const backup = { data: [...cur], timestamp: Date.now(), version: '1.0' };
+        localStorage.setItem('quest_insights_backup', JSON.stringify(backup));
+        console.log('💾 Saved insights backup:', curLen);
+    } catch (e) {
+        console.error('❌ Failed to save insights to localStorage:', e);
+        showErrorMessage('Warning: Unable to save data locally.');
     }
 }
 
@@ -4231,11 +4644,7 @@ if (!window.__QUEST_AUTOSAVE_ID__) {
     }, 15000); // Reduced from 30s to 15s for more frequent saves
 }
 
-// Also save on page unload to prevent data loss
-window.addEventListener('beforeunload', () => {
-    saveStacksToLocalStorage();
-    saveInsightsToLocalStorage();
-});
+// Note: beforeunload handler moved to top of file for better organization
 
 // Find or create the Archive tag for default assignment
 async function findOrCreateArchiveTag() {
@@ -4394,7 +4803,7 @@ async function removeItemFromStack(stackId, insightId) {
                         stackData.modifiedAt = new Date().toISOString();
                         
                         // Save to localStorage
-                        saveInsightsToLocalStorage();
+                        saveInsightsToLocalStorage({ force: true });
                         
                         // If stack has 1 or fewer items, dissolve it
                         if (stackData.cards.length <= 1) {
@@ -4449,7 +4858,7 @@ async function removeItemFromStack(stackId, insightId) {
                         stackData.modifiedAt = new Date().toISOString();
                         
                         // Save to localStorage
-                        saveInsightsToLocalStorage();
+                        saveInsightsToLocalStorage({ force: true });
                         
                         // If stack has 1 or fewer items, dissolve it
                         if (stackData.cards.length <= 1) {
@@ -4525,11 +4934,17 @@ async function deleteStack(stackId) {
                     
                     // Update localStorage to remove the deleted stack
                     saveStacksToLocalStorage();
-                    saveInsightsToLocalStorage();
+                    saveInsightsToLocalStorage({ force: true });
                     
-                    // Invalidate page-1 cache so the effective limit recomputes cleanly
-                    pageCache.delete(1);
-                    loadedPages.delete(1);
+                    // Invalidate ALL page caches since pagination has changed
+                    pageCache.clear();
+                    loadedPages.clear();
+                    
+                    // Clear GET cache to prevent stale data
+                    if (window.apiCache) {
+                        window.apiCache.clearPattern('/api/v1/insights');
+                        window.apiCache.clearPattern('/api/v1/stacks');
+                    }
                     
                     // Update pagination counts
                     updatePaginationCounts();
@@ -4553,9 +4968,15 @@ async function deleteStack(stackId) {
                 // Update localStorage to remove the deleted stack
                 saveStacksToLocalStorage();
                 
-                // Invalidate page-1 cache so the effective limit recomputes cleanly
-                pageCache.delete(1);
-                loadedPages.delete(1);
+                // Invalidate ALL page caches since pagination has changed
+                pageCache.clear();
+                loadedPages.clear();
+                
+                // Clear GET cache to prevent stale data
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                    window.apiCache.clearPattern('/api/v1/stacks');
+                }
                 
                 // Update pagination counts
                 updatePaginationCounts();
@@ -4685,7 +5106,34 @@ function createStackExpandedCard(insight, stackId) {
     
     const title = document.createElement('h4');
     title.className = 'stack-card-title';
-    title.textContent = insight.title || 'Untitled';
+    
+    // Extract clean title
+    let cleanTitle = insight.title || 'Untitled';
+    
+    // For Wikipedia URLs, extract just the article title from URL
+    if (insight.url && insight.url.includes('wikipedia.org')) {
+        try {
+            const urlPath = new URL(insight.url).pathname;
+            const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+            if (articleTitle && articleTitle !== 'Main_Page') {
+                cleanTitle = articleTitle;
+            }
+        } catch (e) {
+            // If URL parsing fails, keep original title
+        }
+    } else {
+        // For other sources, remove source name if it's at the beginning
+        const sourceNameForTitle = getSourceName(insight.url);
+        if (cleanTitle.startsWith(sourceNameForTitle)) {
+            cleanTitle = cleanTitle.substring(sourceNameForTitle.length).trim();
+            // Remove leading comma and space if present
+            if (cleanTitle.startsWith(',')) {
+                cleanTitle = cleanTitle.substring(1).trim();
+            }
+        }
+    }
+    
+    title.textContent = cleanTitle;
     
     const description = document.createElement('p');
     description.className = 'stack-card-description';
@@ -4857,6 +5305,18 @@ async function moveCardToStack(insight, newStackId) {
                 showSuccessMessage('Card moved to new stack successfully.');
             }
             
+            // Invalidate page caches and update pagination
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
+            
+            updatePaginationCounts();
+            
             // Re-render content
             renderInsights();
         } else {
@@ -4882,6 +5342,18 @@ async function moveCardToStack(insight, newStackId) {
                 } else {
                     showSuccessMessage('Card moved to new stack successfully. (Local storage)');
                 }
+                
+                // Invalidate page caches and update pagination
+                pageCache.clear();
+                loadedPages.clear();
+                
+                // Clear GET cache to prevent stale data
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                    window.apiCache.clearPattern('/api/v1/stacks');
+                }
+                
+                updatePaginationCounts();
                 
                 // Re-render content
                 renderInsights();
@@ -4909,7 +5381,7 @@ async function removeCardFromStack(insight, stackId) {
             currentInsights.push(insight);
             
             // Save to localStorage
-            saveInsightsToLocalStorage();
+            saveInsightsToLocalStorage({ force: true });
             
             // If stack has only one card left, dissolve the stack
             if (stackData.cards.length <= 1) {
@@ -4921,7 +5393,7 @@ async function removeCardFromStack(insight, stackId) {
                 }
                 stacks.delete(stackId);
                 saveStacksToLocalStorage();
-                saveInsightsToLocalStorage();
+                saveInsightsToLocalStorage({ force: true });
                 closeStackExpansion();
                 showSuccessMessage('Stack dissolved - cards moved back to your space.');
             } else {
@@ -4940,6 +5412,18 @@ async function removeCardFromStack(insight, stackId) {
                 
                 showSuccessMessage('Card removed from stack.');
             }
+            
+            // Invalidate page caches and update pagination
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
+            
+            updatePaginationCounts();
             
             // Re-render main view
             renderInsights();
@@ -4965,7 +5449,7 @@ async function removeCardFromStack(insight, stackId) {
                     }
                     stacks.delete(stackId);
                     saveStacksToLocalStorage();
-                    saveInsightsToLocalStorage();
+                    saveInsightsToLocalStorage({ force: true });
                     closeStackExpansion();
                     showSuccessMessage('Stack dissolved - cards moved back to your space. (Local storage)');
                 } else {
@@ -4984,6 +5468,18 @@ async function removeCardFromStack(insight, stackId) {
                     
                     showSuccessMessage('Card removed from stack. (Local storage)');
                 }
+                
+                // Invalidate page caches and update pagination
+                pageCache.clear();
+                loadedPages.clear();
+                
+                // Clear GET cache to prevent stale data
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                    window.apiCache.clearPattern('/api/v1/stacks');
+                }
+                
+                updatePaginationCounts();
                 
                 // Re-render main view
                 renderInsights();
@@ -5289,21 +5785,29 @@ function createStackHorizontalCard(insight, stackId) {
     const title = document.createElement('div');
     title.className = 'content-card-title';
     
-    // Extract clean title (remove source name if it's concatenated)
+    // Extract clean title
     let cleanTitle = insight.title || 'Untitled';
-    const sourceNameForTitle = getSourceName(insight.url);
     
-    // If title contains source name, try to clean it
-    if (cleanTitle.includes(sourceNameForTitle)) {
-        cleanTitle = cleanTitle.replace(sourceNameForTitle, '').trim();
-    }
-    
-    // For Wikipedia URLs, extract just the article title
+    // For Wikipedia URLs, extract just the article title from URL
     if (insight.url && insight.url.includes('wikipedia.org')) {
-        const urlPath = new URL(insight.url).pathname;
-        const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
-        if (articleTitle && articleTitle !== cleanTitle) {
-            cleanTitle = articleTitle;
+        try {
+            const urlPath = new URL(insight.url).pathname;
+            const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+            if (articleTitle && articleTitle !== 'Main_Page') {
+                cleanTitle = articleTitle;
+            }
+        } catch (e) {
+            // If URL parsing fails, keep original title
+        }
+    } else {
+        // For other sources, remove source name if it's at the beginning
+        const sourceNameForTitle = getSourceName(insight.url);
+        if (cleanTitle.startsWith(sourceNameForTitle)) {
+            cleanTitle = cleanTitle.substring(sourceNameForTitle.length).trim();
+            // Remove leading comma and space if present
+            if (cleanTitle.startsWith(',')) {
+                cleanTitle = cleanTitle.substring(1).trim();
+            }
         }
     }
     
@@ -5491,7 +5995,7 @@ async function saveInsightTags(insight, modal) {
             await loadUserInsightsWithPagination();
             
             // Also save to localStorage backup
-            saveInsightsToLocalStorage();
+            saveInsightsToLocalStorage({ force: true });
             
             // Force re-render to show updated tags
             renderInsights();
