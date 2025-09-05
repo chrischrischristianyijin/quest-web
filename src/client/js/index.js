@@ -29,7 +29,7 @@ function updateNavigation(isLoggedIn, user = null) {
             </button>
         `;
     } else {
-        // User is not logged in - show section links and auth buttons
+        // User is not logged in - show section links only (auth buttons temporarily hidden)
         navLinks.innerHTML = `
             <a href="#home" class="nav-link">HOME</a>
             <a href="#extension" class="nav-link">EXTENSION</a>
@@ -37,9 +37,9 @@ function updateNavigation(isLoggedIn, user = null) {
             <a href="#more" class="nav-link">MORE</a>
         `;
         
+        // Temporarily hide auth buttons - users can only join waitlist
         authButtons.innerHTML = `
-            <a href="${PATHS.LOGIN}" class="auth-btn auth-btn-secondary">Login</a>
-            <a href="${PATHS.SIGNUP}" class="auth-btn auth-btn-primary">Sign Up</a>
+            <!-- Auth buttons temporarily hidden - users can only join waitlist -->
         `;
     }
 }
