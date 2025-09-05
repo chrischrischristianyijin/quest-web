@@ -3670,6 +3670,9 @@ function populateModalContent(insight) {
     
     // 设置按钮事件
     setupModalActions(insight);
+    
+    // Setup comment UX with elegant clamping
+    setupCommentUX({ maxLines: 4 });
 }
 
 // 绑定标题编辑事件
@@ -3873,6 +3876,96 @@ function populateQuestSuggestions() {
     });
 }
 
+// Best-UX clamping for the comment text inside the modal
+function setupCommentUX({
+  textSelector = '#modalCommentText',
+  afterElSelector = '#editCommentBtn',  // place the toggle near your Edit button
+  maxLines = 4
+} = {}) {
+  const textEl = document.querySelector(textSelector);
+  if (!textEl) return;
+
+  // Ensure clamping class reflects the configured line count
+  textEl.classList.add('clamped');
+  textEl.style.setProperty('-webkit-line-clamp', String(maxLines));
+
+  // Create or reuse the toggle button
+  let toggle = document.querySelector('.comment-toggle');
+  if (!toggle) {
+    toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'comment-toggle';
+    toggle.id = 'commentToggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.style.display = 'none'; // shown only when needed
+
+    // Insert after the chosen element (Edit button), or after the text if not found
+    const anchor = document.querySelector(afterElSelector) || textEl;
+    anchor.parentElement.insertBefore(toggle, anchor.nextSibling);
+  }
+
+  const updateToggleVisibility = () => {
+    // Temporarily remove clamp to measure real height
+    const wasClamped = textEl.classList.contains('clamped');
+    if (wasClamped) textEl.classList.remove('clamped');
+
+    // Force wrap for long tokens
+    textEl.style.whiteSpace = 'pre-wrap';
+
+    const overflowing = textEl.scrollHeight > textEl.clientHeight + 1;
+
+    // Restore clamp if it was on
+    if (wasClamped) textEl.classList.add('clamped');
+
+    if (overflowing) {
+      toggle.style.display = 'inline-flex';
+      toggle.textContent = wasClamped ? 'Show more' : 'Show less';
+      toggle.setAttribute('aria-expanded', String(!wasClamped));
+    } else {
+      toggle.style.display = 'none';
+    }
+  };
+
+  // Initial check (after current frame so layout is correct)
+  requestAnimationFrame(updateToggleVisibility);
+
+  // Toggle behavior
+  toggle.onclick = () => {
+    const clamped = textEl.classList.toggle('clamped'); // toggle
+    toggle.textContent = clamped ? 'Show more' : 'Show less';
+    toggle.setAttribute('aria-expanded', String(!clamped));
+  };
+
+  // Re-evaluate on window resize (layout changes)
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateToggleVisibility, 100);
+  });
+
+  // Keep in sync with your existing edit/save flow if present
+  const editBtn = document.querySelector('#editCommentBtn');
+  const saveBtn = document.querySelector('#saveCommentBtn');
+  const cancelBtn = document.querySelector('#cancelCommentBtn');
+
+  // Hide toggle while editing
+  if (editBtn) editBtn.addEventListener('click', () => {
+    toggle.style.display = 'none';
+  });
+
+  // After save/cancel, clamp again and recompute
+  const postEdit = () => {
+    textEl.classList.add('clamped');
+    requestAnimationFrame(updateToggleVisibility);
+  };
+  if (saveBtn) saveBtn.addEventListener('click', postEdit);
+  if (cancelBtn) cancelBtn.addEventListener('click', postEdit);
+
+  // Optional: normalize pasted monster strings before saving
+  window.normalizeComment = (s) =>
+    s.replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+}
+
 // 设置模态框操作按钮
 function setupModalActions(insight) {
     // 设置评论编辑功能
@@ -3899,6 +3992,23 @@ function setupModalActions(insight) {
     }
 }
 
+// 更新页面缓存中的洞察数据
+function updatePageCacheWithInsight(insightId, updateData) {
+    // 更新所有页面缓存中的该洞察
+    for (const [pageNum, cacheData] of pageCache.entries()) {
+        if (cacheData && cacheData.insights) {
+            const insightIndex = cacheData.insights.findIndex(i => i.id === insightId);
+            if (insightIndex !== -1) {
+                // 更新缓存中的洞察数据
+                Object.assign(cacheData.insights[insightIndex], updateData);
+                // 更新缓存时间戳
+                cacheData.timestamp = Date.now();
+                pageCache.set(pageNum, cacheData);
+            }
+        }
+    }
+}
+
 // 设置评论编辑功能
 function setupCommentEditing() {
     const editCommentBtn = document.getElementById('editCommentBtn');
@@ -3918,17 +4028,58 @@ function setupCommentEditing() {
     });
     
     // 保存按钮点击事件
-    saveCommentBtn.addEventListener('click', () => {
+    saveCommentBtn.addEventListener('click', async () => {
         const newComment = commentTextarea.value.trim();
-        if (newComment) {
-            // 更新显示的评论
-            const commentText = document.getElementById('modalCommentText');
-            if (commentText) {
-                commentText.textContent = newComment;
+        
+        try {
+            // 检查认证状态
+            if (!auth.checkAuth()) {
+                showErrorMessage('Please log in to save comments');
+                return;
             }
             
-            // TODO: Save comment to backend
-            console.log('Saving comment:', newComment);
+            // 获取当前洞察的ID
+            const currentInsight = currentDetailInsight;
+            if (!currentInsight || !currentInsight.id) {
+                showErrorMessage('Unable to identify content to update');
+                return;
+            }
+            
+            // 调用API更新评论
+            const response = await api.updateInsight(currentInsight.id, { 
+                thought: newComment 
+            });
+            
+            if (response.success) {
+                // 更新显示的评论
+                const commentText = document.getElementById('modalCommentText');
+                if (commentText) {
+                    commentText.textContent = newComment || 'No comment added yet.';
+                }
+                
+                // 更新本地数据
+                if (currentInsight) {
+                    currentInsight.thought = newComment;
+                }
+                
+                // 更新全局insights数组
+                if (window.currentInsights) {
+                    const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
+                    if (insightIndex !== -1) {
+                        window.currentInsights[insightIndex].thought = newComment;
+                    }
+                }
+                
+                // 更新页面缓存
+                updatePageCacheWithInsight(currentInsight.id, { thought: newComment });
+                
+                showSuccessMessage('Comment saved successfully!');
+            } else {
+                showErrorMessage(response.message || 'Failed to save comment');
+            }
+        } catch (error) {
+            console.error('Error saving comment:', error);
+            showErrorMessage('Failed to save comment. Please try again.');
         }
         
         // 切换回显示模式

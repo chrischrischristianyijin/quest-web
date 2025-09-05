@@ -1925,6 +1925,54 @@ body .add-content-modal-content {
     100% { background-position: 0 0 } 
 }
 
+/* Comment text handling - elegant wrapping and clamping */
+/* ① Always wrap—even for one super-long "word" */
+.comment-text,
+.comment-edit-textarea {
+  white-space: pre-wrap;        /* keep user line breaks */
+  overflow-wrap: anywhere;      /* break long tokens */
+  word-break: break-word;       /* Safari fallback */
+  hyphens: auto;                /* nicer breaking for real words */
+}
+
+/* Prevent accidental horizontal scrolling in the card */
+.comment-content { overflow-x: hidden; }
+
+/* Flex safety so text can shrink inside flex layouts */
+.comment-content, .comment-text { min-width: 0; }
+
+/* ② Default = clamped preview (toggle added by JS) */
+.comment-text.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;   /* show 4 lines in preview */
+  overflow: hidden;
+  position: relative;
+}
+
+/* Subtle fade at bottom when clamped */
+.comment-text.clamped::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 1.6em;              /* ≈ one line height */
+  background: linear-gradient(180deg, rgba(255,255,255,0), #fff);
+  pointer-events: none;
+}
+
+/* ③ "Show more / Show less" button */
+.comment-toggle {
+  margin-top: 8px;
+  align-self: flex-start;
+  font-size: 0.875rem;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light, #e6e6e6);
+  background: #fff;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+}
+.comment-toggle:active { transform: translateY(1px); }
+
 /* Old skeleton-card rule removed - using new shimmer animation above */
 
 .skeleton-card::before {
