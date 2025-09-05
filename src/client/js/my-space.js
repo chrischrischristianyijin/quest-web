@@ -72,6 +72,32 @@ const renderedInsightIds = new Set();
 let hasLoadedStacksOnce = false;
 let hasLoadedInsightsOnce = false;
 
+// Keep a reference if you're using autosave elsewhere
+const saveOnUnload = () => {
+  try {
+    if (typeof saveStacksToLocalStorage === 'function') saveStacksToLocalStorage();
+    if (typeof saveInsightsToLocalStorage === 'function') saveInsightsToLocalStorage();
+  } catch (_) {}
+};
+window.addEventListener('beforeunload', saveOnUnload);
+
+// 🔐 Global auth-expired handler: immediate logout + redirect
+window.addEventListener('quest-auth-expired', async (e) => {
+  console.warn('🔒 Auth expired; logging out...', e?.detail);
+  try {
+    // stop autosave if running
+    if (window.__QUEST_AUTOSAVE_ID__) {
+      clearInterval(window.__QUEST_AUTOSAVE_ID__);
+      window.__QUEST_AUTOSAVE_ID__ = null;
+    }
+    window.removeEventListener('beforeunload', saveOnUnload);
+    // clear local session via auth manager
+    await auth.logout();
+  } catch (_) {}
+  // hard redirect to login
+  navigateTo(PATHS.LOGIN);
+});
+
 // 翻页功能相关变量
 let currentPage = 1;
 let totalPages = 1;
@@ -249,7 +275,8 @@ async function goToPage(pageNum, { force = false } = {}) {
             
             // 使用分页API加载目标页面 (over-fetch on page 1 to account for stacked insights)
             const effectiveLimit = effectiveFetchLimitForPage(pageNum);
-            const targetPageResponse = await api.getInsightsPaginated(pageNum, effectiveLimit, null, '', true);
+            const uid = (auth?.user?.id || currentUser?.id || undefined);
+            const targetPageResponse = await api.getInsightsPaginated(pageNum, effectiveLimit, uid, '', true);
             if (targetPageResponse?.success) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(targetPageResponse);
                 const targetPageInsights = (items || []).filter(x => !x.stack_id);
@@ -374,13 +401,30 @@ async function loadUserInsightsWithPagination() {
         console.log('🚀 开始请求第一页数据...');
         const startTime = Date.now();
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, null, '', true);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         const endTime = Date.now();
         console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
         
         if (firstPageResponse?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
-            const firstPageInsights = (items || []).filter(x => !x.stack_id);
+            let firstPageInsights = (items || []).filter(x => !x.stack_id);
+            
+            // Retry once if page 1 returns 0 items and we now have a user ID
+            if (firstPageInsights.length === 0 && uid) {
+                console.log('🔄 Page 1 returned 0 items, retrying with user ID...');
+                // Clear any stale cached responses before retrying
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                }
+                
+                const retryResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
+                if (retryResponse?.success) {
+                    const { items: retryItems, hasMore: retryHasMore } = normalizePaginatedInsightsResponse(retryResponse);
+                    firstPageInsights = (retryItems || []).filter(x => !x.stack_id);
+                    console.log(`🔄 Retry returned ${firstPageInsights.length} insights`);
+                }
+            }
             
             // 先设置第一页数据
             currentInsights = firstPageInsights;
@@ -658,7 +702,8 @@ async function loadUserStacks() {
         // 只加载当前页面的数据来构建stacks，避免加载额外数据
         let allInsights = [];
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const response = await api.getInsightsPaginated(1, effectiveLimit, null, '', true);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response.success && response.data) {
             const { items } = normalizePaginatedInsightsResponse(response);
@@ -902,7 +947,8 @@ async function loadUserInsights() {
         // 使用分页API方法获取insights
         insightsLoading = true;
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const response = await api.getInsightsPaginated(1, effectiveLimit, null, '', true);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(response);
@@ -2029,7 +2075,7 @@ async function deleteInsight(id) {
         await loadUserInsightsWithPagination();
         
         // Also save to localStorage backup
-        saveInsightsToLocalStorage();
+        saveInsightsToLocalStorage({ force: true });
         
         alert('Content deleted successfully!');
     } catch (error) {
@@ -2227,7 +2273,7 @@ function bindEvents() {
                         await loadUserInsightsWithPagination();
                         
                         // Also save to localStorage backup
-                        saveInsightsToLocalStorage();
+                        saveInsightsToLocalStorage({ force: true });
                     } catch (error) {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
@@ -4239,7 +4285,7 @@ async function createStack(card1, card2) {
             
             // Save to localStorage for persistence
             saveStacksToLocalStorage();
-            saveInsightsToLocalStorage();
+            saveInsightsToLocalStorage({ force: true });
             
             // Also try to create the stack in the backend database
             try {
@@ -4387,21 +4433,38 @@ function clearStacksFromLocalStorage() {
     }
 }
 
-// Save insights to localStorage backup
-function saveInsightsToLocalStorage() {
+// Save insights to localStorage backup (safe version that prevents data loss)
+function saveInsightsToLocalStorage({ force = false } = {}) {
     try {
-        // Always save insights to prevent data loss - removed conditional checks
-        const insightsBackup = {
-            data: currentInsights || [],
-            timestamp: Date.now(),
-            version: '1.0'
-        };
-        localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
-        console.log('💾 Saved insights to localStorage backup:', currentInsights?.length || 0, 'insights');
-    } catch (error) {
-        console.error('❌ Failed to save insights to localStorage:', error);
-        // Show user notification about storage issue
-        showErrorMessage('Warning: Unable to save data locally. Your data may be lost if you refresh the page.');
+        const cur = Array.isArray(currentInsights) ? currentInsights : [];
+        const curLen = cur.length;
+
+        if (!force) {
+            // Don't auto-save before we've actually loaded anything
+            if (!hasLoadedInsightsOnce || curLen === 0) {
+                console.log('↩︎ skip auto-save: no insights yet');
+                return;
+            }
+            // Don't shrink a non-empty backup unintentionally
+            const prevRaw = localStorage.getItem('quest_insights_backup');
+            const prevLen = (() => {
+                try { 
+                    const prev = prevRaw ? JSON.parse(prevRaw) : null; 
+                    return Array.isArray(prev?.data) ? prev.data.length : 0; 
+                } catch { return 0; }
+            })();
+            if (prevLen && curLen < prevLen) {
+                console.log(`↩︎ skip auto-save: would shrink backup ${prevLen}→${curLen}`);
+                return;
+            }
+        }
+
+        const backup = { data: [...cur], timestamp: Date.now(), version: '1.0' };
+        localStorage.setItem('quest_insights_backup', JSON.stringify(backup));
+        console.log('💾 Saved insights backup:', curLen);
+    } catch (e) {
+        console.error('❌ Failed to save insights to localStorage:', e);
+        showErrorMessage('Warning: Unable to save data locally.');
     }
 }
 
@@ -4430,11 +4493,7 @@ if (!window.__QUEST_AUTOSAVE_ID__) {
     }, 15000); // Reduced from 30s to 15s for more frequent saves
 }
 
-// Also save on page unload to prevent data loss
-window.addEventListener('beforeunload', () => {
-    saveStacksToLocalStorage();
-    saveInsightsToLocalStorage();
-});
+// Note: beforeunload handler moved to top of file for better organization
 
 // Find or create the Archive tag for default assignment
 async function findOrCreateArchiveTag() {
@@ -4593,7 +4652,7 @@ async function removeItemFromStack(stackId, insightId) {
                         stackData.modifiedAt = new Date().toISOString();
                         
                         // Save to localStorage
-                        saveInsightsToLocalStorage();
+                        saveInsightsToLocalStorage({ force: true });
                         
                         // If stack has 1 or fewer items, dissolve it
                         if (stackData.cards.length <= 1) {
@@ -4648,7 +4707,7 @@ async function removeItemFromStack(stackId, insightId) {
                         stackData.modifiedAt = new Date().toISOString();
                         
                         // Save to localStorage
-                        saveInsightsToLocalStorage();
+                        saveInsightsToLocalStorage({ force: true });
                         
                         // If stack has 1 or fewer items, dissolve it
                         if (stackData.cards.length <= 1) {
@@ -4724,7 +4783,7 @@ async function deleteStack(stackId) {
                     
                     // Update localStorage to remove the deleted stack
                     saveStacksToLocalStorage();
-                    saveInsightsToLocalStorage();
+                    saveInsightsToLocalStorage({ force: true });
                     
                     // Invalidate ALL page caches since pagination has changed
                     pageCache.clear();
@@ -5171,7 +5230,7 @@ async function removeCardFromStack(insight, stackId) {
             currentInsights.push(insight);
             
             // Save to localStorage
-            saveInsightsToLocalStorage();
+            saveInsightsToLocalStorage({ force: true });
             
             // If stack has only one card left, dissolve the stack
             if (stackData.cards.length <= 1) {
@@ -5183,7 +5242,7 @@ async function removeCardFromStack(insight, stackId) {
                 }
                 stacks.delete(stackId);
                 saveStacksToLocalStorage();
-                saveInsightsToLocalStorage();
+                saveInsightsToLocalStorage({ force: true });
                 closeStackExpansion();
                 showSuccessMessage('Stack dissolved - cards moved back to your space.');
             } else {
@@ -5239,7 +5298,7 @@ async function removeCardFromStack(insight, stackId) {
                     }
                     stacks.delete(stackId);
                     saveStacksToLocalStorage();
-                    saveInsightsToLocalStorage();
+                    saveInsightsToLocalStorage({ force: true });
                     closeStackExpansion();
                     showSuccessMessage('Stack dissolved - cards moved back to your space. (Local storage)');
                 } else {
@@ -5785,7 +5844,7 @@ async function saveInsightTags(insight, modal) {
             await loadUserInsightsWithPagination();
             
             // Also save to localStorage backup
-            saveInsightsToLocalStorage();
+            saveInsightsToLocalStorage({ force: true });
             
             // Force re-render to show updated tags
             renderInsights();

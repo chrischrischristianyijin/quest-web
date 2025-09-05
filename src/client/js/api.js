@@ -73,6 +73,9 @@ class ApiService {
                 this.setAuthToken(null);
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('quest_user_session');
+                // 清理前端 GET 缓存并广播全局"认证过期"事件
+                if (window.apiCache) window.apiCache.clear();
+                window.dispatchEvent(new CustomEvent('quest-auth-expired', { detail: { status: response.status } }));
                 
                 // Try to get more specific error message from response
                 let errorMessage = '认证已过期，请重新登录';
