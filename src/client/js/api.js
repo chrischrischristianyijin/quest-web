@@ -31,7 +31,7 @@ class ApiService {
         if ((options.method || 'GET') === 'GET' && window.apiCache) {
             const cached = window.apiCache.get(url);
             if (cached) {
-                logger.log(`📦 Cache hit: ${url}`);
+                console.log(`📦 Cache hit: ${url}`);
                 return cached;
             }
         }
@@ -61,10 +61,10 @@ class ApiService {
         };
 
         try {
-            logger.log(`📡 API请求: ${config.method} ${url}`);
+            console.log(`📡 API请求: ${config.method} ${url}`);
             const response = await fetch(url, config);
             
-            logger.log(`📡 API响应: ${response.status} ${response.statusText}`);
+            console.log(`📡 API响应: ${response.status} ${response.statusText}`);
             
             // 处理认证错误
             if (response.status === 401 || response.status === 403) {
@@ -104,7 +104,7 @@ class ApiService {
             }
 
             const data = await response.json();
-            logger.log('✅ API响应成功:', data);
+            console.log('✅ API响应成功:', data);
             
             // Cache successful GET responses
             if ((options.method || 'GET') === 'GET' && window.apiCache) {
@@ -532,6 +532,32 @@ class ApiService {
     // 获取API信息
     async getApiInfo() {
         return await this.request(API_CONFIG.SYSTEM.INFO);
+    }
+
+    // 等待列表相关方法
+    async joinWaitlist(email) {
+        return await this.request(API_CONFIG.WAITLIST.JOIN, {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        });
+    }
+
+    async unsubscribeWaitlist(email) {
+        return await this.request(API_CONFIG.WAITLIST.UNSUBSCRIBE, {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        });
+    }
+
+    async getWaitlistStats() {
+        return await this.request(API_CONFIG.WAITLIST.STATS);
+    }
+
+    async getWaitlistList(page = 1, limit = 50, status = null) {
+        const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+        if (status) params.append('status', status);
+        
+        return await this.request(`${API_CONFIG.WAITLIST.LIST}?${params.toString()}`);
     }
 }
 
