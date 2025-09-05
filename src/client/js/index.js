@@ -18,7 +18,6 @@ function updateNavigation(isLoggedIn, user = null) {
             <a href="#home" class="nav-link">HOME</a>
             <a href="#extension" class="nav-link">EXTENSION</a>
             <a href="#explore" class="nav-link">EXPLORE</a>
-            <a href="#join" class="nav-link">JOIN</a>
             <a href="#more" class="nav-link">MORE</a>
             <a href="${PATHS.MY_SPACE}" class="nav-link">MY SPACE</a>
         `;
@@ -34,7 +33,6 @@ function updateNavigation(isLoggedIn, user = null) {
             <a href="#home" class="nav-link">HOME</a>
             <a href="#extension" class="nav-link">EXTENSION</a>
             <a href="#explore" class="nav-link">EXPLORE</a>
-            <a href="#join" class="nav-link">JOIN</a>
             <a href="#more" class="nav-link">MORE</a>
         `;
         
