@@ -268,7 +268,7 @@ async function goToPage(pageNum, { force = false } = {}) {
                         // Fallback: if page 1 isn't cached yet, drop the items page 1 over-fetched
                         let stackedInsightsCount = 0;
                         stacks.forEach(s => { stackedInsightsCount += (s.cards?.length || 0); });
-                        const borrowed = Math.max(0, stackedInsightsCount - stacks.size); // how many extra we pulled on page 1
+                        const borrowed = Math.max(0, stackedInsightsCount - stacks.size); // ht zow many extra we pulled on page 1
                         adjusted = adjusted.slice(borrowed);
                     }
                 }
@@ -2300,6 +2300,9 @@ function bindEvents() {
         
         // 绑定内容详情模态框事件
         bindContentDetailModalEvents();
+        
+        // 绑定标题编辑事件
+        bindTitleEditEvents();
 }
 
 // Event delegation for card interactions (performance optimization)
@@ -3126,15 +3129,10 @@ function openProfileEditModal() {
     
     // 预填充当前用户信息
         const usernameInput = document.getElementById('profileUsername');
-        const emailInput = document.getElementById('profileEmail');
         
         if (usernameInput && currentUser) {
         const usernameValue = currentUser.nickname || currentUser.email || '';
         usernameInput.value = usernameValue;
-        }
-    
-        if (emailInput && currentUser) {
-            emailInput.value = currentUser.email || '';
         }
     
     // 设置当前头像
@@ -3251,38 +3249,19 @@ async function handleProfileUpdate(event) {
     }
     
     const usernameInput = document.getElementById('profileUsername');
-    const emailInput = document.getElementById('profileEmail');
-    const passwordInput = document.getElementById('profilePassword');
-    const confirmPasswordInput = document.getElementById('profileConfirmPassword');
     const saveBtn = document.getElementById('saveProfileEdit');
     const saveBtnText = document.getElementById('saveProfileBtnText');
     
-    if (!usernameInput || !emailInput) {
-        showErrorMessage('Username or email input not found');
+    if (!usernameInput) {
+        showErrorMessage('Username input not found');
         return;
     }
     
     const username = usernameInput.value.trim();
-    const email = emailInput.value.trim();
-    const password = passwordInput ? passwordInput.value : '';
-    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
     
     // Validate inputs
-    if (!username || !email) {
-        showErrorMessage('Username and email are required');
-        return;
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showErrorMessage('Please enter a valid email address');
-        return;
-    }
-    
-    // Validate password match if password is provided
-    if (password && password !== confirmPassword) {
-        showErrorMessage('Passwords do not match');
+    if (!username) {
+        showErrorMessage('Username is required');
         return;
     }
 
@@ -3328,14 +3307,8 @@ async function handleProfileUpdate(event) {
         
         // 更新用户资料
         const profileData = {
-            nickname: username,
-            email: email
+            nickname: username
         };
-        
-        // 只有当密码提供时才包含它
-        if (password) {
-            profileData.password = password;
-        }
         
         // 只有当头像URL有变化时才包含它
         if (avatarUrl && avatarUrl !== currentUser.avatar_url) {
@@ -3643,6 +3616,164 @@ function populateModalContent(insight) {
     
     // 设置按钮事件
     setupModalActions(insight);
+}
+
+// 绑定标题编辑事件
+function bindTitleEditEvents() {
+    // 标题点击编辑
+    const titleElement = document.getElementById('modalContentTitle');
+    const editTitleBtn = document.getElementById('modalEditTitleBtn');
+    
+    if (titleElement) {
+        titleElement.addEventListener('click', startTitleEdit);
+    }
+    
+    if (editTitleBtn) {
+        editTitleBtn.addEventListener('click', startTitleEdit);
+    }
+}
+
+// 开始标题编辑
+function startTitleEdit() {
+    if (!currentDetailInsight) return;
+    
+    const titleContainer = document.querySelector('.title-container');
+    const titleElement = document.getElementById('modalContentTitle');
+    
+    if (!titleContainer || !titleElement) return;
+    
+    // 进入编辑模式
+    titleContainer.classList.add('title-edit-mode');
+    
+    // 创建输入框
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'title-edit-input';
+    input.value = titleElement.textContent;
+    input.placeholder = 'Enter title...';
+    
+    // 创建操作按钮
+    const actions = document.createElement('div');
+    actions.className = 'title-edit-actions';
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'title-edit-save';
+    saveBtn.innerHTML = '✓';
+    saveBtn.title = 'Save';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'title-edit-cancel';
+    cancelBtn.innerHTML = '✕';
+    cancelBtn.title = 'Cancel';
+    
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancelBtn);
+    
+    // 添加到容器
+    titleContainer.appendChild(input);
+    titleContainer.appendChild(actions);
+    
+    // 聚焦并选中文本
+    input.focus();
+    input.select();
+    
+    // 绑定事件
+    const saveTitle = () => {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== titleElement.textContent) {
+            updateInsightTitle(currentDetailInsight.id, newTitle);
+        }
+        cancelTitleEdit();
+    };
+    
+    const cancelTitle = () => {
+        cancelTitleEdit();
+    };
+    
+    saveBtn.addEventListener('click', saveTitle);
+    cancelBtn.addEventListener('click', cancelTitle);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveTitle();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelTitle();
+        }
+    });
+    
+    // 点击外部取消编辑
+    const handleOutsideClick = (e) => {
+        if (!titleContainer.contains(e.target)) {
+            cancelTitle();
+            document.removeEventListener('click', handleOutsideClick);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', handleOutsideClick);
+    }, 100);
+}
+
+// 取消标题编辑
+function cancelTitleEdit() {
+    const titleContainer = document.querySelector('.title-container');
+    if (!titleContainer) return;
+    
+    // 移除编辑模式
+    titleContainer.classList.remove('title-edit-mode');
+    
+    // 移除输入框和按钮
+    const input = titleContainer.querySelector('.title-edit-input');
+    const actions = titleContainer.querySelector('.title-edit-actions');
+    
+    if (input) input.remove();
+    if (actions) actions.remove();
+}
+
+// 更新洞察标题
+async function updateInsightTitle(insightId, newTitle) {
+    try {
+        // 检查认证状态
+        if (!auth.checkAuth()) {
+            showErrorMessage('Please log in to update content');
+            return;
+        }
+        
+        // 调用API更新标题
+        const response = await api.updateInsight(insightId, { title: newTitle });
+        
+        if (response.success) {
+            // 更新本地数据
+            if (currentDetailInsight && currentDetailInsight.id === insightId) {
+                currentDetailInsight.title = newTitle;
+            }
+            
+            // 更新当前页面数据
+            if (window.currentInsights) {
+                const insight = window.currentInsights.find(i => i.id === insightId);
+                if (insight) {
+                    insight.title = newTitle;
+                }
+            }
+            
+            // 更新显示
+            const titleElement = document.getElementById('modalContentTitle');
+            if (titleElement) {
+                titleElement.textContent = newTitle;
+            }
+            
+            // 重新渲染页面以更新卡片标题
+            renderInsights();
+            
+            showSuccessMessage('Title updated successfully!');
+        } else {
+            throw new Error(response.message || 'Failed to update title');
+        }
+    } catch (error) {
+        console.error('❌ Failed to update title:', error);
+        showErrorMessage('Failed to update title. Please try again.');
+    }
 }
 
 // 填充Quest建议

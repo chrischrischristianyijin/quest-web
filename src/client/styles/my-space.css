@@ -3299,12 +3299,99 @@ body .tag-selector-dropdown.open .tag-selector-options {
     flex: 1;
 }
 
+.title-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
 .content-title {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
     line-height: 1.3;
+    flex: 1;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.content-title:hover {
+    color: var(--quest-purple);
+}
+
+.edit-title-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.title-container:hover .edit-title-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.edit-title-btn:hover {
+    background: var(--quest-purple);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Title edit mode styles */
+.title-edit-mode .content-title {
+    display: none;
+}
+
+.title-edit-mode .edit-title-btn {
+    display: none;
+}
+
+.title-edit-input {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: transparent;
+    border: 2px solid var(--quest-purple);
+    border-radius: 8px;
+    padding: 8px 12px;
+    width: 100%;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.3;
+}
+
+.title-edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+.title-edit-save,
+.title-edit-cancel {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.title-edit-save:hover {
+    background: var(--success-color);
+    color: white;
+}
+
+.title-edit-cancel:hover {
+    background: var(--error-color);
+    color: white;
 }
 
 .content-tags {
