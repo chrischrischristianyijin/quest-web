@@ -225,11 +225,18 @@ async function goToPage(pageNum, { force = false } = {}) {
         // 显示加载状态
         showLoadingState();
         
+        // If force is true, skip cache and fetch fresh data
+        if (force) {
+            pageCache.delete(pageNum);
+        }
+        
         // 检查缓存中是否已有该页面数据
-        if (pageCache.has(pageNum)) {
+        if (!force && pageCache.has(pageNum)) {
             console.log(`📋 从缓存加载第${pageNum}页数据`);
             const cachedData = pageCache.get(pageNum);
-            currentInsights = cachedData.insights;
+            // Defensive normalization for nested array issue
+            const maybeNested = cachedData.insights;
+            currentInsights = Array.isArray(maybeNested?.[0]) ? maybeNested[0] : maybeNested;
             window.currentInsights = currentInsights;
             insightsHasMore = cachedData.hasMore;
             
@@ -247,24 +254,43 @@ async function goToPage(pageNum, { force = false } = {}) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(targetPageResponse);
                 const targetPageInsights = (items || []).filter(x => !x.stack_id);
                 
+                // De-dupe page 2+ against what page 1 actually rendered
+                let adjusted = targetPageInsights;
+                
+                // Only de-dupe when not filtering by tag (stacks hidden under filters)
+                const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
+                if (!hasActiveTagFilter && pageNum > 1) {
+                    const prevVisible = getVisibleIdsForPage(pageNum - 1);
+                    
+                    if (prevVisible.size > 0) {
+                        adjusted = adjusted.filter(i => !prevVisible.has(i.id));
+                    } else if (pageNum === 2) {
+                        // Fallback: if page 1 isn't cached yet, drop the items page 1 over-fetched
+                        let stackedInsightsCount = 0;
+                        stacks.forEach(s => { stackedInsightsCount += (s.cards?.length || 0); });
+                        const borrowed = Math.max(0, stackedInsightsCount - stacks.size); // how many extra we pulled on page 1
+                        adjusted = adjusted.slice(borrowed);
+                    }
+                }
+                
                 // 更新当前页面数据
-                currentInsights = targetPageInsights;
+                currentInsights = adjusted;
                 window.currentInsights = currentInsights;
                 insightsHasMore = hasMore;
                 
-                // 更新已渲染的ID
+                // 更新已渲染的ID（基于 adjusted）
                 renderedInsightIds.clear();
-                targetPageInsights.forEach(i => renderedInsightIds.add(i.id));
+                adjusted.forEach(i => renderedInsightIds.add(i.id));
                 
-                // 缓存该页面数据
+                // 缓存该页面数据（保存 adjusted，而不是原始）
                 pageCache.set(pageNum, {
-                    insights: [...targetPageInsights],
-                    hasMore: hasMore,
+                    insights: adjusted,        // ❗ was [...adjusted]
+                    hasMore,
                     timestamp: Date.now()
                 });
                 loadedPages.add(pageNum);
                 
-                console.log(`📄 第${pageNum}页加载完成并缓存: ${targetPageInsights.length}个insights`);
+                console.log(`📄 第${pageNum}页加载完成并缓存: ${adjusted.length}个insights (原始: ${targetPageInsights.length})`);
             } else {
                 throw new Error(`Failed to load page ${pageNum}`);
             }
@@ -365,9 +391,10 @@ async function loadUserInsightsWithPagination() {
             firstPageInsights.forEach(i => renderedInsightIds.add(i.id));
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
-            // 缓存第一页数据
+            // 缓存第一页数据 (store only what we actually display)
+            const displayedInsights = firstPageInsights.slice(0, effectiveLimitForPage(1));
             pageCache.set(1, {
-                insights: [...firstPageInsights],
+                insights: displayedInsights,  // ✅ Store only what we display
                 hasMore: hasMore,
                 timestamp: Date.now()
             });
@@ -1001,6 +1028,20 @@ async function loadUserInsights() {
     }
 }
 
+// Helper to get visible IDs of a page (for de-duplication)
+function getVisibleIdsForPage(pageNum) {
+    const cached = pageCache.get(pageNum);
+    if (!cached) return new Set();
+
+    // defensive: normalize cache shape
+    const raw = cached.insights;
+    const arr = Array.isArray(raw?.[0]) ? raw[0] : raw;
+
+    // Cache now stores exactly what was displayed, so no need to slice
+    const visible = arr || [];
+    return new Set(visible.map(i => i.id));
+}
+
 // Helper function to calculate effective limit for a page
 function effectiveLimitForPage(pageNum) {
     // If we have an active tag filter, don't account for stacks since they're hidden
@@ -1057,6 +1098,8 @@ function renderInsights() {
     // Get filtered insights for rendering
     const filteredInsights = getFilteredInsights();
     console.log('🎯 Rendering with filtered insights:', filteredInsights.length);
+    console.log('🎯 Stacks count:', stacks.size);
+    console.log('🎯 Effective limit for page', currentPage, ':', effectiveLimitForPage(currentPage));
     
     // Check if we have any content to render (insights OR stacks)
     const hasInsights = filteredInsights.length > 0;
@@ -1101,7 +1144,8 @@ function renderInsights() {
         } else {
             // When not filtering, use normal pagination with stack accounting
             const limit = effectiveLimitForPage(currentPage);
-            const list = filteredInsights.slice(0, limit);
+            // Only slice for page 1 (to account for stacks), other pages use full array
+            const list = currentPage === 1 ? filteredInsights.slice(0, limit) : filteredInsights;
             for (const insight of list) {
                 fragment.appendChild(createInsightCard(insight));
             }
@@ -4070,15 +4114,25 @@ async function createStack(card1, card2) {
                 console.warn('⚠️ Failed to create stack in backend database (this is OK, stack_id approach still works):', stackCreateError);
             }
             
-            // Invalidate page-1 cache so the effective limit recomputes cleanly
-            pageCache.delete(1);
-            loadedPages.delete(1);
+            // Invalidate ALL page caches since pagination has changed
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
             
             // Update pagination counts
             updatePaginationCounts();
             
             // Refill page 1 using the over-fetch rule
+            console.log('🔄 About to refill page 1 after stack creation...');
+            console.log('🔄 Current stacks count:', stacks.size);
+            console.log('🔄 Current insights before refill:', currentInsights.length);
             await goToPage(1, { force: true });
+            console.log('🔄 After refill - current insights:', currentInsights.length);
             
             showSuccessMessage('Stack created successfully!');
         } else {
@@ -4114,9 +4168,15 @@ async function createStack(card1, card2) {
             // Save to localStorage for persistence
             saveStacksToLocalStorage();
             
-            // Invalidate page-1 cache so the effective limit recomputes cleanly
-            pageCache.delete(1);
-            loadedPages.delete(1);
+            // Invalidate ALL page caches since pagination has changed
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
             
             // Update pagination counts
             updatePaginationCounts();
@@ -4527,9 +4587,15 @@ async function deleteStack(stackId) {
                     saveStacksToLocalStorage();
                     saveInsightsToLocalStorage();
                     
-                    // Invalidate page-1 cache so the effective limit recomputes cleanly
-                    pageCache.delete(1);
-                    loadedPages.delete(1);
+                    // Invalidate ALL page caches since pagination has changed
+                    pageCache.clear();
+                    loadedPages.clear();
+                    
+                    // Clear GET cache to prevent stale data
+                    if (window.apiCache) {
+                        window.apiCache.clearPattern('/api/v1/insights');
+                        window.apiCache.clearPattern('/api/v1/stacks');
+                    }
                     
                     // Update pagination counts
                     updatePaginationCounts();
@@ -4553,9 +4619,15 @@ async function deleteStack(stackId) {
                 // Update localStorage to remove the deleted stack
                 saveStacksToLocalStorage();
                 
-                // Invalidate page-1 cache so the effective limit recomputes cleanly
-                pageCache.delete(1);
-                loadedPages.delete(1);
+                // Invalidate ALL page caches since pagination has changed
+                pageCache.clear();
+                loadedPages.clear();
+                
+                // Clear GET cache to prevent stale data
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                    window.apiCache.clearPattern('/api/v1/stacks');
+                }
                 
                 // Update pagination counts
                 updatePaginationCounts();
@@ -4857,6 +4929,18 @@ async function moveCardToStack(insight, newStackId) {
                 showSuccessMessage('Card moved to new stack successfully.');
             }
             
+            // Invalidate page caches and update pagination
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
+            
+            updatePaginationCounts();
+            
             // Re-render content
             renderInsights();
         } else {
@@ -4882,6 +4966,18 @@ async function moveCardToStack(insight, newStackId) {
                 } else {
                     showSuccessMessage('Card moved to new stack successfully. (Local storage)');
                 }
+                
+                // Invalidate page caches and update pagination
+                pageCache.clear();
+                loadedPages.clear();
+                
+                // Clear GET cache to prevent stale data
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                    window.apiCache.clearPattern('/api/v1/stacks');
+                }
+                
+                updatePaginationCounts();
                 
                 // Re-render content
                 renderInsights();
@@ -4941,6 +5037,18 @@ async function removeCardFromStack(insight, stackId) {
                 showSuccessMessage('Card removed from stack.');
             }
             
+            // Invalidate page caches and update pagination
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
+            
+            updatePaginationCounts();
+            
             // Re-render main view
             renderInsights();
         } else {
@@ -4984,6 +5092,18 @@ async function removeCardFromStack(insight, stackId) {
                     
                     showSuccessMessage('Card removed from stack. (Local storage)');
                 }
+                
+                // Invalidate page caches and update pagination
+                pageCache.clear();
+                loadedPages.clear();
+                
+                // Clear GET cache to prevent stale data
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                    window.apiCache.clearPattern('/api/v1/stacks');
+                }
+                
+                updatePaginationCounts();
                 
                 // Re-render main view
                 renderInsights();
