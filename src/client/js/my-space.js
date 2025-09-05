@@ -1353,21 +1353,29 @@ function createInsightCard(insight) {
     const title = document.createElement('div');
     title.className = 'content-card-title';
     
-    // Extract clean title (remove source name if it's concatenated)
+    // Extract clean title
     let cleanTitle = insight.title || 'Untitled';
-    const sourceNameForTitle = getSourceName(insight.url);
     
-    // If title contains source name, try to clean it
-    if (cleanTitle.includes(sourceNameForTitle)) {
-        cleanTitle = cleanTitle.replace(sourceNameForTitle, '').trim();
-    }
-    
-    // For Wikipedia URLs, extract just the article title
+    // For Wikipedia URLs, extract just the article title from URL
     if (insight.url.includes('wikipedia.org')) {
-        const urlPath = new URL(insight.url).pathname;
-        const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
-        if (articleTitle && articleTitle !== cleanTitle) {
-            cleanTitle = articleTitle;
+        try {
+            const urlPath = new URL(insight.url).pathname;
+            const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+            if (articleTitle && articleTitle !== 'Main_Page') {
+                cleanTitle = articleTitle;
+            }
+        } catch (e) {
+            // If URL parsing fails, keep original title
+        }
+    } else {
+        // For other sources, remove source name if it's at the beginning
+        const sourceNameForTitle = getSourceName(insight.url);
+        if (cleanTitle.startsWith(sourceNameForTitle)) {
+            cleanTitle = cleanTitle.substring(sourceNameForTitle.length).trim();
+            // Remove leading comma and space if present
+            if (cleanTitle.startsWith(',')) {
+                cleanTitle = cleanTitle.substring(1).trim();
+            }
         }
     }
     
@@ -4888,7 +4896,34 @@ function createStackExpandedCard(insight, stackId) {
     
     const title = document.createElement('h4');
     title.className = 'stack-card-title';
-    title.textContent = insight.title || 'Untitled';
+    
+    // Extract clean title
+    let cleanTitle = insight.title || 'Untitled';
+    
+    // For Wikipedia URLs, extract just the article title from URL
+    if (insight.url && insight.url.includes('wikipedia.org')) {
+        try {
+            const urlPath = new URL(insight.url).pathname;
+            const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+            if (articleTitle && articleTitle !== 'Main_Page') {
+                cleanTitle = articleTitle;
+            }
+        } catch (e) {
+            // If URL parsing fails, keep original title
+        }
+    } else {
+        // For other sources, remove source name if it's at the beginning
+        const sourceNameForTitle = getSourceName(insight.url);
+        if (cleanTitle.startsWith(sourceNameForTitle)) {
+            cleanTitle = cleanTitle.substring(sourceNameForTitle.length).trim();
+            // Remove leading comma and space if present
+            if (cleanTitle.startsWith(',')) {
+                cleanTitle = cleanTitle.substring(1).trim();
+            }
+        }
+    }
+    
+    title.textContent = cleanTitle;
     
     const description = document.createElement('p');
     description.className = 'stack-card-description';
@@ -5540,21 +5575,29 @@ function createStackHorizontalCard(insight, stackId) {
     const title = document.createElement('div');
     title.className = 'content-card-title';
     
-    // Extract clean title (remove source name if it's concatenated)
+    // Extract clean title
     let cleanTitle = insight.title || 'Untitled';
-    const sourceNameForTitle = getSourceName(insight.url);
     
-    // If title contains source name, try to clean it
-    if (cleanTitle.includes(sourceNameForTitle)) {
-        cleanTitle = cleanTitle.replace(sourceNameForTitle, '').trim();
-    }
-    
-    // For Wikipedia URLs, extract just the article title
+    // For Wikipedia URLs, extract just the article title from URL
     if (insight.url && insight.url.includes('wikipedia.org')) {
-        const urlPath = new URL(insight.url).pathname;
-        const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
-        if (articleTitle && articleTitle !== cleanTitle) {
-            cleanTitle = articleTitle;
+        try {
+            const urlPath = new URL(insight.url).pathname;
+            const articleTitle = urlPath.split('/').pop().replace(/_/g, ' ');
+            if (articleTitle && articleTitle !== 'Main_Page') {
+                cleanTitle = articleTitle;
+            }
+        } catch (e) {
+            // If URL parsing fails, keep original title
+        }
+    } else {
+        // For other sources, remove source name if it's at the beginning
+        const sourceNameForTitle = getSourceName(insight.url);
+        if (cleanTitle.startsWith(sourceNameForTitle)) {
+            cleanTitle = cleanTitle.substring(sourceNameForTitle.length).trim();
+            // Remove leading comma and space if present
+            if (cleanTitle.startsWith(',')) {
+                cleanTitle = cleanTitle.substring(1).trim();
+            }
         }
     }
     
