@@ -4,70 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - Quest</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/styles/common.css">
     <link rel="stylesheet" href="/styles/signup.css">
 </head>
 <body>
-    <section class="signup-section">
-        <div class="signup-container">
-            <div class="signup-header">
-                <h1 class="signup-title">Create Your Account</h1>
-                <p class="signup-subtitle">Join Quest and start your knowledge journey</p>
-            </div>
-            
-            <div class="error-message" id="errorMessage"></div>
-            <div class="success-message" id="successMessage"></div>
-            
-            <form class="signup-form" id="signupForm">
-                <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
-                    <input type="email" id="email" class="form-input" placeholder="Enter your email address" required>
+    <div class="bg-decoration"></div>
+
+    <main class="main-content">
+        <section class="signup-section">
+            <div class="signup-background-blur"></div>
+            <div class="signup-container">
+                <div class="signup-header">
+                    <h1 class="signup-title">Create Your Account</h1>
+                    <p class="signup-subtitle">Join Quest and start your knowledge journey</p>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label" for="nickname">Nickname</label>
-                    <input type="text" id="nickname" class="form-input" placeholder="Enter your nickname" required>
-                </div>
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage"></div>
                 
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
-                    <div class="password-requirements">
-                        <h4>Password Requirements:</h4>
-                        <ul>
-                            <li>At least 8 characters</li>
-                            <li>Contains letters and numbers</li>
-                            <li>Recommended to include special characters</li>
-                        </ul>
+                <form class="signup-form" id="signupForm">
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" class="form-input" placeholder="Enter your email address" required>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" class="form-input" placeholder="Enter password again" required>
-                </div>
-                
-                <div class="terms-checkbox">
-                    <input type="checkbox" id="agreeTerms" required>
-                    <div class="terms-text">
-                        I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="nickname">Nickname</label>
+                        <input type="text" id="nickname" class="form-input" placeholder="Enter your nickname" required>
                     </div>
-                </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+                        <div class="password-requirements">
+                            <h4>Password Requirements:</h4>
+                            <ul>
+                                <li>At least 8 characters</li>
+                                <li>Contains letters and numbers</li>
+                                <li>Recommended to include special characters</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" class="form-input" placeholder="Enter password again" required>
+                    </div>
+                    
+                    <div class="terms-checkbox">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <div class="terms-text">
+                            I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Create Account
+                    </button>
+                </form>
                 
-                <button type="submit" class="btn btn-primary" id="submitBtn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Create Account
-                </button>
-            </form>
-            
-            <div class="login-section">
-                <p class="login-text">Already have an account?</p>
-                <a href="/login" class="btn btn-secondary">Login Now</a>
+                <div class="login-section">
+                    <p class="login-text">Already have an account?</p>
+                    <a href="/pages/login.html" class="btn btn-secondary">Login Now</a>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </main>
+
+    <!-- Logo at bottom right -->
+    <div class="bottom-logo">
+        <a href="/" class="logo-link">
+            <img src="/public/logo.png" alt="Quest">
+        </a>
+    </div>
 
     <script type="module" src="/js/signup.js"></script>
 </body>
