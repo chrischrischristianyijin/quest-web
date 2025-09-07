@@ -5,50 +5,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Quest</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/styles/common.css">
     <link rel="stylesheet" href="/styles/login.css">
 </head>
 
 <body>
-    <section class="login-section">
-        <div class="login-container">
-            <div class="login-header">
-                <h1 class="login-title">Welcome!</h1>
-                <p class="login-subtitle">Log in to your space.</p>
+    <div class="bg-decoration"></div>
+
+    <main class="main-content">
+        <section class="login-section">
+            <div class="login-background-blur"></div>
+            <div class="login-container">
+                <div class="login-header">
+                    <h1 class="login-title">Welcome Back!</h1>
+                    <p class="login-subtitle">Log in to your Quest space</p>
+                </div>
+
+                <div class="message" id="message"></div>
+
+                <form class="login-form" id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email/Account Number</label>
+                        <input type="email" id="email" class="form-input" placeholder="Registered Email / Account Number"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <input type="password" id="password" class="form-input" placeholder="Password" required>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            Log in
+                        </button>
+                        <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot Password?</a>
+                    </div>
+                </form>
+
+                <div class="signup-section">
+                    <p class="signup-text">Don't have an account?</p>
+                    <a href="/pages/signup.html" class="btn btn-secondary">Sign Up</a>
+                </div>
             </div>
+        </section>
+    </main>
 
-            <div class="message" id="message"></div>
-
-            <form class="login-form" id="loginForm">
-                <div class="form-group">
-                    <label class="form-label" for="email">Email/Account Number</label>
-                    <input type="email" id="email" class="form-input" placeholder="Registered Email / Account Number"
-                        required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" class="form-input" placeholder="Password" required>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                            <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                        </svg>
-                        Log in
-                    </button>
-                    <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot Password?</a>
-                </div>
-            </form>
-
-            <div class="signup-section">
-                <p class="signup-text">Don't have an account?</p>
-                <a href="/signup" class="btn btn-secondary">Sign Up</a>
-            </div>
-        </div>
-    </section>
+    <!-- Logo at bottom right -->
+    <div class="bottom-logo">
+        <a href="/" class="logo-link">
+            <img src="/public/logo.png" alt="Quest">
+        </a>
+    </div>
 
     <!-- Forgot Password Modal -->
     <div class="forgot-password-modal" id="forgotPasswordModal">
