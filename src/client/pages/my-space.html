@@ -356,104 +356,55 @@
 
             <!-- Main Content -->
             <div class="modal-content">
-                <!-- Top Header Row -->
-                <div class="modal-top-header">
-                    <div class="content-header">
-                        <div class="title-container">
-                            <h1 class="content-title" id="modalContentTitle">The Placeholder Title</h1>
-                            <button class="edit-title-btn" id="modalEditTitleBtn" title="Edit title">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="content-tags">
-                            <span class="project-tag">Project</span>
-                            <button class="edit-tags-btn" id="modalEditTagsBtn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round" />
-                                </svg>
-                                Edit Tags
-                            </button>
-                        </div>
-                    </div>
-
-                    <button class="share-my-space-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        Share
-                    </button>
+                <!-- LEFT: image -->
+                <div class="content-media" id="modalMedia">
+                    <img id="modalImage" class="content-image" src="" alt="Preview">
+                    <!-- If no image, add class "no-image" to .content-media -->
                 </div>
 
-                <!-- Main Content Layout -->
-                <div class="main-content-layout">
-                    <!-- Image Placeholder -->
-                    <div class="image-placeholder" id="modalImagePlaceholder">
-                        <!-- Image will be inserted here or show placeholder -->
+                <!-- RIGHT: details -->
+                <div class="details-scroll">
+                    <div class="title-row">
+                        <div>
+                            <h1 class="content-title" id="modalContentTitle">Wikipedia, the free encyclopedia</h1>
+                            <div class="chip-row">
+                                <span class="tag-pill" id="primaryTag">Archive</span>
+                                <span class="date-chip" id="summaryDate">09/07/2025</span>
+                            </div>
+                        </div>
+                        <div class="action-group">
+                            <button class="ghost-btn" id="archiveBtn">Archive</button>
+                            <button class="ghost-btn" id="modalEditTagsBtn">Edit Tags</button>
+                            <button class="ghost-btn" id="shareBtn">Share</button>
+                        </div>
                     </div>
 
-                    <!-- Content Sections -->
-                    <div class="content-sections">
-                        <!-- My Comment Section -->
-                        <div class="comment-section">
-                            <h3 class="section-title">My Comment</h3>
-                            <div class="comment-content" id="modalCommentContent">
-                                <div class="comment-text" id="modalCommentText">
-                                    No comment added yet.
-                                </div>
-                                <button class="edit-comment-btn" id="editCommentBtn">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round" />
-                                    </svg>
-                                    Edit
-                                </button>
-                            </div>
-                            <div class="comment-edit-form" id="commentEditForm" style="display: none;">
-                                <textarea class="comment-edit-textarea" id="commentEditTextarea" rows="4"
-                                    placeholder="Enter your comment..."></textarea>
-                                <div class="comment-edit-actions">
-                                    <button class="save-comment-btn" id="saveCommentBtn">Save</button>
-                                    <button class="cancel-comment-btn" id="cancelCommentBtn">Cancel</button>
-                                </div>
-                            </div>
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h3>My Comment</h3>
+                            <button class="ghost-btn" id="editCommentBtn">Edit</button>
                         </div>
+                        <p class="comment-display" id="commentDisplay">No comment added yet.</p>
+                        <textarea class="comment-box" id="commentTextarea" style="display:none;"></textarea>
+                    </div>
 
-                        <!-- AI Summary Section -->
-                        <div class="ai-summary-section">
-                            <div class="ai-summary-header">
-                                <h3 class="section-title">AI Summary</h3>
-                                <div class="ai-summary-date">MMDD, 2025</div>
-                            </div>
-                            <div class="ai-summary-content">
-                                <div class="ai-summary-text">
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas facilisis tempor
-                                    elementum. Mauris eu bibendum est, nec iaculis nunc. Lorem ipsum dolor sit amet,
-                                    consectetur adipiscing elit. Maecenas facilisis tempor elementum. Mauris eu bibendum
-                                    est, nec iaculis nunc.
-                                </div>
-                            </div>
+                    <div class="section-card">
+                        <div class="section-head">
+                            <h3>AI Summary</h3>
                         </div>
-
-                        <!-- Quest Suggestions Section -->
-                        <div class="quest-suggestions-section">
-                            <h3 class="section-title">Quest Suggestions</h3>
-                            <div class="quest-suggestions-grid" id="questSuggestionsGrid">
-                                <!-- Quest suggestion cards will be populated by JavaScript -->
-                            </div>
-                        </div>
+                        <p class="summary-text" id="summaryText">Lorem ipsum dolor sit amet, consectetur adipiscing
+                            elit. Maecenas facilisis tempor
+                            elementum. Mauris eu bibendum est, nec iaculis nunc. Lorem ipsum dolor sit amet,
+                            consectetur adipiscing elit. Maecenas facilisis tempor elementum. Mauris eu bibendum
+                            est, nec iaculis nunc.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- File input for stack cover upload -->
+    <input id="stackCoverUploader" type="file" accept="image/*" style="display:none">
 
     <!-- Performance optimization scripts -->
     <script src="/js/logger.js"></script>
