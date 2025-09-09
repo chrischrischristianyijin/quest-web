@@ -37,9 +37,10 @@ function updateNavigation(isLoggedIn, user = null) {
             <a href="#more" class="nav-link">MORE</a>
         `;
         
-        // Temporarily hide auth buttons - users can only join waitlist
+        // Show auth buttons for login and signup
         authButtons.innerHTML = `
-            <!-- Auth buttons temporarily hidden - users can only join waitlist -->
+            <a href="${PATHS.LOGIN}" class="auth-btn auth-btn-secondary">Login</a>
+            <a href="${PATHS.SIGNUP}" class="auth-btn auth-btn-primary">Sign Up</a>
         `;
     }
 }
