@@ -1547,7 +1547,7 @@ async function initFilterButtons() {
                     { key: 'project', label: 'Project', category: 'P' },
                     { key: 'area', label: 'Area', category: 'A' },
                     { key: 'resource', label: 'Resource', category: 'R' },
-                    { key: 'archive', label: 'Archive', category: 'A' }
+                    { key: 'archive', label: 'Archive', category: 'Archive' }
                 ]
             }
         ];
@@ -2334,11 +2334,6 @@ function bindEvents() {
         });
     }
 
-    // 左上角添加内容按钮
-    const addContentBtnLeft = document.getElementById('addContentBtnLeft');
-    if (addContentBtnLeft) {
-        addContentBtnLeft.addEventListener('click', showAddContentModal);
-    }
     
     // 绑定标签相关事件
     bindTagEvents();
@@ -4140,7 +4135,7 @@ function bindEditModeEvents() {
 }
 
 function toggleEditMode() {
-            isEditMode = !isEditMode;
+    isEditMode = !isEditMode;
     const editModeBtn = document.getElementById('editModeBtn');
     const editBtnText = editModeBtn.querySelector('.edit-btn-text');
     
@@ -4150,8 +4145,11 @@ function toggleEditMode() {
         editBtnText.textContent = 'Done';
         document.body.classList.add('edit-mode');
         
-        // Add shaking animation to all content cards
-        const contentCards = document.querySelectorAll('.content-card');
+        // Add template card at the front
+        addTemplateCard();
+        
+        // Add shaking animation to all content cards (excluding template)
+        const contentCards = document.querySelectorAll('.content-card:not(.template-card)');
         contentCards.forEach(card => {
             card.classList.add('shake');
         });
@@ -4161,11 +4159,214 @@ function toggleEditMode() {
         editBtnText.textContent = 'Edit';
         document.body.classList.remove('edit-mode');
         
+        // Remove template card
+        removeTemplateCard();
+        
         // Remove shaking animation from all content cards
         const contentCards = document.querySelectorAll('.content-card');
         contentCards.forEach(card => {
             card.classList.remove('shake');
         });
+    }
+}
+
+// Add template card for adding new content in edit mode
+function addTemplateCard() {
+    const contentCards = document.getElementById('contentCards');
+    if (!contentCards) return;
+    
+    // Check if template card already exists
+    if (contentCards.querySelector('.template-card')) return;
+    
+    // Create template card
+    const templateCard = document.createElement('div');
+    templateCard.className = 'content-card template-card';
+    templateCard.innerHTML = `
+        <div class="template-card-content">
+            <div class="template-card-icon">
+                <svg width="72" height="72" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="template-card-text">
+                <h3>Add New Content</h3>
+                <p>Click to add a new content card</p>
+            </div>
+        </div>
+    `;
+    
+    // Insert at the beginning
+    contentCards.insertBefore(templateCard, contentCards.firstChild);
+    
+    // Add click event to show creation options
+    templateCard.addEventListener('click', () => {
+        showCreationOptionsModal();
+    });
+}
+
+// Remove template card when exiting edit mode
+function removeTemplateCard() {
+    const templateCard = document.querySelector('.template-card');
+    if (templateCard) {
+        templateCard.remove();
+    }
+}
+
+// Show modal with options to create card or stack
+function showCreationOptionsModal() {
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay creation-options-modal';
+    modalOverlay.innerHTML = `
+        <div class="modal-content creation-options-content">
+            <div class="modal-header">
+                <h2>Create New</h2>
+                <button class="modal-close-btn" id="closeCreationOptionsModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="creation-options">
+                    <div class="creation-option" id="createCardOption">
+                        <div class="creation-option-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="creation-option-content">
+                            <h3>Content Card</h3>
+                            <p>Create a single content card with a link, title, and description</p>
+                        </div>
+                    </div>
+                    
+                    <div class="creation-option" id="createStackOption">
+                        <div class="creation-option-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                                <rect x="7" y="7" width="10" height="10" rx="1" ry="1" stroke="currentColor" stroke-width="2"/>
+                                <path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                            </svg>
+                        </div>
+                        <div class="creation-option-content">
+                            <h3>Stack</h3>
+                            <p>Create an empty stack to organize multiple content cards</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modalOverlay);
+    
+    // Add event listeners
+    const closeBtn = document.getElementById('closeCreationOptionsModal');
+    const createCardOption = document.getElementById('createCardOption');
+    const createStackOption = document.getElementById('createStackOption');
+    
+    closeBtn.addEventListener('click', hideCreationOptionsModal);
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            hideCreationOptionsModal();
+        }
+    });
+    
+    createCardOption.addEventListener('click', () => {
+        hideCreationOptionsModal();
+        showAddContentModal();
+    });
+    
+    createStackOption.addEventListener('click', () => {
+        hideCreationOptionsModal();
+        createEmptyStack();
+    });
+}
+
+// Hide creation options modal
+function hideCreationOptionsModal() {
+    const modal = document.querySelector('.creation-options-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Create an empty stack
+async function createEmptyStack() {
+    try {
+        const stackData = {
+            name: 'New Stack',
+            description: 'A new stack for organizing content',
+            items: []
+        };
+        
+        console.log('Creating empty stack with data:', stackData);
+        const response = await api.createStack(stackData);
+        console.log('Stack creation response:', response);
+        
+        if (response && response.success) {
+            // Add the new stack to current insights
+            const newStack = {
+                id: response.stack.id,
+                type: 'stack',
+                name: stackData.name,
+                description: stackData.description,
+                items: [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            
+            currentInsights.unshift(newStack);
+            
+            // Re-render the insights
+            renderInsights();
+            
+            // Show success message
+            showNotification('Empty stack created successfully!', 'success');
+        } else {
+            // Fallback: Create a local stack if API fails
+            console.warn('API createStack failed, creating local stack:', response);
+            const localStack = {
+                id: 'local-stack-' + Date.now(),
+                type: 'stack',
+                name: stackData.name,
+                description: stackData.description,
+                items: [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                isLocal: true // Mark as local for debugging
+            };
+            
+            currentInsights.unshift(localStack);
+            renderInsights();
+            
+            showNotification('Stack created locally (API endpoint not available)', 'warning');
+        }
+    } catch (error) {
+        console.error('Error creating empty stack:', error);
+        
+        // Fallback: Create a local stack if API completely fails
+        console.warn('API completely failed, creating local stack');
+        const localStack = {
+            id: 'local-stack-' + Date.now(),
+            type: 'stack',
+            name: 'New Stack',
+            description: 'A new stack for organizing content',
+            items: [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            isLocal: true // Mark as local for debugging
+        };
+        
+        currentInsights.unshift(localStack);
+        renderInsights();
+        
+        showNotification('Stack created locally (API unavailable)', 'warning');
     }
 }
 
@@ -4245,6 +4446,7 @@ function startDrag(card, event) {
     // Create ghost element
     const ghost = card.cloneNode(true);
     ghost.classList.add('drag-ghost');
+    ghost.classList.remove('dragging'); // Remove dragging class from ghost
     ghost.style.position = 'fixed';
     ghost.style.pointerEvents = 'none';
     ghost.style.zIndex = '10000';
@@ -4284,8 +4486,10 @@ function handleDragMove(e) {
 
 // Update ghost position
 function updateGhostPosition(ghost, event) {
-    ghost.style.left = (event.clientX - dragOffset.x) + 'px';
-    ghost.style.top = (event.clientY - dragOffset.y) + 'px';
+    const left = (event.clientX - dragOffset.x) + 'px';
+    const top = (event.clientY - dragOffset.y) + 'px';
+    ghost.style.left = left;
+    ghost.style.top = top;
 }
 
 // Check if dragging over another card for stack creation
@@ -4427,6 +4631,10 @@ async function createStack(card1, card2) {
                 insight.id !== insight1.id && 
                 insight.id !== insight2.id
             );
+            
+            // Immediately remove the original cards from the DOM
+            card1.remove();
+            card2.remove();
             
             // Update stackIdCounter
             stackIdCounter = Math.max(stackIdCounter, parseInt(stackId.split('_')[1]) + 1);
@@ -5513,13 +5721,11 @@ function closeStackExpansionInline(stackId) {
         backBtn.remove();
     }
     
-    // Show filter buttons and add content button
+    // Show filter buttons and edit mode button
     const filterButtons = document.getElementById('filterButtons');
-    const addContentBtn = document.getElementById('addContentBtnLeft');
     const editModeMainBtn = document.getElementById('editModeBtn');
     
     if (filterButtons) filterButtons.style.display = 'flex';
-    if (addContentBtn) addContentBtn.style.display = 'flex';
     if (editModeMainBtn) editModeMainBtn.style.display = 'flex';
     
     // Re-render main view
@@ -6084,6 +6290,11 @@ function setupPARATooltips(dropdownOptions) {
             title: 'Resources',
             description: 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
             examples: 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
+        },
+        'Archive': {
+            title: 'Archive',
+            description: 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
+            examples: 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
         }
     };
 
@@ -6124,7 +6335,7 @@ function setupPARATooltips(dropdownOptions) {
                 // Position tooltip
                 const rect = infoIcon.getBoundingClientRect();
                 tooltip.style.left = `${rect.right + 8}px`;
-                tooltip.style.top = `${rect.top - 8}px`;
+                tooltip.style.top = `${rect.bottom + 200}px`;
                 
                 tooltip.style.opacity = '1';
                 tooltip.style.visibility = 'visible';
