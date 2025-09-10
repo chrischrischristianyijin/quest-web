@@ -932,13 +932,7 @@ body {
     color: #666;
 }
 
-.content-card-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: var(--spacing-md);
-    border-top: 1px solid var(--border-light);
-}
+/* Removed - using centered footer styling below */
 
 .content-card-url {
     color: var(--quest-blue);
@@ -4308,28 +4302,7 @@ body.modal-open { overflow: hidden; }
     transform: scaleX(1);
 }
 
-.stack-indicator {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: var(--quest-purple);
-    color: white;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    z-index: 10;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
-}
-
-.stack-count {
-    font-size: 0.75rem;
-    font-weight: 700;
-}
+/* Stack indicator removed - now using top row layout like regular cards */
 
 /* Empty stack styling */
 .stack-card[data-stack-id] .stack-count:empty::after,
@@ -5388,6 +5361,8 @@ body.modal-open { overflow: hidden; }
     justify-content: center;
     align-items: center;
     margin-top: auto;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-light);
 }
 
 /* Tag Edit Modal Styles */
@@ -5943,32 +5918,176 @@ body.modal-open { overflow: hidden; }
 .stack-card .content-card-content{ 
   border-top:1px solid rgba(0,0,0,.06);
   padding: 12px 16px;  /* reduced padding for more compact content */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
-/* Stack card specific content styling */
+/* Stack card specific content styling - now matches regular cards */
 .stack-card .content-card-header {
-  margin-bottom: 8px;  /* reduced margin */
+  margin-bottom: 12px;  /* standard margin */
 }
 
 .stack-card .content-card-title {
-  font-size: 1rem;  /* slightly smaller title */
-  margin-bottom: 4px;  /* reduced margin */
-  line-height: 1.2;  /* tighter line height */
+  font-size: 1.125rem;  /* standard title size */
+  margin-bottom: 8px;  /* standard margin */
+  line-height: 1.3;  /* standard line height */
 }
 
 .stack-card .content-card-description {
-  font-size: 0.8rem;  /* smaller description text */
-  margin-bottom: 8px;  /* reduced margin */
-  line-height: 1.3;  /* tighter line height */
+  font-size: 0.875rem;  /* standard description text */
+  margin-bottom: 12px;  /* standard margin */
+  line-height: 1.4;  /* standard line height */
 }
 
 .stack-card .content-card-footer {
-  margin-top: 4px;  /* reduced margin */
+  margin-top: auto;  /* push to bottom */
 }
 
 .stack-card .content-card-tag-main {
-  font-size: 0.75rem;  /* smaller tag text */
-  padding: 4px 8px;  /* smaller tag padding */
+  font-size: 0.75rem;  /* standard tag text */
+  padding: 6px 12px;  /* standard tag padding */
+}
+
+.stack-edit-description-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.stack-edit-description-btn:hover {
+  opacity: 1;
+  background-color: var(--quest-purple-light);
+  transform: scale(1.1);
+}
+
+/* Edit Description Modal Styles */
+.edit-description-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.edit-description-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.edit-description-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.edit-description-modal .modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.edit-description-modal .modal-close-btn:hover {
+  background-color: var(--background-light);
+  color: var(--text-primary);
+}
+
+.edit-description-modal .modal-body {
+  padding: 24px;
+}
+
+.edit-description-modal .form-group {
+  margin-bottom: 20px;
+}
+
+.edit-description-modal .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.edit-description-modal .form-control {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s ease;
+}
+
+.edit-description-modal .form-control:focus {
+  outline: none;
+  border-color: var(--quest-purple);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.edit-description-modal .char-count {
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.edit-description-modal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.edit-description-modal .btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.edit-description-modal .btn-secondary {
+  background-color: var(--background-light);
+  color: var(--text-primary);
+}
+
+.edit-description-modal .btn-secondary:hover {
+  background-color: var(--border-light);
+}
+
+.edit-description-modal .btn-primary {
+  background-color: var(--quest-purple);
+  color: white;
+}
+
+.edit-description-modal .btn-primary:hover {
+  background-color: var(--quest-purple-dark);
+  transform: translateY(-1px);
 }
 
 /* Responsive adjustments for stack cards */
