@@ -90,6 +90,11 @@ window.addEventListener('quest-auth-expired', async (e) => {
       clearInterval(window.__QUEST_AUTOSAVE_ID__);
       window.__QUEST_AUTOSAVE_ID__ = null;
     }
+    // stop validation if running
+    if (window.__QUEST_VALIDATION_ID__) {
+      clearInterval(window.__QUEST_VALIDATION_ID__);
+      window.__QUEST_VALIDATION_ID__ = null;
+    }
     window.removeEventListener('beforeunload', saveOnUnload);
     // clear local session via auth manager
     await auth.logout();
@@ -480,11 +485,11 @@ async function loadUserInsightsWithPagination() {
             console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
         } else {
             // 尝试从localStorage加载备份
-            loadFromBackup();
+            await loadFromBackup();
         }
     } catch (error) {
         console.error('❌ 加载用户insights失败:', error);
-        loadFromBackup();
+        await loadFromBackup();
     } finally {
         insightsLoading = false;
         hideLoadingState();
@@ -495,8 +500,8 @@ async function loadUserInsightsWithPagination() {
 
 // loadRemainingInsightsInBackground function removed - using pagination only
 
-// 从备份加载数据
-function loadFromBackup() {
+// 从备份加载数据 (with validation)
+async function loadFromBackup() {
     const backupInsights = localStorage.getItem('quest_insights_backup');
     let restoredFromBackup = false;
     
@@ -504,7 +509,29 @@ function loadFromBackup() {
         try {
             const backup = JSON.parse(backupInsights);
             if (Array.isArray(backup.data)) {
-                currentInsights = backup.data;
+                // Validate data before loading
+                const userId = auth?.user?.id || currentUser?.id;
+                if (userId) {
+                    // Run validation to clean up invalid data
+                    await validateInsightsData(userId);
+                    
+                    // Reload from localStorage after validation
+                    const validatedBackup = localStorage.getItem('quest_insights_backup');
+                    if (validatedBackup) {
+                        const validatedData = JSON.parse(validatedBackup);
+                        if (Array.isArray(validatedData.data)) {
+                            currentInsights = validatedData.data;
+                        } else {
+                            currentInsights = [];
+                        }
+                    } else {
+                        currentInsights = [];
+                    }
+                } else {
+                    // No user ID, load without validation (fallback)
+                    currentInsights = backup.data;
+                }
+                
                 window.currentInsights = currentInsights;
                 if (currentInsights.length > 0) {
                     hasLoadedInsightsOnce = true;
@@ -537,6 +564,173 @@ function loadFromBackup() {
     // Notify user if data was restored from backup
     if (restoredFromBackup) {
         showSuccessMessage(`Restored ${currentInsights.length} insights from local backup. Your data is safe!`);
+    }
+}
+
+// Data validation and synchronization functions
+async function validateAndSyncData() {
+    console.log('🔍 Starting data validation and synchronization...');
+    
+    try {
+        // Get current user ID
+        const userId = auth?.user?.id || currentUser?.id;
+        if (!userId) {
+            console.log('⚠️ No user ID available for validation');
+            return;
+        }
+
+        // Validate insights data
+        await validateInsightsData(userId);
+        
+        // Validate stacks data
+        await validateStacksData(userId);
+        
+        console.log('✅ Data validation and synchronization completed');
+    } catch (error) {
+        console.error('❌ Data validation failed:', error);
+    }
+}
+
+// Validate insights data against database
+async function validateInsightsData(userId) {
+    try {
+        // Get insights from database
+        const dbResponse = await api.getInsights(userId);
+        if (!dbResponse.success || !dbResponse.data) {
+            console.log('⚠️ No insights data from database');
+            return;
+        }
+        
+        const dbInsights = Array.isArray(dbResponse.data) ? dbResponse.data : (dbResponse.data.items || []);
+        const dbInsightIds = new Set(dbInsights.map(insight => insight.id));
+        
+        // Get insights from localStorage
+        const backupInsights = localStorage.getItem('quest_insights_backup');
+        if (backupInsights) {
+            try {
+                const backup = JSON.parse(backupInsights);
+                if (backup.data && Array.isArray(backup.data)) {
+                    const localInsights = backup.data;
+                    const localInsightIds = new Set(localInsights.map(insight => insight.id));
+                    
+                    // Find insights that exist in localStorage but not in database
+                    const invalidInsights = localInsights.filter(insight => !dbInsightIds.has(insight.id));
+                    
+                    if (invalidInsights.length > 0) {
+                        console.log(`🧹 Found ${invalidInsights.length} invalid insights in localStorage, cleaning up...`);
+                        
+                        // Remove invalid insights from localStorage
+                        const validInsights = localInsights.filter(insight => dbInsightIds.has(insight.id));
+                        const cleanedBackup = {
+                            data: validInsights,
+                            timestamp: Date.now(),
+                            version: '1.0'
+                        };
+                        localStorage.setItem('quest_insights_backup', JSON.stringify(cleanedBackup));
+                        
+                        // Update current insights if they're loaded
+                        if (currentInsights && Array.isArray(currentInsights)) {
+                            currentInsights = currentInsights.filter(insight => dbInsightIds.has(insight.id));
+                            window.currentInsights = currentInsights;
+                        }
+                        
+                        console.log(`✅ Cleaned up ${invalidInsights.length} invalid insights from localStorage`);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Failed to validate insights data:', error);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error validating insights data:', error);
+    }
+}
+
+// Validate stacks data against database
+async function validateStacksData(userId) {
+    try {
+        // Get stacks from database
+        const dbResponse = await api.getUserStacksWithInsights(userId);
+        if (!dbResponse.success || !dbResponse.data) {
+            console.log('⚠️ No stacks data from database');
+            return;
+        }
+        
+        const dbStacks = Array.isArray(dbResponse.data) ? dbResponse.data : (dbResponse.data.items || []);
+        const dbStackIds = new Set(dbStacks.map(stack => stack.id));
+        
+        // Get stacks from localStorage
+        const savedStacks = localStorage.getItem('quest_stacks');
+        if (savedStacks) {
+            try {
+                const stackEntries = JSON.parse(savedStacks);
+                const validStackEntries = [];
+                
+                stackEntries.forEach(([stackId, stackData]) => {
+                    if (dbStackIds.has(stackId)) {
+                        // Stack exists in database, keep it
+                        validStackEntries.push([stackId, stackData]);
+                    } else {
+                        console.log(`🧹 Removing invalid stack from localStorage: ${stackId}`);
+                    }
+                });
+                
+                // Update localStorage with only valid stacks
+                if (validStackEntries.length !== stackEntries.length) {
+                    localStorage.setItem('quest_stacks', JSON.stringify(validStackEntries));
+                    console.log(`✅ Cleaned up ${stackEntries.length - validStackEntries.length} invalid stacks from localStorage`);
+                }
+                
+                // Update in-memory stacks - merge with database stacks
+                const currentStacks = new Map(stacks);
+                stacks.clear();
+                
+                // Add all database stacks first
+                dbStacks.forEach(dbStack => {
+                    const stackData = {
+                        id: dbStack.id,
+                        name: dbStack.name || 'Unnamed Stack',
+                        cards: dbStack.insights || [],
+                        createdAt: dbStack.created_at || new Date().toISOString(),
+                        modifiedAt: dbStack.modified_at || new Date().toISOString(),
+                        isExpanded: false
+                    };
+                    stacks.set(dbStack.id, stackData);
+                });
+                
+                // Then merge with valid localStorage stacks (for user preferences)
+                validStackEntries.forEach(([stackId, stackData]) => {
+                    if (stacks.has(stackId)) {
+                        // Merge metadata from localStorage with database data
+                        const existingStack = stacks.get(stackId);
+                        if (existingStack && stackData.name) {
+                            existingStack.name = stackData.name;
+                            existingStack.isExpanded = stackData.isExpanded || false;
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('❌ Failed to validate stacks data:', error);
+            }
+        } else {
+            // No localStorage data, but we still need to load database stacks
+            stacks.clear();
+            dbStacks.forEach(dbStack => {
+                const stackData = {
+                    id: dbStack.id,
+                    name: dbStack.name || 'Unnamed Stack',
+                    cards: dbStack.insights || [],
+                    createdAt: dbStack.created_at || new Date().toISOString(),
+                    modifiedAt: dbStack.modified_at || new Date().toISOString(),
+                    isExpanded: false
+                };
+                stacks.set(dbStack.id, stackData);
+            });
+            console.log(`📦 Loaded ${dbStacks.length} stacks from database (no localStorage data)`);
+        }
+    } catch (error) {
+        console.error('❌ Error validating stacks data:', error);
     }
 }
 
@@ -652,6 +846,9 @@ async function initPage() {
         // 初始化过滤器按钮
         initFilterButtons();
         
+        // 验证和同步数据，确保localStorage与数据库一致
+        await validateAndSyncData();
+        
         // 绑定事件
         bindEvents();
         
@@ -691,6 +888,7 @@ async function loadUserStacks() {
                     entries.forEach(([id, data]) => stacks.set(id, data));
                     if (stacks.size > 0) hasLoadedStacksOnce = true;
                     console.log('✅ Loaded', stacks.size, 'stacks from localStorage');
+                    console.log('⚠️ Note: Unauthenticated mode - stacks not validated against database');
                 } catch (e) {
                     console.error('❌ 解析本地 stacks 失败:', e);
                 }
@@ -741,7 +939,32 @@ async function loadUserStacks() {
                     }
                 });
                 
+                // Also load empty stacks from the database
+                try {
+                    const stacksResponse = await api.getUserStacksWithInsights(uid);
+                    if (stacksResponse.success && stacksResponse.data) {
+                        stacksResponse.data.forEach(dbStack => {
+                            // Only add if not already added (from insights grouping above)
+                            if (!stacks.has(dbStack.id)) {
+                                const stackData = {
+                                    id: dbStack.id,
+                                    name: dbStack.name || 'Unnamed Stack',
+                                    cards: dbStack.insights || [],
+                                    createdAt: dbStack.created_at || new Date().toISOString(),
+                                    modifiedAt: dbStack.modified_at || new Date().toISOString(),
+                                    isExpanded: false
+                                };
+                                stacks.set(dbStack.id, stackData);
+                                console.log(`📦 Loaded empty stack: "${stackData.name}" (ID: ${stackData.id})`);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to load empty stacks:', error);
+                }
+                
                 // Always try to load metadata from localStorage to preserve user preferences
+                // But only for stacks that exist in the database
                 const savedStacks = localStorage.getItem('quest_stacks');
                 console.log('🔍 Loading stacks from localStorage (authenticated):', savedStacks ? 'found' : 'not found');
                 if (savedStacks) {
@@ -756,15 +979,17 @@ async function loadUserStacks() {
                                     existingStack.name = stackData.name;
                                     existingStack.isExpanded = stackData.isExpanded || false;
                                 }
-                            } else {
-                                // Load stack from localStorage if not found in database
-                                stacks.set(stackId, stackData);
                             }
+                            // Note: We no longer load stacks from localStorage if they don't exist in database
+                            // This prevents showing invalid/non-existent stacks to users
                         });
                     } catch (error) {
                         console.error('❌ Failed to parse saved stacks:', error);
                     }
                 }
+                
+                // Run validation to clean up any invalid stacks from localStorage
+                await validateStacksData(uid);
                 
                 // 更新stackIdCounter
                 if (Object.keys(stackGroups).length > 0) {
@@ -2076,6 +2301,9 @@ async function deleteInsight(id) {
         
         // Also save to localStorage backup
         saveInsightsToLocalStorage({ force: true });
+        
+        // Run validation to ensure data consistency
+        await validateAndSyncData();
         
         alert('Content deleted successfully!');
     } catch (error) {
@@ -4318,7 +4546,8 @@ async function createEmptyStack() {
                 description: response.data.description,
                 cards: [], // Use 'cards' for consistency
                 createdAt: response.data.created_at,
-                modifiedAt: response.data.updated_at
+                modifiedAt: response.data.updated_at,
+                isExpanded: false // Initialize expansion state
             };
             
             stacks.set(stackId, newStackData);
@@ -4339,7 +4568,8 @@ async function createEmptyStack() {
                 cards: [], // Use 'cards' for consistency
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
-                isLocal: true // Mark as local for debugging
+                isLocal: true, // Mark as local for debugging
+                isExpanded: false // Initialize expansion state
             };
             
             stacks.set(stackId, localStackData);
@@ -4802,15 +5032,180 @@ function checkLocalStorageHealth() {
 
 // Auto-save stacks and insights more frequently to prevent data loss
 if (!window.__QUEST_AUTOSAVE_ID__) {
-    window.__QUEST_AUTOSAVE_ID__ = setInterval(() => {
+    window.__QUEST_AUTOSAVE_ID__ = setInterval(async () => {
         if (checkLocalStorageHealth()) {
+            // Run data validation before saving
+            await validateAndSyncData();
+            
             saveStacksToLocalStorage();
             saveInsightsToLocalStorage();
         }
     }, 15000); // Reduced from 30s to 15s for more frequent saves
 }
 
+// Periodic data validation to ensure consistency (every 2 minutes)
+if (!window.__QUEST_VALIDATION_ID__) {
+    window.__QUEST_VALIDATION_ID__ = setInterval(async () => {
+        // Only run validation if user is authenticated and page is visible
+        if (auth.checkAuth() && !document.hidden) {
+            try {
+                await validateAndSyncData();
+            } catch (error) {
+                console.warn('⚠️ Periodic data validation failed:', error);
+            }
+        }
+    }, 120000); // Every 2 minutes
+}
+
 // Note: beforeunload handler moved to top of file for better organization
+
+// Test function to verify data synchronization (for debugging)
+async function testDataSync() {
+    console.log('🧪 Testing data synchronization...');
+    
+    try {
+        const userId = auth?.user?.id || currentUser?.id;
+        if (!userId) {
+            console.log('⚠️ No user ID available for testing');
+            return;
+        }
+
+        // Test insights validation
+        console.log('🔍 Testing insights validation...');
+        await validateInsightsData(userId);
+        
+        // Test stacks validation
+        console.log('🔍 Testing stacks validation...');
+        await validateStacksData(userId);
+        
+        console.log('✅ Data synchronization test completed');
+    } catch (error) {
+        console.error('❌ Data synchronization test failed:', error);
+    }
+}
+
+// Debug function to check why a specific stack isn't showing
+async function debugStackIssue(stackName = 'gary') {
+    console.log(`🔍 Debugging why stack "${stackName}" isn't showing...`);
+    
+    try {
+        const userId = auth?.user?.id || currentUser?.id;
+        if (!userId) {
+            console.log('⚠️ No user ID available for debugging');
+            return;
+        }
+
+        // 1. Check what's in the stacks Map
+        console.log('📊 Current stacks in memory:', stacks.size);
+        for (const [id, stackData] of stacks) {
+            console.log(`  - Stack ID: ${id}, Name: "${stackData.name}", Cards: ${stackData.cards?.length || 0}`);
+        }
+
+        // 2. Check what's in localStorage
+        const savedStacks = localStorage.getItem('quest_stacks');
+        if (savedStacks) {
+            const stackEntries = JSON.parse(savedStacks);
+            console.log('💾 Stacks in localStorage:', stackEntries.length);
+            stackEntries.forEach(([id, data]) => {
+                console.log(`  - Stack ID: ${id}, Name: "${data.name}"`);
+            });
+        }
+
+        // 3. Check what's in the database
+        console.log('🗄️ Checking database for stacks...');
+        const dbResponse = await api.getUserStacksWithInsights(userId);
+        if (dbResponse.success && dbResponse.data) {
+            console.log('📋 Stacks from database:', dbResponse.data.length);
+            dbResponse.data.forEach(stack => {
+                console.log(`  - Stack ID: ${stack.id}, Name: "${stack.name || 'Unnamed'}", Cards: ${stack.insights?.length || 0}`);
+            });
+            
+            // Look for the specific stack
+            const targetStack = dbResponse.data.find(s => 
+                s.name && s.name.toLowerCase().includes(stackName.toLowerCase())
+            );
+            if (targetStack) {
+                console.log(`✅ Found "${stackName}" stack in database:`, targetStack);
+            } else {
+                console.log(`❌ Stack "${stackName}" not found in database`);
+            }
+        } else {
+            console.log('❌ Failed to fetch stacks from database:', dbResponse);
+        }
+
+        // 4. Check current page and filters
+        console.log('📄 Current page:', currentPage);
+        console.log('🏷️ Active tag filter:', currentFilters.tags);
+        console.log('📊 Has stacks:', stacks.size > 0);
+        console.log('📊 Has insights:', currentInsights.length > 0);
+
+    } catch (error) {
+        console.error('❌ Debug failed:', error);
+    }
+}
+
+// Expose test functions globally for debugging
+window.testDataSync = testDataSync;
+window.debugStackIssue = debugStackIssue;
+
+// Quick fix function to reload stacks and test
+async function reloadStacks() {
+    console.log('🔄 Reloading stacks...');
+    try {
+        await loadUserStacks();
+        renderInsights();
+        console.log('✅ Stacks reloaded. Current count:', stacks.size);
+        for (const [id, stackData] of stacks) {
+            console.log(`  - ${stackData.name} (${stackData.cards.length} cards)`);
+        }
+    } catch (error) {
+        console.error('❌ Failed to reload stacks:', error);
+    }
+}
+
+// Force reload stacks from database and render
+async function forceReloadStacks() {
+    console.log('🔄 Force reloading stacks from database...');
+    try {
+        const userId = auth?.user?.id || currentUser?.id;
+        if (!userId) {
+            console.log('⚠️ No user ID available');
+            return;
+        }
+        
+        // Clear current stacks
+        stacks.clear();
+        
+        // Load directly from database
+        const dbResponse = await api.getUserStacksWithInsights(userId);
+        if (dbResponse.success && dbResponse.data) {
+            const dbStacks = Array.isArray(dbResponse.data) ? dbResponse.data : (dbResponse.data.items || []);
+            dbStacks.forEach(dbStack => {
+                const stackData = {
+                    id: dbStack.id,
+                    name: dbStack.name || 'Unnamed Stack',
+                    cards: dbStack.insights || [],
+                    createdAt: dbStack.created_at || new Date().toISOString(),
+                    modifiedAt: dbStack.modified_at || new Date().toISOString(),
+                    isExpanded: false
+                };
+                stacks.set(dbStack.id, stackData);
+            });
+            console.log(`📦 Force loaded ${dbStacks.length} stacks from database`);
+        }
+        
+        // Re-render
+        renderInsights();
+        console.log('✅ Force reload complete. Current count:', stacks.size);
+        for (const [id, stackData] of stacks) {
+            console.log(`  - ${stackData.name} (${stackData.cards.length} cards)`);
+        }
+    } catch (error) {
+        console.error('❌ Failed to force reload stacks:', error);
+    }
+}
+window.reloadStacks = reloadStacks;
+window.forceReloadStacks = forceReloadStacks;
 
 // Find or create the Archive tag for default assignment
 async function findOrCreateArchiveTag() {
@@ -4902,45 +5297,244 @@ function createStackCard(stackData) {
     const content = document.createElement('div');
     content.className = 'content-card-content';
     
-    const header = document.createElement('div');
-    header.className = 'content-card-header';
+    // Card header - Top row with date and source info (matching insight card structure)
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'content-card-header';
     
-    const title = document.createElement('h3');
-    title.className = 'content-card-title stack-title';
+    // Top row: Date on left, item count on right (where source info would be)
+    const topRow = document.createElement('div');
+    topRow.className = 'content-card-top-row';
+    
+    const headerDate = document.createElement('div');
+    headerDate.className = 'content-card-date';
+    headerDate.textContent = new Date(stackData.createdAt).toLocaleDateString('en-US');
+    
+    const itemCountInfo = document.createElement('div');
+    itemCountInfo.className = 'content-card-source';
+    
+    const itemCountLogo = document.createElement('div');
+    itemCountLogo.className = 'content-card-source-logo';
+    itemCountLogo.innerHTML = '📚'; // Stack icon
+    
+    const itemCountName = document.createElement('span');
+    itemCountName.className = 'content-card-source-name';
+    itemCountName.textContent = `${stackData.cards.length} items`;
+    
+    itemCountInfo.appendChild(itemCountLogo);
+    itemCountInfo.appendChild(itemCountName);
+    
+    topRow.appendChild(headerDate);
+    topRow.appendChild(itemCountInfo);
+    
+    // Title below the top row
+    const title = document.createElement('div');
+    title.className = 'content-card-title';
     title.textContent = stackData.name;
-    header.appendChild(title);
     
-    const description = document.createElement('p');
+    cardHeader.appendChild(topRow);
+    cardHeader.appendChild(title);
+    
+    // Description
+    const description = document.createElement('div');
     description.className = 'content-card-description';
-    description.textContent = `${stackData.cards.length} items • Created ${formatDate(stackData.createdAt)}`;
-    
-    content.appendChild(header);
-    content.appendChild(description);
+    description.textContent = stackData.description || 'A collection of related content';
     
     // Footer with main tag
     const footer = document.createElement('div');
     footer.className = 'content-card-footer';
     
-    const mainTag = document.createElement('span');
+    const mainTag = document.createElement('div');
     mainTag.className = 'content-card-tag-main';
     mainTag.textContent = 'STACK';
+    
     footer.appendChild(mainTag);
     
+    // Assemble card content
+    content.appendChild(cardHeader);
+    content.appendChild(description);
     content.appendChild(footer);
     card.appendChild(content);
     
     // Click handler to expand/collapse stack
     card.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Ensure stackData is properly initialized
+        if (!stackData || !stackData.id) {
+            console.error('❌ Invalid stack data:', stackData);
+            return;
+        }
+        
+        // Ensure isExpanded property exists
+        if (typeof stackData.isExpanded === 'undefined') {
+            stackData.isExpanded = false;
+        }
+        
+        console.log('🖱️ Stack card clicked:', stackData.name, 'isExpanded:', stackData.isExpanded);
+        
         if (!e.target.closest('.content-card-delete-btn')) {
             if (stackData.isExpanded) {
+                console.log('📂 Collapsing stack:', stackData.name);
                 collapseStack(stackData.id);
             } else {
+                console.log('📂 Expanding stack:', stackData.name);
                 expandStack(stackData);
             }
         }
     });
     
     return card;
+}
+
+// Start inline editing of stack name
+function startInlineNameEdit(stackId, nameElement) {
+    const currentName = nameElement.textContent;
+    
+    // Create input element
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.className = 'stack-name-edit-input';
+    input.style.cssText = `
+        background: transparent;
+        border: 2px solid var(--quest-purple);
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: inherit;
+        font-weight: inherit;
+        color: inherit;
+        width: 100%;
+        outline: none;
+    `;
+    
+    // Replace the name element with input
+    const container = nameElement.parentElement;
+    const editIcon = container.querySelector('.edit-icon');
+    
+    // Remove both name element and edit icon
+    if (container.contains(nameElement)) {
+        container.removeChild(nameElement);
+    }
+    if (editIcon && container.contains(editIcon)) {
+        container.removeChild(editIcon);
+    }
+    
+    container.appendChild(input);
+    
+    // Focus and select text
+    input.focus();
+    input.select();
+    
+    // Handle save on Enter or blur
+    const saveEdit = async () => {
+        const newName = input.value.trim();
+        const wasEdited = newName && newName !== currentName;
+        
+        if (wasEdited) {
+            try {
+                await updateStackName(stackId, newName);
+                // Update the stack data
+                const stackData = stacks.get(stackId);
+                if (stackData) {
+                    stackData.name = newName;
+                    stacks.set(stackId, stackData);
+                }
+            } catch (error) {
+                console.error('Failed to update stack name:', error);
+                showNotification('Failed to update stack name', 'error');
+            }
+        }
+        
+        // Restore the name element
+        const newNameElement = document.createElement('h3');
+        newNameElement.className = 'stack-name-horizontal editable-name';
+        newNameElement.setAttribute('data-stack-id', stackId);
+        newNameElement.textContent = newName || currentName;
+        
+        // Add edit icon
+        const editIcon = document.createElement('svg');
+        editIcon.className = 'edit-icon';
+        editIcon.setAttribute('width', '16');
+        editIcon.setAttribute('height', '16');
+        editIcon.setAttribute('viewBox', '0 0 24 24');
+        editIcon.setAttribute('fill', 'none');
+        editIcon.innerHTML = '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />';
+        
+        // Clear container and add new elements
+        container.innerHTML = '';
+        container.appendChild(newNameElement);
+        container.appendChild(editIcon);
+        
+        // Add "edited" class if this was the first edit
+        if (wasEdited) {
+            container.classList.add('edited');
+        }
+        
+        // Re-attach event listener
+        newNameElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startInlineNameEdit(stackId, newNameElement);
+        });
+    };
+    
+    // Handle cancel on Escape
+    const cancelEdit = () => {
+        const newNameElement = document.createElement('h3');
+        newNameElement.className = 'stack-name-horizontal editable-name';
+        newNameElement.setAttribute('data-stack-id', stackId);
+        newNameElement.textContent = currentName;
+        
+        // Add edit icon
+        const editIcon = document.createElement('svg');
+        editIcon.className = 'edit-icon';
+        editIcon.setAttribute('width', '16');
+        editIcon.setAttribute('height', '16');
+        editIcon.setAttribute('viewBox', '0 0 24 24');
+        editIcon.setAttribute('fill', 'none');
+        editIcon.innerHTML = '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />';
+        
+        // Clear container and add new elements
+        container.innerHTML = '';
+        container.appendChild(newNameElement);
+        container.appendChild(editIcon);
+        
+        // Preserve the "edited" class if it was already there
+        // (don't add it since we're canceling the edit)
+        
+        // Re-attach event listener
+        newNameElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startInlineNameEdit(stackId, newNameElement);
+        });
+    };
+    
+    input.addEventListener('blur', saveEdit);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit();
+        }
+    });
+}
+
+// Update stack name via API
+async function updateStackName(stackId, newName) {
+    try {
+        const response = await api.updateStack(stackId, { name: newName });
+        if (response && response.success) {
+            showNotification('Stack name updated successfully', 'success');
+            return response;
+        } else {
+            throw new Error('Failed to update stack name');
+        }
+    } catch (error) {
+        console.error('Error updating stack name:', error);
+        throw error;
+    }
 }
 
 // Remove an item from a stack
@@ -5115,6 +5709,9 @@ async function deleteStack(stackId) {
                     // Update pagination counts
                     updatePaginationCounts();
                     
+                    // Run validation to ensure data consistency
+                    await validateAndSyncData();
+                    
                     // Re-render content
                     renderInsights();
                     showSuccessMessage('Stack deleted and items restored.');
@@ -5185,14 +5782,19 @@ function expandStack(stackData) {
     stackCard.innerHTML = `
         <div class="stack-expanded-header">
             <div class="stack-info-horizontal">
-                <h3 class="stack-name-horizontal">${stackData.name}</h3>
+                <div class="stack-name-container">
+                    <h3 class="stack-name-horizontal editable-name" data-stack-id="${stackData.id}">${stackData.name}</h3>
+                    <svg class="edit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
                 <div class="stack-meta-horizontal">
                     <span class="stack-created">Created: ${formatDate(stackData.createdAt)}</span>
                     <span class="stack-modified">Last Modified: ${formatDate(stackData.modifiedAt)}</span>
                 </div>
             </div>
             <div class="stack-actions-horizontal">
-                <button class="stack-edit-name-btn-horizontal">Edit Name</button>
                 <button class="stack-collapse-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -5217,14 +5819,9 @@ function expandStack(stackData) {
     `;
     
     // Add event listeners
-    const editNameBtn = stackCard.querySelector('.stack-edit-name-btn-horizontal');
     const collapseBtn = stackCard.querySelector('.stack-collapse-btn');
     const editModeBtn = stackCard.querySelector('.stack-edit-mode-btn-horizontal');
-    
-    editNameBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        editStackName(stackData.id);
-    });
+    const editableName = stackCard.querySelector('.editable-name');
     
     collapseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -5235,6 +5832,14 @@ function expandStack(stackData) {
         e.stopPropagation();
         toggleStackEditModeHorizontal(stackData.id);
     });
+    
+    // Set up inline name editing
+    if (editableName) {
+        editableName.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startInlineNameEdit(stackData.id, editableName);
+        });
+    }
     
     // Populate cards horizontally
     const stackCardsContainer = document.getElementById(`stackCardsHorizontal-${stackData.id}`);
