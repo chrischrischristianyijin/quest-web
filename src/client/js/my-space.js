@@ -4311,14 +4311,14 @@ async function createEmptyStack() {
         
         if (response && response.success) {
             // Register the new stack in the stacks Map
-            const stackId = response.stack.id;
+            const stackId = response.data.id;
             const newStackData = {
                 id: stackId,
-                name: stackData.name,
-                description: stackData.description,
+                name: response.data.name,
+                description: response.data.description,
                 cards: [], // Use 'cards' for consistency
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString()
+                createdAt: response.data.created_at,
+                modifiedAt: response.data.updated_at
             };
             
             stacks.set(stackId, newStackData);
