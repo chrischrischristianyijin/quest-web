@@ -44,32 +44,32 @@ export const API_CONFIG = {
     
     // 见解管理接口
     INSIGHTS: {
-        LIST: '/api/v1/insights',
-        ALL: '/api/v1/insights/all',
-        GET: '/api/v1/insights',
-        CREATE: '/api/v1/insights',
-        UPDATE: '/api/v1/insights',
-        DELETE: '/api/v1/insights'
+        LIST: '/api/v1/insights/',
+        ALL: '/api/v1/insights/all/',
+        GET: '/api/v1/insights/',
+        CREATE: '/api/v1/insights/',
+        UPDATE: '/api/v1/insights/',
+        DELETE: '/api/v1/insights/'
     },
     
     // 标签管理接口
     USER_TAGS: {
-        LIST: '/api/v1/user-tags',
-        GET: '/api/v1/user-tags',
-        CREATE: '/api/v1/user-tags',
-        UPDATE: '/api/v1/user-tags',
-        DELETE: '/api/v1/user-tags',
-        SEARCH: '/api/v1/user-tags/search'
+        LIST: '/api/v1/user-tags/',
+        GET: '/api/v1/user-tags/',
+        CREATE: '/api/v1/user-tags/',
+        UPDATE: '/api/v1/user-tags/',
+        DELETE: '/api/v1/user-tags/',
+        SEARCH: '/api/v1/user-tags/search/'
     },
     
     // 堆叠管理接口
     STACKS: {
-        LIST: '/api/v1/stacks',
-        GET: '/api/v1/stacks',
-        CREATE: '/api/v1/stacks',
-        UPDATE: '/api/v1/stacks',
-        DELETE: '/api/v1/stacks',
-        ITEMS: '/api/v1/stacks/items'
+        LIST: '/api/v1/stacks/',
+        GET: '/api/v1/stacks/',
+        CREATE: '/api/v1/stacks/',
+        UPDATE: '/api/v1/stacks/',
+        DELETE: '/api/v1/stacks/',
+        ITEMS: '/api/v1/stacks/items/'
     },
     
     // 等待列表接口
