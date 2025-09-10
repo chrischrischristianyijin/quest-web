@@ -90,11 +90,6 @@ window.addEventListener('quest-auth-expired', async (e) => {
       clearInterval(window.__QUEST_AUTOSAVE_ID__);
       window.__QUEST_AUTOSAVE_ID__ = null;
     }
-    // stop validation if running
-    if (window.__QUEST_VALIDATION_ID__) {
-      clearInterval(window.__QUEST_VALIDATION_ID__);
-      window.__QUEST_VALIDATION_ID__ = null;
-    }
     window.removeEventListener('beforeunload', saveOnUnload);
     // clear local session via auth manager
     await auth.logout();
@@ -485,11 +480,11 @@ async function loadUserInsightsWithPagination() {
             console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
         } else {
             // 尝试从localStorage加载备份
-            await loadFromBackup();
+            loadFromBackup();
         }
     } catch (error) {
         console.error('❌ 加载用户insights失败:', error);
-        await loadFromBackup();
+        loadFromBackup();
     } finally {
         insightsLoading = false;
         hideLoadingState();
@@ -500,8 +495,8 @@ async function loadUserInsightsWithPagination() {
 
 // loadRemainingInsightsInBackground function removed - using pagination only
 
-// 从备份加载数据 (with validation)
-async function loadFromBackup() {
+// 从备份加载数据
+function loadFromBackup() {
     const backupInsights = localStorage.getItem('quest_insights_backup');
     let restoredFromBackup = false;
     
@@ -509,29 +504,7 @@ async function loadFromBackup() {
         try {
             const backup = JSON.parse(backupInsights);
             if (Array.isArray(backup.data)) {
-                // Validate data before loading
-                const userId = auth?.user?.id || currentUser?.id;
-                if (userId) {
-                    // Run validation to clean up invalid data
-                    await validateInsightsData(userId);
-                    
-                    // Reload from localStorage after validation
-                    const validatedBackup = localStorage.getItem('quest_insights_backup');
-                    if (validatedBackup) {
-                        const validatedData = JSON.parse(validatedBackup);
-                        if (Array.isArray(validatedData.data)) {
-                            currentInsights = validatedData.data;
-                        } else {
-                            currentInsights = [];
-                        }
-                    } else {
-                        currentInsights = [];
-                    }
-                } else {
-                    // No user ID, load without validation (fallback)
-                    currentInsights = backup.data;
-                }
-                
+                currentInsights = backup.data;
                 window.currentInsights = currentInsights;
                 if (currentInsights.length > 0) {
                     hasLoadedInsightsOnce = true;
@@ -564,173 +537,6 @@ async function loadFromBackup() {
     // Notify user if data was restored from backup
     if (restoredFromBackup) {
         showSuccessMessage(`Restored ${currentInsights.length} insights from local backup. Your data is safe!`);
-    }
-}
-
-// Data validation and synchronization functions
-async function validateAndSyncData() {
-    console.log('🔍 Starting data validation and synchronization...');
-    
-    try {
-        // Get current user ID
-        const userId = auth?.user?.id || currentUser?.id;
-        if (!userId) {
-            console.log('⚠️ No user ID available for validation');
-            return;
-        }
-
-        // Validate insights data
-        await validateInsightsData(userId);
-        
-        // Validate stacks data
-        await validateStacksData(userId);
-        
-        console.log('✅ Data validation and synchronization completed');
-    } catch (error) {
-        console.error('❌ Data validation failed:', error);
-    }
-}
-
-// Validate insights data against database
-async function validateInsightsData(userId) {
-    try {
-        // Get insights from database
-        const dbResponse = await api.getInsights(userId);
-        if (!dbResponse.success || !dbResponse.data) {
-            console.log('⚠️ No insights data from database');
-            return;
-        }
-        
-        const dbInsights = Array.isArray(dbResponse.data) ? dbResponse.data : (dbResponse.data.items || []);
-        const dbInsightIds = new Set(dbInsights.map(insight => insight.id));
-        
-        // Get insights from localStorage
-        const backupInsights = localStorage.getItem('quest_insights_backup');
-        if (backupInsights) {
-            try {
-                const backup = JSON.parse(backupInsights);
-                if (backup.data && Array.isArray(backup.data)) {
-                    const localInsights = backup.data;
-                    const localInsightIds = new Set(localInsights.map(insight => insight.id));
-                    
-                    // Find insights that exist in localStorage but not in database
-                    const invalidInsights = localInsights.filter(insight => !dbInsightIds.has(insight.id));
-                    
-                    if (invalidInsights.length > 0) {
-                        console.log(`🧹 Found ${invalidInsights.length} invalid insights in localStorage, cleaning up...`);
-                        
-                        // Remove invalid insights from localStorage
-                        const validInsights = localInsights.filter(insight => dbInsightIds.has(insight.id));
-                        const cleanedBackup = {
-                            data: validInsights,
-                            timestamp: Date.now(),
-                            version: '1.0'
-                        };
-                        localStorage.setItem('quest_insights_backup', JSON.stringify(cleanedBackup));
-                        
-                        // Update current insights if they're loaded
-                        if (currentInsights && Array.isArray(currentInsights)) {
-                            currentInsights = currentInsights.filter(insight => dbInsightIds.has(insight.id));
-                            window.currentInsights = currentInsights;
-                        }
-                        
-                        console.log(`✅ Cleaned up ${invalidInsights.length} invalid insights from localStorage`);
-                    }
-                }
-            } catch (error) {
-                console.error('❌ Failed to validate insights data:', error);
-            }
-        }
-    } catch (error) {
-        console.error('❌ Error validating insights data:', error);
-    }
-}
-
-// Validate stacks data against database
-async function validateStacksData(userId) {
-    try {
-        // Get stacks from database
-        const dbResponse = await api.getUserStacksWithInsights(userId);
-        if (!dbResponse.success || !dbResponse.data) {
-            console.log('⚠️ No stacks data from database');
-            return;
-        }
-        
-        const dbStacks = Array.isArray(dbResponse.data) ? dbResponse.data : (dbResponse.data.items || []);
-        const dbStackIds = new Set(dbStacks.map(stack => stack.id));
-        
-        // Get stacks from localStorage
-        const savedStacks = localStorage.getItem('quest_stacks');
-        if (savedStacks) {
-            try {
-                const stackEntries = JSON.parse(savedStacks);
-                const validStackEntries = [];
-                
-                stackEntries.forEach(([stackId, stackData]) => {
-                    if (dbStackIds.has(stackId)) {
-                        // Stack exists in database, keep it
-                        validStackEntries.push([stackId, stackData]);
-                    } else {
-                        console.log(`🧹 Removing invalid stack from localStorage: ${stackId}`);
-                    }
-                });
-                
-                // Update localStorage with only valid stacks
-                if (validStackEntries.length !== stackEntries.length) {
-                    localStorage.setItem('quest_stacks', JSON.stringify(validStackEntries));
-                    console.log(`✅ Cleaned up ${stackEntries.length - validStackEntries.length} invalid stacks from localStorage`);
-                }
-                
-                // Update in-memory stacks - merge with database stacks
-                const currentStacks = new Map(stacks);
-                stacks.clear();
-                
-                // Add all database stacks first
-                dbStacks.forEach(dbStack => {
-                    const stackData = {
-                        id: dbStack.id,
-                        name: dbStack.name || 'Unnamed Stack',
-                        cards: dbStack.insights || [],
-                        createdAt: dbStack.created_at || new Date().toISOString(),
-                        modifiedAt: dbStack.modified_at || new Date().toISOString(),
-                        isExpanded: false
-                    };
-                    stacks.set(dbStack.id, stackData);
-                });
-                
-                // Then merge with valid localStorage stacks (for user preferences)
-                validStackEntries.forEach(([stackId, stackData]) => {
-                    if (stacks.has(stackId)) {
-                        // Merge metadata from localStorage with database data
-                        const existingStack = stacks.get(stackId);
-                        if (existingStack && stackData.name) {
-                            existingStack.name = stackData.name;
-                            existingStack.isExpanded = stackData.isExpanded || false;
-                        }
-                    }
-                });
-                
-            } catch (error) {
-                console.error('❌ Failed to validate stacks data:', error);
-            }
-        } else {
-            // No localStorage data, but we still need to load database stacks
-            stacks.clear();
-            dbStacks.forEach(dbStack => {
-                const stackData = {
-                    id: dbStack.id,
-                    name: dbStack.name || 'Unnamed Stack',
-                    cards: dbStack.insights || [],
-                    createdAt: dbStack.created_at || new Date().toISOString(),
-                    modifiedAt: dbStack.modified_at || new Date().toISOString(),
-                    isExpanded: false
-                };
-                stacks.set(dbStack.id, stackData);
-            });
-            console.log(`📦 Loaded ${dbStacks.length} stacks from database (no localStorage data)`);
-        }
-    } catch (error) {
-        console.error('❌ Error validating stacks data:', error);
     }
 }
 
@@ -846,9 +652,6 @@ async function initPage() {
         // 初始化过滤器按钮
         initFilterButtons();
         
-        // 验证和同步数据，确保localStorage与数据库一致
-        await validateAndSyncData();
-        
         // 绑定事件
         bindEvents();
         
@@ -857,6 +660,9 @@ async function initPage() {
         
         // Set up event delegation for card interactions (performance optimization)
         setupCardEventDelegation();
+        
+        // Set up authentication listener to reload stacks when user logs in
+        setupAuthListener();
         
         // 分页模式：不需要无限滚动
     } catch (error) {
@@ -885,14 +691,22 @@ async function loadUserStacks() {
                     const entries = JSON.parse(saved);
                     console.log('📦 Parsed stack entries:', entries.length);
                     stacks.clear();
-                    entries.forEach(([id, data]) => stacks.set(id, data));
+                    entries.forEach(([id, data]) => {
+                        const stringId = String(id); // Ensure string format
+                        data.id = stringId; // Ensure ID is string
+                        stacks.set(stringId, data);
+                    });
                     if (stacks.size > 0) hasLoadedStacksOnce = true;
                     console.log('✅ Loaded', stacks.size, 'stacks from localStorage');
-                    console.log('⚠️ Note: Unauthenticated mode - stacks not validated against database');
                 } catch (e) {
                     console.error('❌ 解析本地 stacks 失败:', e);
                 }
             }
+            
+            // Mark stacks as loaded regardless of whether any were found
+            hasLoadedStacksOnce = true;
+            console.log('✅ Stacks loading process completed (unauthenticated). Found', stacks.size, 'stacks');
+            
             // 在未认证时不要继续调用后端
             return;
         }
@@ -901,6 +715,30 @@ async function loadUserStacks() {
         let allInsights = [];
         const effectiveLimit = effectiveFetchLimitForPage(1);
         const uid = (auth?.user?.id || currentUser?.id || undefined);
+        
+        // Load stacks directly from the stack API
+        console.log('🔍 Loading stacks from API...');
+        const stacksResponse = await api.getUserStacks(uid);
+        console.log('📡 Stacks API response:', stacksResponse);
+        
+        // Process stacks from API response
+        if (stacksResponse && stacksResponse.success && stacksResponse.data) {
+            console.log('📦 Processing stacks from API:', stacksResponse.data.length, 'stacks');
+            stacksResponse.data.forEach(stack => {
+                const stackData = {
+                    id: String(stack.id),
+                    name: stack.name || 'Stack',
+                    cards: [], // Will be populated from insights
+                    createdAt: stack.created_at || new Date().toISOString(),
+                    modifiedAt: stack.updated_at || new Date().toISOString(),
+                    isExpanded: false
+                };
+                stacks.set(String(stack.id), stackData);
+            });
+            console.log('✅ Loaded', stacks.size, 'stacks from API');
+        } else {
+            console.log('⚠️ No stacks found in API response or API failed');
+        }
         const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response.success && response.data) {
@@ -910,86 +748,80 @@ async function loadUserStacks() {
             }
         }
                 
-                stacks.clear(); // 清空现有stacks
+                // Debug: Check insights for stack_id
+                console.log('🔍 Debug: Checking insights for stack_id...');
+                allInsights.forEach((insight, index) => {
+                    console.log(`  Insight ${index}:`, {
+                        id: insight.id,
+                        stack_id: insight.stack_id,
+                        hasStackId: !!insight.stack_id,
+                        allKeys: Object.keys(insight),
+                        fullInsight: insight
+                    });
+                });
                 
-                // Group insights by stack_id
-                const stackGroups = {};
+                // Populate existing stacks with insights that have matching stack_id
                 allInsights.forEach(insight => {
                     if (insight.stack_id) {
-                        if (!stackGroups[insight.stack_id]) {
-                            stackGroups[insight.stack_id] = [];
+                        const stackId = String(insight.stack_id);
+                        if (stacks.has(stackId)) {
+                            const stack = stacks.get(stackId);
+                            stack.cards.push(insight);
+                            console.log(`📦 Added insight ${insight.id} to stack ${stackId}`);
+                        } else {
+                            console.warn(`⚠️ Insight ${insight.id} has stack_id ${stackId} but stack not found`);
                         }
-                        stackGroups[insight.stack_id].push(insight);
                     }
                 });
                 
-                // Create stack objects from grouped insights
-                Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
-                    if (stackInsights.length > 0) {
-                        const stackData = {
-                            id: stackId,
-                            name: 'Stack',
-                            cards: stackInsights,
-                            createdAt: stackInsights[0].created_at || new Date().toISOString(),
-                            modifiedAt: stackInsights[0].modified_at || new Date().toISOString(),
-                            isExpanded: false
-                        };
-                        
-                        stacks.set(stackId, stackData);
-                    }
-                });
-                
-                // Also load empty stacks from the database
-                try {
-                    const stacksResponse = await api.getUserStacksWithInsights(uid);
-                    if (stacksResponse.success && stacksResponse.data) {
-                        stacksResponse.data.forEach(dbStack => {
-                            // Only add if not already added (from insights grouping above)
-                            if (!stacks.has(dbStack.id)) {
-                                const stackData = {
-                                    id: dbStack.id,
-                                    name: dbStack.name || 'Unnamed Stack',
-                                    cards: dbStack.insights || [],
-                                    createdAt: dbStack.created_at || new Date().toISOString(),
-                                    modifiedAt: dbStack.modified_at || new Date().toISOString(),
-                                    isExpanded: false
-                                };
-                                stacks.set(dbStack.id, stackData);
-                                console.log(`📦 Loaded empty stack: "${stackData.name}" (ID: ${stackData.id})`);
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error('❌ Failed to load empty stacks:', error);
-                }
+                console.log('🔍 Debug: Stacks populated with insights. Total stacks:', stacks.size);
                 
                 // Always try to load metadata from localStorage to preserve user preferences
-                // But only for stacks that exist in the database
                 const savedStacks = localStorage.getItem('quest_stacks');
                 console.log('🔍 Loading stacks from localStorage (authenticated):', savedStacks ? 'found' : 'not found');
+                
+                // Debug: Check all localStorage keys that might contain stack data
+                console.log('🔍 Debug: All localStorage keys:', Object.keys(localStorage).filter(key => key.includes('stack') || key.includes('quest')));
+                console.log('🔍 Debug: quest_stacks value:', localStorage.getItem('quest_stacks'));
+                console.log('🔍 Debug: quest_insights_backup value length:', localStorage.getItem('quest_insights_backup')?.length || 0);
+                
+                // Debug: Check all localStorage keys to see if stacks are stored elsewhere
+                console.log('🔍 Debug: All localStorage keys:', Object.keys(localStorage));
+                Object.keys(localStorage).forEach(key => {
+                    if (key.includes('stack') || key.includes('quest')) {
+                        console.log(`🔍 Debug: ${key}:`, localStorage.getItem(key));
+                    }
+                });
                 if (savedStacks) {
                     try {
                         const stackEntries = JSON.parse(savedStacks);
                         console.log('📦 Parsed stack entries from localStorage:', stackEntries.length);
+                        console.log('🔍 Debug: Raw localStorage data:', savedStacks);
+                        console.log('🔍 Debug: Parsed stack entries:', stackEntries);
                         stackEntries.forEach(([stackId, stackData]) => {
-                            if (stacks.has(stackId)) {
+                            const stringStackId = String(stackId); // Ensure string format
+                            if (stacks.has(stringStackId)) {
                                 // Merge metadata from localStorage with database data
-                                const existingStack = stacks.get(stackId);
+                                const existingStack = stacks.get(stringStackId);
                                 if (existingStack && stackData.name) {
                                     existingStack.name = stackData.name;
                                     existingStack.isExpanded = stackData.isExpanded || false;
                                 }
+                            } else {
+                                // Load stack from localStorage if not found in database
+                                stackData.id = stringStackId; // Ensure ID is string
+                                stacks.set(stringStackId, stackData);
                             }
-                            // Note: We no longer load stacks from localStorage if they don't exist in database
-                            // This prevents showing invalid/non-existent stacks to users
                         });
+                        
+                        // If no stacks were loaded from database but we have localStorage data, use it
+                        if (stacks.size === 0 && stackEntries.length > 0) {
+                            console.log('🔄 No database stacks found, using localStorage stacks');
+                        }
                     } catch (error) {
                         console.error('❌ Failed to parse saved stacks:', error);
                     }
                 }
-                
-                // Run validation to clean up any invalid stacks from localStorage
-                await validateStacksData(uid);
                 
                 // 更新stackIdCounter
                 if (Object.keys(stackGroups).length > 0) {
@@ -1028,12 +860,34 @@ async function loadUserStacks() {
             // 不抛出错误，允许页面继续加载
         }
         
+        // Mark stacks as loaded regardless of whether any were found
+        hasLoadedStacksOnce = true;
+        console.log('✅ Stacks loading process completed. Found', stacks.size, 'stacks');
+        
         // After stacks are known, refill page 1 with correct over-fetch
         if (stacks.size > 0) {
             await goToPage(1, { force: true });
         }
 }
 
+// Set up authentication listener to reload stacks when user logs in
+function setupAuthListener() {
+    // Listen for authentication state changes
+    auth.addListener((authState) => {
+        console.log('🔔 Auth state changed:', {
+            isAuthenticated: authState.isAuthenticated,
+            hasUser: !!authState.user
+        });
+        
+        // If user just logged in, reload stacks
+        if (authState.isAuthenticated && authState.user) {
+            console.log('🔄 User logged in, reloading stacks...');
+            loadUserStacks().catch(error => {
+                console.error('❌ Failed to reload stacks after login:', error);
+            });
+        }
+    });
+}
 
 // 加载用户资料
 async function loadUserProfile() {
@@ -2301,9 +2155,6 @@ async function deleteInsight(id) {
         
         // Also save to localStorage backup
         saveInsightsToLocalStorage({ force: true });
-        
-        // Run validation to ensure data consistency
-        await validateAndSyncData();
         
         alert('Content deleted successfully!');
     } catch (error) {
@@ -4550,7 +4401,7 @@ async function createEmptyStack() {
                 isExpanded: false // Initialize expansion state
             };
             
-            stacks.set(stackId, newStackData);
+            stacks.set(String(stackId), newStackData);
             
             // Re-render the insights
             renderInsights();
@@ -4572,7 +4423,7 @@ async function createEmptyStack() {
                 isExpanded: false // Initialize expansion state
             };
             
-            stacks.set(stackId, localStackData);
+            stacks.set(String(stackId), localStackData);
             renderInsights();
             
             showNotification('Stack created locally (API endpoint not available)', 'warning');
@@ -4593,7 +4444,7 @@ async function createEmptyStack() {
             isLocal: true // Mark as local for debugging
         };
         
-        stacks.set(stackId, localStackData);
+        stacks.set(String(stackId), localStackData);
         renderInsights();
         
         showNotification('Stack created locally (API unavailable)', 'warning');
@@ -4854,21 +4705,23 @@ async function joinStack(card, targetStack) {
         const insightInStack = Array.from(stacks.values()).some(stack => 
             stack.cards.some(card => card.id === insight.id)
         );
-        
+
         if (insightInStack) {
             showErrorMessage('This card is already in a stack. Each card can only be in one stack.');
             return;
         }
         
-        // Get the target stack data
+        // Get the target stack data (stackId is already a string from dataset)
         const targetStackData = stacks.get(stackId);
         if (!targetStackData) {
-            console.error('❌ Cannot find target stack data');
+            console.error('❌ Cannot find target stack data for stackId:', stackId);
+            console.error('Available stack IDs:', Array.from(stacks.keys()));
             return;
         }
         
         // Add insight to the stack via API
-        const response = await api.addItemToStack(stackId, insight.id);
+        // Convert stackId to integer since database expects integer type
+        const response = await api.addItemToStack(parseInt(stackId), insight.id);
         
         if (response.success) {
             // Update local stack data
@@ -4876,7 +4729,7 @@ async function joinStack(card, targetStack) {
             targetStackData.modifiedAt = new Date().toISOString();
             
             // Update the stacks Map
-            stacks.set(stackId, targetStackData);
+            stacks.set(String(stackId), targetStackData);
             
             // Remove card from currentInsights to avoid duplicates
             currentInsights = currentInsights.filter(currentInsight => 
@@ -4963,6 +4816,15 @@ function saveStacksToLocalStorage() {
         // Always save stacks data, even if empty (to properly handle deletions)
         localStorage.setItem('quest_stacks', JSON.stringify(stacksData));
         console.log('💾 Saved stacks to localStorage:', stacksData.length, 'stacks');
+        
+        // Debug: Log stack details if there are any
+        if (stacksData.length > 0) {
+            console.log('🔍 Debug: Stack details being saved:', stacksData.map(([id, data]) => ({
+                id,
+                name: data.name,
+                cardCount: data.cards?.length || 0
+            })));
+        }
     } catch (error) {
         console.error('❌ Failed to save stacks to localStorage:', error);
         // Show user notification about storage issue
@@ -5032,180 +4894,21 @@ function checkLocalStorageHealth() {
 
 // Auto-save stacks and insights more frequently to prevent data loss
 if (!window.__QUEST_AUTOSAVE_ID__) {
-    window.__QUEST_AUTOSAVE_ID__ = setInterval(async () => {
+    window.__QUEST_AUTOSAVE_ID__ = setInterval(() => {
         if (checkLocalStorageHealth()) {
-            // Run data validation before saving
-            await validateAndSyncData();
-            
-            saveStacksToLocalStorage();
-            saveInsightsToLocalStorage();
+            // Only save stacks if they've been loaded at least once
+            if (hasLoadedStacksOnce) {
+                saveStacksToLocalStorage();
+            }
+            // Only save insights if they've been loaded at least once
+            if (hasLoadedInsightsOnce) {
+                saveInsightsToLocalStorage();
+            }
         }
     }, 15000); // Reduced from 30s to 15s for more frequent saves
 }
 
-// Periodic data validation to ensure consistency (every 2 minutes)
-if (!window.__QUEST_VALIDATION_ID__) {
-    window.__QUEST_VALIDATION_ID__ = setInterval(async () => {
-        // Only run validation if user is authenticated and page is visible
-        if (auth.checkAuth() && !document.hidden) {
-            try {
-                await validateAndSyncData();
-            } catch (error) {
-                console.warn('⚠️ Periodic data validation failed:', error);
-            }
-        }
-    }, 120000); // Every 2 minutes
-}
-
 // Note: beforeunload handler moved to top of file for better organization
-
-// Test function to verify data synchronization (for debugging)
-async function testDataSync() {
-    console.log('🧪 Testing data synchronization...');
-    
-    try {
-        const userId = auth?.user?.id || currentUser?.id;
-        if (!userId) {
-            console.log('⚠️ No user ID available for testing');
-            return;
-        }
-
-        // Test insights validation
-        console.log('🔍 Testing insights validation...');
-        await validateInsightsData(userId);
-        
-        // Test stacks validation
-        console.log('🔍 Testing stacks validation...');
-        await validateStacksData(userId);
-        
-        console.log('✅ Data synchronization test completed');
-    } catch (error) {
-        console.error('❌ Data synchronization test failed:', error);
-    }
-}
-
-// Debug function to check why a specific stack isn't showing
-async function debugStackIssue(stackName = 'gary') {
-    console.log(`🔍 Debugging why stack "${stackName}" isn't showing...`);
-    
-    try {
-        const userId = auth?.user?.id || currentUser?.id;
-        if (!userId) {
-            console.log('⚠️ No user ID available for debugging');
-            return;
-        }
-
-        // 1. Check what's in the stacks Map
-        console.log('📊 Current stacks in memory:', stacks.size);
-        for (const [id, stackData] of stacks) {
-            console.log(`  - Stack ID: ${id}, Name: "${stackData.name}", Cards: ${stackData.cards?.length || 0}`);
-        }
-
-        // 2. Check what's in localStorage
-        const savedStacks = localStorage.getItem('quest_stacks');
-        if (savedStacks) {
-            const stackEntries = JSON.parse(savedStacks);
-            console.log('💾 Stacks in localStorage:', stackEntries.length);
-            stackEntries.forEach(([id, data]) => {
-                console.log(`  - Stack ID: ${id}, Name: "${data.name}"`);
-            });
-        }
-
-        // 3. Check what's in the database
-        console.log('🗄️ Checking database for stacks...');
-        const dbResponse = await api.getUserStacksWithInsights(userId);
-        if (dbResponse.success && dbResponse.data) {
-            console.log('📋 Stacks from database:', dbResponse.data.length);
-            dbResponse.data.forEach(stack => {
-                console.log(`  - Stack ID: ${stack.id}, Name: "${stack.name || 'Unnamed'}", Cards: ${stack.insights?.length || 0}`);
-            });
-            
-            // Look for the specific stack
-            const targetStack = dbResponse.data.find(s => 
-                s.name && s.name.toLowerCase().includes(stackName.toLowerCase())
-            );
-            if (targetStack) {
-                console.log(`✅ Found "${stackName}" stack in database:`, targetStack);
-            } else {
-                console.log(`❌ Stack "${stackName}" not found in database`);
-            }
-        } else {
-            console.log('❌ Failed to fetch stacks from database:', dbResponse);
-        }
-
-        // 4. Check current page and filters
-        console.log('📄 Current page:', currentPage);
-        console.log('🏷️ Active tag filter:', currentFilters.tags);
-        console.log('📊 Has stacks:', stacks.size > 0);
-        console.log('📊 Has insights:', currentInsights.length > 0);
-
-    } catch (error) {
-        console.error('❌ Debug failed:', error);
-    }
-}
-
-// Expose test functions globally for debugging
-window.testDataSync = testDataSync;
-window.debugStackIssue = debugStackIssue;
-
-// Quick fix function to reload stacks and test
-async function reloadStacks() {
-    console.log('🔄 Reloading stacks...');
-    try {
-        await loadUserStacks();
-        renderInsights();
-        console.log('✅ Stacks reloaded. Current count:', stacks.size);
-        for (const [id, stackData] of stacks) {
-            console.log(`  - ${stackData.name} (${stackData.cards.length} cards)`);
-        }
-    } catch (error) {
-        console.error('❌ Failed to reload stacks:', error);
-    }
-}
-
-// Force reload stacks from database and render
-async function forceReloadStacks() {
-    console.log('🔄 Force reloading stacks from database...');
-    try {
-        const userId = auth?.user?.id || currentUser?.id;
-        if (!userId) {
-            console.log('⚠️ No user ID available');
-            return;
-        }
-        
-        // Clear current stacks
-        stacks.clear();
-        
-        // Load directly from database
-        const dbResponse = await api.getUserStacksWithInsights(userId);
-        if (dbResponse.success && dbResponse.data) {
-            const dbStacks = Array.isArray(dbResponse.data) ? dbResponse.data : (dbResponse.data.items || []);
-            dbStacks.forEach(dbStack => {
-                const stackData = {
-                    id: dbStack.id,
-                    name: dbStack.name || 'Unnamed Stack',
-                    cards: dbStack.insights || [],
-                    createdAt: dbStack.created_at || new Date().toISOString(),
-                    modifiedAt: dbStack.modified_at || new Date().toISOString(),
-                    isExpanded: false
-                };
-                stacks.set(dbStack.id, stackData);
-            });
-            console.log(`📦 Force loaded ${dbStacks.length} stacks from database`);
-        }
-        
-        // Re-render
-        renderInsights();
-        console.log('✅ Force reload complete. Current count:', stacks.size);
-        for (const [id, stackData] of stacks) {
-            console.log(`  - ${stackData.name} (${stackData.cards.length} cards)`);
-        }
-    } catch (error) {
-        console.error('❌ Failed to force reload stacks:', error);
-    }
-}
-window.reloadStacks = reloadStacks;
-window.forceReloadStacks = forceReloadStacks;
 
 // Find or create the Archive tag for default assignment
 async function findOrCreateArchiveTag() {
@@ -5438,7 +5141,7 @@ function startInlineNameEdit(stackId, nameElement) {
                 const stackData = stacks.get(stackId);
                 if (stackData) {
                     stackData.name = newName;
-                    stacks.set(stackId, stackData);
+                    stacks.set(String(stackId), stackData);
                 }
             } catch (error) {
                 console.error('Failed to update stack name:', error);
@@ -5524,7 +5227,7 @@ function startInlineNameEdit(stackId, nameElement) {
 // Update stack name via API
 async function updateStackName(stackId, newName) {
     try {
-        const response = await api.updateStack(stackId, { name: newName });
+        const response = await api.updateStack(parseInt(stackId), { name: newName });
         if (response && response.success) {
             showNotification('Stack name updated successfully', 'success');
             return response;
@@ -5542,7 +5245,7 @@ async function removeItemFromStack(stackId, insightId) {
     if (confirm('Are you sure you want to remove this item from the stack?')) {
         try {
             // Remove stack_id from the insight via API
-            const response = await api.removeItemFromStack(stackId, insightId);
+            const response = await api.removeItemFromStack(parseInt(stackId), insightId);
             
             if (response.success) {
                 // Get the stack data
@@ -5679,7 +5382,7 @@ async function deleteStack(stackId) {
             if (stackData) {
                 // Remove stack_id from all insights in the stack via insights API
                 const removePromises = stackData.cards.map(card => 
-                    api.removeItemFromStack(stackId, card.id)
+                    api.removeItemFromStack(parseInt(stackId), card.id)
                 );
                 
                 const responses = await Promise.all(removePromises);
@@ -5708,9 +5411,6 @@ async function deleteStack(stackId) {
                     
                     // Update pagination counts
                     updatePaginationCounts();
-                    
-                    // Run validation to ensure data consistency
-                    await validateAndSyncData();
                     
                     // Re-render content
                     renderInsights();
@@ -6057,7 +5757,8 @@ async function moveCardToStack(insight, newStackId) {
         }
         
         // Move card via API (updates insight's stack_id)
-        const response = await api.moveItemToStack(newStackId, insight.id);
+        // Convert newStackId to integer since database expects integer type
+        const response = await api.moveItemToStack(parseInt(newStackId), insight.id);
         
         if (response.success) {
             // Remove from current stack
@@ -6141,7 +5842,7 @@ async function removeCardFromStack(insight, stackId) {
     
     try {
         // Remove card from stack via API (sets stack_id to null)
-        const response = await api.removeItemFromStack(stackId, insight.id);
+        const response = await api.removeItemFromStack(parseInt(stackId), insight.id);
         
         if (response.success) {
             // Remove card from local stack data
@@ -6159,7 +5860,7 @@ async function removeCardFromStack(insight, stackId) {
                 if (stackData.cards.length === 1) {
                     // Remove the last card from stack
                     const lastCard = stackData.cards[0];
-                    await api.removeItemFromStack(stackId, lastCard.id);
+                    await api.removeItemFromStack(parseInt(stackId), lastCard.id);
                     currentInsights.push(lastCard);
                 }
                 stacks.delete(stackId);
@@ -6315,7 +6016,7 @@ async function editStackName(stackId) {
     if (newName && newName.trim() && newName.trim() !== stackData.name) {
         try {
             // Update stack name via API
-            const response = await api.updateStack(stackId, {
+            const response = await api.updateStack(parseInt(stackId), {
                 name: newName.trim()
             });
             
