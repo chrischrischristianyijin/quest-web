@@ -1138,7 +1138,7 @@ function renderInsights() {
     contentCards.classList.add('content-loaded');
     
     // Clear existing content cards (but keep skeleton for next time)
-    const existingCards = contentCards.querySelectorAll('.content-card, .empty-state');
+    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
     existingCards.forEach(card => card.remove());
     
     // Get filtered insights for rendering
@@ -4310,18 +4310,18 @@ async function createEmptyStack() {
         console.log('Stack creation response:', response);
         
         if (response && response.success) {
-            // Add the new stack to current insights
-            const newStack = {
-                id: response.stack.id,
-                type: 'stack',
+            // Register the new stack in the stacks Map
+            const stackId = response.stack.id;
+            const newStackData = {
+                id: stackId,
                 name: stackData.name,
                 description: stackData.description,
-                items: [],
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                cards: [], // Use 'cards' for consistency
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString()
             };
             
-            currentInsights.unshift(newStack);
+            stacks.set(stackId, newStackData);
             
             // Re-render the insights
             renderInsights();
@@ -4331,18 +4331,18 @@ async function createEmptyStack() {
         } else {
             // Fallback: Create a local stack if API fails
             console.warn('API createStack failed, creating local stack:', response);
-            const localStack = {
-                id: 'local-stack-' + Date.now(),
-                type: 'stack',
+            const stackId = 'local-stack-' + Date.now();
+            const localStackData = {
+                id: stackId,
                 name: stackData.name,
                 description: stackData.description,
-                items: [],
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
+                cards: [], // Use 'cards' for consistency
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
                 isLocal: true // Mark as local for debugging
             };
             
-            currentInsights.unshift(localStack);
+            stacks.set(stackId, localStackData);
             renderInsights();
             
             showNotification('Stack created locally (API endpoint not available)', 'warning');
@@ -4352,18 +4352,18 @@ async function createEmptyStack() {
         
         // Fallback: Create a local stack if API completely fails
         console.warn('API completely failed, creating local stack');
-        const localStack = {
-            id: 'local-stack-' + Date.now(),
-            type: 'stack',
+        const stackId = 'local-stack-' + Date.now();
+        const localStackData = {
+            id: stackId,
             name: 'New Stack',
             description: 'A new stack for organizing content',
-            items: [],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            cards: [], // Use 'cards' for consistency
+            createdAt: new Date().toISOString(),
+            modifiedAt: new Date().toISOString(),
             isLocal: true // Mark as local for debugging
         };
         
-        currentInsights.unshift(localStack);
+        stacks.set(stackId, localStackData);
         renderInsights();
         
         showNotification('Stack created locally (API unavailable)', 'warning');
@@ -4400,19 +4400,41 @@ function getSourceName(url) {
 // Function to update edit mode state when content cards are re-rendered
 function updateEditModeState() {
     if (isEditMode) {
-        const contentCards = document.querySelectorAll('.content-card');
+        // Add template card if it doesn't exist
+        const existingTemplateCard = document.querySelector('.template-card');
+        if (!existingTemplateCard) {
+            addTemplateCard();
+        }
+        
+        // Add shake animation to all content cards (excluding template)
+        const contentCards = document.querySelectorAll('.content-card:not(.template-card)');
         contentCards.forEach(card => {
             card.classList.add('shake');
         });
+    } else {
+        // Remove template card when not in edit mode
+        const templateCard = document.querySelector('.template-card');
+        if (templateCard) {
+            templateCard.remove();
+        }
     }
 }
 
 // Setup drag and drop functionality for a card
 function setupCardDragAndDrop(card, insight) {
-    // Only enable drag in edit mode
+    // Only enable drag in edit mode and only for individual insight cards (not stack cards)
     card.addEventListener('mousedown', (e) => {
-        if (!isEditMode || e.target.closest('.content-card-delete-btn')) {
+        if (!isEditMode || e.target.closest('.content-card-delete-btn') || card.classList.contains('stack-card')) {
             return;
+        }
+        
+        // Check if this insight is already in a stack
+        const insightInStack = Array.from(stacks.values()).some(stack => 
+            stack.cards.some(card => card.id === insight.id)
+        );
+        
+        if (insightInStack) {
+            return; // Don't allow dragging cards that are already in stacks
         }
         
         e.preventDefault();
@@ -4421,8 +4443,17 @@ function setupCardDragAndDrop(card, insight) {
     
     // Touch events for mobile
     card.addEventListener('touchstart', (e) => {
-        if (!isEditMode || e.target.closest('.content-card-delete-btn')) {
+        if (!isEditMode || e.target.closest('.content-card-delete-btn') || card.classList.contains('stack-card')) {
             return;
+        }
+        
+        // Check if this insight is already in a stack
+        const insightInStack = Array.from(stacks.values()).some(stack => 
+            stack.cards.some(card => card.id === insight.id)
+        );
+        
+        if (insightInStack) {
+            return; // Don't allow dragging cards that are already in stacks
         }
         
         e.preventDefault();
@@ -4492,7 +4523,7 @@ function updateGhostPosition(ghost, event) {
     ghost.style.top = top;
 }
 
-// Check if dragging over another card for stack creation
+// Check if dragging over a stack for joining
 function checkForStackHover(event) {
     // Temporarily hide the ghost to get element below
     const ghost = document.querySelector('.drag-ghost');
@@ -4506,21 +4537,22 @@ function checkForStackHover(event) {
         elementBelow = document.elementFromPoint(event.clientX, event.clientY);
     }
     
-    const targetCard = elementBelow?.closest('.content-card:not(.dragging):not(.stack-card)');
+    // Only allow dropping on existing stacks (not individual cards)
+    const targetStack = elementBelow?.closest('.content-card.stack-card:not(.dragging)');
     
-    if (targetCard && targetCard !== draggedCard) {
+    if (targetStack && targetStack !== draggedCard) {
         // Clear previous timeout
         if (stackHoverTimeout) {
             clearTimeout(stackHoverTimeout);
         }
         
         // Add hover effect
-        targetCard.classList.add('stack-hover');
+        targetStack.classList.add('stack-hover');
         
-        // Set timeout for stack creation
+        // Set timeout for joining stack
         stackHoverTimeout = setTimeout(() => {
-            createStack(draggedCard, targetCard);
-        }, 1500); // 1.5 seconds hover time
+            joinStack(draggedCard, targetStack);
+        }, 1000); // 1 second hover time
         
     } else {
         // Clear hover effects
@@ -4571,93 +4603,63 @@ function handleDragEnd(e) {
     draggedCard = null;
 }
 
-// Create a stack from two cards
-async function createStack(card1, card2) {
+// Join an insight to an existing stack
+async function joinStack(card, targetStack) {
+    // Get insight data for the card being dragged
+    const insight = getInsightById(card.dataset.insightId);
+    const stackId = targetStack.dataset.stackId;
     
-    // Get insight data for both cards (moved outside try block for scope)
-    const insight1 = getInsightById(card1.dataset.insightId);
-    const insight2 = getInsightById(card2.dataset.insightId);
+    if (!insight) {
+        console.error('❌ Cannot find insight data for card');
+        return;
+    }
     
-    if (!insight1 || !insight2) {
-        console.error('❌ Cannot find insight data for cards');
+    if (!stackId) {
+        console.error('❌ Cannot find stack ID for target stack');
         return;
     }
     
     try {
-        // Check if either insight is already in a stack (one-to-one constraint)
-        const insight1InStack = Array.from(stacks.values()).some(stack => 
-            stack.cards.some(card => card.id === insight1.id)
-        );
-        const insight2InStack = Array.from(stacks.values()).some(stack => 
-            stack.cards.some(card => card.id === insight2.id)
+        // Check if insight is already in a stack
+        const insightInStack = Array.from(stacks.values()).some(stack => 
+            stack.cards.some(card => card.id === insight.id)
         );
         
-        if (insight1InStack || insight2InStack) {
-            showErrorMessage('One or both cards are already in a stack. Each card can only be in one stack.');
+        if (insightInStack) {
+            showErrorMessage('This card is already in a stack. Each card can only be in one stack.');
             return;
         }
         
-        // Generate a unique stack ID locally
-        const stackId = `stack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Get the target stack data
+        const targetStackData = stacks.get(stackId);
+        if (!targetStackData) {
+            console.error('❌ Cannot find target stack data');
+            return;
+        }
         
-        // Add insights to the stack via insights API (using stack_id field)
-        const updatePromises = [
-            api.addItemToStack(stackId, insight1.id),
-            api.addItemToStack(stackId, insight2.id)
-        ];
+        // Add insight to the stack via API
+        const response = await api.addItemToStack(stackId, insight.id);
         
-        const responses = await Promise.all(updatePromises);
-        
-        // Check if all updates were successful
-        const allSuccessful = responses.every(response => response.success);
-        
-        if (allSuccessful) {
-            // Create local stack data
-            const localStackData = {
-                id: stackId,
-                name: 'Stack',
-                cards: [insight1, insight2],
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
-                isExpanded: false
-            };
+        if (response.success) {
+            // Update local stack data
+            targetStackData.cards.push(insight);
+            targetStackData.modifiedAt = new Date().toISOString();
             
-            // Add to local stacks collection
-            stacks.set(stackId, localStackData);
+            // Update the stacks Map
+            stacks.set(stackId, targetStackData);
             
-            // Remove cards from currentInsights to avoid duplicates
-            // (This is safe because of one-to-one constraint)
-            currentInsights = currentInsights.filter(insight => 
-                insight.id !== insight1.id && 
-                insight.id !== insight2.id
+            // Remove card from currentInsights to avoid duplicates
+            currentInsights = currentInsights.filter(currentInsight => 
+                currentInsight.id !== insight.id
             );
             
-            // Immediately remove the original cards from the DOM
-            card1.remove();
-            card2.remove();
-            
-            // Update stackIdCounter
-            stackIdCounter = Math.max(stackIdCounter, parseInt(stackId.split('_')[1]) + 1);
-            
-            // Ensure stacks can be saved by setting the flag
-            hasLoadedStacksOnce = true;
+            // Immediately remove the original card from the DOM
+            card.remove();
             
             // Save to localStorage for persistence
             saveStacksToLocalStorage();
             saveInsightsToLocalStorage({ force: true });
             
-            // Also try to create the stack in the backend database
-            try {
-                const stackCreateResponse = await api.createStack({
-                    id: stackId,
-                    name: 'Stack',
-                    created_at: localStackData.createdAt,
-                    modified_at: localStackData.modifiedAt
-                });
-            } catch (stackCreateError) {
-                console.warn('⚠️ Failed to create stack in backend database (this is OK, stack_id approach still works):', stackCreateError);
-            }
-            
             // Invalidate ALL page caches since pagination has changed
             pageCache.clear();
             loadedPages.clear();
@@ -4671,65 +4673,21 @@ async function createStack(card1, card2) {
             // Update pagination counts
             updatePaginationCounts();
             
-            // Refill page 1 using the over-fetch rule
-            console.log('🔄 About to refill page 1 after stack creation...');
-            console.log('🔄 Current stacks count:', stacks.size);
-            console.log('🔄 Current insights before refill:', currentInsights.length);
-            await goToPage(1, { force: true });
-            console.log('🔄 After refill - current insights:', currentInsights.length);
+            // Re-render to show the updated stack
+            renderInsights();
             
-            showSuccessMessage('Stack created successfully!');
+            // Show success message
+            showSuccessMessage('Card added to stack successfully!');
+            
         } else {
-            throw new Error('Failed to update insights with stack information');
+            console.error('❌ Failed to add insight to stack');
+            showErrorMessage('Failed to add card to stack. Please try again.');
         }
-            } catch (error) {
-            console.error('❌ Failed to create stack via API:', error);
-            
-            // Fallback to local storage if API doesn't support stack_id
-            // Create stack locally
-            const stackId = `stack_${stackIdCounter++}`;
-            const localStackData = {
-                id: stackId,
-                name: 'Stack',
-                cards: [insight1, insight2],
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
-                isExpanded: false
-            };
-            
-            // Add to local stacks collection
-            stacks.set(stackId, localStackData);
-            
-            // Remove cards from currentInsights
-            currentInsights = currentInsights.filter(insight => 
-                insight.id !== insight1.id && 
-                insight.id !== insight2.id
-            );
-            
-            // Ensure stacks can be saved by setting the flag
-            hasLoadedStacksOnce = true;
-            
-            // Save to localStorage for persistence
-            saveStacksToLocalStorage();
-            
-            // Invalidate ALL page caches since pagination has changed
-            pageCache.clear();
-            loadedPages.clear();
-            
-            // Clear GET cache to prevent stale data
-            if (window.apiCache) {
-                window.apiCache.clearPattern('/api/v1/insights');
-                window.apiCache.clearPattern('/api/v1/stacks');
-            }
-            
-            // Update pagination counts
-            updatePaginationCounts();
-            
-            // Refill page 1 using the over-fetch rule
-            await goToPage(1, { force: true });
-            
-            showSuccessMessage('Stack created successfully! (Local storage)');
-        }
+        
+    } catch (error) {
+        console.error('❌ Error joining stack:', error);
+        showErrorMessage('Error adding card to stack: ' + error.message);
+    }
     
     // Clear drag state
     if (stackHoverTimeout) {
