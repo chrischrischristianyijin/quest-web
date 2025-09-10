@@ -5949,6 +5949,68 @@ body.modal-open { overflow: hidden; }
   padding: 6px 12px;  /* standard tag padding */
 }
 
+/* Editable stack name styles */
+.stack-name-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.editable-name {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+  position: relative;
+}
+
+.editable-name:hover {
+  background-color: rgba(139, 69, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.edit-icon {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  color: var(--quest-purple);
+  cursor: pointer;
+}
+
+.stack-name-container:hover .edit-icon {
+  opacity: 1;
+}
+
+.editable-name:hover + .edit-icon {
+  opacity: 1;
+}
+
+/* Hide edit icon after first edit (when user has edited before) */
+.stack-name-container.edited .edit-icon {
+  opacity: 0;
+}
+
+.stack-name-container.edited:hover .edit-icon {
+  opacity: 0.7;
+}
+
+.stack-name-container.edited .editable-name:hover + .edit-icon {
+  opacity: 1;
+}
+
+.stack-name-edit-input {
+  background: transparent !important;
+  border: 2px solid var(--quest-purple) !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  width: 100% !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(139, 69, 255, 0.2) !important;
+}
+
 .stack-edit-description-btn {
   background: none;
   border: none;

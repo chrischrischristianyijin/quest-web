@@ -226,6 +226,15 @@ class AuthManager {
         });
     }
     
+    // 添加认证状态监听器
+    addListener(listener) {
+        if (typeof listener === 'function') {
+            this.listeners.push(listener);
+        } else {
+            console.warn('addListener: listener must be a function');
+        }
+    }
+    
     // 恢复会话状态
     restoreSession() {
         try {
