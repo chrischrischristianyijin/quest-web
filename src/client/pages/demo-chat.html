@@ -6,6 +6,7 @@
     <title>Demo Chat - Quest</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="/src/client/js/quest-config.js"></script>
+    <script src="/src/client/js/quest-auth.js"></script>
     <style>
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -277,6 +278,10 @@
         if (!configValidation.isValid) {
             console.warn('Quest API Configuration Issues:', configValidation.issues);
         }
+        
+        // Check authentication status on load
+        const authStatus = checkAuthStatus();
+        console.log('Quest AI Authentication Status:', authStatus);
 
         function addMessage(text, isUser = false, isTyping = false) {
             const messageDiv = document.createElement('div');
@@ -319,20 +324,19 @@
             
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
+            } else {
+                // 如果没有token，显示提示
+                addMessage("ℹ️ You're using Quest AI without authentication. Some features may be limited.", false);
             }
             
             try {
-                const response = await fetch(QUEST_API_ENDPOINT, {
+                const response = await questAPIRequest(QUEST_API_ENDPOINT, {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({
                         message: message
                     })
                 });
-                
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
-                }
                 
                 // Handle streaming response
                 const reader = response.body.getReader();
@@ -385,7 +389,11 @@
                 
             } catch (error) {
                 console.error('Quest API Error:', error);
-                throw error;
+                
+                // 使用认证助手处理错误
+                const authErrorMessage = handleAuthError(error);
+                addMessage(`🔐 ${authErrorMessage}`, false);
+                return; // 不抛出错误，直接返回
             }
         }
 
@@ -452,17 +460,30 @@
         // Check API health on load
         async function checkAPIHealth() {
             try {
-                const response = await fetch(QUEST_HEALTH_ENDPOINT);
-                if (response.ok) {
-                    const health = await response.json();
-                    console.log('Quest API Health:', health);
-                    if (health.features && health.features.rag_enabled) {
-                        addMessage("✅ RAG system is active and ready to analyze your content!", false);
+                const response = await questAPIRequest(QUEST_HEALTH_ENDPOINT, {
+                    method: 'GET'
+                });
+                
+                const health = await response.json();
+                console.log('Quest API Health:', health);
+                
+                if (health.features && health.features.rag_enabled) {
+                    const token = getQuestToken();
+                    if (token) {
+                        addMessage("✅ RAG system is active and ready to analyze your content! (Authenticated)", false);
+                    } else {
+                        addMessage("✅ RAG system is active and ready to analyze your content! (Guest mode)", false);
                     }
+                } else {
+                    addMessage("⚠️ RAG system is not available. Some features may be limited.", false);
                 }
             } catch (error) {
                 console.warn('API health check failed:', error);
-                if (!configValidation.isValid) {
+                
+                if (error.message.includes('Authentication expired') || error.message.includes('401') || error.message.includes('403')) {
+                    const authErrorMessage = handleAuthError(error);
+                    addMessage(`🔐 ${authErrorMessage}`, false);
+                } else if (!configValidation.isValid) {
                     addMessage("⚠️ Quest API configuration needed. Please update quest-config.js with your API endpoint.", false);
                 } else {
                     addMessage("⚠️ Unable to connect to Quest API. Please check your connection and API status.", false);

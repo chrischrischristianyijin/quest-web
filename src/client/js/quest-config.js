@@ -34,10 +34,45 @@ function getQuestAPIUrl(endpoint) {
 function getQuestToken() {
     // 尝试从localStorage获取
     const token = localStorage.getItem('quest_token');
-    if (token) return token;
+    if (token && isTokenValid(token)) return token;
     
     // 尝试从sessionStorage获取
-    return sessionStorage.getItem('quest_token');
+    const sessionToken = sessionStorage.getItem('quest_token');
+    if (sessionToken && isTokenValid(sessionToken)) return sessionToken;
+    
+    // 如果token无效，清理存储
+    if (token) {
+        console.warn('Stored token is invalid or expired, clearing...');
+        clearQuestToken();
+    }
+    
+    return null;
+}
+
+// 验证token是否有效（简单检查）
+function isTokenValid(token) {
+    if (!token || typeof token !== 'string') return false;
+    
+    try {
+        // 检查token格式（JWT应该有三个部分，用.分隔）
+        const parts = token.split('.');
+        if (parts.length !== 3) return false;
+        
+        // 解析payload部分检查过期时间
+        const payload = JSON.parse(atob(parts[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+        // 检查token是否过期（留5分钟缓冲时间）
+        if (payload.exp && payload.exp < (currentTime + 300)) {
+            console.warn('Token will expire soon or has expired');
+            return false;
+        }
+        
+        return true;
+    } catch (error) {
+        console.warn('Token validation error:', error);
+        return false;
+    }
 }
 
 // 设置用户认证token
@@ -73,6 +108,77 @@ function validateQuestConfig() {
     };
 }
 
+// 处理API错误响应
+async function handleAPIError(response, error) {
+    let errorMessage = 'Unknown error occurred';
+    let shouldRetry = false;
+    
+    try {
+        if (response) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
+            
+            // 检查是否是认证错误
+            if (response.status === 401 || response.status === 403) {
+                console.warn('Authentication error detected, clearing token');
+                clearQuestToken();
+                errorMessage = 'Authentication expired. Please log in again.';
+            } else if (response.status >= 500) {
+                shouldRetry = true;
+                errorMessage = 'Server error. Please try again later.';
+            }
+        } else {
+            errorMessage = error.message || 'Network error';
+            shouldRetry = true;
+        }
+    } catch (parseError) {
+        console.warn('Failed to parse error response:', parseError);
+        if (response) {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+    }
+    
+    return { message: errorMessage, shouldRetry };
+}
+
+// 带重试的API请求
+async function questAPIRequest(url, options = {}, retryCount = 0) {
+    const maxRetries = QUEST_CONFIG.REQUEST_CONFIG.RETRY_ATTEMPTS;
+    const retryDelay = QUEST_CONFIG.REQUEST_CONFIG.RETRY_DELAY;
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            timeout: QUEST_CONFIG.REQUEST_CONFIG.TIMEOUT
+        });
+        
+        if (!response.ok) {
+            const errorInfo = await handleAPIError(response);
+            if (errorInfo.shouldRetry && retryCount < maxRetries) {
+                console.log(`Retrying request (${retryCount + 1}/${maxRetries})...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
+                return questAPIRequest(url, options, retryCount + 1);
+            }
+            throw new Error(errorInfo.message);
+        }
+        
+        return response;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout');
+        }
+        
+        const errorInfo = await handleAPIError(null, error);
+        if (errorInfo.shouldRetry && retryCount < maxRetries) {
+            console.log(`Retrying request due to network error (${retryCount + 1}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
+            return questAPIRequest(url, options, retryCount + 1);
+        }
+        
+        throw new Error(errorInfo.message);
+    }
+}
+
 // 导出配置（如果在模块环境中）
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -81,6 +187,9 @@ if (typeof module !== 'undefined' && module.exports) {
         getQuestToken,
         setQuestToken,
         clearQuestToken,
-        validateQuestConfig
+        validateQuestConfig,
+        isTokenValid,
+        handleAPIError,
+        questAPIRequest
     };
 }
