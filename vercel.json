@@ -42,6 +42,10 @@
     {
       "src": "/",
       "dest": "/src/client/pages/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/src/client/pages/my-space.html"
     }
   ]
 } 
