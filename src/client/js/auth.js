@@ -188,7 +188,9 @@ class AuthManager {
         localStorage.removeItem('quest_user_profile');
         localStorage.removeItem('quest_user_insights');
         
-        console.log('✅ 会话已完全清除');
+        // 注意：不要清除 quest_stacks 和 quest_insights_backup
+        // 这些数据应该持久化，即使在没有认证的情况下
+        console.log('✅ 会话已完全清除 (保留stacks和insights数据)');
     }
 
     // 获取当前用户

@@ -624,19 +624,36 @@ async function initPage() {
         
         // API服务器已在页面加载时预热
         
-        // 优先加载核心数据，stacks延迟加载
-        const [profileResult, insightsResult, tagsResult] = await Promise.allSettled([
+        // 优先加载核心数据，包括stacks
+        const [profileResult, insightsResult, tagsResult, stacksResult] = await Promise.allSettled([
             loadUserProfile(),
             loadUserInsightsWithPagination(),
-            loadUserTags()
+            loadUserTags(),
+            loadUserStacks()
         ]);
         
-        // 加载stacks数据以保持持久化
-        setTimeout(() => {
-            loadUserStacks().catch(error => {
-                console.error('❌ 延迟加载stacks失败:', error);
-            });
-        }, 100);
+        // 如果stacks加载失败，尝试从localStorage直接恢复
+        if (stacksResult.status === 'rejected') {
+            console.error('❌ 加载stacks失败:', stacksResult.reason);
+            const savedStacks = localStorage.getItem('quest_stacks');
+            if (savedStacks) {
+                try {
+                    const entries = JSON.parse(savedStacks);
+                    console.log('🔄 从localStorage直接恢复stacks:', entries.length, 'entries');
+                    entries.forEach(([id, data]) => {
+                        const stringId = String(id);
+                        data.id = stringId;
+                        stacks.set(stringId, data);
+                    });
+                    if (stacks.size > 0) {
+                        hasLoadedStacksOnce = true;
+                        console.log('✅ 成功从localStorage恢复', stacks.size, '个stacks');
+                    }
+                } catch (e) {
+                    console.error('❌ 解析localStorage stacks失败:', e);
+                }
+            }
+        }
         
         // 检查每个加载结果并记录错误
         if (profileResult.status === 'rejected') {
@@ -664,6 +681,9 @@ async function initPage() {
         // Set up authentication listener to reload stacks when user logs in
         setupAuthListener();
         
+        // Final render after all data is loaded
+        renderInsights();
+        
         // 分页模式：不需要无限滚动
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
@@ -690,7 +710,8 @@ async function loadUserStacks() {
                 try {
                     const entries = JSON.parse(saved);
                     console.log('📦 Parsed stack entries:', entries.length);
-                    stacks.clear();
+                    // Don't clear stacks immediately - preserve existing data
+                    // stacks.clear();
                     entries.forEach(([id, data]) => {
                         const stringId = String(id); // Ensure string format
                         data.id = stringId; // Ensure ID is string
@@ -824,8 +845,8 @@ async function loadUserStacks() {
                 }
                 
                 // 更新stackIdCounter
-                if (Object.keys(stackGroups).length > 0) {
-                    const maxTimestamp = Math.max(...Object.keys(stackGroups).map(id => {
+                if (stacks.size > 0) {
+                    const maxTimestamp = Math.max(...Array.from(stacks.keys()).map(id => {
                         const timestamp = id.split('_')[1];
                         return timestamp ? parseInt(timestamp) : 0;
                     }));
@@ -855,7 +876,28 @@ async function loadUserStacks() {
             console.error('❌ 加载用户stacks失败:', error);
             // 如果stacks端点不存在，继续使用本地存储
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-            // Stacks API端点尚未实现，使用本地存储模式
+                console.log('⚠️ Stacks API端点尚未实现，使用本地存储模式');
+            }
+            
+            // 如果认证失败，尝试从localStorage恢复stacks数据
+            if (error.message.includes('401') || error.message.includes('403') || error.message.includes('认证')) {
+                console.log('🔍 认证失败，尝试从localStorage恢复stacks数据...');
+                const savedStacks = localStorage.getItem('quest_stacks');
+                if (savedStacks) {
+                    try {
+                        const entries = JSON.parse(savedStacks);
+                        console.log('📦 从localStorage恢复stacks:', entries.length, 'entries');
+                        entries.forEach(([id, data]) => {
+                            const stringId = String(id);
+                            data.id = stringId;
+                            stacks.set(stringId, data);
+                        });
+                        if (stacks.size > 0) hasLoadedStacksOnce = true;
+                        console.log('✅ 成功从localStorage恢复', stacks.size, '个stacks');
+                    } catch (e) {
+                        console.error('❌ 解析localStorage stacks失败:', e);
+                    }
+                }
             }
             // 不抛出错误，允许页面继续加载
         }
@@ -4403,6 +4445,9 @@ async function createEmptyStack() {
             
             stacks.set(String(stackId), newStackData);
             
+            // Save to localStorage immediately
+            saveStacksToLocalStorage();
+            
             // Re-render the insights
             renderInsights();
             
@@ -4424,6 +4469,10 @@ async function createEmptyStack() {
             };
             
             stacks.set(String(stackId), localStackData);
+            
+            // Save to localStorage immediately
+            saveStacksToLocalStorage();
+            
             renderInsights();
             
             showNotification('Stack created locally (API endpoint not available)', 'warning');
@@ -4445,6 +4494,10 @@ async function createEmptyStack() {
         };
         
         stacks.set(String(stackId), localStackData);
+        
+        // Save to localStorage immediately
+        saveStacksToLocalStorage();
+        
         renderInsights();
         
         showNotification('Stack created locally (API unavailable)', 'warning');
@@ -5142,6 +5195,9 @@ function startInlineNameEdit(stackId, nameElement) {
                 if (stackData) {
                     stackData.name = newName;
                     stacks.set(String(stackId), stackData);
+                    
+                    // Save to localStorage immediately
+                    saveStacksToLocalStorage();
                 }
             } catch (error) {
                 console.error('Failed to update stack name:', error);
