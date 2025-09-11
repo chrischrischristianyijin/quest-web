@@ -32,6 +32,14 @@
       "dest": "/src/client/pages/my-space.html"
     },
     {
+      "src": "/demo-chat",
+      "dest": "/src/client/pages/demo-chat.html"
+    },
+    {
+      "src": "/pages/demo-chat.html",
+      "dest": "/src/client/pages/demo-chat.html"
+    },
+    {
       "src": "/",
       "dest": "/src/client/pages/index.html"
     },
