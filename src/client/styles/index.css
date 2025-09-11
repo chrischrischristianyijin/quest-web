@@ -146,6 +146,7 @@ body {
 
 .auth-btn-primary:hover {
     background: #4a3f6b;
+    color: white;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(84, 73, 125, 0.3);
 }
@@ -458,6 +459,7 @@ body {
 }
 
 .hero-cta:hover {
+    color: white;
     transform: translateY(-5px) scale(1.05);
     box-shadow: 0 16px 48px rgba(75, 38, 79, 0.5), 0 8px 24px rgba(75, 38, 79, 0.3);
 }
@@ -612,6 +614,7 @@ body {
 }
 
 .showcase-cta:hover {
+    color: white;
     transform: translateY(-3px) scale(1.02);
     box-shadow: var(--shadow-heavy);
 }
