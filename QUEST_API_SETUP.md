@@ -27,11 +27,19 @@ const QUEST_CONFIG = {
 如果你的API需要用户认证，可以通过以下方式设置token：
 
 ```javascript
-// 在用户登录后设置token
-setQuestToken('your-user-token', true); // true = 持久化存储
+// 在用户登录后设置token（推荐使用带验证的方法）
+setQuestTokenWithValidation('your-user-token', true); // true = 持久化存储
 
 // 或者在会话中临时存储
-setQuestToken('your-user-token', false); // false = 会话存储
+setQuestTokenWithValidation('your-user-token', false); // false = 会话存储
+
+// 检查认证状态
+const authStatus = checkAuthStatus();
+console.log('认证状态:', authStatus);
+
+// 获取认证摘要
+const summary = getAuthSummary();
+console.log('认证摘要:', summary);
 ```
 
 ### 3. 测试连接
@@ -101,22 +109,43 @@ console.log('配置状态:', validation);
 
 ### 常见问题
 
-1. **API配置错误**
+1. **JWT Token过期错误**
+   ```
+   错误: "invalid JWT: unable to parse or verify signature, token has invalid claims: token is expired"
+   解决: 
+   - 系统会自动检测并清理过期的token
+   - 用户需要重新登录获取新的token
+   - 使用 setQuestTokenWithValidation() 设置token时会自动验证
+   ```
+
+2. **API配置错误**
    ```
    问题: "API_BASE 未配置或仍为默认值"
    解决: 更新 quest-config.js 中的 API_BASE
    ```
 
-2. **连接失败**
+3. **连接失败**
    ```
    问题: "Unable to connect to Quest API"
    解决: 检查API地址、网络连接、CORS设置
    ```
 
-3. **认证失败**
+4. **认证失败**
    ```
    问题: "API Error: 401 Unauthorized"
-   解决: 检查token是否正确设置
+   解决: 
+   - 检查token是否正确设置
+   - 确认token未过期
+   - 使用 checkAuthStatus() 验证认证状态
+   ```
+
+5. **Token验证失败**
+   ```
+   问题: "Token is invalid or expired"
+   解决:
+   - 使用 getAuthSummary() 查看认证摘要
+   - 调用 clearQuestToken() 清理无效token
+   - 重新设置有效的token
    ```
 
 ### 开发环境测试
