@@ -3195,7 +3195,9 @@ function navigateToStack(stackId) {
 
 // Navigate back to home view
 function navigateToHome() {
-    navigateTo('/pages/my-space.html');
+    navigateTo(PATHS.MY_SPACE);
+    // The renderHomeView() will be called by the popstate event listener
+    // or we can call it directly for immediate UI update
     viewMode = 'home';
     activeStackId = null;
     renderHomeView();
@@ -3317,6 +3319,12 @@ function updateStackContextBar(stack) {
 function renderStackInsights(stack) {
     console.log('🎯 renderStackInsights called with stack:', stack);
     
+    // Guard clause: only render stack insights when in stack view mode
+    if (viewMode !== 'stack') {
+        console.log('⚠️ renderStackInsights called but not in stack view mode, ignoring');
+        return;
+    }
+    
     if (!contentCards) {
         console.error('❌ contentCards element not found in renderStackInsights');
         return;
@@ -3357,6 +3365,12 @@ function renderStackInsights(stack) {
 
 // Render empty stack state
 function renderEmptyStackState(stack) {
+    // Guard clause: only render empty stack state when in stack view mode
+    if (viewMode !== 'stack') {
+        console.log('⚠️ renderEmptyStackState called but not in stack view mode, ignoring');
+        return;
+    }
+    
     const emptyState = document.createElement('div');
     emptyState.className = 'empty-stack-state';
     emptyState.innerHTML = `
@@ -3388,6 +3402,10 @@ function renderEmptyStackState(stack) {
 function renderHomeView() {
     console.log('🏠 Rendering home view');
     
+    // Ensure we're in home view mode
+    viewMode = 'home';
+    activeStackId = null;
+    
     // Disable stack view mode (shows profile/controls sections)
     setStackViewEnabled(false);
     
@@ -3404,6 +3422,12 @@ function renderHomeView() {
     
     // Show pagination
     showPagination();
+    
+    // Clear any existing empty stack states
+    if (contentCards) {
+        const existingEmptyStackStates = contentCards.querySelectorAll('.empty-stack-state');
+        existingEmptyStackStates.forEach(state => state.remove());
+    }
     
     // Render normal insights
     renderInsights();
@@ -3432,6 +3456,9 @@ window.addEventListener('popstate', function(event) {
     if (newViewMode === 'stack' && stackId) {
         renderStackView(stackId);
     } else {
+        // Navigate to home view
+        viewMode = 'home';
+        activeStackId = null;
         renderHomeView();
     }
 });
