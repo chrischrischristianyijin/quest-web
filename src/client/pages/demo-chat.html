@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo Chat - Quest</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/common.css">
     <style>
         body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
-            margin: 0;
-            font-family: 'Inter', sans-serif;
         }
-
+        
         .chat-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -25,7 +24,7 @@
         }
 
         .chat-header {
-            background: var(--quest-gradient);
+            background: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
             color: white;
             padding: 20px 30px;
             border-radius: 16px 16px 0 0;
@@ -85,10 +84,20 @@
             border-radius: 18px;
             font-size: 0.95rem;
             line-height: 1.5;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: messageSlideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes messageSlideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .message.user {
-            background: var(--quest-gradient);
+            background: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
             color: white;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
@@ -99,6 +108,25 @@
             color: #333;
             align-self: flex-start;
             border-bottom-left-radius: 4px;
+        }
+
+        .demo-notice {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+            font-size: 0.9rem;
+        }
+
+        .demo-notice strong {
+            font-weight: 600;
+        }
+
+        .typing-indicator {
+            color: #666;
+            font-style: italic;
         }
 
         .chat-input-container {
@@ -124,11 +152,11 @@
         }
 
         .chat-input:focus {
-            border-color: var(--quest-purple);
+            border-color: #4B264F;
         }
 
         .send-btn {
-            background: var(--quest-gradient);
+            background: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
             color: white;
             border: none;
             padding: 12px 20px;
@@ -151,20 +179,6 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
-        }
-
-        .demo-notice {
-            background: #e3f2fd;
-            color: #1976d2;
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #2196f3;
-            font-size: 0.9rem;
-        }
-
-        .demo-notice strong {
-            font-weight: 600;
         }
 
         @media (max-width: 768px) {
@@ -202,7 +216,6 @@
         }
     </style>
 </head>
-
 <body>
     <div class="chat-container">
         <div class="chat-header">
@@ -262,15 +275,40 @@
             "Let me help you discover new insights from your existing content. What's your current focus area?",
             "I can help you organize and categorize your thoughts about the content you've saved. What would you like to explore?",
             "That's a great question! In the full Quest experience, I'd search through your personal knowledge vault to find relevant information.",
-            "I'm here to help you make sense of all the information you've collected. What would you like to dive deeper into?"
+            "I'm here to help you make sense of all the information you've collected. What would you like to dive deeper into?",
+            "Based on your saved content, I can help you identify patterns and connections. What interests you most?",
+            "I can help you explore new perspectives on topics you've already researched. What would you like to discuss?"
         ];
 
-        function addMessage(text, isUser = false) {
+        function addMessage(text, isUser = false, isTyping = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-            messageDiv.textContent = text;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            if (isTyping) {
+                messageDiv.innerHTML = '<span class="typing-indicator">AI is typing...</span>';
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                return messageDiv;
+            } else {
+                messageDiv.textContent = text;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                return messageDiv;
+            }
+        }
+
+        function typeMessage(element, text, speed = 30) {
+            element.textContent = '';
+            let i = 0;
+            const timer = setInterval(() => {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                } else {
+                    clearInterval(timer);
+                }
+            }, speed);
         }
 
         function getRandomResponse() {
@@ -289,12 +327,24 @@
             // Clear input and disable send button
             chatInput.value = '';
             sendBtn.disabled = true;
-            sendBtn.textContent = 'Thinking...';
+            sendBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Thinking...
+            `;
 
             // Simulate AI thinking time
             setTimeout(() => {
                 const response = getRandomResponse();
-                addMessage(response);
+                const typingMessage = addMessage('', false, true);
+                
+                setTimeout(() => {
+                    typingMessage.remove();
+                    const responseMessage = addMessage('', false);
+                    typeMessage(responseMessage, response, 30);
+                }, 500 + Math.random() * 1000);
                 
                 // Re-enable send button
                 sendBtn.disabled = false;
@@ -318,7 +368,11 @@
                 chatForm.dispatchEvent(new Event('submit'));
             }
         });
+
+        // Add some demo messages on load
+        setTimeout(() => {
+            addMessage("Try asking me about your saved articles, research topics, or any content you've collected!", false);
+        }, 2000);
     </script>
 </body>
-
 </html>
