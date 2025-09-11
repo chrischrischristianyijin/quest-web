@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo Chat - Quest</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/src/client/js/quest-config.js"></script>
     <style>
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -232,13 +233,14 @@
         <div class="chat-main">
             <div class="chat-messages" id="chatMessages">
                 <div class="demo-notice">
-                    <strong>Demo Mode:</strong> This is a demonstration of Quest's AI chat functionality. 
-                    In the full version, this would connect to Quest's AI assistant to help you explore and understand your saved content.
+                    <strong>Quest AI Assistant:</strong> This chat is powered by Quest's RAG (Retrieval-Augmented Generation) technology. 
+                    I can analyze your saved content and provide intelligent insights based on your knowledge collection.
                 </div>
                 
                 <div class="message assistant">
-                    👋 Hello! I'm Quest's AI assistant. I can help you explore and understand the content you've saved. 
-                    What would you like to know about your knowledge collection?
+                    👋 Hello! I'm Quest's AI assistant powered by advanced RAG technology. 
+                    I can analyze your saved content, find connections between different pieces, and provide personalized insights. 
+                    What would you like to explore in your knowledge collection?
                 </div>
             </div>
 
@@ -260,25 +262,21 @@
     </div>
 
     <script>
-        // Demo chat functionality
+        // Quest AI Chat functionality
         const chatMessages = document.getElementById('chatMessages');
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
 
-        // Sample responses for demo
-        const sampleResponses = [
-            "That's an interesting question! In a real Quest chat, I would analyze your saved content to provide personalized insights.",
-            "I can help you find connections between different pieces of content you've saved. What topic are you curious about?",
-            "Based on your knowledge collection, I notice you're interested in several key areas. Would you like me to explore any specific topic?",
-            "I can summarize and explain complex topics from your saved articles. What would you like me to break down for you?",
-            "Let me help you discover new insights from your existing content. What's your current focus area?",
-            "I can help you organize and categorize your thoughts about the content you've saved. What would you like to explore?",
-            "That's a great question! In the full Quest experience, I'd search through your personal knowledge vault to find relevant information.",
-            "I'm here to help you make sense of all the information you've collected. What would you like to dive deeper into?",
-            "Based on your saved content, I can help you identify patterns and connections. What interests you most?",
-            "I can help you explore new perspectives on topics you've already researched. What would you like to discuss?"
-        ];
+        // Quest API configuration
+        const QUEST_API_ENDPOINT = getQuestAPIUrl('CHAT');
+        const QUEST_HEALTH_ENDPOINT = getQuestAPIUrl('HEALTH');
+        
+        // Validate configuration on load
+        const configValidation = validateQuestConfig();
+        if (!configValidation.isValid) {
+            console.warn('Quest API Configuration Issues:', configValidation.issues);
+        }
 
         function addMessage(text, isUser = false, isTyping = false) {
             const messageDiv = document.createElement('div');
@@ -311,11 +309,87 @@
             }, speed);
         }
 
-        function getRandomResponse() {
-            return sampleResponses[Math.floor(Math.random() * sampleResponses.length)];
+        // Send message to Quest API
+        async function sendToQuestAPI(message) {
+            const token = getQuestToken();
+            
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            try {
+                const response = await fetch(QUEST_API_ENDPOINT, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        message: message
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+                
+                // Handle streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+                let sources = [];
+                
+                // Create typing indicator
+                const typingMessage = addMessage('', false, true);
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                
+                                if (data.type === 'content') {
+                                    fullResponse += data.content;
+                                    // Update typing message with current content
+                                    typingMessage.innerHTML = `<span class="typing-indicator">AI is typing...</span><br><div style="margin-top: 8px; color: #666; font-size: 0.9rem;">${fullResponse}</div>`;
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                } else if (data.type === 'done') {
+                                    sources = data.sources || [];
+                                    // Replace typing message with final response
+                                    typingMessage.remove();
+                                    const responseMessage = addMessage(fullResponse, false);
+                                    
+                                    // Add sources if available
+                                    if (sources.length > 0) {
+                                        const sourcesDiv = document.createElement('div');
+                                        sourcesDiv.style.cssText = 'margin-top: 8px; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 8px;';
+                                        sourcesDiv.innerHTML = `<strong>Sources:</strong> ${sources.length} relevant documents found`;
+                                        responseMessage.appendChild(sourcesDiv);
+                                    }
+                                }
+                            } catch (parseError) {
+                                console.warn('Failed to parse SSE data:', parseError);
+                            }
+                        }
+                    }
+                }
+                
+                return { success: true, response: fullResponse, sources };
+                
+            } catch (error) {
+                console.error('Quest API Error:', error);
+                throw error;
+            }
         }
 
-        chatForm.addEventListener('submit', function(e) {
+        chatForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const userMessage = chatInput.value.trim();
@@ -335,17 +409,18 @@
                 Thinking...
             `;
 
-            // Simulate AI thinking time
-            setTimeout(() => {
-                const response = getRandomResponse();
-                const typingMessage = addMessage('', false, true);
+            try {
+                await sendToQuestAPI(userMessage);
+            } catch (error) {
+                // Remove any existing typing indicator
+                const existingTyping = document.querySelector('.typing-indicator');
+                if (existingTyping && existingTyping.closest('.message')) {
+                    existingTyping.closest('.message').remove();
+                }
                 
-                setTimeout(() => {
-                    typingMessage.remove();
-                    const responseMessage = addMessage('', false);
-                    typeMessage(responseMessage, response, 30);
-                }, 500 + Math.random() * 1000);
-                
+                // Show error message
+                addMessage(`Sorry, I encountered an error: ${error.message}. Please try again or check your connection.`, false);
+            } finally {
                 // Re-enable send button
                 sendBtn.disabled = false;
                 sendBtn.innerHTML = `
@@ -355,7 +430,7 @@
                     </svg>
                     Send
                 `;
-            }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
+            }
         });
 
         // Auto-focus on input
@@ -369,10 +444,34 @@
             }
         });
 
-        // Add some demo messages on load
+        // Add welcome message on load
         setTimeout(() => {
-            addMessage("Try asking me about your saved articles, research topics, or any content you've collected!", false);
+            addMessage("Try asking me about your saved articles, research topics, or any content you've collected! I'll use RAG technology to find relevant information from your knowledge base.", false);
         }, 2000);
+        
+        // Check API health on load
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(QUEST_HEALTH_ENDPOINT);
+                if (response.ok) {
+                    const health = await response.json();
+                    console.log('Quest API Health:', health);
+                    if (health.features && health.features.rag_enabled) {
+                        addMessage("✅ RAG system is active and ready to analyze your content!", false);
+                    }
+                }
+            } catch (error) {
+                console.warn('API health check failed:', error);
+                if (!configValidation.isValid) {
+                    addMessage("⚠️ Quest API configuration needed. Please update quest-config.js with your API endpoint.", false);
+                } else {
+                    addMessage("⚠️ Unable to connect to Quest API. Please check your connection and API status.", false);
+                }
+            }
+        }
+        
+        // Run health check after initial load
+        setTimeout(checkAPIHealth, 3000);
     </script>
 </body>
 </html>
