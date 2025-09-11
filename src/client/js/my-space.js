@@ -55,6 +55,10 @@ let currentFilters = {
     tags: null         // 标签筛选
 };
 let isEditMode = false; // Edit mode state
+
+// Stack view state management
+let viewMode = 'home'; // 'home' | 'stack'
+let activeStackId = null;
 let draggedCard = null;
 let dragOffset = { x: 0, y: 0 };
 let stackHoverTimeout = null;
@@ -681,8 +685,15 @@ async function initPage() {
         // Set up authentication listener to reload stacks when user logs in
         setupAuthListener();
         
-        // Final render after all data is loaded
-        renderInsights();
+        // Handle deep linking for stack views
+        const { viewMode: initialViewMode, stackId } = parseRoute();
+        if (initialViewMode === 'stack' && stackId) {
+            // Navigate to stack view
+            renderStackView(stackId);
+        } else {
+            // Final render after all data is loaded
+            renderInsights();
+        }
         
         // 分页模式：不需要无限滚动
     } catch (error) {
@@ -2473,6 +2484,9 @@ function bindEvents() {
         
         // 绑定标题编辑事件
         bindTitleEditEvents();
+        
+        // 绑定堆叠视图事件
+        bindStackViewEvents();
 }
 
 // Event delegation for card interactions (performance optimization)
@@ -3017,6 +3031,374 @@ async function createNewTag() {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initPage);
+
+// ===== STACK VIEW FUNCTIONALITY =====
+
+// Toggle stack view class on root element
+function setStackViewEnabled(enabled) {
+    const root = document.querySelector('.MySpace');
+    if (!root) return;
+    root.classList.toggle('stack-view', !!enabled);
+}
+
+// Parse route and determine view mode
+function parseRoute() {
+    const path = window.location.pathname;
+    const stackMatch = path.match(/^\/stacks\/(\d+)$/);
+    
+    if (stackMatch) {
+        const stackId = stackMatch[1];
+        viewMode = 'stack';
+        activeStackId = stackId;
+        return { viewMode, stackId };
+    }
+    
+    viewMode = 'home';
+    activeStackId = null;
+    return { viewMode, stackId: null };
+}
+
+// Navigate to stack view
+function navigateToStack(stackId) {
+    const url = `/stacks/${stackId}`;
+    navigateTo(url);
+    viewMode = 'stack';
+    activeStackId = stackId;
+    renderStackView(stackId);
+}
+
+// Navigate back to home view
+function navigateToHome() {
+    navigateTo('/pages/my-space.html');
+    viewMode = 'home';
+    activeStackId = null;
+    renderHomeView();
+}
+
+// Render stack view
+async function renderStackView(stackId) {
+    console.log(`🎯 Rendering stack view for stack ${stackId}`);
+    
+    // Enable stack view mode (hides profile/controls sections)
+    setStackViewEnabled(true);
+    
+    // Show stack context bar
+    const stackContextBar = getCachedElementById('stackContextBar');
+    if (stackContextBar) {
+        stackContextBar.style.display = 'block';
+    }
+    
+    // Hide filters in stack view
+    if (filterButtons) {
+        filterButtons.style.display = 'none';
+    }
+    
+    // Get stack data
+    let stack = stacks.get(stackId);
+    if (!stack) {
+        // Try to fetch from API if not in memory
+        try {
+            const response = await api.getUserStacksWithInsights(currentUser?.id);
+            if (response.success && response.data) {
+                // Process and cache the stacks
+                response.data.forEach(stackData => {
+                    const stackId = String(stackData.id);
+                    const stackInsights = stackData.insights || [];
+                    stacks.set(stackId, {
+                        id: stackId,
+                        name: stackData.name,
+                        description: stackData.description,
+                        cards: stackInsights,
+                        createdAt: stackData.created_at,
+                        updatedAt: stackData.updated_at,
+                        modifiedAt: new Date().toISOString()
+                    });
+                });
+                stack = stacks.get(stackId);
+            }
+        } catch (error) {
+            console.error('❌ Failed to fetch stack data:', error);
+            showErrorMessage('Failed to load stack data');
+            return;
+        }
+    }
+    
+    if (!stack) {
+        console.error('❌ Stack not found:', stackId);
+        showErrorMessage('Stack not found');
+        navigateToHome();
+        return;
+    }
+    
+    // Update context bar
+    updateStackContextBar(stack);
+    
+    // Enhance stack actions
+    enhanceStackActions();
+    bindEnhancedStackActions();
+    
+    // Render stack insights
+    renderStackInsights(stack);
+    
+    // Hide pagination
+    hidePagination();
+}
+
+// Update stack context bar with stack data
+function updateStackContextBar(stack) {
+    const stackBreadcrumbName = getCachedElementById('stackBreadcrumbName');
+    const stackCount = getCachedElementById('stackCount');
+    const stackDates = getCachedElementById('stackDates');
+    
+    if (stackBreadcrumbName) {
+        stackBreadcrumbName.textContent = stack.name || 'Untitled';
+    }
+    
+    if (stackCount) {
+        const n = Array.isArray(stack.cards) ? stack.cards.length : 0;
+        stackCount.textContent = `${n} insight${n === 1 ? '' : 's'}`;
+    }
+    
+    if (stackDates) {
+        const created = stack.createdAt ? new Date(stack.createdAt) : null;
+        // prefer updatedAt; if missing, fall back to modifiedAt you stamp locally
+        const updated = stack.updatedAt ? new Date(stack.updatedAt)
+                      : (stack.modifiedAt ? new Date(stack.modifiedAt) : null);
+
+        const parts = [];
+        if (created && !isNaN(created)) {
+            const createdFormatted = created.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+            parts.push(`Created ${createdFormatted}`);
+        }
+        if (updated && !isNaN(updated)) {
+            const updatedFormatted = updated.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+            parts.push(`Modified ${updatedFormatted}`);
+        }
+
+        stackDates.textContent = parts.join(' • ');
+    }
+}
+
+// Render insights for stack view
+function renderStackInsights(stack) {
+    if (!contentCards) return;
+    
+    // Clear existing content
+    contentCards.innerHTML = '';
+    
+    if (!stack.cards || stack.cards.length === 0) {
+        renderEmptyStackState(stack);
+        return;
+    }
+    
+    // Render stack insights using existing card creation logic
+    stack.cards.forEach(insight => {
+        const card = createInsightCard(insight);
+        if (card) {
+            contentCards.appendChild(card);
+        }
+    });
+    
+    console.log(`✅ Rendered ${stack.cards.length} insights for stack ${stack.id}`);
+}
+
+// Render empty stack state
+function renderEmptyStackState(stack) {
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-stack-state';
+    emptyState.innerHTML = `
+        <div class="empty-stack-content">
+            <div class="empty-stack-icon">📚</div>
+            <h3>No insights yet</h3>
+            <p>This stack is empty. Add some insights to get started!</p>
+            <div class="empty-stack-actions">
+                <button class="btn-primary" onclick="openAddContentModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Add Insight
+                </button>
+                <button class="btn-secondary" onclick="navigateToHome()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Back to My Space
+                </button>
+            </div>
+        </div>
+    `;
+    
+    contentCards.appendChild(emptyState);
+}
+
+// Render home view (existing functionality)
+function renderHomeView() {
+    console.log('🏠 Rendering home view');
+    
+    // Disable stack view mode (shows profile/controls sections)
+    setStackViewEnabled(false);
+    
+    // Hide stack context bar
+    const stackContextBar = getCachedElementById('stackContextBar');
+    if (stackContextBar) {
+        stackContextBar.style.display = 'none';
+    }
+    
+    // Show filters
+    if (filterButtons) {
+        filterButtons.style.display = 'flex';
+    }
+    
+    // Show pagination
+    showPagination();
+    
+    // Render normal insights
+    renderInsights();
+}
+
+// Hide pagination controls
+function hidePagination() {
+    const paginationContainer = getCachedElementById('paginationContainer');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
+}
+
+// Show pagination controls
+function showPagination() {
+    const paginationContainer = getCachedElementById('paginationContainer');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'flex';
+    }
+}
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', function(event) {
+    const { viewMode: newViewMode, stackId } = parseRoute();
+    
+    if (newViewMode === 'stack' && stackId) {
+        renderStackView(stackId);
+    } else {
+        renderHomeView();
+    }
+});
+
+// Enhance stack actions with Edit, Add, and proper Exit button
+function enhanceStackActions() {
+    const actions = document.querySelector('.stack-actions');
+    if (!actions) return;
+
+    actions.innerHTML = `
+        <button class="stack-action-btn primary" id="stackEditModeBtn" aria-label="Toggle edit mode">Edit</button>
+    `;
+}
+
+// Bind enhanced stack actions
+function bindEnhancedStackActions() {
+    const editBtn = document.getElementById('stackEditModeBtn');
+    if (editBtn) {
+        editBtn.onclick = () => {
+            if (typeof toggleEditMode === 'function') {
+                toggleEditMode();
+            }
+        };
+    }
+
+
+    // Back button
+    const backBtn = document.getElementById('backToMySpaceBtn');
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            navigateToHome();
+        });
+    }
+    
+    // Make stack name clickable for inline editing
+    const stackName = document.getElementById('stackBreadcrumbName');
+    if (stackName) {
+        stackName.addEventListener('click', function() {
+            startStackNameEdit(stackName);
+        });
+    }
+    
+    // Make edit icon clickable too
+    const editIcon = document.querySelector('.edit-hint-icon');
+    if (editIcon) {
+        editIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const stackName = document.getElementById('stackBreadcrumbName');
+            if (stackName) {
+                startStackNameEdit(stackName);
+            }
+        });
+    }
+}
+
+// Start inline editing of stack name
+function startStackNameEdit(stackNameElement) {
+    if (!stackNameElement || stackNameElement.classList.contains('editing')) return;
+    
+    const currentName = stackNameElement.textContent;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.className = 'stack-name-input';
+    
+    // Replace text with input
+    stackNameElement.textContent = '';
+    stackNameElement.appendChild(input);
+    stackNameElement.classList.add('editing');
+    
+    // Focus and select text
+    input.focus();
+    input.select();
+    
+    // Handle save on Enter or blur
+    const saveEdit = () => {
+        const newName = input.value.trim();
+        if (newName && newName !== currentName) {
+            updateStackName(activeStackId, newName);
+            // Mark as edited to hide the hint icon
+            const container = stackNameElement.closest('.stack-name-container');
+            if (container) {
+                container.classList.add('edited');
+            }
+        }
+        stackNameElement.textContent = newName || currentName;
+        stackNameElement.classList.remove('editing');
+    };
+    
+    const cancelEdit = () => {
+        stackNameElement.textContent = currentName;
+        stackNameElement.classList.remove('editing');
+    };
+    
+    input.addEventListener('blur', saveEdit);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit();
+        }
+    });
+}
+
+
+// Bind stack view events
+function bindStackViewEvents() {
+    // This function is kept for compatibility but enhanced actions are handled above
+    bindEnhancedStackActions();
+}
 
 // 标签管理弹窗已删除，使用简单的标签下拉选择器
 
@@ -5111,10 +5493,15 @@ function createStackCard(stackData) {
     content.appendChild(footer);
     card.appendChild(content);
     
-    // Click handler to expand/collapse stack
+    // Click handler to navigate to stack view
     card.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
+        // Don't navigate if clicking on delete button or in edit mode
+        if (e.target.closest('.content-card-delete-btn') || isEditMode) {
+            return;
+        }
         
         // Ensure stackData is properly initialized
         if (!stackData || !stackData.id) {
@@ -5122,22 +5509,10 @@ function createStackCard(stackData) {
             return;
         }
         
-        // Ensure isExpanded property exists
-        if (typeof stackData.isExpanded === 'undefined') {
-            stackData.isExpanded = false;
-        }
+        console.log('🖱️ Stack card clicked, navigating to stack view:', stackData.name);
         
-        console.log('🖱️ Stack card clicked:', stackData.name, 'isExpanded:', stackData.isExpanded);
-        
-        if (!e.target.closest('.content-card-delete-btn')) {
-            if (stackData.isExpanded) {
-                console.log('📂 Collapsing stack:', stackData.name);
-                collapseStack(stackData.id);
-            } else {
-                console.log('📂 Expanding stack:', stackData.name);
-                expandStack(stackData);
-            }
-        }
+        // Navigate to stack view
+        navigateToStack(stackData.id);
     });
     
     return card;

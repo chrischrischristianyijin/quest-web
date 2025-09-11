@@ -4,8 +4,8 @@
   "description": "Quest Web Application",
   "main": "index.js",
   "scripts": {
-    "start": "http-server src/client -p 8080 -c-1 -o",
-    "dev": "http-server src/client -p 8080 -c-1 -o",
+    "start": "node src/server/dev-server.js",
+    "dev": "node src/server/dev-server.js",
     "build": "echo 'Frontend build completed'",
     "vercel-build": "echo 'Frontend build completed'"
   },
@@ -20,6 +20,7 @@
   "author": "Quest Team",
   "license": "MIT",
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0"
