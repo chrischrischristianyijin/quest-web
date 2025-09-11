@@ -216,7 +216,7 @@ function initExtensionCarousel() {
     }
 
     function startCarousel() {
-        interval = setInterval(nextSlide, 4000); // Switch every 4 seconds
+        interval = setInterval(nextSlide, 2000); // Switch every 2 seconds
     }
 
     function stopCarousel() {

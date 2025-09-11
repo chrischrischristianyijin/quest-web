@@ -236,21 +236,29 @@ body::before {
 }
 
 .auth-btn-primary {
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.3) 0%, rgba(139, 95, 191, 0.25) 100%);
+    background: linear-gradient(135deg, #2D1B30 0%, #4B264F 25%, #6B3A70 50%, #8E4F9D 75%, #A865B8 100%);
     backdrop-filter: blur(60px) saturate(220%);
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 40px rgba(53, 39, 107, 0.15), 0 2px 10px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
-    font-weight: 600;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+        0 8px 30px rgba(45, 27, 48, 0.3), 
+        0 4px 12px rgba(0, 0, 0, 0.15), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+    font-weight: 700;
 }
 
 .auth-btn-primary:hover {
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.4) 0%, rgba(139, 95, 191, 0.35) 100%);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 12px 50px rgba(53, 39, 107, 0.2), 0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 12px 40px rgba(45, 27, 48, 0.4), 
+        0 6px 18px rgba(0, 0, 0, 0.2), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px) scale(1.02);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .auth-btn-secondary {
@@ -528,21 +536,25 @@ body::before {
 .waitlist-button {
     width: 120px;
     height: 48px;
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.3) 0%, rgba(139, 95, 191, 0.25) 50%, rgba(199, 125, 255, 0.2) 100%);
+    background: linear-gradient(135deg, #2D1B30 0%, #4B264F 25%, #6B3A70 50%, #8E4F9D 75%, #A865B8 100%);
     backdrop-filter: blur(60px) saturate(220%);
     border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     color: white;
     font-size: 16px;
     font-family: inherit;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.5;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    box-shadow: 0 8px 40px rgba(53, 39, 107, 0.15), 0 2px 10px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+    box-shadow: 
+        0 12px 50px rgba(45, 27, 48, 0.4), 
+        0 6px 20px rgba(0, 0, 0, 0.2), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .waitlist-button::before {
@@ -561,11 +573,15 @@ body::before {
 }
 
 .waitlist-button:hover {
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.4) 0%, rgba(139, 95, 191, 0.35) 50%, rgba(199, 125, 255, 0.3) 100%);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-3px);
-    box-shadow: 0 12px 50px rgba(53, 39, 107, 0.2), 0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 
+        0 20px 70px rgba(45, 27, 48, 0.6), 
+        0 10px 30px rgba(0, 0, 0, 0.3), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 .waitlist-button:active {
@@ -725,23 +741,27 @@ body::before {
     justify-content: center;
     gap: 12px;
     padding: 18px 36px;
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.3) 0%, rgba(139, 95, 191, 0.25) 100%);
+    background: linear-gradient(135deg, #2D1B30 0%, #4B264F 25%, #6B3A70 50%, #8E4F9D 75%, #A865B8 100%);
     backdrop-filter: blur(60px) saturate(220%);
     color: white;
     text-decoration: none;
     border-radius: 40px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 20px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 8px 40px rgba(53, 39, 107, 0.15), 0 2px 10px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 12px 50px rgba(45, 27, 48, 0.4), 
+        0 6px 20px rgba(0, 0, 0, 0.2), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     position: relative;
     overflow: hidden;
-    animation: showcaseGlow 4s ease-in-out infinite;
+    animation: showcaseGlow 2s ease-in-out infinite;
     margin-top: 3rem;
     min-width: 200px;
     z-index: 20;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .showcase-cta::before {
@@ -760,11 +780,15 @@ body::before {
 }
 
 .showcase-cta:hover {
-    transform: translateY(-3px) scale(1.02);
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.4) 0%, rgba(139, 95, 191, 0.35) 100%);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 12px 50px rgba(53, 39, 107, 0.2), 0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+    transform: translateY(-4px) scale(1.05);
+    background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 
+        0 20px 70px rgba(45, 27, 48, 0.6), 
+        0 10px 30px rgba(0, 0, 0, 0.3), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 @keyframes showcaseGlow {
@@ -784,7 +808,7 @@ body::before {
     align-items: center;
     gap: 20px;
     margin-top: -30px;
-    animation: visualFloat 6s ease-in-out infinite;
+    animation: visualFloat 3s ease-in-out infinite;
 }
 
 @keyframes visualFloat {
@@ -800,7 +824,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: carouselGlow 4s ease-in-out infinite;
+    animation: carouselGlow 2s ease-in-out infinite;
 }
 
 @keyframes carouselGlow {
@@ -838,7 +862,7 @@ body::before {
 .carousel-slide.active img {
     transform: scale(1);
     filter: brightness(1) contrast(1);
-    animation: photoEntrance 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: photoEntrance 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 @keyframes photoEntrance {
@@ -908,7 +932,7 @@ body::before {
     background: white;
     transform: scale(1.3);
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-    animation: indicatorPulse 2s ease-in-out infinite;
+    animation: indicatorPulse 1s ease-in-out infinite;
 }
 
 @keyframes indicatorPulse {
@@ -1024,23 +1048,27 @@ body::before {
     justify-content: center;
     gap: 12px;
     padding: 18px 36px;
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.4) 0%, rgba(139, 95, 191, 0.35) 100%);
+    background: linear-gradient(135deg, #2D1B30 0%, #4B264F 25%, #6B3A70 50%, #8E4F9D 75%, #A865B8 100%);
     backdrop-filter: blur(60px) saturate(220%);
     color: white;
     text-decoration: none;
     border-radius: 40px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 20px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 12px 50px rgba(53, 39, 107, 0.2), 0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 
+        0 12px 50px rgba(45, 27, 48, 0.4), 
+        0 6px 20px rgba(0, 0, 0, 0.2), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     position: relative;
     overflow: hidden;
-    animation: exploreGlow 4s ease-in-out infinite;
+    animation: exploreGlow 2s ease-in-out infinite;
     margin-top: 0;
     min-width: 200px;
     z-index: 20;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .explore-cta::before {
@@ -1059,11 +1087,15 @@ body::before {
 }
 
 .explore-cta:hover {
-    transform: translateY(-3px) scale(1.02);
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.8) 0%, rgba(139, 95, 191, 0.7) 100%);
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 16px 60px rgba(53, 39, 107, 0.4), 0 6px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    text-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.4), 0 0.8px 1.5px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px) scale(1.05);
+    background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 
+        0 20px 70px rgba(45, 27, 48, 0.6), 
+        0 10px 30px rgba(0, 0, 0, 0.3), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 @keyframes exploreGlow {
@@ -1084,7 +1116,7 @@ body::before {
     gap: 20px;
     margin-top: 0;
     padding-left: 40px;
-    animation: visualFloat 6s ease-in-out infinite;
+    animation: visualFloat 3s ease-in-out infinite;
 }
 
 @keyframes visualFloat {
@@ -1439,25 +1471,33 @@ body::before {
     align-items: center;
     gap: 12px;
     padding: 16px 32px;
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.3) 0%, rgba(139, 95, 191, 0.25) 100%);
+    background: linear-gradient(135deg, #2D1B30 0%, #4B264F 25%, #6B3A70 50%, #8E4F9D 75%, #A865B8 100%);
     backdrop-filter: blur(60px) saturate(220%);
     color: white;
     text-decoration: none;
     border-radius: 50px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 18px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 8px 40px rgba(53, 39, 107, 0.15), 0 2px 10px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+    box-shadow: 
+        0 12px 50px rgba(45, 27, 48, 0.4), 
+        0 6px 20px rgba(0, 0, 0, 0.2), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .more-cta:hover {
-    transform: translateY(-3px);
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.6) 0%, rgba(139, 95, 191, 0.5) 100%);
-    border-color: rgba(255, 255, 255, 0.35);
-    box-shadow: 0 12px 50px rgba(53, 39, 107, 0.3), 0 4px 15px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.4);
+    transform: translateY(-4px) scale(1.05);
+    background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 
+        0 20px 70px rgba(45, 27, 48, 0.6), 
+        0 10px 30px rgba(0, 0, 0, 0.3), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 /* 深色联系我们部分 */
@@ -1531,19 +1571,23 @@ body::before {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.5) 0%, rgba(139, 95, 191, 0.4) 100%);
+    background: linear-gradient(135deg, #2D1B30 0%, #4B264F 25%, #6B3A70 50%, #8E4F9D 75%, #A865B8 100%);
     backdrop-filter: blur(60px) saturate(220%);
     color: white;
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 18px;
     padding: 18px 36px;
     border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin-top: var(--space-8);
-    box-shadow: 0 8px 40px rgba(53, 39, 107, 0.2), 0 2px 10px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        0 12px 50px rgba(45, 27, 48, 0.4), 
+        0 6px 20px rgba(0, 0, 0, 0.2), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.6);
     position: relative;
     overflow: hidden;
 }
@@ -1564,61 +1608,209 @@ body::before {
 }
 
 .contact-button:hover {
-    transform: translateY(-3px);
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.6) 0%, rgba(139, 95, 191, 0.5) 100%);
-    border-color: rgba(255, 255, 255, 0.35);
-    box-shadow: 0 12px 50px rgba(53, 39, 107, 0.3), 0 4px 15px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.4);
+    transform: translateY(-4px) scale(1.05);
+    background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 
+        0 20px 70px rgba(45, 27, 48, 0.6), 
+        0 10px 30px rgba(0, 0, 0, 0.3), 
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 
-/* 极简页脚 */
+/* 重新设计的页脚 */
 .footer {
-    background: transparent;
-    padding: var(--space-20) var(--space-6) var(--space-12);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 0;
+    margin-top: 0;
 }
 
 .footer-content {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
+    padding: var(--space-12) var(--space-6) var(--space-8);
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 2fr 1fr 1fr;
     gap: 40px;
     align-items: start;
 }
 
-.footer-section h3 {
-    color: var(--quest-purple);
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
+/* 品牌区域 */
+.footer-brand {
+    max-width: 400px;
 }
 
-.footer-text {
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.footer-logo-img {
+    width: 40px;
+    height: 13px;
+    opacity: 0.8;
+}
+
+.footer-brand h3 {
+    color: var(--accent-color);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.footer-description {
     color: var(--text-secondary);
     line-height: 1.6;
+    font-size: 0.9rem;
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* 链接区域 */
+.footer-links-section h4,
+.footer-contact-section h4 {
+    color: var(--accent-color);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.footer-links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .footer-links a {
-    display: block;
     color: var(--text-secondary);
     text-decoration: none;
-    margin-bottom: 0.5rem;
-    transition: var(--transition-fast);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    padding: 2px 0;
+    position: relative;
+}
+
+.footer-links a::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 2px;
+    background: linear-gradient(135deg, var(--accent-color) 0%, rgba(139, 95, 191, 0.8) 100%);
+    transition: width 0.3s ease;
 }
 
 .footer-links a:hover {
-    color: var(--quest-purple);
+    color: var(--accent-color);
+    transform: translateX(8px);
 }
 
-.footer-copyright {
-    grid-column: 1 / -1;
-    margin-top: var(--space-4);
-    padding: 0;
-    text-align: center;
+.footer-links a:hover::before {
+    width: 4px;
+}
+
+/* 联系区域 */
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.contact-icon {
+    font-size: 1.1rem;
+    opacity: 0.8;
+}
+
+.contact-item a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.contact-item a:hover {
+    color: var(--accent-color);
+}
+
+/* 社交媒体区域 */
+.footer-social {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.social-text {
     color: var(--text-muted);
-    font-size: 0.875rem;
-    background: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.social-links {
+    display: flex;
+    gap: 8px;
+}
+
+/* 底部区域 */
+.footer-bottom {
+    background: transparent;
+    padding: 0 0 16px 0;
+    margin-top: 16px;
+}
+
+.footer-bottom-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.copyright {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.social-link:hover {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(53, 39, 107, 0.2);
 }
 
 /* 页面加载动画 */
@@ -1969,29 +2161,42 @@ body::before {
     }
 
     /* 页脚移动端优化 */
-    .footer {
-        padding: 40px 1rem 20px;
-    }
-
     .footer-content {
         grid-template-columns: 1fr;
         gap: 30px;
+        padding: var(--space-12) var(--space-4) var(--space-6);
+    }
+
+    .footer-brand {
+        text-align: center;
+        max-width: 100%;
+    }
+
+    .footer-logo {
+        justify-content: center;
+        margin-bottom: 16px;
+    }
+
+    .footer-links-section,
+    .footer-contact-section {
         text-align: center;
     }
 
-    .footer-section h3 {
-        font-size: 1.1rem;
-        margin-bottom: 0.8rem;
+    .footer-links {
+        align-items: center;
     }
 
-    .footer-text {
-        font-size: 0.9rem;
-        line-height: 1.5;
+    .contact-info {
+        align-items: center;
     }
 
-    .footer-links a {
-        font-size: 0.9rem;
-        margin-bottom: 0.3rem;
+    .footer-social {
+        align-items: center;
+    }
+
+    .footer-bottom-content {
+        padding: 0 var(--space-4);
+        text-align: center;
     }
 }
 
@@ -2143,6 +2348,12 @@ body::before {
         grid-column: 1 / -1;
         max-width: 400px;
         margin: 0 auto;
+    }
+
+    /* 页脚平板端优化 */
+    .footer-content {
+        grid-template-columns: 1.5fr 1fr 1fr;
+        gap: 35px;
     }
 }
 
@@ -2352,20 +2563,47 @@ body::before {
     }
 
     /* 页脚小屏幕优化 */
-    .footer {
-        padding: 30px 0.5rem 15px;
+    .footer-content {
+        padding: var(--space-10) var(--space-3) var(--space-4);
+        gap: 24px;
     }
 
-    .footer-section h3 {
-        font-size: 1rem;
+    .footer-brand h3 {
+        font-size: 1.2rem;
     }
 
-    .footer-text {
+    .footer-description {
+        font-size: 0.85rem;
+    }
+
+    .footer-links-section h4,
+    .footer-contact-section h4 {
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+    }
+
+    .footer-links a,
+    .contact-item a {
         font-size: 0.8rem;
     }
 
-    .footer-links a {
-        font-size: 0.8rem;
+    .footer-bottom {
+        padding: 0 0 16px 0;
+        margin-top: 12px;
+    }
+
+    .footer-bottom-content {
+        padding: 0 var(--space-3);
+    }
+
+    .copyright {
+        font-size: 0.75rem;
+    }
+
+    .social-link {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
     }
 }
 
@@ -2388,7 +2626,7 @@ body::before {
     }
     
     .footer-content {
-        max-width: 1400px;
+        max-width: 1200px;
     }
 }
 
