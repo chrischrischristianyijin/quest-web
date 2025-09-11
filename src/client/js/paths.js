@@ -36,6 +36,14 @@ export const PATHS = {
 
 // 页面跳转函数
 export const navigateTo = (path) => {
+    // Check if this is a stack navigation (SPA route)
+    if (path.startsWith('/stacks/')) {
+        // Use History API for SPA navigation
+        history.pushState({ stackId: path.split('/')[2] }, '', path);
+        return;
+    }
+    
+    // For other paths, use full page navigation
     window.location.href = path;
 };
 
