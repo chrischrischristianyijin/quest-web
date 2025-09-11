@@ -1332,6 +1332,9 @@ function renderInsights() {
     
     contentCards.appendChild(fragment);
     
+    // Re-setup event delegation for the newly rendered cards
+    setupCardEventDelegation();
+    
     const insightsCount = hasActiveTagFilter ? 
         Math.min(insightsPerPage, Math.max(0, filteredInsights.length - (currentPage - 1) * insightsPerPage)) :
         Math.min(filteredInsights.length, effectiveLimitForPage(currentPage));
@@ -1457,9 +1460,13 @@ async function loadTagsForInsights(insights) {
 
 // 创建见解卡片
 function createInsightCard(insight) {
+    console.log('🔨 Creating insight card for:', insight.title, 'ID:', insight.id);
+    
     const card = document.createElement('div');
     card.className = 'content-card';
     card.dataset.insightId = insight.id;
+    
+    console.log('🔨 Card element created with classes:', card.className, 'and dataset:', card.dataset);
     
     // Add delete button for edit mode
     const editDeleteBtn = document.createElement('button');
@@ -1609,6 +1616,13 @@ function createInsightCard(insight) {
     
     // 组装完整卡片
     card.appendChild(cardContent);
+    
+    console.log('✅ Insight card created successfully:', {
+        title: insight.title,
+        id: insight.id,
+        classes: card.className,
+        dataset: card.dataset
+    });
     
     return card;
 }
@@ -2491,37 +2505,149 @@ function bindEvents() {
 
 // Event delegation for card interactions (performance optimization)
 function setupCardEventDelegation() {
-    if (!contentCards) return;
+    if (!contentCards) {
+        console.error('❌ setupCardEventDelegation: contentCards element not found!');
+        return;
+    }
+    
+    console.log('🔧 Setting up card event delegation on:', contentCards);
+    console.log('🔧 Current cards in DOM:', contentCards.querySelectorAll('.content-card').length);
+    
+    // Remove any existing event listeners to avoid duplicates
+    contentCards.removeEventListener('click', handleCardClick);
     
     // Single event listener for all card interactions
-    contentCards.addEventListener('click', (e) => {
-        // Handle delete button clicks
-        if (e.target.matches('.content-card-delete-btn') || e.target.closest('.content-card-delete-btn')) {
-            e.stopPropagation();
-            const deleteBtn = e.target.matches('.content-card-delete-btn') ? e.target : e.target.closest('.content-card-delete-btn');
-            const insightId = deleteBtn.dataset.insightId;
-            if (insightId) {
-                deleteInsight(insightId);
-            }
-            return;
+    contentCards.addEventListener('click', handleCardClick);
+    
+    console.log('✅ Card event delegation set up successfully');
+}
+
+// Separate function for card click handling to allow removal
+function handleCardClick(e) {
+    console.log('🖱️ Card click detected:', e.target);
+    console.log('🖱️ Clicked element classes:', e.target.className);
+    console.log('🖱️ Event target:', e.target);
+    
+    // Handle delete button clicks
+    if (e.target.matches('.content-card-delete-btn') || e.target.closest('.content-card-delete-btn')) {
+        console.log('🗑️ Delete button clicked');
+        e.stopPropagation();
+        const deleteBtn = e.target.matches('.content-card-delete-btn') ? e.target : e.target.closest('.content-card-delete-btn');
+        const insightId = deleteBtn.dataset.insightId;
+        if (insightId) {
+            deleteInsight(insightId);
         }
+        return;
+    }
+    
+    // Handle card clicks for details
+    const card = e.target.closest('.content-card');
+    console.log('🖱️ Closest card element:', card);
+    
+    if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn')) {
+        const insightId = card.dataset.insightId;
+        console.log('🖱️ Card clicked with insight ID:', insightId);
         
-        // Handle card clicks for details
-        const card = e.target.closest('.content-card');
-        if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn')) {
-            const insightId = card.dataset.insightId;
-            if (insightId) {
-                // Find the insight data and open the modal
-                const insight = window.currentInsights?.find(i => i.id === insightId);
-                if (insight) {
-                    openContentDetailModal(insight);
-                } else {
-                    console.error('❌ Insight not found for ID:', insightId);
+        if (insightId) {
+            // Find the insight data - check both currentInsights and active stack
+            let insight = window.currentInsights?.find(i => i.id === insightId);
+            console.log('🖱️ Found insight in currentInsights:', insight);
+            
+            // If not found in currentInsights and we're in stack view, check the active stack
+            if (!insight && viewMode === 'stack' && activeStackId) {
+                const activeStack = stacks.get(activeStackId);
+                if (activeStack && activeStack.cards) {
+                    insight = activeStack.cards.find(card => card.id === insightId);
+                    console.log('🖱️ Found insight in active stack:', insight);
                 }
             }
+            
+            if (insight) {
+                console.log('✅ Opening content detail modal for insight:', insight.title);
+                openContentDetailModal(insight);
+            } else {
+                console.error('❌ Insight not found for ID:', insightId);
+                console.log('❌ Available insights in currentInsights:', window.currentInsights);
+                console.log('❌ Active stack ID:', activeStackId);
+                console.log('❌ Active stack cards:', activeStackId ? stacks.get(activeStackId)?.cards : 'No active stack');
+            }
+        } else {
+            console.error('❌ No insight ID found on card');
         }
-    });
+    } else {
+        console.log('🖱️ Click not on a card or on delete button');
+    }
 }
+
+// Test function to debug card clickability issues
+function testCardClickability() {
+    console.log('🧪 Testing card clickability...');
+    
+    // Check if contentCards exists
+    if (!contentCards) {
+        console.error('❌ contentCards element not found');
+        return;
+    }
+    
+    // Check how many cards are in the DOM
+    const cards = contentCards.querySelectorAll('.content-card');
+    console.log(`📊 Found ${cards.length} cards in DOM`);
+    
+    // Check if event listener is attached
+    const hasEventListener = contentCards.onclick !== null || 
+                           contentCards.addEventListener !== undefined;
+    console.log(`🔧 Event listener attached:`, hasEventListener);
+    
+    // Check each card's structure
+    cards.forEach((card, index) => {
+        const insightId = card.dataset.insightId;
+        const classes = card.className;
+        console.log(`📄 Card ${index + 1}:`, {
+            insightId,
+            classes,
+            hasClickHandler: card.onclick !== null
+        });
+    });
+    
+    // Test clicking on the first card programmatically
+    if (cards.length > 0) {
+        console.log('🖱️ Testing programmatic click on first card...');
+        const firstCard = cards[0];
+        const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        firstCard.dispatchEvent(clickEvent);
+    }
+    
+    // Check window.currentInsights
+    console.log('📋 window.currentInsights:', window.currentInsights);
+    
+    // Check current view mode and active stack
+    console.log('📋 Current view mode:', viewMode);
+    console.log('📋 Active stack ID:', activeStackId);
+    
+    if (viewMode === 'stack' && activeStackId) {
+        const activeStack = stacks.get(activeStackId);
+        console.log('📋 Active stack data:', activeStack);
+        console.log('📋 Active stack cards:', activeStack?.cards);
+    }
+    
+    return {
+        cardCount: cards.length,
+        hasEventListener,
+        viewMode,
+        activeStackId,
+        cards: Array.from(cards).map(card => ({
+            insightId: card.dataset.insightId,
+            classes: card.className
+        }))
+    };
+}
+
+// Make test function available globally
+window.testCardClickability = testCardClickability;
 
 // Cached version of getUserTags to reduce API calls
 async function getCachedUserTags() {
@@ -3189,23 +3315,42 @@ function updateStackContextBar(stack) {
 
 // Render insights for stack view
 function renderStackInsights(stack) {
-    if (!contentCards) return;
+    console.log('🎯 renderStackInsights called with stack:', stack);
+    
+    if (!contentCards) {
+        console.error('❌ contentCards element not found in renderStackInsights');
+        return;
+    }
     
     // Clear existing content
+    console.log('🧹 Clearing existing content');
     contentCards.innerHTML = '';
     
     if (!stack.cards || stack.cards.length === 0) {
+        console.log('📭 No cards in stack, rendering empty state');
         renderEmptyStackState(stack);
         return;
     }
     
+    console.log(`📋 Rendering ${stack.cards.length} insights for stack ${stack.id}`);
+    
     // Render stack insights using existing card creation logic
-    stack.cards.forEach(insight => {
+    stack.cards.forEach((insight, index) => {
+        console.log(`📄 Creating card ${index + 1} for insight:`, insight.title);
         const card = createInsightCard(insight);
         if (card) {
+            console.log(`✅ Card created successfully, appending to DOM`);
             contentCards.appendChild(card);
+        } else {
+            console.error(`❌ Failed to create card for insight:`, insight.title);
         }
     });
+    
+    console.log(`📊 Total cards in DOM after rendering:`, contentCards.querySelectorAll('.content-card').length);
+    
+    // Re-setup event delegation for the newly rendered cards
+    console.log('🔧 Re-setting up event delegation');
+    setupCardEventDelegation();
     
     console.log(`✅ Rendered ${stack.cards.length} insights for stack ${stack.id}`);
 }
@@ -6764,6 +6909,14 @@ function createStackHorizontalCard(insight, stackId) {
     
     // Setup drag functionality for horizontal cards
     setupStackHorizontalCardDrag(card, insight, stackId);
+    
+    // Click handler to view full content
+    card.addEventListener('click', (e) => {
+        if (!e.target.closest('.content-card-delete-btn')) {
+            // Open content detail modal (reuse existing functionality)
+            openContentDetailModal(insight);
+        }
+    });
     
     return card;
 }
