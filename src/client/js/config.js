@@ -84,5 +84,11 @@ export const API_CONFIG = {
     SYSTEM: {
         HEALTH: '/health',
         INFO: '/'
+    },
+    
+    // AI聊天接口
+    CHAT: {
+        CHAT: '/api/v1/chat',
+        HEALTH: '/api/v1/chat/health'
     }
 };
