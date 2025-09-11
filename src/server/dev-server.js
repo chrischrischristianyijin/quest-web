@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Static files root
 const clientRoot = path.resolve(__dirname, '../client');
@@ -21,6 +21,9 @@ const page = (name) => path.join(clientRoot, 'pages', `${name}.html`);
 app.get('/login', (_req, res) => res.sendFile(page('login')));
 app.get('/signup', (_req, res) => res.sendFile(page('signup')));
 app.get('/my-space', (_req, res) => res.sendFile(page('my-space')));
+
+// Stack view routes - serve my-space.html for SPA routing
+app.get('/stacks/:id', (_req, res) => res.sendFile(page('my-space')));
 
 // Root → index
 app.get('/', (_req, res) => res.sendFile(page('index')));
