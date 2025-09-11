@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Chat - Quest</title>
+    <title>Quest AI Chat - Quest</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="/src/client/js/quest-config.js"></script>
-    <script src="/src/client/js/quest-auth.js"></script>
     <style>
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -112,13 +110,21 @@
             border-bottom-left-radius: 4px;
         }
 
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
         .demo-notice {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: #e8f5e8;
+            color: #2e7d32;
             padding: 16px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border-left: 4px solid #2196f3;
+            border-left: 4px solid #4caf50;
             font-size: 0.9rem;
         }
 
@@ -129,6 +135,49 @@
         .typing-indicator {
             color: #666;
             font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #666;
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typingDot {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .sources-info {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(75, 38, 79, 0.1);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .sources-info strong {
+            color: #4B264F;
         }
 
         .chat-input-container {
@@ -183,6 +232,27 @@
             transform: none;
         }
 
+        .api-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            z-index: 1000;
+        }
+
+        .api-status.connected {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .api-status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
         @media (max-width: 768px) {
             .chat-container {
                 padding: 10px;
@@ -215,13 +285,25 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            .api-status {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 10px 0;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="api-status" id="apiStatus">
+        🔄 Checking API connection...
+    </div>
+
     <div class="chat-container">
         <div class="chat-header">
-            <h1>🤖 Quest Demo Chat</h1>
+            <h1>🤖 Quest AI Chat</h1>
             <a href="/my-space" class="back-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2"
@@ -234,14 +316,14 @@
         <div class="chat-main">
             <div class="chat-messages" id="chatMessages">
                 <div class="demo-notice">
-                    <strong>Quest AI Assistant:</strong> This chat is powered by Quest's RAG (Retrieval-Augmented Generation) technology. 
-                    I can analyze your saved content and provide intelligent insights based on your knowledge collection.
+                    <strong>🎉 Real AI Mode:</strong> This chat is now powered by Quest's real AI backend with RAG (Retrieval-Augmented Generation) capabilities. 
+                    Ask me anything and I'll search through your knowledge base to provide intelligent answers!
                 </div>
                 
                 <div class="message assistant">
-                    👋 Hello! I'm Quest's AI assistant powered by advanced RAG technology. 
-                    I can analyze your saved content, find connections between different pieces, and provide personalized insights. 
-                    What would you like to explore in your knowledge collection?
+                    👋 Hello! I'm Quest's AI assistant powered by real AI technology. 
+                    I can help you explore and understand your saved content using advanced RAG capabilities. 
+                    What would you like to know about your knowledge collection?
                 </div>
             </div>
 
@@ -263,89 +345,108 @@
     </div>
 
     <script>
-        // Quest AI Chat functionality
+        // Quest AI Chat functionalityutut
         const chatMessages = document.getElementById('chatMessages');
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
+        const apiStatus = document.getElementById('apiStatus');
 
-        // Quest API configuration
-        const QUEST_API_ENDPOINT = getQuestAPIUrl('CHAT');
-        const QUEST_HEALTH_ENDPOINT = getQuestAPIUrl('HEALTH');
-        
-        // Validate configuration on load
-        const configValidation = validateQuestConfig();
-        if (!configValidation.isValid) {
-            console.warn('Quest API Configuration Issues:', configValidation.issues);
+        // API Configuration - 使用现有的配置
+        const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
+        const API_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;
+        const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;
+
+        // Check API health on load
+        async function checkApiHealth() {
+            try {
+                const response = await fetch(HEALTH_ENDPOINT);
+                if (response.ok) {
+                    const data = await response.json();
+                    apiStatus.className = 'api-status connected';
+                    apiStatus.textContent = '🟢 AI Connected';
+                    console.log('API Health:', data);
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                console.error('API Health Check Error:', error);
+                apiStatus.className = 'api-status error';
+                apiStatus.textContent = '🔴 API Error - Using Fallback';
+            }
         }
-        
-        // Check authentication status on load
-        const authStatus = checkAuthStatus();
-        console.log('Quest AI Authentication Status:', authStatus);
 
-        function addMessage(text, isUser = false, isTyping = false) {
+        function addMessage(text, isUser = false, isError = false, sources = null) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            messageDiv.className = `message ${isUser ? 'user' : isError ? 'error' : 'assistant'}`;
             
-            if (isTyping) {
-                messageDiv.innerHTML = '<span class="typing-indicator">AI is typing...</span>';
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                return messageDiv;
+            if (sources && sources.length > 0) {
+                messageDiv.innerHTML = `
+                    <div>${text}</div>
+                    <div class="sources-info">
+                        <strong>Sources:</strong> ${sources.length} reference(s) found
+                    </div>
+                `;
             } else {
                 messageDiv.textContent = text;
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                return messageDiv;
             }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageDiv;
         }
 
-        function typeMessage(element, text, speed = 30) {
-            element.textContent = '';
-            let i = 0;
-            const timer = setInterval(() => {
-                if (i < text.length) {
-                    element.textContent += text.charAt(i);
-                    i++;
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                } else {
-                    clearInterval(timer);
-                }
-            }, speed);
+        function addTypingIndicator() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.innerHTML = `
+                <div class="typing-indicator">
+                    <span>AI is thinking</span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageDiv;
         }
 
-        // Send message to Quest API
         async function sendToQuestAPI(message) {
-            const token = getQuestToken();
-            
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            } else {
-                // 如果没有token，显示提示
-                addMessage("ℹ️ You're using Quest AI without authentication. Some features may be limited.", false);
-            }
-            
             try {
-                const response = await questAPIRequest(QUEST_API_ENDPOINT, {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // 添加认证头（如果需要）
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({
                         message: message
                     })
                 });
-                
-                // Handle streaming response
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let fullResponse = '';
-                let sources = [];
-                
-                // Create typing indicator
-                const typingMessage = addMessage('', false, true);
+                let sources = null;
+                let requestId = null;
+                let latency = null;
+
+                // Create response message container
+                const responseMessage = addMessage('', false);
                 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -361,40 +462,49 @@
                                 
                                 if (data.type === 'content') {
                                     fullResponse += data.content;
-                                    // Update typing message with current content
-                                    typingMessage.innerHTML = `<span class="typing-indicator">AI is typing...</span><br><div style="margin-top: 8px; color: #666; font-size: 0.9rem;">${fullResponse}</div>`;
+                                    responseMessage.textContent = fullResponse;
                                     chatMessages.scrollTop = chatMessages.scrollHeight;
                                 } else if (data.type === 'done') {
-                                    sources = data.sources || [];
-                                    // Replace typing message with final response
-                                    typingMessage.remove();
-                                    const responseMessage = addMessage(fullResponse, false);
+                                    sources = data.sources;
+                                    requestId = data.request_id;
+                                    latency = data.latency_ms;
                                     
-                                    // Add sources if available
-                                    if (sources.length > 0) {
-                                        const sourcesDiv = document.createElement('div');
-                                        sourcesDiv.style.cssText = 'margin-top: 8px; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 8px;';
-                                        sourcesDiv.innerHTML = `<strong>Sources:</strong> ${sources.length} relevant documents found`;
-                                        responseMessage.appendChild(sourcesDiv);
+                                    // Update message with sources info
+                                    if (sources && sources.length > 0) {
+                                        responseMessage.innerHTML = `
+                                            <div>${fullResponse}</div>
+                                            <div class="sources-info">
+                                                <strong>Sources:</strong> ${sources.length} reference(s) found
+                                                ${latency ? ` • Response time: ${latency}ms` : ''}
+                                            </div>
+                                        `;
                                     }
                                 }
                             } catch (parseError) {
-                                console.warn('Failed to parse SSE data:', parseError);
+                                console.error('Error parsing SSE data:', parseError);
                             }
                         }
                     }
                 }
-                
-                return { success: true, response: fullResponse, sources };
-                
+
+                return { success: true, response: fullResponse, sources, latency };
             } catch (error) {
                 console.error('Quest API Error:', error);
-                
-                // 使用认证助手处理错误
-                const authErrorMessage = handleAuthError(error);
-                addMessage(`🔐 ${authErrorMessage}`, false);
-                return; // 不抛出错误，直接返回
+                throw error;
             }
+        }
+
+        // Fallback responses for when API is unavailable
+        const fallbackResponses = [
+            "I'm currently experiencing some technical difficulties with the AI service. Please try again in a moment, or check back later.",
+            "The AI backend is temporarily unavailable. I'm working on getting it back online as soon as possible.",
+            "Sorry, I'm having trouble connecting to the AI service right now. Please try your question again in a few moments.",
+            "The Quest AI service is currently offline for maintenance. Please try again later.",
+            "I'm unable to process your request at the moment due to a service interruption. Please try again soon."
+        ];
+
+        function getFallbackResponse() {
+            return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
         }
 
         chatForm.addEventListener('submit', async function(e) {
@@ -417,28 +527,46 @@
                 Thinking...
             `;
 
+            // Add typing indicator
+            const typingMessage = addTypingIndicator();
+
             try {
-                await sendToQuestAPI(userMessage);
-            } catch (error) {
-                // Remove any existing typing indicator
-                const existingTyping = document.querySelector('.typing-indicator');
-                if (existingTyping && existingTyping.closest('.message')) {
-                    existingTyping.closest('.message').remove();
-                }
+                // Try to send to Quest API
+                const result = await sendToQuestAPI(userMessage);
                 
-                // Show error message
-                addMessage(`Sorry, I encountered an error: ${error.message}. Please try again or check your connection.`, false);
-            } finally {
-                // Re-enable send button
-                sendBtn.disabled = false;
-                sendBtn.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    Send
-                `;
+                // Remove typing indicator
+                typingMessage.remove();
+                
+                if (result.success) {
+                    // API response was successful, message already added
+                    console.log('AI Response:', result.response);
+                    console.log('Sources:', result.sources);
+                    console.log('Latency:', result.latency);
+                }
+            } catch (error) {
+                console.error('Chat Error:', error);
+                
+                // Remove typing indicator
+                typingMessage.remove();
+                
+                // Add error message
+                addMessage(
+                    "Sorry, I'm having trouble connecting to the AI service right now. " + 
+                    "Please check your internet connection and try again.", 
+                    false, 
+                    true
+                );
             }
+            
+            // Re-enable send button
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                Send
+            `;
         });
 
         // Auto-focus on input
@@ -452,47 +580,13 @@
             }
         });
 
-        // Add welcome message on load
+        // Initialize API health check
+        checkApiHealth();
+
+        // Add welcome message
         setTimeout(() => {
-            addMessage("Try asking me about your saved articles, research topics, or any content you've collected! I'll use RAG technology to find relevant information from your knowledge base.", false);
+            addMessage("Try asking me about your saved articles, research topics, or any content you've collected! I'll use RAG to find relevant information from your knowledge base.", false);
         }, 2000);
-        
-        // Check API health on load
-        async function checkAPIHealth() {
-            try {
-                const response = await questAPIRequest(QUEST_HEALTH_ENDPOINT, {
-                    method: 'GET'
-                });
-                
-                const health = await response.json();
-                console.log('Quest API Health:', health);
-                
-                if (health.features && health.features.rag_enabled) {
-                    const token = getQuestToken();
-                    if (token) {
-                        addMessage("✅ RAG system is active and ready to analyze your content! (Authenticated)", false);
-                    } else {
-                        addMessage("✅ RAG system is active and ready to analyze your content! (Guest mode)", false);
-                    }
-                } else {
-                    addMessage("⚠️ RAG system is not available. Some features may be limited.", false);
-                }
-            } catch (error) {
-                console.warn('API health check failed:', error);
-                
-                if (error.message.includes('Authentication expired') || error.message.includes('401') || error.message.includes('403')) {
-                    const authErrorMessage = handleAuthError(error);
-                    addMessage(`🔐 ${authErrorMessage}`, false);
-                } else if (!configValidation.isValid) {
-                    addMessage("⚠️ Quest API configuration needed. Please update quest-config.js with your API endpoint.", false);
-                } else {
-                    addMessage("⚠️ Unable to connect to Quest API. Please check your connection and API status.", false);
-                }
-            }
-        }
-        
-        // Run health check after initial load
-        setTimeout(checkAPIHealth, 3000);
     </script>
 </body>
 </html>
