@@ -21,6 +21,7 @@ const page = (name) => path.join(clientRoot, 'pages', `${name}.html`);
 app.get('/login', (_req, res) => res.sendFile(page('login')));
 app.get('/signup', (_req, res) => res.sendFile(page('signup')));
 app.get('/my-space', (_req, res) => res.sendFile(page('my-space')));
+app.get('/demo-chat', (_req, res) => res.sendFile(page('demo-chat')));
 
 // Stack view routes - serve my-space.html for SPA routing
 app.get('/stacks/:id', (_req, res) => res.sendFile(page('my-space')));

@@ -55,6 +55,42 @@ body {
     justify-self: end;
 }
 
+/* Header Actions Container */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Demo Chat Button */
+.demo-chat-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    white-space: nowrap;
+}
+
+.demo-chat-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.demo-chat-btn svg {
+    flex-shrink: 0;
+}
+
 .Quest {
     display: flex;
     align-items: center;
@@ -1242,6 +1278,21 @@ body .add-content-modal-content {
         gap: var(--spacing-md);
         text-align: left;
     }
+
+    .header-actions {
+        gap: 12px;
+    }
+
+    .demo-chat-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        border-radius: 16px;
+    }
+
+    .demo-chat-btn svg {
+        width: 14px;
+        height: 14px;
+    }
     
     .header-avatar-container {
         width: 40px;
@@ -1251,6 +1302,28 @@ body .add-content-modal-content {
     .header-dropdown {
         min-width: 160px;
         right: -10px;
+    }
+}
+
+/* Small screen adjustments */
+@media (max-width: 480px) {
+    .header-actions {
+        gap: 8px;
+    }
+
+    .demo-chat-btn {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        border-radius: 14px;
+    }
+
+    .demo-chat-btn svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .demo-chat-btn span {
+        display: none; /* Hide text on very small screens, show only icon */
     }
     
     .WelcomeToYourPersonalSpacePlaceholder {
