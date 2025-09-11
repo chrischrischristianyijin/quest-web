@@ -216,7 +216,7 @@ function initExtensionCarousel() {
     }
 
     function startCarousel() {
-        interval = setInterval(nextSlide, 4000); // Switch every 4 seconds
+        interval = setInterval(nextSlide, 2000); // Switch every 2 seconds
     }
 
     function stopCarousel() {
@@ -269,15 +269,15 @@ function initNavbarScrollEffect() {
         if (!navbar) return;
         
         if (window.scrollY > 50) {
-            navbar.style.background = 'rgba(234, 234, 234, 0.50)';
-            navbar.style.backdropFilter = 'blur(7.5px)';
-            navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.12)';
-            navbar.style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.06)';
+            navbar.style.background = 'rgba(255, 255, 255, 0.15)';
+            navbar.style.backdropFilter = 'blur(24px) saturate(180%)';
+            navbar.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
+            navbar.style.boxShadow = '0 4px 32px rgba(0, 0, 0, 0.15)';
         } else {
-            navbar.style.background = 'rgba(234, 234, 234, 0.50)';
-            navbar.style.backdropFilter = 'blur(7.5px)';
-            navbar.style.borderBottom = '1px solid rgba(75, 38, 79, 0.08)';
-            navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.02)';
+            navbar.style.background = 'rgba(255, 255, 255, 0.1)';
+            navbar.style.backdropFilter = 'blur(24px) saturate(180%)';
+            navbar.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+            navbar.style.boxShadow = '0 4px 32px rgba(0, 0, 0, 0.1)';
         }
     });
 }
