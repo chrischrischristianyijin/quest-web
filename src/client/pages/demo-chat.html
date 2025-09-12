@@ -469,8 +469,11 @@
         </div>
     </div>
 
-    <script>
-        // Quest AI Chat functionalityutut
+    <script type="module">
+        // 导入现有的认证系统
+        import { auth } from '../js/auth.js';
+        
+        // Quest AI Chat functionality
         const chatMessages = document.getElementById('chatMessages');
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
@@ -481,6 +484,27 @@
         const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
         const API_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;
         const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;
+
+        // 获取当前用户信息 - 使用现有的认证系统
+        function getCurrentUserInfo() {
+            try {
+                const user = auth.getCurrentUser();
+                if (user) {
+                    console.log('👤 找到用户信息:', {
+                        id: user.id || user.user_id,
+                        email: user.email,
+                        nickname: user.nickname || user.name
+                    });
+                    return user;
+                } else {
+                    console.warn('⚠️ 未找到用户信息');
+                    return null;
+                }
+            } catch (error) {
+                console.error('❌ 获取用户信息失败:', error);
+                return null;
+            }
+        }
 
         // Check API health on load
         async function checkApiHealth() {
@@ -545,17 +569,34 @@
                 };
                 
                 // 添加认证头（如果需要）
-                const token = localStorage.getItem('authToken');
+                const token = auth.getCurrentToken();
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                // 获取用户信息
+                const user = getCurrentUserInfo();
+                const userId = user ? (user.id || user.user_id) : null;
+                
+                // 构建请求体，包含用户ID
+                const requestBody = {
+                    message: message
+                };
+                
+                // 如果用户已登录，添加用户ID到请求中
+                if (userId) {
+                    requestBody.user_id = userId;
+                    console.log('🔍 发送聊天请求，用户ID:', userId);
+                } else {
+                    console.warn('⚠️ 用户未登录，无法提供用户上下文');
+                    // 添加用户未登录的提示信息
+                    requestBody.message = `[用户未登录] ${message}`;
                 }
                 
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({
-                        message: message
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
@@ -602,6 +643,26 @@
                                                 ${latency ? ` • Response time: ${latency}ms` : ''}
                                             </div>
                                         `;
+                                    } else {
+                                        // 如果没有找到来源，添加提示信息
+                                        const user = getCurrentUserInfo();
+                                        if (user) {
+                                            responseMessage.innerHTML = `
+                                                <div>${fullResponse}</div>
+                                                <div class="sources-info">
+                                                    <strong>Note:</strong> No specific sources found in your knowledge base. 
+                                                    ${latency ? `Response time: ${latency}ms` : ''}
+                                                </div>
+                                            `;
+                                        } else {
+                                            responseMessage.innerHTML = `
+                                                <div>${fullResponse}</div>
+                                                <div class="sources-info">
+                                                    <strong>Note:</strong> Sign in to access your personal knowledge base for more relevant responses.
+                                                    ${latency ? `Response time: ${latency}ms` : ''}
+                                                </div>
+                                            `;
+                                        }
                                     }
                                 }
                             } catch (parseError) {
@@ -710,8 +771,32 @@
             }
         });
 
+        // 更新用户状态显示
+        function updateUserStatus() {
+            const isAuthenticated = auth.checkAuth();
+            const user = getCurrentUserInfo();
+            const statusElement = document.getElementById('apiStatus');
+            
+            if (isAuthenticated && user) {
+                statusElement.className = 'api-status connected';
+                statusElement.innerHTML = `🟢 AI Connected • ${user.nickname || user.email || 'User'}`;
+            } else {
+                statusElement.className = 'api-status error';
+                statusElement.innerHTML = '🟡 AI Connected • Guest Mode';
+            }
+        }
+
         // Initialize API health check
         checkApiHealth();
+        
+        // 更新用户状态
+        updateUserStatus();
+        
+        // 监听认证状态变化
+        auth.subscribe((authState) => {
+            console.log('🔔 认证状态变化:', authState.isAuthenticated ? '已登录' : '未登录');
+            updateUserStatus();
+        });
 
         // Elegant welcome messages
         const welcomeMessages = [
@@ -723,8 +808,29 @@
 
         // Add welcome message
         setTimeout(() => {
-            const randomWelcome = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-            addMessage(randomWelcome, false);
+            const isAuthenticated = auth.checkAuth();
+            const user = getCurrentUserInfo();
+            let welcomeMessage;
+            
+            if (isAuthenticated && user) {
+                // 用户已登录，显示个性化欢迎消息
+                const personalizedMessages = [
+                    `Hi ${user.nickname || user.email}! I'm ready to explore your personal knowledge collection and provide insights tailored just for you.`,
+                    `Welcome back, ${user.nickname || user.email}! Your curated content is a treasure trove of insights waiting to be discovered.`,
+                    `Hello ${user.nickname || user.email}! I'm here to help you navigate through your saved articles, notes, and research with intelligent, context-aware responses.`
+                ];
+                welcomeMessage = personalizedMessages[Math.floor(Math.random() * personalizedMessages.length)];
+            } else {
+                // 用户未登录，显示通用欢迎消息
+                const guestMessages = [
+                    "Welcome to Quest AI! I'm your intelligent companion, though I'll have limited access to your personal knowledge without authentication.",
+                    "Hi there! I'm Quest's AI assistant. For the best experience with your personal content, please consider signing in to access your knowledge base.",
+                    "Hello! I'm here to help, though I can provide more personalized insights when you're signed in to your Quest account."
+                ];
+                welcomeMessage = guestMessages[Math.floor(Math.random() * guestMessages.length)];
+            }
+            
+            addMessage(welcomeMessage, false);
         }, 1500);
     </script>
 </body>
