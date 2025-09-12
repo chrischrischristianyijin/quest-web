@@ -10,10 +10,10 @@ const apiStatus = document.getElementById('apiStatus');
 
 // API Configuration - 更新为新的聊天记忆系统接口
 const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
-const API_ENDPOINT = `${API_BASE_URL}/chat`;
-const HEALTH_ENDPOINT = `${API_BASE_URL}/chat/health`;
-const SESSIONS_ENDPOINT = `${API_BASE_URL}/chat/sessions`;
-const MESSAGES_ENDPOINT = `${API_BASE_URL}/chat/sessions`;
+const API_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;
+const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;
+const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;
+const MESSAGES_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;
 
 // 获取当前用户信息 - 使用现有的认证系统
 function getCurrentUserInfo() {
@@ -647,17 +647,20 @@ chatUI.initializeSidebarState();
 // Check API health on load
 async function checkApiHealth() {
     try {
+        console.log('🔍 检查API健康状态:', HEALTH_ENDPOINT);
         const response = await fetch(HEALTH_ENDPOINT);
         if (response.ok) {
             const data = await response.json();
             // API健康检查成功，但不显示状态（除非用户已登录）
-            console.log('API Health:', data);
+            console.log('✅ API健康检查成功:', data);
             apiStatus.style.display = 'none';
         } else {
-            throw new Error('Health check failed');
+            console.error('❌ API健康检查失败，状态码:', response.status);
+            throw new Error(`Health check failed with status: ${response.status}`);
         }
     } catch (error) {
-        console.error('API Health Check Error:', error);
+        console.error('❌ API健康检查错误:', error);
+        console.log('🔍 尝试的端点:', HEALTH_ENDPOINT);
         // API连接失败时完全隐藏状态
         apiStatus.style.display = 'none';
     }
@@ -778,6 +781,13 @@ async function sendToQuestAPI(message) {
             // 添加用户未登录的提示信息
             requestBody.question = `[用户未登录] ${message}`;
         }
+        
+        // 添加调试信息
+        console.log('🚀 API请求信息:');
+        console.log('  - URL:', API_ENDPOINT);
+        console.log('  - Method: POST');
+        console.log('  - Headers:', headers);
+        console.log('  - Body:', requestBody);
         
         const response = await fetch(API_ENDPOINT, {
             method: 'POST',
