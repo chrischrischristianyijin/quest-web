@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link rel="stylesheet" href="/styles/common.css">
     <link rel="stylesheet" href="/styles/signup.css">
 </head>
+
 <body>
     <div class="bg-decoration"></div>
 
@@ -20,24 +22,26 @@
                     <h1 class="signup-title">Create Your Account</h1>
                     <p class="signup-subtitle">Join Quest and start your knowledge journey</p>
                 </div>
-                
+
                 <div class="error-message" id="errorMessage"></div>
                 <div class="success-message" id="successMessage"></div>
-                
+
                 <form class="signup-form" id="signupForm">
                     <div class="form-group">
                         <label class="form-label" for="email">Email</label>
-                        <input type="email" id="email" class="form-input" placeholder="Enter your email address" required>
+                        <input type="email" id="email" class="form-input" placeholder="Enter your email address"
+                            required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label" for="nickname">Nickname</label>
                         <input type="text" id="nickname" class="form-input" placeholder="Enter your nickname" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>
-                        <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+                        <input type="password" id="password" class="form-input" placeholder="Enter your password"
+                            required>
                         <div class="password-requirements">
                             <h4>Password Requirements:</h4>
                             <ul>
@@ -47,27 +51,30 @@
                             </ul>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label" for="confirmPassword">Confirm Password</label>
-                        <input type="password" id="confirmPassword" class="form-input" placeholder="Enter password again" required>
+                        <input type="password" id="confirmPassword" class="form-input"
+                            placeholder="Enter password again" required>
                     </div>
-                    
+
                     <div class="terms-checkbox">
                         <input type="checkbox" id="agreeTerms" required>
                         <div class="terms-text">
-                            I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
+                            I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy"
+                                target="_blank">Privacy Policy</a>
                         </div>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary" id="submitBtn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
                         </svg>
                         Create Account
                     </button>
                 </form>
-                
+
                 <div class="login-section">
                     <p class="login-text">Already have an account?</p>
                     <a href="/pages/login.html" class="btn btn-secondary">Login Now</a>
@@ -84,11 +91,8 @@
     </div>
 
     <script type="module" src="/js/signup.js"></script>
-    
-    <!-- Vercel Analytics -->
-    <script>
-        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
-    <script defer src="/_vercel/insights/script.js"></script>
+
+    <!-- Vercel Analytics - Disabled to prevent 404 errors -->
 </body>
+
 </html>

@@ -43,6 +43,13 @@ export const navigateTo = (path) => {
         return;
     }
     
+    // Check if this is the home/my-space route (SPA route)
+    if (path === '/my-space' || path === '/') {
+        // Use History API for SPA navigation
+        history.pushState({ viewMode: 'home' }, '', path);
+        return;
+    }
+    
     // For other paths, use full page navigation
     window.location.href = path;
 };
