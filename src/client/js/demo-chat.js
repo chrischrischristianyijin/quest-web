@@ -8,11 +8,11 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const apiStatus = document.getElementById('apiStatus');
 
-// API Configuration - 根据API文档更新为聊天会话管理系统
+// API Configuration - 根据实际API端点更新
 const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
 const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;  // 主要聊天接口
 const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;  // 健康检查
-const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;  // 会话管理
+const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/sessions`;  // 会话管理 - 修正端点
 
 // 获取当前用户信息 - 使用现有的认证系统
 function getCurrentUserInfo() {
@@ -75,6 +75,7 @@ class SessionManager {
 
             const url = `${SESSIONS_ENDPOINT}?user_id=${userId}&page=${page}&size=${size}`;
             console.log('🔍 获取会话列表请求:', url);
+            console.log('🔍 尝试的端点:', SESSIONS_ENDPOINT);
 
             const response = await fetch(url, {
                 headers
@@ -83,6 +84,15 @@ class SessionManager {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('❌ 获取会话列表失败:', response.status, errorText);
+                console.log('🔍 尝试的URL:', url);
+                console.log('🔍 请求头:', headers);
+                
+                // 如果是404，尝试不同的端点格式
+                if (response.status === 404) {
+                    console.log('🔄 404错误，会话端点可能不正确');
+                    console.log('💡 建议检查后端API的会话端点配置');
+                }
+                
                 throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
 
@@ -870,14 +880,16 @@ async function sendToQuestAPI(message) {
         const user = getCurrentUserInfo();
         const userId = user ? (user.id || user.user_id) : null;
         
-        // 构建请求体，根据API文档格式
-        const requestBody = {
-            question: message
-        };
+        // 构建请求体，尝试不同的格式
+        let requestBody;
         
-        // 如果用户已登录，添加用户ID到请求中
         if (userId) {
-            requestBody.user_id = userId;
+            // 用户已登录的请求格式
+            requestBody = {
+                message: message,  // 尝试使用message而不是question
+                user_id: userId
+            };
+            
             console.log('🔍 发送聊天请求，用户ID:', userId);
             
             // 如果有当前会话，添加会话ID
@@ -886,9 +898,11 @@ async function sendToQuestAPI(message) {
                 console.log('🔍 使用现有会话ID:', sessionManager.currentSession.id);
             }
         } else {
-            console.warn('⚠️ 用户未登录，无法提供用户上下文');
-            // 用户未登录时，仍然发送请求但标记为未登录
-            requestBody.question = message;
+            // 用户未登录的请求格式
+            requestBody = {
+                message: message
+            };
+            console.warn('⚠️ 用户未登录，发送匿名请求');
         }
         
         // 添加调试信息
@@ -905,7 +919,18 @@ async function sendToQuestAPI(message) {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('❌ 聊天API请求失败:', response.status, errorText);
+            console.log('🔍 请求体:', requestBody);
+            console.log('🔍 请求头:', headers);
+            
+            // 422错误通常是请求格式问题
+            if (response.status === 422) {
+                console.log('🔄 422错误，请求格式可能不正确');
+                console.log('💡 建议检查请求体格式和必需参数');
+            }
+            
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         // 从响应头获取会话ID
