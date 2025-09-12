@@ -8,10 +8,12 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const apiStatus = document.getElementById('apiStatus');
 
-// API Configuration - 使用现有的配置
+// API Configuration - 更新为新的聊天记忆系统接口
 const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
-const API_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;
-const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;
+const API_ENDPOINT = `${API_BASE_URL}/chat`;
+const HEALTH_ENDPOINT = `${API_BASE_URL}/chat/health`;
+const SESSIONS_ENDPOINT = `${API_BASE_URL}/chat/sessions`;
+const MESSAGES_ENDPOINT = `${API_BASE_URL}/chat/sessions`;
 
 // 获取当前用户信息 - 使用现有的认证系统
 function getCurrentUserInfo() {
@@ -50,8 +52,597 @@ function getUserAvatar(user) {
 
 // 获取AI头像
 function getAIAvatar() {
-    return `<img src="../public/backgroundimage.png" alt="Quest AI" style="width: 80%; height: 80%; border-radius: 50%; object-fit: contain;">`;
+    return `<img src="../public/Q.png" alt="Quest AI" style="width: 80%; height: 80%; border-radius: 50%; object-fit: contain;" class="ai-avatar-img">`;
 }
+
+// 会话管理功能
+class SessionManager {
+    constructor() {
+        this.currentSession = null;
+        this.sessions = [];
+        this.memories = [];
+    }
+
+    // 获取会话列表
+    async getSessions(userId, page = 1, size = 20) {
+        try {
+            const token = auth.getCurrentToken();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${SESSIONS_ENDPOINT}?user_id=${userId}&page=${page}&size=${size}`, {
+                headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.sessions = data.sessions || [];
+            return data;
+        } catch (error) {
+            console.error('获取会话列表失败:', error);
+            return { sessions: [], total: 0 };
+        }
+    }
+
+    // 创建新会话
+    async createSession(userId, title = null) {
+        try {
+            const token = auth.getCurrentToken();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(SESSIONS_ENDPOINT, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    user_id: userId,
+                    title: title || '新对话'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const session = await response.json();
+            this.currentSession = session;
+            return session;
+        } catch (error) {
+            console.error('创建会话失败:', error);
+            throw error;
+        }
+    }
+
+    // 获取会话详情
+    async getSession(sessionId) {
+        try {
+            const token = auth.getCurrentToken();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${SESSIONS_ENDPOINT}/${sessionId}`, {
+                headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('获取会话详情失败:', error);
+            throw error;
+        }
+    }
+
+    // 获取会话消息
+    async getSessionMessages(sessionId, limit = 50) {
+        try {
+            const token = auth.getCurrentToken();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${MESSAGES_ENDPOINT}/${sessionId}/messages?limit=${limit}`, {
+                headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('获取会话消息失败:', error);
+            return { messages: [] };
+        }
+    }
+
+    // 获取完整上下文（包括记忆）
+    async getSessionContext(sessionId, limitMessages = 20) {
+        try {
+            const token = auth.getCurrentToken();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${MESSAGES_ENDPOINT}/${sessionId}/context?limit_messages=${limitMessages}`, {
+                headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const context = await response.json();
+            this.memories = context.memories || [];
+            return context;
+        } catch (error) {
+            console.error('获取会话上下文失败:', error);
+            return { messages: [], memories: [] };
+        }
+    }
+
+    // 删除会话
+    async deleteSession(sessionId) {
+        try {
+            const token = auth.getCurrentToken();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${SESSIONS_ENDPOINT}/${sessionId}`, {
+                method: 'DELETE',
+                headers
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.error('删除会话失败:', error);
+            return false;
+        }
+    }
+}
+
+// 创建全局会话管理器实例
+const sessionManager = new SessionManager();
+
+// UI组件管理
+class ChatUI {
+    constructor() {
+        this.sidebarOpen = false;
+        this.memoryPanelOpen = false;
+        this.initializeElements();
+        this.bindEvents();
+    }
+
+    initializeElements() {
+        // 侧边栏相关元素
+        this.sessionSidebar = document.getElementById('sessionSidebar');
+        this.sessionsList = document.getElementById('sessionsList');
+        this.newSessionBtn = document.getElementById('newSessionBtn');
+        this.closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        this.sidebarToggle = document.getElementById('sidebarToggle');
+
+        // 记忆面板相关元素
+        this.memoryPanel = document.getElementById('memoryPanel');
+        this.memoriesList = document.getElementById('memoriesList');
+        this.closeMemoryBtn = document.getElementById('closeMemoryBtn');
+        this.memoryIndicator = document.getElementById('memoryIndicator');
+        this.memoryCount = document.getElementById('memoryCount');
+
+        // 聊天相关元素
+        this.chatLogo = document.getElementById('chatLogo');
+    }
+
+    bindEvents() {
+        // 侧边栏事件
+        this.sidebarToggle?.addEventListener('click', () => this.toggleSidebar());
+        this.closeSidebarBtn?.addEventListener('click', () => this.closeSidebar());
+        this.newSessionBtn?.addEventListener('click', () => this.createNewSession());
+
+        // 记忆面板事件
+        this.closeMemoryBtn?.addEventListener('click', () => this.closeMemoryPanel());
+        this.memoryIndicator?.addEventListener('click', () => this.toggleMemoryPanel());
+
+        // Logo点击事件
+        this.chatLogo?.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+
+        // 点击外部关闭面板
+        document.addEventListener('click', (e) => {
+            if (this.sidebarOpen && !this.sessionSidebar.contains(e.target) && !this.sidebarToggle.contains(e.target)) {
+                this.closeSidebar();
+            }
+            if (this.memoryPanelOpen && !this.memoryPanel.contains(e.target) && !this.memoryIndicator.contains(e.target)) {
+                this.closeMemoryPanel();
+            }
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (this.sidebarOpen) {
+                    this.closeSidebar();
+                }
+                if (this.memoryPanelOpen) {
+                    this.closeMemoryPanel();
+                }
+            }
+            // Ctrl/Cmd + B 切换侧边栏
+            if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                e.preventDefault();
+                this.toggleSidebar();
+            }
+        });
+    }
+
+    // 侧边栏管理
+    toggleSidebar() {
+        this.sidebarOpen = !this.sidebarOpen;
+        this.sessionSidebar.classList.toggle('open', this.sidebarOpen);
+        this.sidebarToggle.classList.toggle('active', this.sidebarOpen);
+        
+        // 当侧边栏打开时隐藏侧边栏按钮
+        if (this.sidebarOpen) {
+            this.sidebarToggle.classList.add('hidden');
+        } else {
+            this.sidebarToggle.classList.remove('hidden');
+        }
+        
+        // 保存侧边栏状态到localStorage
+        localStorage.setItem('quest-sidebar-open', this.sidebarOpen.toString());
+        
+        // 更新切换按钮的图标
+        this.updateSidebarToggleIcon();
+        
+        // 调整布局
+        this.adjustLayout();
+    }
+
+    closeSidebar() {
+        this.sidebarOpen = false;
+        this.sessionSidebar.classList.remove('open');
+        this.sidebarToggle.classList.remove('active');
+        
+        // 显示侧边栏按钮
+        this.sidebarToggle.classList.remove('hidden');
+        
+        // 保存状态
+        localStorage.setItem('quest-sidebar-open', 'false');
+        
+        // 更新切换按钮的图标
+        this.updateSidebarToggleIcon();
+        
+        // 调整布局
+        this.adjustLayout();
+    }
+
+    // 调整布局以适应侧边栏状态
+    adjustLayout() {
+        // CSS已经处理了宽度变化，这里只需要确保flex布局正确
+        const chatContainer = document.querySelector('.chat-container');
+        const sidebar = this.sessionSidebar;
+        const chatMain = document.querySelector('.chat-main-container');
+        
+        chatContainer.style.flexDirection = 'row';
+        
+        // 调试信息
+        if (this.sidebarOpen) {
+            console.log('📐 侧边栏打开');
+            console.log('  - 侧边栏宽度:', sidebar.offsetWidth + 'px');
+            console.log('  - 聊天区域宽度:', chatMain.offsetWidth + 'px');
+        } else {
+            console.log('📐 侧边栏关闭');
+            console.log('  - 侧边栏宽度:', sidebar.offsetWidth + 'px');
+            console.log('  - 聊天区域宽度:', chatMain.offsetWidth + 'px');
+            console.log('  - 容器总宽度:', chatContainer.offsetWidth + 'px');
+        }
+    }
+
+    updateSidebarToggleIcon() {
+        const icon = this.sidebarToggle.querySelector('svg path');
+        if (this.sidebarOpen) {
+            // 显示关闭图标
+            icon.setAttribute('d', 'M18 6L6 18M6 6l12 12');
+        } else {
+            // 显示菜单图标
+            icon.setAttribute('d', 'M3 12h18M3 6h18M3 18h18');
+        }
+    }
+
+    // 初始化侧边栏状态
+    initializeSidebarState() {
+        const savedState = localStorage.getItem('quest-sidebar-open');
+        if (savedState === 'true') {
+            this.sidebarOpen = true;
+            this.sessionSidebar.classList.add('open');
+            this.sidebarToggle.classList.add('active');
+            // 如果侧边栏是打开的，隐藏按钮
+            this.sidebarToggle.classList.add('hidden');
+        } else {
+            // 确保按钮显示
+            this.sidebarToggle.classList.remove('hidden');
+        }
+        this.updateSidebarToggleIcon();
+        this.adjustLayout();
+    }
+
+    // 记忆面板管理
+    toggleMemoryPanel() {
+        this.memoryPanelOpen = !this.memoryPanelOpen;
+        this.memoryPanel.classList.toggle('open', this.memoryPanelOpen);
+    }
+
+    closeMemoryPanel() {
+        this.memoryPanelOpen = false;
+        this.memoryPanel.classList.remove('open');
+    }
+
+    // 会话管理
+    async createNewSession() {
+        try {
+            const user = getCurrentUserInfo();
+            if (!user) {
+                alert('Please login first');
+                return;
+            }
+
+            const session = await sessionManager.createSession(user.id || user.user_id, 'New Chat');
+            this.updateChatTitle(session.title || 'New Chat');
+            this.closeSidebar();
+            
+            // 清空当前消息
+            this.clearMessages();
+            
+            // 重新加载会话列表
+            await this.loadSessions();
+            
+            console.log('✅ 创建新会话成功:', session);
+        } catch (error) {
+            console.error('❌ 创建新会话失败:', error);
+            alert('Failed to create new session, please try again');
+        }
+    }
+
+    async loadSessions() {
+        try {
+            const user = getCurrentUserInfo();
+            if (!user) {
+                this.sessionsList.innerHTML = '<div class="no-sessions">请先登录</div>';
+                return;
+            }
+
+            const data = await sessionManager.getSessions(user.id || user.user_id);
+            this.renderSessions(data.sessions || []);
+        } catch (error) {
+            console.error('❌ 加载会话列表失败:', error);
+            this.sessionsList.innerHTML = '<div class="error-sessions">Failed to load</div>';
+        }
+    }
+
+        renderSessions(sessions) {
+            if (sessions.length === 0) {
+                this.sessionsList.innerHTML = '<div class="no-sessions">No chat history</div>';
+                return;
+            }
+
+        this.sessionsList.innerHTML = sessions.map(session => `
+            <div class="session-item ${session.id === sessionManager.currentSession?.id ? 'active' : ''}" 
+                 data-session-id="${session.id}">
+                <div class="session-title">${session.title || 'Untitled Chat'}</div>
+                <div class="session-meta">
+                    <span>${session.message_count || 0} messages</span>
+                    <span>${new Date(session.updated_at).toLocaleDateString()}</span>
+                </div>
+                <div class="session-actions">
+                    <button class="delete-session-btn" data-session-id="${session.id}" title="Delete chat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        // 绑定会话点击事件
+        this.sessionsList.querySelectorAll('.session-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-session-btn')) return;
+                const sessionId = item.dataset.sessionId;
+                this.switchToSession(sessionId);
+            });
+        });
+
+        // 绑定删除按钮事件
+        this.sessionsList.querySelectorAll('.delete-session-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const sessionId = btn.dataset.sessionId;
+                if (confirm('确定要删除这个对话吗？')) {
+                    await this.deleteSession(sessionId);
+                }
+            });
+        });
+    }
+
+    async switchToSession(sessionId) {
+        try {
+            this.sessionsList.innerHTML = '<div class="loading-sessions">加载中...</div>';
+            
+            const context = await sessionManager.getSessionContext(sessionId);
+            sessionManager.currentSession = { id: sessionId };
+            
+            // 更新UI
+            this.updateChatTitle(context.title || 'Chat');
+            this.renderMessages(context.messages || []);
+            this.renderMemories(context.memories || []);
+            this.closeSidebar();
+            
+            console.log('✅ 切换到会话:', sessionId);
+        } catch (error) {
+            console.error('❌ 切换会话失败:', error);
+            alert('Failed to switch session, please try again');
+        }
+    }
+
+    async deleteSession(sessionId) {
+        try {
+            const success = await sessionManager.deleteSession(sessionId);
+            if (success) {
+                // 如果删除的是当前会话，清空消息
+                if (sessionManager.currentSession?.id === sessionId) {
+                    this.clearMessages();
+                    this.updateChatTitle('Quest AI Assistant');
+                    sessionManager.currentSession = null;
+                }
+                
+                // 重新加载会话列表
+                await this.loadSessions();
+                console.log('✅ 删除会话成功');
+            } else {
+                throw new Error('Delete failed');
+            }
+        } catch (error) {
+            console.error('❌ 删除会话失败:', error);
+            alert('Failed to delete session, please try again');
+        }
+    }
+
+    // 消息管理
+    renderMessages(messages) {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.innerHTML = '';
+
+        messages.forEach(message => {
+            const containerDiv = document.createElement('div');
+            containerDiv.className = `message-container ${message.role}`;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.role}`;
+            messageDiv.textContent = message.content;
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            
+            if (message.role === 'user') {
+                const user = getCurrentUserInfo();
+                avatarDiv.innerHTML = getUserAvatar(user);
+            } else {
+                avatarDiv.innerHTML = getAIAvatar();
+            }
+            
+            containerDiv.appendChild(avatarDiv);
+            containerDiv.appendChild(messageDiv);
+            chatMessages.appendChild(containerDiv);
+        });
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    clearMessages() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.innerHTML = `
+            <div class="demo-notice">
+                <strong>✨ Welcome to Quest AI:</strong> I'm your intelligent companion, ready to explore your personal knowledge collection and provide thoughtful insights tailored just for you.
+            </div>
+            
+            <div class="message-container assistant">
+                <div class="message-avatar">
+                    <img src="../public/Q.png" alt="Quest AI" style="width: 80%; height: 80%; border-radius: 50%; object-fit: contain;" class="ai-avatar-img">
+                </div>
+                <div class="message assistant">
+                    Hi 👋 I'm Quest's AI assistant.<br>
+                    I use your saved content to give smarter, context-based answers.<br>
+                    Ask me about your notes, articles, or research, and I'll pull up what's most relevant for you!
+                </div>
+            </div>
+        `;
+    }
+
+    // 记忆管理
+    renderMemories(memories) {
+        // 始终显示memory按钮
+        this.memoryIndicator.style.display = 'flex';
+        
+        if (memories.length === 0) {
+            this.memoriesList.innerHTML = '<div class="empty-memories">No memories</div>';
+            this.memoryCount.textContent = '0';
+            return;
+        }
+
+        this.memoryCount.textContent = memories.length;
+
+        this.memoriesList.innerHTML = memories.map(memory => `
+            <div class="memory-item" style="background-color: ${this.getMemoryColor(memory.memory_type)}">
+                <div class="memory-header">
+                    <span class="memory-icon">${this.getMemoryIcon(memory.memory_type)}</span>
+                    <span class="memory-type">${memory.memory_type.replace('_', ' ')}</span>
+                    <span class="importance-score">${Math.round(memory.importance_score * 100)}%</span>
+                </div>
+                <div class="memory-content">${memory.content}</div>
+                <div class="memory-date">${new Date(memory.created_at).toLocaleDateString()}</div>
+            </div>
+        `).join('');
+    }
+
+    getMemoryIcon(type) {
+        const icons = {
+            'user_preference': '👤',
+            'fact': '📊',
+            'context': '📝',
+            'insight': '💡'
+        };
+        return icons[type] || '🧠';
+    }
+
+    getMemoryColor(type) {
+        const colors = {
+            'user_preference': '#e3f2fd',
+            'fact': '#f3e5f5',
+            'context': '#e8f5e8',
+            'insight': '#fff3e0'
+        };
+        return colors[type] || '#f5f5f5';
+    }
+
+    updateChatTitle(title) {
+        // 现在使用logo，不需要更新标题
+        // 但保留这个方法以防其他地方调用
+        console.log('Chat title updated to:', title);
+    }
+}
+
+// 创建UI管理器实例
+const chatUI = new ChatUI();
+
+// 初始化侧边栏状态
+chatUI.initializeSidebarState();
 
 // Check API health on load
 async function checkApiHealth() {
@@ -59,15 +650,16 @@ async function checkApiHealth() {
         const response = await fetch(HEALTH_ENDPOINT);
         if (response.ok) {
             const data = await response.json();
-            apiStatus.style.display = 'none';
+            // API健康检查成功，但不显示状态（除非用户已登录）
             console.log('API Health:', data);
+            apiStatus.style.display = 'none';
         } else {
             throw new Error('Health check failed');
         }
     } catch (error) {
         console.error('API Health Check Error:', error);
-        apiStatus.className = 'api-status error';
-        apiStatus.textContent = '🔴 Service Temporarily Unavailable';
+        // API连接失败时完全隐藏状态
+        apiStatus.style.display = 'none';
     }
 }
 
@@ -166,19 +758,25 @@ async function sendToQuestAPI(message) {
         const user = getCurrentUserInfo();
         const userId = user ? (user.id || user.user_id) : null;
         
-        // 构建请求体，包含用户ID
+        // 构建请求体，使用新的API格式
         const requestBody = {
-            message: message
+            question: message  // 更新为question参数
         };
         
         // 如果用户已登录，添加用户ID到请求中
         if (userId) {
             requestBody.user_id = userId;
             console.log('🔍 发送聊天请求，用户ID:', userId);
+            
+            // 如果有当前会话，添加会话ID
+            if (sessionManager.currentSession && sessionManager.currentSession.id) {
+                requestBody.session_id = sessionManager.currentSession.id;
+                console.log('🔍 使用现有会话ID:', sessionManager.currentSession.id);
+            }
         } else {
             console.warn('⚠️ 用户未登录，无法提供用户上下文');
             // 添加用户未登录的提示信息
-            requestBody.message = `[用户未登录] ${message}`;
+            requestBody.question = `[用户未登录] ${message}`;
         }
         
         const response = await fetch(API_ENDPOINT, {
@@ -189,6 +787,14 @@ async function sendToQuestAPI(message) {
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // 从响应头获取会话ID
+        const sessionIdFromResponse = response.headers.get('X-Session-ID');
+        if (sessionIdFromResponse && !sessionManager.currentSession) {
+            // 如果是新会话，创建会话对象
+            sessionManager.currentSession = { id: sessionIdFromResponse };
+            console.log('🆕 创建新会话:', sessionIdFromResponse);
         }
 
         const reader = response.body.getReader();
@@ -284,13 +890,17 @@ function updateUserStatus() {
     const user = getCurrentUserInfo();
     const statusElement = document.getElementById('apiStatus');
     
+    // 默认隐藏API状态，保持界面简洁
+    statusElement.style.display = 'none';
+    
+    // 可选：只在用户已登录时显示连接状态（取消注释下面的代码）
+    /*
     if (isAuthenticated && user) {
         statusElement.className = 'api-status connected';
         statusElement.innerHTML = `🟢 AI Connected • ${user.nickname || user.email || 'User'}`;
-    } else {
-        statusElement.className = 'api-status error';
-        statusElement.innerHTML = '🟡 AI Connected • Guest Mode';
+        statusElement.style.display = 'block';
     }
+    */
 }
 
 // 事件监听器
@@ -389,10 +999,18 @@ checkApiHealth();
 // 更新用户状态
 updateUserStatus();
 
+// 初始化memory按钮显示
+chatUI.renderMemories([]);
+
+// 加载会话列表
+chatUI.loadSessions();
+
 // 监听认证状态变化
 auth.subscribe((authState) => {
     console.log('🔔 认证状态变化:', authState.isAuthenticated ? '已登录' : '未登录');
     updateUserStatus();
+    // 重新加载会话列表
+    chatUI.loadSessions();
 });
 
 // Elegant welcome messages
