@@ -1494,6 +1494,10 @@ function renderInsights() {
             const startIndex = (currentPage - 1) * insightsPerPage;
             const endIndex = startIndex + insightsPerPage;
             const list = filteredInsights.slice(startIndex, endIndex);
+            
+            console.log(`🔍 DEBUG: Tag filter rendering - startIndex=${startIndex}, endIndex=${endIndex}, list.length=${list.length}`);
+            console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, insightsPerPage=${insightsPerPage}`);
+            
             for (const insight of list) {
                 fragment.appendChild(createInsightCard(insight));
             }
@@ -1566,9 +1570,31 @@ function resetInsightsPaginationAndRerender() {
     console.log('📊 Filtered insights for rendering:', filteredInsights.length);
     
     // Update pagination with filtered insights count (insights only)
-    totalInsights = filteredInsights.length;
-    totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
+    // For "All" filter, use the total available insights for proper pagination
+    if (currentFilters.tags === 'all' && !currentFilters.search) {
+        // Use all available insights for proper pagination when showing all
+        const allAvailableInsights = window.allInsightsForFiltering || [];
+        totalInsights = allAvailableInsights.length;
+        console.log(`🔍 DEBUG: Using all available insights for pagination: ${totalInsights}`);
+        
+        // For "All" filter, calculate pagination the same way as normal pagination
+        // Page 1 shows (insightsPerPage - stacksCount) insights + stacks
+        // Remaining insights go to page 2
+        const stacksCount = stacks.size;
+        const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+        const remainingInsights = Math.max(0, totalInsights - page1SlotsForInsights);
+        
+        // Calculate total pages based on actual page capacity
+        totalPages = remainingInsights > 0 ? 2 : 1;
+        console.log(`🔍 DEBUG: All filter pagination - page1Slots=${page1SlotsForInsights}, remaining=${remainingInsights}, totalPages=${totalPages}`);
+    } else {
+        totalInsights = filteredInsights.length;
+        console.log(`🔍 DEBUG: Using filtered insights for pagination: ${totalInsights}`);
+        totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
+    }
     currentPage = 1; // Reset to first page when filtering
+    
+    console.log(`🔍 DEBUG: Pagination calculation - totalInsights=${totalInsights}, insightsPerPage=${insightsPerPage}, totalPages=${totalPages}`);
     
     // DON'T overwrite currentInsights - keep original data for future filtering
     // The renderInsights function will call getFilteredInsights() to get the right data
@@ -2079,7 +2105,8 @@ async function fetchAllInsightsForFiltering() {
         let allInsights = [];
         
         try {
-            const response = await api.getInsightsPaginated(1, 1000, null, '', true); // Large limit to get all
+            const uid = (auth?.user?.id || currentUser?.id || undefined);
+            const response = await api.getInsightsPaginated(1, 100, uid, '', true); // Reasonable limit to get all
             
             if (response?.success) {
                 const { items } = normalizePaginatedInsightsResponse(response);
@@ -2088,6 +2115,7 @@ async function fetchAllInsightsForFiltering() {
             }
         } catch (apiError) {
             console.warn('⚠️ API fetch failed, using existing insights:', apiError);
+            console.warn('⚠️ API error details:', apiError.message, apiError.status);
             // Fallback: use current insights and add insights from stacks
             allInsights = [...currentInsights];
         }
@@ -2104,10 +2132,15 @@ async function fetchAllInsightsForFiltering() {
             });
         });
         
+        console.log('📊 Before combining:');
+        console.log(`  - API insights: ${allInsights.length}`);
+        console.log(`  - Insights from stacks: ${insightsFromStacks.length}`);
+        console.log(`  - Stack insights details:`, insightsFromStacks.map(i => ({ id: i.id, title: i.title })));
+        
         // Combine all insights
         allInsights = [...allInsights, ...insightsFromStacks];
         console.log('📊 Total insights for filtering (including from stacks):', allInsights.length);
-        console.log('📊 Insights from stacks:', insightsFromStacks.length);
+        console.log('📊 All insights details:', allInsights.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
         
         // Ensure tags are normalized for all insights
         const insightsWithoutTags = allInsights.filter(insight => !insight.tags || insight.tags.length === 0);
@@ -2145,8 +2178,14 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
         } else {
             // Clear the global insights when showing all
             window.allInsightsForFiltering = null;
-            // Reload the original page data for normal pagination
-            await loadUserInsightsWithPagination();
+            // Ensure we have all insights available for proper pagination
+            // If we don't have enough insights loaded, fetch them
+            if (currentInsights.length < totalInsights) {
+                console.log('🔄 Switching back to "All" filter - need to fetch all insights for pagination');
+                await fetchAllInsightsForFiltering();
+            } else {
+                console.log('🔄 Switching back to "All" filter - all insights already available');
+            }
         }
     }
     
@@ -2294,6 +2333,28 @@ function getFilteredInsights() {
             console.log('🔍 Using fallback insights for filtering:', insightsToFilter.length);
             console.log('📊 Current insights:', currentInsights.length);
             console.log('📊 Insights from stacks:', insightsFromStacks.length);
+        }
+    } else {
+        // No active filter - use all available insights for proper pagination
+        if (window.allInsightsForFiltering) {
+            insightsToFilter = window.allInsightsForFiltering;
+            console.log('🔍 Using all insights for "All" filter:', insightsToFilter.length);
+        } else {
+            // Fallback: combine current insights with insights from stacks
+            console.log('⚠️ allInsightsForFiltering not available for "All" filter, creating fallback...');
+            const insightsFromStacks = [];
+            stacks.forEach(stackData => {
+                stackData.cards.forEach(card => {
+                    // Check if this insight is already in currentInsights
+                    const exists = currentInsights.some(insight => insight.id === card.id);
+                    if (!exists) {
+                        insightsFromStacks.push(card);
+                    }
+                });
+            });
+            
+            insightsToFilter = [...currentInsights, ...insightsFromStacks];
+            console.log('🔍 Using fallback insights for "All" filter:', insightsToFilter.length);
         }
     }
     
