@@ -5520,21 +5520,24 @@ function populateModalContent(insight) {
         titleElement.textContent = insight.title || new URL(insight.url).hostname;
     }
     
-    // 图片占位符
-    const imageContainer = document.getElementById('modalImagePlaceholder');
-    if (imageContainer) {
-        imageContainer.innerHTML = '';
-        
+    // 图片处理
+    const modalImage = document.getElementById('modalImage');
+    const modalMedia = document.getElementById('modalMedia');
+    
+    if (modalImage && modalMedia) {
         if (insight.image_url) {
-            const img = document.createElement('img');
-            img.src = insight.image_url;
-            img.alt = insight.title || 'Content image';
-            img.onerror = function() {
-                imageContainer.innerHTML = '<span>No image available</span>';
+            modalImage.src = insight.image_url;
+            modalImage.alt = insight.title || 'Content image';
+            modalImage.style.display = 'block';
+            modalMedia.classList.remove('no-image');
+            
+            modalImage.onerror = function() {
+                modalImage.style.display = 'none';
+                modalMedia.classList.add('no-image');
             };
-            imageContainer.appendChild(img);
         } else {
-            imageContainer.innerHTML = '<span>No image available</span>';
+            modalImage.style.display = 'none';
+            modalMedia.classList.add('no-image');
         }
     }
     
@@ -5561,15 +5564,14 @@ function populateModalContent(insight) {
         aiSummaryDate.textContent = date;
     }
     
-            // 绑定编辑标签按钮事件
+            // 绑定编辑标签按钮事件 - 内联编辑
         const editTagsBtn = document.getElementById('modalEditTagsBtn');
         if (editTagsBtn) {
             // Remove any existing event listeners
             editTagsBtn.onclick = null;
-            // Add new event listener
+            // Add new event listener for inline editing
             editTagsBtn.onclick = () => {
-                closeContentDetailModal(); // Close current modal first
-                openTagEditModal(insight);  // Open tag edit modal
+                showInlineTagEditor(insight);
             };
         }
     
@@ -5932,23 +5934,38 @@ function updatePageCacheWithInsight(insightId, updateData) {
 // 设置评论编辑功能
 function setupCommentEditing() {
     const editCommentBtn = document.getElementById('editCommentBtn');
-    const commentContent = document.getElementById('modalCommentContent');
-    const commentEditForm = document.getElementById('commentEditForm');
-    const saveCommentBtn = document.getElementById('saveCommentBtn');
-    const cancelCommentBtn = document.getElementById('cancelCommentBtn');
-    const commentTextarea = document.getElementById('commentEditTextarea');
+    const commentDisplay = document.getElementById('commentDisplay');
+    const commentTextarea = document.getElementById('commentTextarea');
     
-    if (!editCommentBtn || !commentContent || !commentEditForm) return;
+    if (!editCommentBtn || !commentDisplay || !commentTextarea) return;
     
     // 编辑按钮点击事件
     editCommentBtn.addEventListener('click', () => {
-        commentContent.style.display = 'none';
-        commentEditForm.style.display = 'block';
+        // 如果当前是编辑模式，则保存
+        if (editCommentBtn.textContent === 'Save') {
+            saveComment();
+            return;
+        }
+        
+        // 进入编辑模式
+        commentDisplay.style.display = 'none';
+        commentTextarea.style.display = 'block';
         commentTextarea.focus();
+        
+        // 更新按钮文本
+        editCommentBtn.textContent = 'Save';
+        
+        // 添加取消按钮
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'ghost-btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.marginLeft = '8px';
+        cancelBtn.onclick = cancelComment;
+        editCommentBtn.parentNode.appendChild(cancelBtn);
     });
     
-    // 保存按钮点击事件
-    saveCommentBtn.addEventListener('click', async () => {
+    // 保存评论函数
+    async function saveComment() {
         const newComment = commentTextarea.value.trim();
         
         try {
@@ -5972,10 +5989,7 @@ function setupCommentEditing() {
             
             if (response.success) {
                 // 更新显示的评论
-                const commentText = document.getElementById('modalCommentText');
-                if (commentText) {
-                    commentText.textContent = newComment || 'No comment added yet.';
-                }
+                commentDisplay.textContent = newComment || 'No comment added yet.';
                 
                 // 更新本地数据
                 if (currentInsight) {
@@ -6003,22 +6017,34 @@ function setupCommentEditing() {
         }
         
         // 切换回显示模式
-        commentContent.style.display = 'flex';
-        commentEditForm.style.display = 'none';
-    });
-    
-    // 取消按钮点击事件
-    cancelCommentBtn.addEventListener('click', () => {
-        // 恢复原始内容
-        const commentText = document.getElementById('modalCommentText');
-        if (commentText) {
-            commentTextarea.value = commentText.textContent;
+        commentDisplay.style.display = 'block';
+        commentTextarea.style.display = 'none';
+        editCommentBtn.textContent = 'Edit';
+        
+        // 移除取消按钮
+        const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
+        if (cancelBtn && cancelBtn.textContent === 'Cancel') {
+            cancelBtn.remove();
         }
+    }
+    
+    // 取消评论函数
+    function cancelComment() {
+        // 恢复原始内容
+        commentTextarea.value = commentDisplay.textContent;
         
         // 切换回显示模式
-        commentContent.style.display = 'flex';
-        commentEditForm.style.display = 'none';
-    });
+        commentDisplay.style.display = 'block';
+        commentTextarea.style.display = 'none';
+        editCommentBtn.textContent = 'Edit';
+        
+        // 移除取消按钮
+        const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
+        if (cancelBtn && cancelBtn.textContent === 'Cancel') {
+            cancelBtn.remove();
+        }
+    }
+    
 }
 
 // 绑定模态框事件监听器
@@ -8804,5 +8830,220 @@ function clearAllFilters() {
 
 // Make clear filters function globally available
 window.clearAllFilters = clearAllFilters;
+
+// ===== INLINE TAG EDITOR =====
+
+let currentEditingInsight = null;
+let selectedTagIds = new Set();
+
+// Show inline tag editor
+function showInlineTagEditor(insight) {
+    currentEditingInsight = insight;
+    selectedTagIds.clear();
+    
+    // Add current tag to selected set (only one tag allowed)
+    if (insight.tags && insight.tags.length > 0) {
+        const firstTag = insight.tags[0]; // Only take the first tag
+        const tagId = typeof firstTag === 'string' ? firstTag : (firstTag.id || firstTag.tag_id || firstTag.user_tag_id);
+        if (tagId) {
+            selectedTagIds.add(tagId);
+        }
+    }
+    
+    // Show the tag editing section
+    const tagEditingSection = document.getElementById('tagEditingSection');
+    if (tagEditingSection) {
+        tagEditingSection.style.display = 'block';
+        
+        // Populate available tags
+        populateAvailableTags();
+        
+        // Bind save and cancel events
+        bindTagEditorEvents();
+    }
+}
+
+// Populate available tags
+function populateAvailableTags() {
+    const availableTagsList = document.getElementById('availableTagsList');
+    if (!availableTagsList) return;
+    
+    // Get all available tags (user tags + PARA tags)
+    const allTags = [];
+    
+    // Add user tags
+    if (window.userTags && window.userTags.length > 0) {
+        window.userTags.forEach(tag => {
+            allTags.push({
+                id: tag.id,
+                name: tag.name,
+                color: tag.color,
+                type: 'user'
+            });
+        });
+    }
+    
+    // Add PARA tags
+    const paraTags = [
+        { id: 'project', name: 'Project', color: '#3B82F6', type: 'para' },
+        { id: 'area', name: 'Area', color: '#10B981', type: 'para' },
+        { id: 'resource', name: 'Resource', color: '#F59E0B', type: 'para' },
+        { id: 'archive', name: 'Archive', color: '#6B7280', type: 'para' }
+    ];
+    
+    allTags.push(...paraTags);
+    
+    // Clear existing content
+    availableTagsList.innerHTML = '';
+    
+    // Add header
+    const header = document.createElement('h4');
+    header.textContent = 'Available Tags';
+    availableTagsList.appendChild(header);
+    
+    // Create tags container
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'available-tags-list';
+    
+    // Add each tag
+    allTags.forEach(tag => {
+        const tagElement = document.createElement('div');
+        tagElement.className = 'available-tag';
+        tagElement.dataset.tagId = tag.id;
+        tagElement.dataset.tagName = tag.name;
+        tagElement.dataset.tagColor = tag.color;
+        
+        // Add color indicator
+        const colorIndicator = document.createElement('div');
+        colorIndicator.className = 'tag-color';
+        colorIndicator.style.backgroundColor = tag.color;
+        tagElement.appendChild(colorIndicator);
+        
+        // Add tag name
+        const tagName = document.createElement('span');
+        tagName.textContent = tag.name;
+        tagElement.appendChild(tagName);
+        
+        // Add click handler
+        tagElement.onclick = () => toggleTagSelection(tag.id, tag.name, tag.color);
+        
+        // Mark as selected if already selected
+        if (selectedTagIds.has(tag.id)) {
+            tagElement.classList.add('selected');
+        }
+        
+        tagsContainer.appendChild(tagElement);
+    });
+    
+    availableTagsList.appendChild(tagsContainer);
+}
+
+// Toggle tag selection (single tag only)
+function toggleTagSelection(tagId, tagName, tagColor) {
+    if (selectedTagIds.has(tagId)) {
+        // If clicking the same tag, deselect it
+        selectedTagIds.clear();
+    } else {
+        // Clear any existing selection and select the new tag
+        selectedTagIds.clear();
+        selectedTagIds.add(tagId);
+    }
+    
+    // Update UI
+    updateAvailableTagsUI();
+}
+
+// Update available tags UI to show selection state
+function updateAvailableTagsUI() {
+    const availableTags = document.querySelectorAll('.available-tag');
+    availableTags.forEach(tag => {
+        const tagId = tag.dataset.tagId;
+        if (selectedTagIds.has(tagId)) {
+            tag.classList.add('selected');
+        } else {
+            tag.classList.remove('selected');
+        }
+    });
+}
+
+
+// Bind tag editor events
+function bindTagEditorEvents() {
+    const saveBtn = document.getElementById('saveTagsBtn');
+    const cancelBtn = document.getElementById('cancelTagsBtn');
+    
+    if (saveBtn) {
+        saveBtn.onclick = saveTagChanges;
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.onclick = cancelTagEditing;
+    }
+}
+
+// Save tag changes
+async function saveTagChanges() {
+    if (!currentEditingInsight) return;
+    
+    try {
+        // Convert selected tag IDs to tag objects
+        const tagsToSave = Array.from(selectedTagIds).map(tagId => {
+            // Check if it's a PARA tag
+            const paraTags = ['project', 'area', 'resource', 'archive'];
+            if (paraTags.includes(tagId)) {
+                return { id: tagId, name: tagId.charAt(0).toUpperCase() + tagId.slice(1) };
+            }
+            
+            // Find user tag
+            if (window.userTags) {
+                const userTag = window.userTags.find(tag => tag.id === tagId);
+                if (userTag) {
+                    return { id: userTag.id, name: userTag.name, color: userTag.color };
+                }
+            }
+            
+            return { id: tagId, name: tagId };
+        });
+        
+        // Update the insight with new tags
+        currentEditingInsight.tags = tagsToSave;
+        
+        // Update the primary tag display in modal
+        updatePrimaryTagDisplay(tagsToSave[0]);
+        
+        // Hide the tag editor
+        hideInlineTagEditor();
+        
+        // Show success message (optional)
+        console.log('✅ Tags updated successfully');
+        
+    } catch (error) {
+        console.error('❌ Error saving tags:', error);
+    }
+}
+
+// Cancel tag editing
+function cancelTagEditing() {
+    hideInlineTagEditor();
+}
+
+// Hide inline tag editor
+function hideInlineTagEditor() {
+    const tagEditingSection = document.getElementById('tagEditingSection');
+    if (tagEditingSection) {
+        tagEditingSection.style.display = 'none';
+    }
+    
+    currentEditingInsight = null;
+    selectedTagIds.clear();
+}
+
+// Update primary tag display
+function updatePrimaryTagDisplay(primaryTag) {
+    const primaryTagElement = document.getElementById('primaryTag');
+    if (primaryTagElement && primaryTag) {
+        primaryTagElement.textContent = primaryTag.name;
+    }
+}
 
 
