@@ -752,6 +752,14 @@ async function initPage() {
             renderInsights();
         }
         
+        // Ensure edit mode is always off when entering My Space page
+        if (document.body.classList.contains('edit-mode')) {
+            console.log('🔄 My Space page loaded, disabling edit mode');
+            document.body.classList.remove('edit-mode');
+            isEditMode = false;
+            updateEditModeState();
+        }
+        
         // 分页模式：不需要无限滚动
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
@@ -3798,6 +3806,14 @@ function renderHomeView() {
     // Disable stack view mode (shows profile/controls sections)
     setStackViewEnabled(false);
     
+    // Ensure edit mode is always off when entering home view
+    if (document.body.classList.contains('edit-mode')) {
+        console.log('🏠 Home view loaded, disabling edit mode');
+        document.body.classList.remove('edit-mode');
+        isEditMode = false;
+        updateEditModeState();
+    }
+    
     // Hide stack context bar
     const stackContextBar = getCachedElementById('stackContextBar');
     if (stackContextBar) {
@@ -6155,6 +6171,9 @@ function getSourceName(url) {
 
 // Function to update edit mode state when content cards are re-rendered
 function updateEditModeState() {
+    const editModeBtn = document.getElementById('editModeBtn');
+    const editBtnText = editModeBtn ? editModeBtn.querySelector('.edit-btn-text') : null;
+    
     if (isEditMode) {
         // Add template card if it doesn't exist
         const existingTemplateCard = document.querySelector('.template-card');
@@ -6167,11 +6186,23 @@ function updateEditModeState() {
         contentCards.forEach(card => {
             card.classList.add('shake');
         });
+        
+        // Update button text and state
+        if (editModeBtn && editBtnText) {
+            editModeBtn.classList.add('active');
+            editBtnText.textContent = 'Done';
+        }
     } else {
         // Remove template card when not in edit mode
         const templateCard = document.querySelector('.template-card');
         if (templateCard) {
             templateCard.remove();
+        }
+        
+        // Update button text and state
+        if (editModeBtn && editBtnText) {
+            editModeBtn.classList.remove('active');
+            editBtnText.textContent = 'Edit';
         }
     }
 }
