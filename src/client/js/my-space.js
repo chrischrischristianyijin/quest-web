@@ -141,6 +141,8 @@ function getTotalInsightsCount() {
 
 // 更新翻页UI
 function updatePaginationUI() {
+    console.log(`🔍 DEBUG: updatePaginationUI called - currentPage=${currentPage}, totalPages=${totalPages}`);
+    
     const currentPageEl = document.getElementById('currentPage');
     const totalPagesEl = document.getElementById('totalPages');
     const totalInsightsEl = document.getElementById('totalInsights');
@@ -148,8 +150,14 @@ function updatePaginationUI() {
     const nextBtn = document.getElementById('nextPageBtn');
     const paginationPages = document.getElementById('paginationPages');
     
-    if (currentPageEl) currentPageEl.textContent = currentPage;
-    if (totalPagesEl) totalPagesEl.textContent = totalPages;
+    if (currentPageEl) {
+        currentPageEl.textContent = currentPage;
+        console.log(`🔍 DEBUG: Set currentPageEl to ${currentPage}`);
+    }
+    if (totalPagesEl) {
+        totalPagesEl.textContent = totalPages;
+        console.log(`🔍 DEBUG: Set totalPagesEl to ${totalPages}`);
+    }
     if (totalInsightsEl) {
         const s = stacks.size;
         
@@ -245,13 +253,20 @@ function createEllipsis(container) {
 
 // 跳转到指定页面
 async function goToPage(pageNum, { force = false } = {}) {
+    console.log(`🔍 DEBUG: goToPage called with pageNum=${pageNum}, force=${force}`);
+    console.log(`🔍 DEBUG: Current state - currentPage=${currentPage}, totalPages=${totalPages}, totalInsights=${totalInsights}`);
+    
     if (!force && (pageNum < 1 || pageNum > totalPages || pageNum === currentPage)) {
+        console.log(`🔍 DEBUG: Skipping page navigation - pageNum=${pageNum}, totalPages=${totalPages}, currentPage=${currentPage}`);
         return;
     }
     
     try {
+        console.log(`🔍 DEBUG: Before setting - currentPage=${currentPage}, pageNum=${pageNum}`);
         currentPage = pageNum;
         insightsPage = pageNum; // 更新全局变量
+        
+        console.log(`🔍 DEBUG: After setting - currentPage=${currentPage}, insightsPage=${insightsPage}`);
         
         // 显示加载状态
         showLoadingState();
@@ -259,17 +274,22 @@ async function goToPage(pageNum, { force = false } = {}) {
         // If force is true, skip cache and fetch fresh data
         if (force) {
             pageCache.delete(pageNum);
+            console.log(`🔍 DEBUG: Force mode - cleared cache for page ${pageNum}`);
         }
         
         // 检查缓存中是否已有该页面数据
         if (!force && pageCache.has(pageNum)) {
             console.log(`📋 从缓存加载第${pageNum}页数据`);
             const cachedData = pageCache.get(pageNum);
+            console.log(`🔍 DEBUG: Cached data for page ${pageNum}:`, cachedData);
             // Defensive normalization for nested array issue
             const maybeNested = cachedData.insights;
             currentInsights = Array.isArray(maybeNested?.[0]) ? maybeNested[0] : maybeNested;
             window.currentInsights = currentInsights;
             insightsHasMore = cachedData.hasMore;
+            
+            console.log(`🔍 DEBUG: Loaded from cache - currentInsights.length=${currentInsights.length}`);
+            console.log(`🔍 DEBUG: Cached insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
             
             // 更新已渲染的ID
             renderedInsightIds.clear();
@@ -281,34 +301,98 @@ async function goToPage(pageNum, { force = false } = {}) {
             // 使用分页API加载目标页面 (over-fetch on page 1 to account for stacked insights)
             const effectiveLimit = effectiveFetchLimitForPage(pageNum);
             const uid = (auth?.user?.id || currentUser?.id || undefined);
-            const targetPageResponse = await api.getInsightsPaginated(pageNum, effectiveLimit, uid, '', true);
+            
+            console.log(`🔍 DEBUG: API call parameters - pageNum=${pageNum}, effectiveLimit=${effectiveLimit}, uid=${uid}`);
+            
+            // For page 2+, we need to get insights that weren't shown on page 1
+            // Since the API doesn't know about stacks, we need to calculate the offset
+            let apiPage = pageNum;
+            let apiLimit = effectiveLimit;
+            
+            if (pageNum > 1) {
+                // Calculate how many insights were actually shown on page 1
+                const stacksCount = stacks.size;
+                const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+                
+                // For page 2, we want to get insights starting from after page 1's insights
+                // But since the API doesn't know about stacks, we need to get all insights and slice them
+                apiPage = 1; // Always get page 1 from API
+                apiLimit = 100; // Get a large number to get all insights
+                console.log(`🔍 DEBUG: Page ${pageNum} - using API page 1 with limit ${apiLimit} to get all insights`);
+            }
+            
+            const targetPageResponse = await api.getInsightsPaginated(apiPage, apiLimit, uid, '', true);
+            console.log(`🔍 DEBUG: API response for page ${pageNum}:`, targetPageResponse);
+            
             if (targetPageResponse?.success) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(targetPageResponse);
-                const targetPageInsights = (items || []).filter(x => !x.stack_id);
+                console.log(`🔍 DEBUG: Normalized response - items.length=${items?.length}, hasMore=${hasMore}`);
+                console.log(`🔍 DEBUG: Raw items:`, items?.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
+                
+                let targetPageInsights = (items || []).filter(x => !x.stack_id);
+                console.log(`🔍 DEBUG: Filtered insights (no stack_id): ${targetPageInsights.length}`);
+                console.log(`🔍 DEBUG: Filtered insights:`, targetPageInsights.map(i => ({ id: i.id, title: i.title })));
+                
+                // For page 2+, slice the insights to get the correct subset
+                if (pageNum > 1) {
+                    const stacksCount = stacks.size;
+                    const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+                    const startIndex = page1SlotsForInsights;
+                    const endIndex = startIndex + insightsPerPage;
+                    
+                    targetPageInsights = targetPageInsights.slice(startIndex, endIndex);
+                    console.log(`🔍 DEBUG: Page ${pageNum} slicing - startIndex=${startIndex}, endIndex=${endIndex}, sliced insights=${targetPageInsights.length}`);
+                    console.log(`🔍 DEBUG: Sliced insights:`, targetPageInsights.map(i => ({ id: i.id, title: i.title })));
+                }
+                
+                // Update pagination info from API response
+                updatePaginationInfo(targetPageResponse.data);
+                console.log(`🔍 DEBUG: Updated pagination - totalPages=${totalPages}, totalInsights=${totalInsights}`);
+                
+                // Fix pagination calculation for stacks
+                // The API doesn't know about stacks, so we need to recalculate totalPages
+                // based on how many insights can actually fit on each page
+                const stacksCount = stacks.size;
+                const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+                const remainingInsights = Math.max(0, totalInsights - page1SlotsForInsights);
+                
+                // Recalculate totalPages based on actual page capacity
+                totalPages = remainingInsights > 0 ? 2 : 1;
+                console.log(`🔍 DEBUG: Recalculated pagination - stacksCount=${stacksCount}, page1SlotsForInsights=${page1SlotsForInsights}, remainingInsights=${remainingInsights}, totalPages=${totalPages}`);
                 
                 // De-dupe page 2+ against what page 1 actually rendered
                 let adjusted = targetPageInsights;
                 
                 // Only de-dupe when not filtering by tag (stacks hidden under filters)
                 const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
+                console.log(`🔍 DEBUG: De-duplication check - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
+                
                 if (!hasActiveTagFilter && pageNum > 1) {
                     const prevVisible = getVisibleIdsForPage(pageNum - 1);
+                    console.log(`🔍 DEBUG: Previous page visible IDs:`, Array.from(prevVisible));
                     
                     if (prevVisible.size > 0) {
+                        // De-duplicate against what was actually visible on the previous page
+                        const beforeCount = adjusted.length;
                         adjusted = adjusted.filter(i => !prevVisible.has(i.id));
-                    } else if (pageNum === 2) {
-                        // Fallback: if page 1 isn't cached yet, drop the items page 1 over-fetched
-                        let stackedInsightsCount = 0;
-                        stacks.forEach(s => { stackedInsightsCount += (s.cards?.length || 0); });
-                        const borrowed = Math.max(0, stackedInsightsCount - stacks.size); // ht zow many extra we pulled on page 1
-                        adjusted = adjusted.slice(borrowed);
+                        console.log(`🔄 Page ${pageNum} de-duplicated: ${beforeCount} -> ${adjusted.length} insights`);
+                        console.log(`🔍 DEBUG: After de-duplication:`, adjusted.map(i => ({ id: i.id, title: i.title })));
+                    } else {
+                        // If previous page isn't cached, don't do any de-duplication
+                        // This prevents incorrectly removing insights from page 2
+                        console.log(`⚠️ Page ${pageNum}: Previous page not cached, skipping de-duplication`);
                     }
+                } else {
+                    console.log(`🔍 DEBUG: Skipping de-duplication - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
                 }
                 
                 // 更新当前页面数据
                 currentInsights = adjusted;
                 window.currentInsights = currentInsights;
                 insightsHasMore = hasMore;
+                
+                console.log(`🔍 DEBUG: Final currentInsights for page ${pageNum}:`, currentInsights.length, 'insights');
+                console.log(`🔍 DEBUG: Final insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
                 
                 // 更新已渲染的ID（基于 adjusted）
                 renderedInsightIds.clear();
@@ -336,6 +420,8 @@ async function goToPage(pageNum, { force = false } = {}) {
         
         // 滚动到顶部
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        console.log(`🔍 DEBUG: After goToPage - currentPage=${currentPage}, totalPages=${totalPages}`);
     } catch (error) {
         console.error('❌ Failed to go to page:', error);
         showErrorMessage('Failed to load page. Please try again.');
@@ -349,7 +435,9 @@ function updatePaginationInfo(data) {
     const pagination = data.pagination || {};
     totalPages = pagination.total_pages || 1;
     totalInsights = pagination.total || 0;
-    currentPage = pagination.page || 1;
+    // Don't update currentPage from API response as it might reset our navigation
+    // currentPage = pagination.page || 1;
+    console.log(`🔍 DEBUG: updatePaginationInfo - totalPages=${totalPages}, totalInsights=${totalInsights}, currentPage=${currentPage} (not updated from API)`);
 }
 
 // 显示加载状态
@@ -1328,6 +1416,7 @@ function effectiveFetchLimitForPage(pageNum) {
 // 渲染见解列表
 function renderInsights() {
     console.log('🚨 renderInsights() called - viewMode:', viewMode, 'activeStackId:', activeStackId);
+    console.log('🔍 DEBUG: renderInsights - currentPage:', currentPage, 'totalPages:', totalPages);
     console.trace('renderInsights call stack');
     
     // Guard clause: don't render home view when in stack view mode
@@ -1357,11 +1446,14 @@ function renderInsights() {
     // Get filtered insights for rendering
     const filteredInsights = getFilteredInsights();
     console.log('🎯 Rendering with filtered insights:', filteredInsights.length);
+    console.log('🔍 DEBUG: currentInsights.length:', currentInsights.length);
+    console.log('🔍 DEBUG: currentInsights:', currentInsights.map(i => ({ id: i.id, title: i.title })));
     console.log('🎯 Stacks count:', stacks.size);
     console.log('🎯 Effective limit for page', currentPage, ':', effectiveLimitForPage(currentPage));
     
     // Check if we have any content to render (insights OR stacks)
-    const hasInsights = filteredInsights.length > 0;
+    // For page 1, check both insights and stacks. For other pages, only check insights
+    const hasInsights = currentPage === 1 ? filteredInsights.length > 0 : currentInsights.length > 0;
     const hasStacks = stacks.size > 0;
     
     if (!hasInsights && !hasStacks) {
@@ -1382,12 +1474,17 @@ function renderInsights() {
     const fragment = document.createDocumentFragment();
     
     // Page 1: render stacks first (each stack is ONE tile)
-    // Only show stacks if no specific tag filter is active
+    // Only show stacks if no specific tag filter is active AND we're on page 1
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
+    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
+    
     if (currentPage === 1 && hasStacks && !hasActiveTagFilter) {
+        console.log(`🔍 DEBUG: Rendering ${stacks.size} stacks on page 1`);
         for (const [, stackData] of stacks) {
             fragment.appendChild(createStackCard(stackData));
         }
+    } else {
+        console.log(`🔍 DEBUG: Not rendering stacks - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
     }
     
     // Then render insights (using filtered insights)
@@ -1403,9 +1500,16 @@ function renderInsights() {
         } else {
             // When not filtering, use normal pagination with stack accounting
             const limit = effectiveLimitForPage(currentPage);
-            // Only slice for page 1 (to account for stacks), other pages use full array
-            const list = currentPage === 1 ? filteredInsights.slice(0, limit) : filteredInsights;
+            console.log(`🔍 DEBUG: Rendering logic - currentPage=${currentPage}, limit=${limit}`);
+            console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, currentInsights.length=${currentInsights.length}`);
+            
+            // For page 1, slice to account for stacks. For other pages, use the insights loaded for that page
+            const list = currentPage === 1 ? filteredInsights.slice(0, limit) : currentInsights;
+            console.log(`🔍 DEBUG: Final list to render:`, list.length, 'insights');
+            console.log(`🔍 DEBUG: List items:`, list.map(i => ({ id: i.id, title: i.title })));
+            
             for (const insight of list) {
+                console.log(`🔍 DEBUG: Creating card for insight:`, insight.id, insight.title);
                 fragment.appendChild(createInsightCard(insight));
             }
         }
@@ -1422,6 +1526,7 @@ function renderInsights() {
     const stacksCount = currentPage === 1 && !hasActiveTagFilter ? stacks.size : 0;
     const totalCards = insightsCount + stacksCount;
     console.log(`📊 渲染第${currentPage}页: ${insightsCount}个insights + ${stacksCount}个stacks = ${totalCards}个卡片总计`);
+    console.log(`🔍 DEBUG: Final rendering stats - currentPage=${currentPage}, insightsCount=${insightsCount}, stacksCount=${stacksCount}, totalCards=${totalCards}`);
     
     // Update edit mode state after rendering cards
     updateEditModeState();
@@ -6498,27 +6603,42 @@ function getInsightById(id) {
 
 // Update pagination when stacks or insights change
 function updatePaginationCounts() {
-    // DO NOT overwrite totalInsights here; it already comes from backend pagination.total
-    const stacksCount = stacks.size;
+    // DO NOT overwrite totalInsights or totalPages here; they come from backend pagination
+    // This function should only update the UI, not recalculate pagination values
     
-    // Count insights that are within stacks (these should not be counted separately)
-    let insightsInStacks = 0;
-    stacks.forEach(stackData => {
-        insightsInStacks += stackData.cards.length;
-    });
+    // Ensure current page doesn't exceed total pages (safety check)
+    if (currentPage > totalPages) {
+        currentPage = totalPages;
+    }
     
-    // Calculate actual insights that are not in stacks
-    const standaloneInsights = Math.max(0, totalInsights - insightsInStacks);
-
-    const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-    const remainingInsights = Math.max(0, standaloneInsights - page1SlotsForInsights);
-
-    // 0 insights → still show 1 page (empty state)
-    totalPages = standaloneInsights === 0 && stacksCount === 0 ? 1 : (1 + (remainingInsights > 0 ? Math.ceil(remainingInsights / insightsPerPage) : 0));
-
-    if (currentPage > totalPages) currentPage = totalPages;
+    // Update the UI with current pagination values
     updatePaginationUI();
 }
+
+// Test function for debugging pagination - can be called from browser console
+window.testPagination = function() {
+    console.log('🧪 PAGINATION TEST STARTED');
+    console.log('🧪 Current state:');
+    console.log('  - currentPage:', currentPage);
+    console.log('  - totalPages:', totalPages);
+    console.log('  - totalInsights:', totalInsights);
+    console.log('  - insightsPerPage:', insightsPerPage);
+    console.log('  - currentInsights.length:', currentInsights.length);
+    console.log('  - pageCache size:', pageCache.size);
+    console.log('  - loadedPages:', Array.from(loadedPages));
+    
+    console.log('🧪 Page cache contents:');
+    for (const [pageNum, data] of pageCache) {
+        console.log(`  Page ${pageNum}:`, {
+            insightsCount: data.insights?.length || 0,
+            hasMore: data.hasMore,
+            timestamp: data.timestamp
+        });
+    }
+    
+    console.log('🧪 Testing page 2 navigation...');
+    return goToPage(2, { force: true });
+};
 
 // Save stacks to localStorage (called periodically to prevent data loss)
 function saveStacksToLocalStorage() {
