@@ -8,12 +8,11 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const apiStatus = document.getElementById('apiStatus');
 
-// API Configuration - 更新为新的聊天记忆系统接口
+// API Configuration - 根据API文档更新为聊天会话管理系统
 const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
-const API_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;
-const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;
-const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;
-const MESSAGES_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;
+const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;  // 主要聊天接口
+const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;  // 健康检查
+const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;  // 会话管理
 
 // 获取当前用户信息 - 使用现有的认证系统
 function getCurrentUserInfo() {
@@ -74,19 +73,25 @@ class SessionManager {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await fetch(`${SESSIONS_ENDPOINT}?user_id=${userId}&page=${page}&size=${size}`, {
+            const url = `${SESSIONS_ENDPOINT}?user_id=${userId}&page=${page}&size=${size}`;
+            console.log('🔍 获取会话列表请求:', url);
+
+            const response = await fetch(url, {
                 headers
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ 获取会话列表失败:', response.status, errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
 
             const data = await response.json();
             this.sessions = data.sessions || [];
+            console.log('✅ 获取会话列表成功:', data);
             return data;
         } catch (error) {
-            console.error('获取会话列表失败:', error);
+            console.error('❌ 获取会话列表失败:', error);
             return { sessions: [], total: 0 };
         }
     }
@@ -102,24 +107,31 @@ class SessionManager {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
+            const requestBody = {
+                user_id: userId,
+                title: title || '新对话'
+            };
+
+            console.log('🔍 创建会话请求:', requestBody);
+
             const response = await fetch(SESSIONS_ENDPOINT, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({
-                    user_id: userId,
-                    title: title || '新对话'
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ 创建会话失败:', response.status, errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
 
             const session = await response.json();
             this.currentSession = session;
+            console.log('✅ 创建会话成功:', session);
             return session;
         } catch (error) {
-            console.error('创建会话失败:', error);
+            console.error('❌ 创建会话失败:', error);
             throw error;
         }
     }
@@ -161,7 +173,7 @@ class SessionManager {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await fetch(`${MESSAGES_ENDPOINT}/${sessionId}/messages?limit=${limit}`, {
+            const response = await fetch(`${SESSIONS_ENDPOINT}/${sessionId}/messages?limit=${limit}`, {
                 headers
             });
 
@@ -187,19 +199,32 @@ class SessionManager {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await fetch(`${MESSAGES_ENDPOINT}/${sessionId}/context?limit_messages=${limitMessages}`, {
+            const url = `${SESSIONS_ENDPOINT}/${sessionId}/context?limit_messages=${limitMessages}`;
+            console.log('🧠 获取会话上下文API调用:');
+            console.log('  - URL:', url);
+            console.log('  - Session ID:', sessionId);
+            console.log('  - Limit Messages:', limitMessages);
+            console.log('  - Headers:', headers);
+
+            const response = await fetch(url, {
                 headers
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ 获取会话上下文失败:', response.status, errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
 
             const context = await response.json();
+            console.log('✅ 会话上下文API响应:', context);
+            console.log('  - Messages:', context.messages?.length || 0);
+            console.log('  - Memories:', context.memories?.length || 0);
+            
             this.memories = context.memories || [];
             return context;
         } catch (error) {
-            console.error('获取会话上下文失败:', error);
+            console.error('❌ 获取会话上下文失败:', error);
             return { messages: [], memories: [] };
         }
     }
@@ -420,6 +445,9 @@ class ChatUI {
             // 清空当前消息
             this.clearMessages();
             
+            // 清空记忆显示（新会话没有记忆）
+            this.renderMemories([]);
+            
             // 重新加载会话列表
             await this.loadSessions();
             
@@ -495,16 +523,26 @@ class ChatUI {
         try {
             this.sessionsList.innerHTML = '<div class="loading-sessions">加载中...</div>';
             
+            console.log('🔄 切换到会话:', sessionId);
             const context = await sessionManager.getSessionContext(sessionId);
             sessionManager.currentSession = { id: sessionId };
             
             // 更新UI
             this.updateChatTitle(context.title || 'Chat');
             this.renderMessages(context.messages || []);
-            this.renderMemories(context.memories || []);
+            
+            // 更新记忆显示
+            if (context.memories && context.memories.length > 0) {
+                this.renderMemories(context.memories);
+                console.log('🧠 会话记忆:', context.memories.length, '条');
+            } else {
+                this.renderMemories([]);
+                console.log('ℹ️ 会话暂无记忆');
+            }
+            
             this.closeSidebar();
             
-            console.log('✅ 切换到会话:', sessionId);
+            console.log('✅ 切换到会话成功:', sessionId);
         } catch (error) {
             console.error('❌ 切换会话失败:', error);
             alert('Failed to switch session, please try again');
@@ -587,15 +625,16 @@ class ChatUI {
 
     // 记忆管理
     renderMemories(memories) {
-        // 始终显示memory按钮
-        this.memoryIndicator.style.display = 'flex';
-        
-        if (memories.length === 0) {
-            this.memoriesList.innerHTML = '<div class="empty-memories">No memories</div>';
+        if (!memories || memories.length === 0) {
+            // 没有记忆时隐藏记忆按钮
+            this.memoryIndicator.style.display = 'none';
+            this.memoriesList.innerHTML = '<div class="empty-memories">暂无记忆</div>';
             this.memoryCount.textContent = '0';
             return;
         }
 
+        // 有记忆时显示记忆按钮
+        this.memoryIndicator.style.display = 'flex';
         this.memoryCount.textContent = memories.length;
 
         this.memoriesList.innerHTML = memories.map(memory => `
@@ -609,6 +648,8 @@ class ChatUI {
                 <div class="memory-date">${new Date(memory.created_at).toLocaleDateString()}</div>
             </div>
         `).join('');
+        
+        console.log('🧠 渲染记忆:', memories.length, '条记忆');
     }
 
     getMemoryIcon(type) {
@@ -641,6 +682,28 @@ class ChatUI {
 // 创建UI管理器实例
 const chatUI = new ChatUI();
 
+// 聊天完成后更新记忆显示
+async function updateMemoriesAfterChat() {
+    try {
+        if (sessionManager.currentSession && sessionManager.currentSession.id) {
+            console.log('🧠 聊天完成，更新记忆显示...');
+            
+            // 获取最新的会话上下文
+            const context = await sessionManager.getSessionContext(sessionManager.currentSession.id);
+            
+            // 更新记忆显示
+            if (context.memories && context.memories.length > 0) {
+                chatUI.renderMemories(context.memories);
+                console.log('✅ 记忆更新成功，共', context.memories.length, '条记忆');
+            } else {
+                console.log('ℹ️ 当前会话暂无记忆');
+            }
+        }
+    } catch (error) {
+        console.error('❌ 更新记忆失败:', error);
+    }
+}
+
 // 初始化侧边栏状态
 chatUI.initializeSidebarState();
 
@@ -654,6 +717,9 @@ async function checkApiHealth() {
             // API健康检查成功，但不显示状态（除非用户已登录）
             console.log('✅ API健康检查成功:', data);
             apiStatus.style.display = 'none';
+            
+            // 测试API集成
+            await testApiIntegration();
         } else {
             console.error('❌ API健康检查失败，状态码:', response.status);
             throw new Error(`Health check failed with status: ${response.status}`);
@@ -663,6 +729,49 @@ async function checkApiHealth() {
         console.log('🔍 尝试的端点:', HEALTH_ENDPOINT);
         // API连接失败时完全隐藏状态
         apiStatus.style.display = 'none';
+    }
+}
+
+// 测试API集成功能
+async function testApiIntegration() {
+    try {
+        const user = getCurrentUserInfo();
+        if (user) {
+            console.log('🧪 测试API集成功能...');
+            
+            // 测试获取会话列表
+            const sessionsData = await sessionManager.getSessions(user.id || user.user_id, 1, 5);
+            console.log('✅ 会话列表API测试通过:', sessionsData);
+            
+            // 如果有会话，测试获取上下文和记忆
+            if (sessionsData.sessions && sessionsData.sessions.length > 0) {
+                const firstSession = sessionsData.sessions[0];
+                console.log('🧪 测试会话上下文API:', firstSession.id);
+                
+                const contextData = await sessionManager.getSessionContext(firstSession.id);
+                console.log('✅ 上下文API测试通过:', contextData);
+                
+                // 特别检查记忆数据
+                if (contextData.memories && contextData.memories.length > 0) {
+                    console.log('🧠 发现记忆数据:', contextData.memories.length, '条');
+                    contextData.memories.forEach((memory, index) => {
+                        console.log(`  记忆 ${index + 1}:`, {
+                            type: memory.memory_type,
+                            content: memory.content?.substring(0, 50) + '...',
+                            importance: memory.importance_score
+                        });
+                    });
+                } else {
+                    console.log('ℹ️ 该会话暂无记忆数据');
+                }
+            } else {
+                console.log('ℹ️ 用户暂无会话');
+            }
+        } else {
+            console.log('ℹ️ 用户未登录，跳过API测试');
+        }
+    } catch (error) {
+        console.warn('⚠️ API集成测试失败:', error);
     }
 }
 
@@ -761,9 +870,9 @@ async function sendToQuestAPI(message) {
         const user = getCurrentUserInfo();
         const userId = user ? (user.id || user.user_id) : null;
         
-        // 构建请求体，使用新的API格式
+        // 构建请求体，根据API文档格式
         const requestBody = {
-            question: message  // 更新为question参数
+            question: message
         };
         
         // 如果用户已登录，添加用户ID到请求中
@@ -778,18 +887,18 @@ async function sendToQuestAPI(message) {
             }
         } else {
             console.warn('⚠️ 用户未登录，无法提供用户上下文');
-            // 添加用户未登录的提示信息
-            requestBody.question = `[用户未登录] ${message}`;
+            // 用户未登录时，仍然发送请求但标记为未登录
+            requestBody.question = message;
         }
         
         // 添加调试信息
         console.log('🚀 API请求信息:');
-        console.log('  - URL:', API_ENDPOINT);
+        console.log('  - URL:', CHAT_ENDPOINT);
         console.log('  - Method: POST');
         console.log('  - Headers:', headers);
         console.log('  - Body:', requestBody);
         
-        const response = await fetch(API_ENDPOINT, {
+        const response = await fetch(CHAT_ENDPOINT, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(requestBody)
@@ -866,6 +975,9 @@ async function sendToQuestAPI(message) {
                                     <div>${fullResponse}</div>
                                 `;
                             }
+                            
+                            // 聊天完成后，更新记忆显示
+                            await updateMemoriesAfterChat();
                         }
                     } catch (parseError) {
                         console.error('Error parsing SSE data:', parseError);
@@ -1009,8 +1121,8 @@ checkApiHealth();
 // 更新用户状态
 updateUserStatus();
 
-// 初始化memory按钮显示
-chatUI.renderMemories([]);
+// 初始化memory按钮显示 - 不显示记忆，等待会话加载
+// chatUI.renderMemories([]);  // 注释掉，让记忆按钮在会话加载时自动显示
 
 // 加载会话列表
 chatUI.loadSessions();
