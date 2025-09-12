@@ -418,7 +418,7 @@ class ApiService {
 
     // 获取单个堆叠详情
     async getStack(stackId) {
-        return await this.request(`${API_CONFIG.STACKS.GET}${stackId}`);
+        return await this.request(`${API_CONFIG.STACKS.GET}/${stackId}/`);
     }
 
     // 创建新堆叠
@@ -431,7 +431,7 @@ class ApiService {
 
     // 更新堆叠信息
     async updateStack(stackId, stackData) {
-        return await this.request(`${API_CONFIG.STACKS.UPDATE}${stackId}`, {
+        return await this.request(`${API_CONFIG.STACKS.UPDATE}/${stackId}/`, {
             method: 'PUT',
             body: JSON.stringify(stackData)
         });
@@ -439,7 +439,7 @@ class ApiService {
 
     // 删除堆叠
     async deleteStack(stackId) {
-        return await this.request(`${API_CONFIG.STACKS.DELETE}${stackId}`, {
+        return await this.request(`${API_CONFIG.STACKS.DELETE}/${stackId}/`, {
             method: 'DELETE'
         });
     }
