@@ -52,7 +52,8 @@ let userTagsCacheTime = 0;
 const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
     latest: 'latest',  // 时间排序
-    tags: null         // 标签筛选
+    tags: null,        // 标签筛选
+    search: ''         // 搜索筛选
 };
 let isEditMode = false; // Edit mode state
 
@@ -406,13 +407,44 @@ async function loadUserInsightsWithPagination() {
         const startTime = Date.now();
         const effectiveLimit = effectiveFetchLimitForPage(1);
         const uid = (auth?.user?.id || currentUser?.id || undefined);
+        
+        console.log('🔍 API Request Details:', {
+            page: 1,
+            limit: effectiveLimit,
+            userId: uid,
+            search: '',
+            includeTags: true
+        });
+        
+        // Debug: Check what's in localStorage backup
+        const backupInsights = localStorage.getItem('quest_insights_backup');
+        if (backupInsights) {
+            try {
+                const backup = JSON.parse(backupInsights);
+                console.log('📦 localStorage backup insights:', backup.data?.length || 0, 'insights');
+                console.log('📦 Sample backup insights:', backup.data?.slice(0, 2));
+                if (backup.data?.length > 0) {
+                    console.log('📦 Backup insight properties:', Object.keys(backup.data[0]));
+                    console.log('📦 Backup insight stack_id values:', backup.data.map(i => ({ id: i.id, stack_id: i.stack_id })));
+                }
+            } catch (e) {
+                console.error('❌ Failed to parse backup for debugging:', e);
+            }
+        }
+        
         const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         const endTime = Date.now();
         console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
+        console.log('📡 First page API response:', firstPageResponse);
         
         if (firstPageResponse?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
+            console.log('📦 Raw API items before filtering:', items?.length || 0, 'items');
+            console.log('📦 Sample raw items:', items?.slice(0, 2));
+            
             let firstPageInsights = (items || []).filter(x => !x.stack_id);
+            console.log('📦 Filtered insights (no stack_id):', firstPageInsights.length, 'insights');
+            console.log('📦 Sample filtered insights:', firstPageInsights.slice(0, 2));
             
             // Retry once if page 1 returns 0 items and we now have a user ID
             if (firstPageInsights.length === 0 && uid) {
@@ -423,10 +455,13 @@ async function loadUserInsightsWithPagination() {
                 }
                 
                 const retryResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
+                console.log('📡 Retry API response:', retryResponse);
                 if (retryResponse?.success) {
                     const { items: retryItems, hasMore: retryHasMore } = normalizePaginatedInsightsResponse(retryResponse);
+                    console.log('📦 Retry raw items:', retryItems?.length || 0, 'items');
                     firstPageInsights = (retryItems || []).filter(x => !x.stack_id);
                     console.log(`🔄 Retry returned ${firstPageInsights.length} insights`);
+                    console.log('📦 Retry filtered insights:', firstPageInsights.slice(0, 2));
                 }
             }
             
@@ -482,6 +517,12 @@ async function loadUserInsightsWithPagination() {
             
             console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
             console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
+            
+            // If API returned 0 insights, try loading from backup
+            if (firstPageInsights.length === 0) {
+                console.log('🔄 API returned 0 insights, trying to load from backup...');
+                loadFromBackup();
+            }
         } else {
             // 尝试从localStorage加载备份
             loadFromBackup();
@@ -501,21 +542,27 @@ async function loadUserInsightsWithPagination() {
 
 // 从备份加载数据
 function loadFromBackup() {
+    console.log('🔄 Loading from backup...');
     const backupInsights = localStorage.getItem('quest_insights_backup');
     let restoredFromBackup = false;
+    
+    console.log('📦 Backup insights found:', !!backupInsights);
     
     if (backupInsights) {
         try {
             const backup = JSON.parse(backupInsights);
+            console.log('📦 Parsed backup data:', backup);
             if (Array.isArray(backup.data)) {
                 currentInsights = backup.data;
                 window.currentInsights = currentInsights;
+                console.log('📦 Set currentInsights to:', currentInsights.length, 'insights');
                 if (currentInsights.length > 0) {
                     hasLoadedInsightsOnce = true;
                     restoredFromBackup = true;
                     console.log('✅ Restored insights from backup:', currentInsights.length, 'insights');
                 }
             } else {
+                console.log('⚠️ Backup data is not an array:', backup);
                 currentInsights = [];
                 window.currentInsights = currentInsights;
             }
@@ -534,6 +581,13 @@ function loadFromBackup() {
     totalPages = Math.max(1, Math.ceil(currentInsights.length / insightsPerPage));
     totalInsights = currentInsights.length;
     currentPage = 1;
+    
+    console.log('📊 Backup loading stats:', { 
+        totalInsights, 
+        totalPages, 
+        currentPage, 
+        restoredFromBackup 
+    });
     
     renderInsights();
     updatePaginationUI();
@@ -685,6 +739,9 @@ async function initPage() {
         // Set up authentication listener to reload stacks when user logs in
         setupAuthListener();
         
+        // Initialize search functionality
+        initSearch();
+        
         // Handle deep linking for stack views
         const { viewMode: initialViewMode, stackId } = parseRoute();
         if (initialViewMode === 'stack' && stackId) {
@@ -743,9 +800,8 @@ async function loadUserStacks() {
             return;
         }
         
-        // 只加载当前页面的数据来构建stacks，避免加载额外数据
+        // Load stacks and populate them with ALL insights to show correct counts
         let allInsights = [];
-        const effectiveLimit = effectiveFetchLimitForPage(1);
         const uid = (auth?.user?.id || currentUser?.id || undefined);
         
         // Load stacks directly from the stack API
@@ -756,27 +812,35 @@ async function loadUserStacks() {
         // Process stacks from API response
         if (stacksResponse && stacksResponse.success && stacksResponse.data) {
             console.log('📦 Processing stacks from API:', stacksResponse.data.length, 'stacks');
+            console.log('📦 Raw API response data:', stacksResponse.data);
             stacksResponse.data.forEach(stack => {
                 const stackData = {
                     id: String(stack.id),
                     name: stack.name || 'Stack',
+                    description: stack.description || 'A collection of related content',
                     cards: [], // Will be populated from insights
                     createdAt: stack.created_at || new Date().toISOString(),
                     modifiedAt: stack.updated_at || new Date().toISOString(),
                     isExpanded: false
                 };
+                console.log('📦 Loading stack:', { id: stack.id, name: stack.name, description: stack.description });
                 stacks.set(String(stack.id), stackData);
             });
             console.log('✅ Loaded', stacks.size, 'stacks from API');
+            console.log('📦 Final stacks map:', Array.from(stacks.entries()));
         } else {
             console.log('⚠️ No stacks found in API response or API failed');
         }
-        const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
+        
+        // Fetch ALL insights to properly populate stack counts
+        console.log('🔍 Fetching ALL insights to populate stack counts...');
+        const response = await api.getInsightsPaginated(1, 100, uid, '', true);
         
         if (response.success && response.data) {
             const { items } = normalizePaginatedInsightsResponse(response);
             if (items && items.length > 0) {
                 allInsights = items;
+                console.log(`📦 Fetched ${allInsights.length} insights for stack population`);
             }
         }
                 
@@ -1255,6 +1319,15 @@ function effectiveFetchLimitForPage(pageNum) {
 
 // 渲染见解列表
 function renderInsights() {
+    console.log('🚨 renderInsights() called - viewMode:', viewMode, 'activeStackId:', activeStackId);
+    console.trace('renderInsights call stack');
+    
+    // Guard clause: don't render home view when in stack view mode
+    if (viewMode === 'stack') {
+        console.log('⚠️ renderInsights() called but we are in stack view mode, ignoring');
+        return;
+    }
+    
     if (!contentCards) {
         console.error('❌ contentCards element not found!');
         return;
@@ -1889,30 +1962,54 @@ async function fetchAllInsightsForFiltering() {
     try {
         console.log('🔄 Fetching all insights for tag filtering...');
         
-        // Fetch all insights with tags included
-        const response = await api.getInsightsPaginated(1, 1000, null, '', true); // Large limit to get all
+        // Try to fetch all insights with tags included
+        let allInsights = [];
         
-        if (response?.success) {
-            const { items } = normalizePaginatedInsightsResponse(response);
-            let allInsights = (items || []).filter(x => !x.stack_id); // Exclude stacked items
+        try {
+            const response = await api.getInsightsPaginated(1, 1000, null, '', true); // Large limit to get all
             
-            // Ensure tags are normalized for all insights
-            const insightsWithoutTags = allInsights.filter(insight => !insight.tags || insight.tags.length === 0);
-            if (insightsWithoutTags.length > 0) {
-                console.log('🔄 Loading tags for insights without them...');
-                await loadTagsForInsights(insightsWithoutTags);
+            if (response?.success) {
+                const { items } = normalizePaginatedInsightsResponse(response);
+                allInsights = items || [];
+                console.log('✅ Fetched insights from API:', allInsights.length);
             }
-            
-            // Store globally for filtering
-            window.allInsightsForFiltering = allInsights;
-            console.log('✅ Fetched all insights for filtering:', allInsights.length);
-            
-            return allInsights;
+        } catch (apiError) {
+            console.warn('⚠️ API fetch failed, using existing insights:', apiError);
+            // Fallback: use current insights and add insights from stacks
+            allInsights = [...currentInsights];
         }
         
-        return [];
+        // Add insights from stacks to ensure we have all insights
+        const insightsFromStacks = [];
+        stacks.forEach(stackData => {
+            stackData.cards.forEach(card => {
+                // Check if this insight is already in allInsights
+                const exists = allInsights.some(insight => insight.id === card.id);
+                if (!exists) {
+                    insightsFromStacks.push(card);
+                }
+            });
+        });
+        
+        // Combine all insights
+        allInsights = [...allInsights, ...insightsFromStacks];
+        console.log('📊 Total insights for filtering (including from stacks):', allInsights.length);
+        console.log('📊 Insights from stacks:', insightsFromStacks.length);
+        
+        // Ensure tags are normalized for all insights
+        const insightsWithoutTags = allInsights.filter(insight => !insight.tags || insight.tags.length === 0);
+        if (insightsWithoutTags.length > 0) {
+            console.log('🔄 Loading tags for insights without them...');
+            await loadTagsForInsights(insightsWithoutTags);
+        }
+        
+        // Store globally for filtering
+        window.allInsightsForFiltering = allInsights;
+        console.log('✅ Prepared all insights for filtering:', allInsights.length);
+        
+        return allInsights;
     } catch (error) {
-        console.error('❌ Failed to fetch all insights for filtering:', error);
+        console.error('❌ Failed to prepare all insights for filtering:', error);
         return [];
     }
 }
@@ -2055,28 +2152,53 @@ function getFilteredInsights() {
         })));
     }
     
-    // If we have an active tag filter, we need to work with all insights, not just current page
+    // If we have an active tag filter or search filter, we need to work with all insights, not just current page
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
+    const hasActiveSearchFilter = currentFilters.search && currentFilters.search.trim() !== '';
+    const hasAnyFilter = hasActiveTagFilter || hasActiveSearchFilter;
     let insightsToFilter = currentInsights;
     
-    if (hasActiveTagFilter && window.allInsightsForFiltering) {
-        // Use all insights for filtering when tag filter is active
-        insightsToFilter = window.allInsightsForFiltering;
-        console.log('🔍 Using all insights for tag filtering:', insightsToFilter.length);
+    if (hasAnyFilter) {
+        if (window.allInsightsForFiltering) {
+            // Use all insights for filtering when any filter is active
+            insightsToFilter = window.allInsightsForFiltering;
+            console.log('🔍 Using all insights for filtering:', insightsToFilter.length);
+        } else {
+            // Fallback: combine current insights with insights from stacks
+            console.log('⚠️ allInsightsForFiltering not available, creating fallback...');
+            const insightsFromStacks = [];
+            stacks.forEach(stackData => {
+                stackData.cards.forEach(card => {
+                    // Check if this insight is already in currentInsights
+                    const exists = currentInsights.some(insight => insight.id === card.id);
+                    if (!exists) {
+                        insightsFromStacks.push(card);
+                    }
+                });
+            });
+            
+            insightsToFilter = [...currentInsights, ...insightsFromStacks];
+            console.log('🔍 Using fallback insights for filtering:', insightsToFilter.length);
+            console.log('📊 Current insights:', currentInsights.length);
+            console.log('📊 Insights from stacks:', insightsFromStacks.length);
+        }
     }
     
     let filteredInsights = [...insightsToFilter];
     
-    // Filter out cards that are already in stacks
-    const cardsInStacks = new Set();
-    stacks.forEach(stackData => {
-        stackData.cards.forEach(card => {
-            cardsInStacks.add(card.id);
+    // Only filter out cards that are in stacks when there's NO active filter
+    // When any filtering is active, we want to show insights from stacks too
+    if (!hasAnyFilter) {
+        // Only remove insights that are actually in stacks based on their stack_id field
+        // Don't rely on the stacks Map which might contain stale data
+        filteredInsights = filteredInsights.filter(insight => {
+            // Keep insights that don't have a stack_id (not in any stack)
+            return !insight.stack_id;
         });
-    });
-    
-    filteredInsights = filteredInsights.filter(insight => !cardsInStacks.has(insight.id));
-    console.log('📋 Insights after removing stacked cards:', filteredInsights.length);
+        console.log('📋 Insights after removing stacked cards (no filter):', filteredInsights.length);
+    } else {
+        console.log('📋 Keeping all insights for filtering (including those in stacks):', filteredInsights.length);
+    }
     
     // 1. 排序逻辑（始终应用）
     if (currentFilters.latest === 'latest') {
@@ -2097,7 +2219,36 @@ function getFilteredInsights() {
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
     
-    // 2. 标签筛选
+    // 2. Text search filter (title + metadata)
+    if (currentFilters.search && currentFilters.search.trim() !== '') {
+        const q = currentFilters.search.trim().toLowerCase();
+        console.log('🔍 Applying search filter:', q);
+
+        const matchSearch = (insight) => {
+            // title
+            const title = (insight.title || insight.url || '').toLowerCase();
+
+            // try common metadata-ish fields; if you have `metadata` object, this will catch it,
+            // else we fall back to description/summary etc.
+            let metaBlob = '';
+            const metaCandidates = [
+                'metadata', 'meta', 'description', 'summary', 'site_name', 'author'
+            ];
+            metaCandidates.forEach((k) => {
+                const v = insight[k];
+                if (!v) return;
+                metaBlob += ' ' + (typeof v === 'object' ? JSON.stringify(v) : String(v));
+            });
+            metaBlob = metaBlob.toLowerCase();
+
+            return title.includes(q) || metaBlob.includes(q);
+        };
+
+        filteredInsights = filteredInsights.filter(matchSearch);
+        console.log('📋 Insights after search filtering:', filteredInsights.length);
+    }
+    
+    // 3. 标签筛选
     if (currentFilters.tags && currentFilters.tags !== 'all') {
         console.log('🏷️ Applying tag filter:', currentFilters.tags);
         
@@ -2218,7 +2369,16 @@ async function deleteInsight(id) {
         }
         
         clearPageCache(); // 清除缓存，因为数据已变化
-        await loadUserInsightsWithPagination();
+        
+        // Handle refresh based on current view mode
+        if (viewMode === 'stack' && activeStackId) {
+            // We're in stack view - refresh the stack view
+            console.log('🔄 Deleting insight in stack view, refreshing stack:', activeStackId);
+            await renderStackView(activeStackId);
+        } else {
+            // We're in home view - refresh normally
+            await loadUserInsightsWithPagination();
+        }
         
         // Also save to localStorage backup
         saveInsightsToLocalStorage({ force: true });
@@ -2371,6 +2531,27 @@ function bindEvents() {
                     url: url
                 };
                 
+                // If we're in stack view mode, add the insight to the current stack
+                console.log('🔍 DEBUG: Checking stack assignment conditions:');
+                console.log('🔍 DEBUG: viewMode:', viewMode);
+                console.log('🔍 DEBUG: activeStackId:', activeStackId);
+                console.log('🔍 DEBUG: viewMode === "stack":', viewMode === 'stack');
+                console.log('🔍 DEBUG: activeStackId truthy:', !!activeStackId);
+                console.log('🔍 DEBUG: Both conditions met:', viewMode === 'stack' && activeStackId);
+                console.log('🔍 DEBUG: insightData before assignment:', JSON.stringify(insightData, null, 2));
+                
+                if (viewMode === 'stack' && activeStackId) {
+                    // Convert stack_id to integer since backend expects integer type
+                    insightData.stack_id = parseInt(activeStackId);
+                    console.log('🔄 Adding insight to current stack:', activeStackId);
+                    console.log('🔄 stack_id value:', insightData.stack_id);
+                    console.log('🔄 Type of stack_id:', typeof insightData.stack_id);
+                    console.log('🔄 insightData after assignment:', JSON.stringify(insightData, null, 2));
+                } else {
+                    console.log('⚠️ Stack assignment skipped - conditions not met');
+                    console.log('⚠️ Reason: viewMode !== "stack" or activeStackId is falsy');
+                }
+                
                 // 获取自定义字段
                 const customTitle = document.getElementById('customTitle')?.value?.trim();
                 const customThought = document.getElementById('customThought')?.value?.trim();
@@ -2380,14 +2561,13 @@ function bindEvents() {
                     const tagIds = selectedTags.map(tag => tag.id);
                     if (tagIds.length > 0) {
                         insightData.tag_ids = tagIds;
+                        console.log('🔍 DEBUG: Using selected tags:', tagIds);
                     }
                 } else {
-                    // If no tags selected, assign default "Archive" tag
-                    // First, try to find the Archive tag ID from available tags
-                    const archiveTag = await findOrCreateArchiveTag();
-                    if (archiveTag) {
-                        insightData.tag_ids = [archiveTag.id];
-                    }
+                    // TEMPORARY: Use hardcoded Archive tag ID to test
+                    console.log('🔍 DEBUG: No tags selected, using hardcoded Archive tag ID...');
+                    insightData.tag_ids = ["90c083ca-6a03-4431-8469-d541a7e59998"];
+                    console.log('🔍 DEBUG: Set hardcoded tag_ids to:', insightData.tag_ids);
                 }
                 
                 // 添加自定义字段（如果用户输入了的话）
@@ -2395,7 +2575,18 @@ function bindEvents() {
                 if (customThought) insightData.thought = customThought;
                 
                 // 使用正确的API端点创建insight
+                console.log('📝 Creating insight with data:', insightData);
+                console.log('🔍 DEBUG: Full insightData object:', JSON.stringify(insightData, null, 2));
+                console.log('🔍 DEBUG: stack_id value:', insightData.stack_id);
+                console.log('🔍 DEBUG: stack_id type:', typeof insightData.stack_id);
+                console.log('🔍 DEBUG: activeStackId:', activeStackId);
+                console.log('🔍 DEBUG: viewMode:', viewMode);
+                console.log('🔍 DEBUG: Final data being sent to API:', JSON.stringify(insightData, null, 2));
+                
+                // Use the correct API endpoint /api/v1/insights/ which supports stack_id
                 const result = await api.createInsight(insightData);
+                console.log('✅ Insight creation result:', result);
+                console.log('🔍 DEBUG: Result data:', JSON.stringify(result, null, 2));
                 
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
@@ -2416,7 +2607,25 @@ function bindEvents() {
                         }
                         
                         clearPageCache(); // 清除缓存，因为数据已变化
-                        await loadUserInsightsWithPagination();
+                        
+                        // Check if we're in stack view mode
+                        if (viewMode === 'stack' && activeStackId) {
+                            console.log('🔄 In stack view mode, refreshing current stack');
+                            
+                            try {
+                                // Simply refresh the current stack view to show the new insight
+                                console.log('🎯 Refreshing stack view for stack:', activeStackId);
+                                await renderStackView(activeStackId);
+                                console.log('✅ Stack view refreshed with new insight');
+                            } catch (error) {
+                                console.error('❌ Failed to reload stack data:', error);
+                                // Fallback: just re-render the current stack view
+                                renderStackView(activeStackId);
+                            }
+                        } else {
+                            // Normal home view reload
+                            await loadUserInsightsWithPagination();
+                        }
                         
                         // Also save to localStorage backup
                         saveInsightsToLocalStorage({ force: true });
@@ -2424,7 +2633,7 @@ function bindEvents() {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
                     }
-                }, 1000);
+                }, 2000);
                 
             } catch (error) {
                 console.error('❌ 添加内容失败:', error);
@@ -2438,9 +2647,11 @@ function bindEvents() {
                     } else if (error.message.includes('422')) {
                         errorMessage = 'Data validation failed. Please check your input and try again.';
                         console.error('🔍 422错误详情 - 错误信息:', error.message);
+                        console.error('🔍 422错误详情 - 完整错误对象:', error);
                         console.error('🔍 422错误详情 - URL:', url);
-                        console.error('🔍 422错误详情 - 标签数量:', selectedTags ? selectedTags.length : 0);
+                        console.error('🔍 422错误详情 - 标签数量:', tag_ids ? tag_ids.length : 0);
                         console.error('🔍 422错误详情 - 标签ID数组:', insightData.tag_ids);
+                        console.error('🔍 422错误详情 - 完整insightData:', insightData);
                     } else if (error.message.includes('500') || error.message.includes('server error')) {
                         errorMessage = 'Server error. Please try again later.';
                     } else {
@@ -3158,6 +3369,64 @@ async function createNewTag() {
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initPage);
 
+// ===== SEARCH FUNCTIONALITY =====
+
+// Helper to apply search and re-render both views consistently
+async function applySearch(query) {
+    currentFilters.search = (query || '').trim();
+    // keep inputs in sync across bars
+    const homeInput = document.getElementById('searchInput');
+    const stackInput = document.getElementById('stackSearchInput');
+    if (homeInput && homeInput.value !== currentFilters.search) homeInput.value = currentFilters.search;
+    if (stackInput && stackInput.value !== currentFilters.search) stackInput.value = currentFilters.search;
+
+    // If search is active, fetch all insights for filtering (similar to tag filtering)
+    if (currentFilters.search.trim() !== '') {
+        try {
+            console.log('🔍 Search active, fetching all insights for filtering...');
+            await fetchAllInsightsForFiltering();
+        } catch (error) {
+            console.warn('⚠️ Failed to fetch all insights for search, using fallback:', error);
+        }
+    } else {
+        // Clear the global insights when search is cleared
+        window.allInsightsForFiltering = null;
+    }
+
+    renderInsights();         // re-renders lists with new filter
+    updatePaginationUI?.();   // update pagination counts
+}
+
+// Initialize search functionality
+function initSearch() {
+    // Wire home bar
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applySearch(searchInput.value);
+        });
+    }
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => applySearch(searchInput?.value || ''));
+    }
+
+    // Wire stack bar
+    const stackSearchInput = document.getElementById('stackSearchInput');
+    const stackSearchBtn = document.getElementById('stackSearchBtn');
+    if (stackSearchInput) {
+        stackSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applySearch(stackSearchInput.value);
+        });
+    }
+    if (stackSearchBtn) {
+        stackSearchBtn.addEventListener('click', () => applySearch(stackSearchInput?.value || ''));
+    }
+
+    // Optional: keep inputs populated on first render, e.g. after restoring state
+    applySearch(currentFilters.search || '');
+}
+
 // ===== STACK VIEW FUNCTIONALITY =====
 
 // Toggle stack view class on root element
@@ -3226,28 +3495,102 @@ async function renderStackView(stackId) {
     if (!stack) {
         // Try to fetch from API if not in memory
         try {
-            const response = await api.getUserStacksWithInsights(currentUser?.id);
-            if (response.success && response.data) {
-                // Process and cache the stacks
-                response.data.forEach(stackData => {
-                    const stackId = String(stackData.id);
-                    const stackInsights = stackData.insights || [];
-                    stacks.set(stackId, {
-                        id: stackId,
+            // First get the stack metadata
+            const stacksResponse = await api.getUserStacks(currentUser?.id);
+            if (stacksResponse.success && stacksResponse.data) {
+                const stackData = stacksResponse.data.find(s => String(s.id) === String(stackId));
+                if (stackData) {
+                    // Then get the insights for this specific stack
+                    const insightsResponse = await api.getStackItems(stackId);
+                    console.log(`🔍 Fetching insights for stack ${stackId}:`, insightsResponse);
+                    const stackInsights = insightsResponse.success && insightsResponse.data ? 
+                        (insightsResponse.data.items || insightsResponse.data.insights || insightsResponse.data) : [];
+                    console.log(`📦 Found ${stackInsights.length} insights for stack ${stackId}:`, stackInsights.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
+                    
+                    // TEMPORARY WORKAROUND: If backend filtering isn't working, filter on frontend
+                    let validInsights;
+                    if (stackInsights.length > 0 && stackInsights.every(insight => insight.stack_id === null)) {
+                        console.warn('⚠️ Backend filtering not working - all insights have stack_id null. Using frontend fallback...');
+                        // Fallback: Get all insights and filter by stack_id on frontend
+                        const allInsightsResponse = await api.getInsightsPaginated(1, 100, null, '', true);
+                        if (allInsightsResponse.success && allInsightsResponse.data) {
+                            const allInsights = allInsightsResponse.data.items || allInsightsResponse.data.insights || [];
+                            validInsights = allInsights.filter(insight => parseInt(insight.stack_id) === parseInt(stackId));
+                            console.log(`📦 Frontend fallback: Found ${validInsights.length} insights with stack_id ${stackId}`);
+                        } else {
+                            validInsights = [];
+                        }
+                    } else {
+                        // Normal validation
+                        validInsights = stackInsights.filter(insight => {
+                            const belongsToStack = insight.stack_id === stackId;
+                            if (!belongsToStack) {
+                                console.warn(`⚠️ Insight ${insight.id} has stack_id ${insight.stack_id} but expected ${stackId}`);
+                            }
+                            return belongsToStack;
+                        });
+                    }
+                    console.log(`📦 Valid insights for stack ${stackId}: ${validInsights.length} (filtered from ${stackInsights.length})`);
+                    
+                    stack = {
+                        id: String(stackId),
                         name: stackData.name,
                         description: stackData.description,
-                        cards: stackInsights,
+                        cards: validInsights, // Use validated insights
                         createdAt: stackData.created_at,
                         updatedAt: stackData.updated_at,
                         modifiedAt: new Date().toISOString()
-                    });
-                });
-                stack = stacks.get(stackId);
+                    };
+                    stacks.set(stackId, stack);
+                }
             }
         } catch (error) {
             console.error('❌ Failed to fetch stack data:', error);
             showErrorMessage('Failed to load stack data');
             return;
+        }
+    } else {
+        // If stack exists in memory, refresh its insights
+        try {
+            const insightsResponse = await api.getStackItems(stackId);
+            console.log(`🔍 Refreshing insights for stack ${stackId}:`, insightsResponse);
+            const stackInsights = insightsResponse.success && insightsResponse.data ? 
+                (insightsResponse.data.items || insightsResponse.data.insights || insightsResponse.data) : [];
+            console.log(`📦 Refreshed stack ${stackId} with ${stackInsights.length} insights:`, stackInsights.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
+            
+            // TEMPORARY WORKAROUND: If backend filtering isn't working, filter on frontend
+            let validInsights;
+            if (stackInsights.length > 0 && stackInsights.every(insight => insight.stack_id === null)) {
+                console.warn('⚠️ Backend filtering not working - all insights have stack_id null. Using frontend fallback...');
+                // Fallback: Get all insights and filter by stack_id on frontend
+                const allInsightsResponse = await api.getInsightsPaginated(1, 100, null, '', true);
+                if (allInsightsResponse.success && allInsightsResponse.data) {
+                    const allInsights = allInsightsResponse.data.items || allInsightsResponse.data.insights || [];
+                    validInsights = allInsights.filter(insight => parseInt(insight.stack_id) === parseInt(stackId));
+                    console.log(`📦 Frontend fallback: Found ${validInsights.length} insights with stack_id ${stackId}`);
+                } else {
+                    validInsights = [];
+                }
+            } else {
+                // Normal validation
+                validInsights = stackInsights.filter(insight => {
+                    // Convert both to numbers for comparison since stack_id is stored as integer
+                    const insightStackId = parseInt(insight.stack_id);
+                    const expectedStackId = parseInt(stackId);
+                    const belongsToStack = insightStackId === expectedStackId;
+                    if (!belongsToStack) {
+                        console.warn(`⚠️ Insight ${insight.id} has stack_id ${insight.stack_id} (${typeof insight.stack_id}) but expected ${stackId} (${typeof stackId})`);
+                    }
+                    return belongsToStack;
+                });
+            }
+            console.log(`📦 Valid refreshed insights for stack ${stackId}: ${validInsights.length} (filtered from ${stackInsights.length})`);
+            
+            // Update the stack with validated insights
+            stack.cards = validInsights;
+            stacks.set(stackId, stack);
+        } catch (error) {
+            console.error('❌ Failed to refresh stack insights:', error);
         }
     }
     
@@ -3318,6 +3661,7 @@ function updateStackContextBar(stack) {
 // Render insights for stack view
 function renderStackInsights(stack) {
     console.log('🎯 renderStackInsights called with stack:', stack);
+    console.log('🎯 Current viewMode:', viewMode, 'activeStackId:', activeStackId);
     
     // Guard clause: only render stack insights when in stack view mode
     if (viewMode !== 'stack') {
@@ -3337,6 +3681,8 @@ function renderStackInsights(stack) {
     if (!stack.cards || stack.cards.length === 0) {
         console.log('📭 No cards in stack, rendering empty state');
         renderEmptyStackState(stack);
+        console.log('🔍 After renderEmptyStackState, contentCards children:', contentCards.children.length);
+        console.log('🔍 Template card exists:', !!contentCards.querySelector('.template-card'));
         return;
     }
     
@@ -3344,7 +3690,7 @@ function renderStackInsights(stack) {
     
     // Render stack insights using existing card creation logic
     stack.cards.forEach((insight, index) => {
-        console.log(`📄 Creating card ${index + 1} for insight:`, insight.title);
+        console.log(`📄 Creating card ${index + 1} for insight:`, insight.title, 'ID:', insight.id);
         const card = createInsightCard(insight);
         if (card) {
             console.log(`✅ Card created successfully, appending to DOM`);
@@ -3354,7 +3700,15 @@ function renderStackInsights(stack) {
         }
     });
     
+    console.log(`🔍 After rendering, contentCards has ${contentCards.children.length} children`);
+    console.log(`🔍 ContentCards HTML:`, contentCards.innerHTML.substring(0, 200) + '...');
+    
     console.log(`📊 Total cards in DOM after rendering:`, contentCards.querySelectorAll('.content-card').length);
+    
+    // Add template card if in edit mode
+    if (document.body.classList.contains('edit-mode')) {
+        addTemplateCard();
+    }
     
     // Re-setup event delegation for the newly rendered cards
     console.log('🔧 Re-setting up event delegation');
@@ -3379,13 +3733,13 @@ function renderEmptyStackState(stack) {
             <h3>No insights yet</h3>
             <p>This stack is empty. Add some insights to get started!</p>
             <div class="empty-stack-actions">
-                <button class="btn-primary" onclick="openAddContentModal()">
+                <button class="btn-primary" id="emptyStackAddInsightBtn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     Add Insight
                 </button>
-                <button class="btn-secondary" onclick="navigateToHome()">
+                <button class="btn-secondary" id="emptyStackBackToHomeBtn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -3395,7 +3749,42 @@ function renderEmptyStackState(stack) {
         </div>
     `;
     
+    // Add event listeners for the buttons
+    const addInsightBtn = emptyState.querySelector('#emptyStackAddInsightBtn');
+    const backToHomeBtn = emptyState.querySelector('#emptyStackBackToHomeBtn');
+    
+    if (addInsightBtn) {
+        addInsightBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🖱️ Empty stack add insight button clicked');
+            showAddContentModal();
+        });
+    }
+    
+    if (backToHomeBtn) {
+        backToHomeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🖱️ Empty stack back to home button clicked');
+            navigateToHome();
+        });
+    }
+    
     contentCards.appendChild(emptyState);
+    console.log('🔍 After appending emptyState, contentCards children:', contentCards.children.length);
+    console.log('🔍 Template card exists after emptyState:', !!contentCards.querySelector('.template-card'));
+    
+    // Disable edit mode when showing empty stack state
+    if (document.body.classList.contains('edit-mode')) {
+        console.log('📭 Empty stack detected, disabling edit mode');
+        document.body.classList.remove('edit-mode');
+        isEditMode = false; // Update the edit mode state variable
+        updateEditModeState();
+    }
+    
+    console.log('🔍 After disabling edit mode, contentCards children:', contentCards.children.length);
+    console.log('🔍 Template card exists after edit mode disabled:', !!contentCards.querySelector('.template-card'));
 }
 
 // Render home view (existing functionality)
@@ -3468,9 +3857,21 @@ function enhanceStackActions() {
     const actions = document.querySelector('.stack-actions');
     if (!actions) return;
 
-    actions.innerHTML = `
-        <button class="stack-action-btn primary" id="stackEditModeBtn" aria-label="Toggle edit mode">Edit</button>
-    `;
+    // Check if current stack is empty
+    const currentStack = stacks.get(activeStackId);
+    const isEmpty = !currentStack || !currentStack.cards || currentStack.cards.length === 0;
+    
+    if (isEmpty) {
+        // Show Add button for empty stacks
+        actions.innerHTML = `
+            <button class="stack-action-btn primary" id="stackAddBtn" aria-label="Add content">Add</button>
+        `;
+    } else {
+        // Show Edit button for stacks with content
+        actions.innerHTML = `
+            <button class="stack-action-btn primary" id="stackEditModeBtn" aria-label="Toggle edit mode">Edit</button>
+        `;
+    }
 }
 
 // Bind enhanced stack actions
@@ -3481,6 +3882,14 @@ function bindEnhancedStackActions() {
             if (typeof toggleEditMode === 'function') {
                 toggleEditMode();
             }
+        };
+    }
+    
+    const addBtn = document.getElementById('stackAddBtn');
+    if (addBtn) {
+        addBtn.onclick = () => {
+            console.log('🖱️ Stack Add button clicked');
+            showAddContentModal();
         };
     }
 
@@ -3761,6 +4170,665 @@ window.editUserTag = editUserTag;
 window.updateUserTag = updateUserTag;
 window.deleteUserTag = deleteUserTag;
 window.editTagInManagement = editTagInManagement;
+
+// 测试函数 - 可以在控制台调用
+window.testStackIdFunctionality = async function() {
+    console.log('🧪 Starting stack_id functionality test...');
+    
+    // 检查当前状态
+    console.log('🔍 Current viewMode:', viewMode);
+    console.log('🔍 Current activeStackId:', activeStackId);
+    console.log('🔍 Current stacks:', Array.from(stacks.entries()));
+    
+    // 测试数据
+    const testData = {
+        url: 'https://example.com/test-stack-insight',
+        title: 'Test Stack Insight',
+        thought: 'This is a test insight for stack functionality',
+        stack_id: isNaN(activeStackId) ? activeStackId : parseInt(activeStackId)
+    };
+    
+    console.log('🧪 Test data:', testData);
+    console.log('🧪 Test data stack_id type:', typeof testData.stack_id);
+    
+    try {
+        // 测试API调用
+        console.log('🧪 Testing API call...');
+        const result = await api.createInsight(testData);
+        console.log('🧪 API result:', result);
+        
+        // 检查结果
+        if (result.success && result.data) {
+            console.log('✅ Insight created successfully');
+            console.log('🔍 Created insight data:', result.data);
+            console.log('🔍 Created insight stack_id:', result.data.stack_id);
+            console.log('🔍 Created insight stack_id type:', typeof result.data.stack_id);
+        } else {
+            console.error('❌ Insight creation failed:', result);
+        }
+        
+    } catch (error) {
+        console.error('❌ Test failed with error:', error);
+    }
+};
+
+// 测试函数 - 检查数据库中的stack_id
+window.testDatabaseStackId = async function() {
+    console.log('🧪 Testing database stack_id storage...');
+    
+    try {
+        // 获取最新的insights
+        const response = await api.getInsightsPaginated(1, 10, null, '', true);
+        console.log('🧪 Latest insights from API:', response);
+        
+        if (response.success && response.data) {
+            const insights = response.data.items || response.data.insights || [];
+            console.log('🧪 Found insights:', insights.length);
+            
+            insights.forEach((insight, index) => {
+                console.log(`🧪 Insight ${index + 1}:`, {
+                    id: insight.id,
+                    title: insight.title,
+                    stack_id: insight.stack_id,
+                    stack_id_type: typeof insight.stack_id,
+                    url: insight.url
+                });
+            });
+            
+            // 检查是否有任何 insights with stack_id
+            const insightsWithStackId = insights.filter(i => i.stack_id);
+            console.log('🧪 Insights with stack_id:', insightsWithStackId.length);
+            console.log('🧪 Insights with stack_id details:', insightsWithStackId);
+        }
+        
+    } catch (error) {
+        console.error('❌ Database test failed:', error);
+    }
+};
+
+// 测试函数 - 检查特定stack的内容
+window.testStackContent = async function(stackId = null) {
+    const targetStackId = stackId || activeStackId;
+    console.log('🧪 Testing stack content for stack:', targetStackId);
+    
+    if (!targetStackId) {
+        console.error('❌ No stack ID provided and no active stack');
+        return;
+    }
+    
+    try {
+        // 获取stack数据
+        const stackResponse = await api.getUserStacksWithInsights(currentUser?.id);
+        console.log('🧪 Stack API response:', stackResponse);
+        
+        if (stackResponse.success && stackResponse.data) {
+            const targetStack = stackResponse.data.find(s => String(s.id) === String(targetStackId));
+            console.log('🧪 Target stack:', targetStack);
+            
+            if (targetStack) {
+                console.log('🧪 Stack insights count:', targetStack.insights?.length || 0);
+                console.log('🧪 Stack insights:', targetStack.insights || []);
+                
+                // 检查每个insight的stack_id
+                if (targetStack.insights) {
+                    targetStack.insights.forEach((insight, index) => {
+                        console.log(`🧪 Stack insight ${index + 1}:`, {
+                            id: insight.id,
+                            title: insight.title,
+                            stack_id: insight.stack_id,
+                            stack_id_type: typeof insight.stack_id,
+                            matches_stack: insight.stack_id === targetStackId
+                        });
+                    });
+                }
+            } else {
+                console.error('❌ Stack not found:', targetStackId);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Stack content test failed:', error);
+    }
+};
+
+// 测试函数 - 调用后端调试端点
+// 调试函数 - 检查后端数据库状态
+window.debugBackendDatabase = async function() {
+    console.log('🔍 Checking backend database state...');
+    
+    try {
+        const response = await fetch('https://quest-api-edz1.onrender.com/api/v1/insights/debug/stack-ids', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${api.authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📡 Backend debug response:', data);
+            
+            if (data.success && data.data) {
+                console.log('📦 Recent insights from database:');
+                data.data.insights.forEach(insight => {
+                    console.log(`  - ${insight.id}: "${insight.title}" (stack_id: ${insight.stack_id}, type: ${typeof insight.stack_id})`);
+                });
+                
+                console.log('📦 All stacks from database:');
+                data.data.stacks.forEach(stack => {
+                    console.log(`  - Stack ${stack.id}: "${stack.name}"`);
+                });
+            }
+            
+            return data;
+        } else {
+            console.error('❌ Backend debug failed:', response.status, response.statusText);
+            return null;
+        }
+    } catch (error) {
+        console.error('❌ Backend debug error:', error);
+        return null;
+    }
+};
+
+window.testBackendDebug = async function() {
+    console.log('🧪 Testing backend debug endpoint...');
+    
+    try {
+        const response = await api.request('/api/v1/insights/debug/stack-ids');
+        console.log('🧪 Backend debug response:', response);
+        
+        if (response.success && response.data) {
+            console.log('🧪 Recent insights from backend:', response.data.insights);
+            console.log('🧪 All stacks from backend:', response.data.stacks);
+            
+            // 分析stack_id状态
+            const insights = response.data.insights || [];
+            const stacks = response.data.stacks || [];
+            
+            console.log('🧪 Analysis:');
+            console.log(`  - Total insights: ${insights.length}`);
+            console.log(`  - Total stacks: ${stacks.length}`);
+            
+            const insightsWithStackId = insights.filter(i => i.stack_id);
+            console.log(`  - Insights with stack_id: ${insightsWithStackId.length}`);
+            
+            if (insightsWithStackId.length > 0) {
+                console.log('🧪 Insights with stack_id details:', insightsWithStackId);
+            } else {
+                console.log('🧪 No insights have stack_id - this is the problem!');
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Backend debug test failed:', error);
+    }
+};
+
+// 调试函数 - 检查数据库中的stack_id状态
+window.debugStackInsights = async function(stackId) {
+    console.log(`🔍 Debugging stack insights for stack ${stackId}...`);
+    
+    try {
+        // 1. 检查API返回的数据
+        const insightsResponse = await api.getStackItems(stackId);
+        console.log('📡 Raw API response:', insightsResponse);
+        
+        if (insightsResponse.success && insightsResponse.data) {
+            const stackInsights = insightsResponse.data.items || insightsResponse.data.insights || insightsResponse.data;
+            console.log(`📦 Found ${stackInsights.length} insights from API:`, stackInsights);
+            
+            // 2. 检查每个insight的stack_id
+            stackInsights.forEach((insight, index) => {
+                console.log(`🔍 Insight ${index + 1}:`, {
+                    id: insight.id,
+                    title: insight.title,
+                    stack_id: insight.stack_id,
+                    stack_id_type: typeof insight.stack_id,
+                    expected_stack_id: stackId,
+                    expected_type: typeof stackId,
+                    matches: parseInt(insight.stack_id) === parseInt(stackId),
+                    strict_matches: insight.stack_id === stackId
+                });
+            });
+            
+            // 3. 检查验证逻辑
+                const validInsights = stackInsights.filter(insight => {
+                const belongsToStack = parseInt(insight.stack_id) === parseInt(stackId);
+                console.log(`🔍 Validation for ${insight.id}: stack_id=${insight.stack_id} (${typeof insight.stack_id}), expected=${stackId} (${typeof stackId}), valid=${belongsToStack}`);
+                return belongsToStack;
+            });
+            
+            console.log(`📊 Validation results: ${validInsights.length} valid out of ${stackInsights.length} total`);
+            
+            return {
+                total: stackInsights.length,
+                valid: validInsights.length,
+                insights: stackInsights,
+                validInsights: validInsights
+            };
+        } else {
+            console.error('❌ API response failed:', insightsResponse);
+            return null;
+        }
+    } catch (error) {
+        console.error('❌ Debug failed:', error);
+        return null;
+    }
+};
+
+// 调试函数 - 检查所有insights的stack_id
+window.debugAllInsights = async function() {
+    console.log('🔍 Debugging all insights...');
+    
+    try {
+        const response = await api.getInsightsPaginated(1, 50, null, '', true);
+        console.log('📡 All insights API response:', response);
+        
+        if (response.success && response.data) {
+            const insights = response.data.items || response.data.insights || [];
+            console.log(`📦 Found ${insights.length} total insights`);
+            
+            // 按stack_id分组
+            const byStackId = {};
+            insights.forEach(insight => {
+                const stackId = insight.stack_id;
+                if (!byStackId[stackId]) {
+                    byStackId[stackId] = [];
+                }
+                byStackId[stackId].push(insight);
+            });
+            
+            console.log('📊 Insights by stack_id:', byStackId);
+            
+            // 显示有stack_id的insights
+            Object.keys(byStackId).forEach(stackId => {
+                if (stackId !== 'null' && stackId !== null) {
+                    console.log(`📦 Stack ${stackId} has ${byStackId[stackId].length} insights:`, 
+                        byStackId[stackId].map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
+                }
+            });
+            
+            return byStackId;
+        }
+    } catch (error) {
+        console.error('❌ Debug all insights failed:', error);
+        return null;
+    }
+};
+
+// 测试函数 - 创建insight并立即验证stack_id
+window.testCreateAndVerify = async function() {
+    console.log('🧪 Testing create insight and verify stack_id...');
+    
+    if (!activeStackId) {
+        console.error('❌ No active stack. Please navigate to a stack first.');
+        return;
+    }
+    
+    const testData = {
+        url: `https://example.com/test-${Date.now()}`,
+        title: `Test Insight ${Date.now()}`,
+        thought: 'This is a test insight to verify stack_id storage',
+        stack_id: parseInt(activeStackId)  // Convert to integer for backend
+    };
+    
+    console.log('🧪 Creating insight with data:', testData);
+    console.log('🧪 Active stack ID type:', typeof activeStackId);
+    console.log('🧪 Active stack ID value:', activeStackId);
+    
+    try {
+        // 创建insight
+        const result = await api.createInsight(testData);
+        console.log('🧪 Creation result:', result);
+        
+        if (result.success && result.data) {
+            console.log('✅ Insight created successfully');
+            console.log('🔍 Created insight stack_id:', result.data.stack_id);
+            console.log('🔍 Created insight stack_id type:', typeof result.data.stack_id);
+            console.log('🔍 Expected stack_id:', activeStackId);
+            console.log('🔍 Expected stack_id type:', typeof activeStackId);
+            console.log('🔍 Stack_id matches:', result.data.stack_id === activeStackId);
+            console.log('🔍 Stack_id loose match:', result.data.stack_id == activeStackId);
+            
+            // 立即查询数据库验证
+            console.log('🧪 Verifying in database...');
+            const verifyResponse = await api.getInsightsPaginated(1, 5, null, '', true);
+            
+            if (verifyResponse.success && verifyResponse.data) {
+                const insights = verifyResponse.data.items || verifyResponse.data.insights || [];
+                const createdInsight = insights.find(i => i.id === result.data.id);
+                
+                if (createdInsight) {
+                    console.log('🔍 Database verification:');
+                    console.log('  - Insight found in database:', !!createdInsight);
+                    console.log('  - Database stack_id:', createdInsight.stack_id);
+                    console.log('  - Database stack_id type:', typeof createdInsight.stack_id);
+                    console.log('  - Expected stack_id:', activeStackId);
+                    console.log('  - Expected stack_id type:', typeof activeStackId);
+                    console.log('  - Stack_id strict match:', createdInsight.stack_id === activeStackId);
+                    console.log('  - Stack_id loose match:', createdInsight.stack_id == activeStackId);
+                    
+                    // Test if we can find it in stack items
+                    console.log('🧪 Testing stack items API...');
+                    const stackItemsResponse = await api.getStackItems(activeStackId);
+                    console.log('🧪 Stack items response:', stackItemsResponse);
+                    
+                    if (stackItemsResponse.success && stackItemsResponse.data) {
+                        const stackItems = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
+                        console.log('🧪 Stack items found:', stackItems.length);
+                        const foundInStack = stackItems.find(item => item.id === result.data.id);
+                        console.log('🧪 Found in stack items:', !!foundInStack);
+                        if (foundInStack) {
+                            console.log('🧪 Stack item stack_id:', foundInStack.stack_id);
+                            console.log('🧪 Stack item stack_id type:', typeof foundInStack.stack_id);
+                        }
+                    }
+                } else {
+                    console.error('❌ Created insight not found in database');
+                }
+            }
+        } else {
+            console.error('❌ Insight creation failed:', result);
+        }
+        
+    } catch (error) {
+        console.error('❌ Test failed:', error);
+    }
+};
+
+// 测试函数 - 直接测试API端点
+window.testApiDirectly = async function() {
+    console.log('🧪 Testing API endpoints directly...');
+    
+    if (!activeStackId) {
+        console.error('❌ No active stack. Please navigate to a stack first.');
+        return;
+    }
+    
+    console.log('🧪 Current stack ID:', activeStackId);
+    console.log('🧪 Current stack ID type:', typeof activeStackId);
+    
+    // Test 1: Check what the stack items API returns
+    console.log('🧪 Test 1: Checking stack items API...');
+    try {
+        const stackItemsResponse = await api.getStackItems(activeStackId);
+        console.log('🧪 Stack items response:', stackItemsResponse);
+        
+        if (stackItemsResponse.success && stackItemsResponse.data) {
+            const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
+            console.log('🧪 Current stack items:', items.length);
+            if (items.length > 0) {
+                console.log('🧪 First item stack_id:', items[0].stack_id);
+                console.log('🧪 First item stack_id type:', typeof items[0].stack_id);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Stack items API error:', error);
+    }
+    
+    // Test 2: Create insight with different stack_id formats
+    console.log('🧪 Test 2: Testing different stack_id formats...');
+    const testCases = [
+        { name: 'Integer', stack_id: parseInt(activeStackId) },
+        { name: 'String', stack_id: activeStackId },
+        { name: 'Null', stack_id: null }
+    ].filter(test => test.stack_id !== null);
+    
+    for (const testCase of testCases) {
+        console.log(`🧪 Testing ${testCase.name}:`, testCase.stack_id);
+        
+        const testData = {
+            url: `https://example.com/test-${testCase.name}-${Date.now()}`,
+            title: `Test ${testCase.name} ${Date.now()}`,
+            thought: `Testing ${testCase.name} format`,
+            stack_id: testCase.stack_id
+        };
+        
+        try {
+            const result = await api.createInsight(testData);
+            console.log(`🧪 ${testCase.name} result:`, result);
+            
+            if (result.success && result.data) {
+                console.log(`✅ ${testCase.name} created successfully`);
+                console.log(`🔍 ${testCase.name} returned stack_id:`, result.data.stack_id);
+                console.log(`🔍 ${testCase.name} returned stack_id type:`, typeof result.data.stack_id);
+                
+                // Immediately check if it appears in stack items
+                const stackItemsResponse = await api.getStackItems(activeStackId);
+                if (stackItemsResponse.success && stackItemsResponse.data) {
+                    const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
+                    const found = items.find(item => item.id === result.data.id);
+                    console.log(`🔍 ${testCase.name} found in stack items:`, !!found);
+                    if (found) {
+                        console.log(`🔍 ${testCase.name} stack_id in items:`, found.stack_id);
+                    }
+                }
+            } else {
+                console.error(`❌ ${testCase.name} failed:`, result);
+            }
+        } catch (error) {
+            console.error(`❌ ${testCase.name} error:`, error);
+        }
+        
+        // Wait a bit between tests
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+};
+
+// 测试函数 - 检查后端API响应格式
+window.testBackendResponse = async function() {
+    console.log('🧪 Testing backend API response format...');
+    
+    if (!activeStackId) {
+        console.error('❌ No active stack. Please navigate to a stack first.');
+        return;
+    }
+    
+    // Test creating an insight and examine the full response
+    const testData = {
+        url: `https://example.com/backend-test-${Date.now()}`,
+        title: `Backend Test ${Date.now()}`,
+        thought: 'Testing backend response format',
+        stack_id: parseInt(activeStackId)
+    };
+    
+    console.log('🧪 Sending data to backend:', testData);
+    
+    try {
+        // Make the API call and capture the full response
+        const response = await fetch(`${API_CONFIG.API_BASE_URL}${API_CONFIG.INSIGHTS.CREATE}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${api.authToken}`
+            },
+            body: JSON.stringify(testData)
+        });
+        
+        console.log('🧪 Raw response status:', response.status);
+        console.log('🧪 Raw response headers:', Object.fromEntries(response.headers.entries()));
+        
+        const responseText = await response.text();
+        console.log('🧪 Raw response text:', responseText);
+        
+        let responseData;
+        try {
+            responseData = JSON.parse(responseText);
+            console.log('🧪 Parsed response data:', responseData);
+        } catch (e) {
+            console.error('❌ Failed to parse response as JSON:', e);
+            return;
+        }
+        
+        if (responseData.success && responseData.data) {
+            console.log('✅ Insight created via direct API call');
+            console.log('🔍 Created insight:', responseData.data);
+            console.log('🔍 Stack_id in response:', responseData.data.stack_id);
+            console.log('🔍 Stack_id type in response:', typeof responseData.data.stack_id);
+            
+            // Now test the stack items endpoint
+            console.log('🧪 Testing stack items endpoint...');
+            const stackItemsUrl = `${API_CONFIG.API_BASE_URL}${API_CONFIG.INSIGHTS.LIST}?stack_id=${activeStackId}`;
+            console.log('🧪 Stack items URL:', stackItemsUrl);
+            
+            const stackResponse = await fetch(stackItemsUrl, {
+                headers: {
+                    'Authorization': `Bearer ${api.authToken}`
+                }
+            });
+            
+            const stackResponseText = await stackResponse.text();
+            console.log('🧪 Stack items raw response:', stackResponseText);
+            
+            try {
+                const stackResponseData = JSON.parse(stackResponseText);
+                console.log('🧪 Stack items parsed response:', stackResponseData);
+                
+                if (stackResponseData.success && stackResponseData.data) {
+                    const items = stackResponseData.data.items || stackResponseData.data.insights || stackResponseData.data;
+                    console.log('🧪 Stack items found:', items.length);
+                    
+                    const found = items.find(item => item.id === responseData.data.id);
+                    console.log('🧪 New insight found in stack items:', !!found);
+                    if (found) {
+                        console.log('🧪 Found item stack_id:', found.stack_id);
+                        console.log('🧪 Found item stack_id type:', typeof found.stack_id);
+                    }
+                }
+            } catch (e) {
+                console.error('❌ Failed to parse stack response:', e);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Direct API test failed:', error);
+    }
+};
+
+// 测试函数 - 快速验证修复
+window.testFix = async function() {
+    console.log('🧪 Testing the fix for stack_id assignment...');
+    
+    if (!activeStackId) {
+        console.error('❌ No active stack. Please navigate to a stack first.');
+        return;
+    }
+    
+    const testData = {
+        url: `https://example.com/fix-test-${Date.now()}`,
+        title: `Fix Test ${Date.now()}`,
+        thought: 'Testing the stack_id fix',
+        stack_id: parseInt(activeStackId)  // Use integer format
+    };
+    
+    console.log('🧪 Creating insight with integer stack_id:', testData);
+    
+    try {
+        const result = await api.createInsight(testData);
+        console.log('🧪 Creation result:', result);
+        
+        if (result.success && result.data) {
+            console.log('✅ Insight created successfully');
+            console.log('🔍 Created insight stack_id:', result.data.stack_id);
+            console.log('🔍 Expected stack_id:', parseInt(activeStackId));
+            console.log('🔍 Stack_id matches:', result.data.stack_id === parseInt(activeStackId));
+            
+            // Check if it appears in stack items
+            const stackItemsResponse = await api.getStackItems(activeStackId);
+            if (stackItemsResponse.success && stackItemsResponse.data) {
+                const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
+                const found = items.find(item => item.id === result.data.id);
+                console.log('🔍 Found in stack items:', !!found);
+                if (found) {
+                    console.log('🔍 Stack item stack_id:', found.stack_id);
+                    console.log('🔍 Stack item stack_id type:', typeof found.stack_id);
+                }
+            }
+        } else {
+            console.error('❌ Insight creation failed:', result);
+        }
+        
+    } catch (error) {
+        console.error('❌ Test failed:', error);
+    }
+};
+
+// 测试函数 - 验证stack过滤逻辑
+window.testStackFiltering = async function() {
+    console.log('🧪 Testing stack filtering logic...');
+    
+    if (!activeStackId) {
+        console.error('❌ No active stack. Please navigate to a stack first.');
+        return;
+    }
+    
+    console.log('🧪 Testing stack filtering for stack:', activeStackId);
+    console.log('🧪 Stack ID type:', typeof activeStackId);
+    
+    try {
+        const stackItemsResponse = await api.getStackItems(activeStackId);
+        console.log('🧪 Stack items response:', stackItemsResponse);
+        
+        if (stackItemsResponse.success && stackItemsResponse.data) {
+            const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
+            console.log('🧪 Total items returned:', items.length);
+            
+            // Test the filtering logic
+            const validItems = items.filter(insight => parseInt(insight.stack_id) === parseInt(activeStackId));
+            console.log('🧪 Valid items after filtering:', validItems.length);
+            
+            items.forEach((item, index) => {
+                console.log(`🧪 Item ${index}:`, {
+                    id: item.id,
+                    title: item.title,
+                    stack_id: item.stack_id,
+                    stack_id_type: typeof item.stack_id,
+                    matches: parseInt(item.stack_id) === parseInt(activeStackId)
+                });
+            });
+        }
+    } catch (error) {
+        console.error('❌ Stack filtering test failed:', error);
+    }
+};
+
+// 测试函数 - 检查当前状态
+window.checkCurrentState = function() {
+    console.log('🧪 Checking current application state...');
+    console.log('🧪 viewMode:', viewMode);
+    console.log('🧪 activeStackId:', activeStackId);
+    console.log('🧪 activeStackId type:', typeof activeStackId);
+    console.log('🧪 viewMode === "stack":', viewMode === 'stack');
+    console.log('🧪 activeStackId truthy:', !!activeStackId);
+    console.log('🧪 Both conditions for stack assignment:', viewMode === 'stack' && activeStackId);
+    
+    if (viewMode === 'stack' && activeStackId) {
+        console.log('✅ Stack assignment conditions are met');
+        console.log('✅ Should assign stack_id:', parseInt(activeStackId));
+    } else {
+        console.log('❌ Stack assignment conditions NOT met');
+        if (viewMode !== 'stack') {
+            console.log('❌ Reason: viewMode is not "stack", it is:', viewMode);
+        }
+        if (!activeStackId) {
+            console.log('❌ Reason: activeStackId is falsy:', activeStackId);
+        }
+    }
+};
+
+console.log('🧪 Test functions loaded. Available commands:');
+console.log('  - checkCurrentState() - Check current app state (viewMode, activeStackId)');
+console.log('  - testFix() - Quick test of the stack_id fix');
+console.log('  - testStackFiltering() - Test stack filtering logic');
+console.log('  - testStackIdFunctionality() - Test creating insight with stack_id');
+console.log('  - testDatabaseStackId() - Check database for stack_id values');
+console.log('  - testStackContent(stackId) - Check specific stack content');
+console.log('  - testBackendDebug() - Call backend debug endpoint');
+console.log('  - testCreateAndVerify() - Create insight and verify stack_id immediately');
+console.log('  - testApiDirectly() - Test API endpoints directly with different formats');
+console.log('  - testBackendResponse() - Test backend API response format directly');
 window.deleteTagInManagement = deleteTagInManagement;
 window.createNewTag = createNewTag;
 
@@ -5366,6 +6434,12 @@ async function joinStack(card, targetStack) {
             // Re-render to show the updated stack
             renderInsights();
             
+            // Update stack actions if we're in stack view
+            if (viewMode === 'stack' && activeStackId === stackId) {
+                enhanceStackActions();
+                bindEnhancedStackActions();
+            }
+            
             // Show success message
             showSuccessMessage('Card added to stack successfully!');
             
@@ -5644,10 +6718,18 @@ function createStackCard(stackData) {
     cardHeader.appendChild(topRow);
     cardHeader.appendChild(title);
     
-    // Description
+    // Description (editable)
     const description = document.createElement('div');
-    description.className = 'content-card-description';
-    description.textContent = stackData.description || 'A collection of related content';
+    description.className = 'content-card-description stack-description';
+    description.setAttribute('data-stack-id', stackData.id);
+    description.innerHTML = `
+        <span class="description-text">${stackData.description || 'A collection of related content'}</span>
+        <button class="edit-description-btn" title="Edit description">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    `;
     
     // Footer with main tag
     const footer = document.createElement('div');
@@ -5686,6 +6768,26 @@ function createStackCard(stackData) {
         // Navigate to stack view
         navigateToStack(stackData.id);
     });
+    
+    // Add event listener for edit description button
+    const editDescriptionBtn = description.querySelector('.edit-description-btn');
+    if (editDescriptionBtn) {
+        editDescriptionBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startInlineDescriptionEdit(stackData.id, description);
+        });
+    }
+    
+    // Add event listener for description text click (also starts editing)
+    const descriptionText = description.querySelector('.description-text');
+    if (descriptionText) {
+        descriptionText.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startInlineDescriptionEdit(stackData.id, description);
+        });
+    }
     
     return card;
 }
@@ -5843,6 +6945,140 @@ async function updateStackName(stackId, newName) {
     }
 }
 
+// Start inline editing of stack description
+function startInlineDescriptionEdit(stackId, descriptionElement) {
+    const currentDescription = descriptionElement.querySelector('.description-text').textContent;
+    
+    // Create textarea element
+    const textarea = document.createElement('textarea');
+    textarea.value = currentDescription;
+    textarea.className = 'stack-description-edit-input';
+    textarea.style.cssText = `
+        background: transparent;
+        border: 2px solid var(--quest-purple);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 14px;
+        font-family: inherit;
+        color: var(--text-secondary);
+        width: 100%;
+        min-height: 60px;
+        max-height: 120px;
+        resize: vertical;
+        outline: none;
+        line-height: 1.4;
+    `;
+    
+    // Replace the description content with textarea
+    const container = descriptionElement;
+    const descriptionText = container.querySelector('.description-text');
+    const editBtn = container.querySelector('.edit-description-btn');
+    
+    // Hide the text and button
+    if (descriptionText) descriptionText.style.display = 'none';
+    if (editBtn) editBtn.style.display = 'none';
+    
+    container.appendChild(textarea);
+    
+    // Focus and select text
+    textarea.focus();
+    textarea.select();
+    
+    // Handle save on Enter (Ctrl+Enter) or blur
+    const saveEdit = async () => {
+        const newDescription = textarea.value.trim();
+        const wasEdited = newDescription !== currentDescription;
+        
+        console.log('💾 Saving description edit:', { 
+            stackId, 
+            currentDescription, 
+            newDescription, 
+            wasEdited 
+        });
+        
+        if (wasEdited) {
+            try {
+                await updateStackDescription(stackId, newDescription);
+                // Update the stack data
+                const stackData = stacks.get(stackId);
+                if (stackData) {
+                    stackData.description = newDescription;
+                    stackData.modifiedAt = new Date().toISOString();
+                    console.log('✅ Updated local stack data:', stackData);
+                }
+                
+                // Update the display
+                if (descriptionText) {
+                    descriptionText.textContent = newDescription || 'A collection of related content';
+                }
+                
+                showNotification('Stack description updated successfully', 'success');
+            } catch (error) {
+                console.error('❌ Error updating stack description:', error);
+                showErrorMessage('Failed to update stack description');
+            }
+        } else {
+            console.log('ℹ️ No changes to save');
+        }
+        
+        // Restore the original display
+        if (descriptionText) descriptionText.style.display = '';
+        if (editBtn) editBtn.style.display = '';
+        
+        // Safely remove textarea if it exists
+        if (textarea && textarea.parentNode) {
+            textarea.parentNode.removeChild(textarea);
+        }
+    };
+    
+    // Handle cancel on Escape
+    const cancelEdit = () => {
+        // Restore the original display
+        if (descriptionText) descriptionText.style.display = '';
+        if (editBtn) editBtn.style.display = '';
+        
+        // Safely remove textarea if it exists
+        if (textarea && textarea.parentNode) {
+            textarea.parentNode.removeChild(textarea);
+        }
+    };
+    
+    // Save on Enter, cancel on Escape
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit();
+        }
+    });
+    
+    // Also save on blur as a fallback
+    textarea.addEventListener('blur', saveEdit);
+}
+
+// Update stack description via API
+async function updateStackDescription(stackId, newDescription) {
+    try {
+        console.log('🔄 Updating stack description:', { stackId, newDescription });
+        console.log('🔍 Available stacks:', Array.from(stacks.keys()));
+        console.log('🔍 Stack exists in memory:', stacks.has(stackId));
+        
+        const response = await api.updateStack(parseInt(stackId), { description: newDescription });
+        console.log('✅ Stack description update response:', response);
+        if (response && response.success) {
+            showNotification('Stack description updated successfully', 'success');
+            return response;
+        } else {
+            throw new Error('Failed to update stack description');
+        }
+    } catch (error) {
+        console.error('❌ Error updating stack description:', error);
+        throw error;
+    }
+}
+
 // Remove an item from a stack
 async function removeItemFromStack(stackId, insightId) {
     if (confirm('Are you sure you want to remove this item from the stack?')) {
@@ -5888,8 +7124,29 @@ async function removeItemFromStack(stackId, insightId) {
                             showSuccessMessage('Item removed from stack.');
                         }
                         
-                        // Re-render content
-                        renderInsights();
+                        // Re-render content based on current view mode
+                        console.log('🔄 Re-rendering after item removal - viewMode:', viewMode, 'activeStackId:', activeStackId, 'stackId:', stackId);
+                        if (viewMode === 'stack' && activeStackId === stackId) {
+                            // We're in stack view and this is the active stack
+                            const updatedStack = stacks.get(stackId);
+                            console.log('📦 Updated stack from memory:', updatedStack);
+                            console.log('📦 Stack cards count:', updatedStack ? updatedStack.cards.length : 'stack not found');
+                            if (updatedStack && updatedStack.cards.length > 0) {
+                                // Stack still has items - refresh with updated data
+                                console.log('✅ Stack has items, refreshing with updated data');
+                                console.log('📋 Cards to render:', updatedStack.cards.map(c => ({ id: c.id, title: c.title })));
+                                renderStackInsights(updatedStack);
+                            } else {
+                                // Stack is now empty - show empty state
+                                console.log('📭 Stack is empty, showing empty state');
+                                const emptyStack = { id: stackId, cards: [], name: 'Empty Stack' };
+                                renderStackInsights(emptyStack);
+                            }
+                        } else {
+                            // We're in home view - render normally
+                            console.log('🏠 In home view, rendering normally');
+                            renderInsights();
+                        }
                     } else {
                         console.warn('⚠️ Insight not found in stack');
                         showErrorMessage('Item not found in stack.');
@@ -6500,8 +7757,22 @@ async function removeCardFromStack(insight, stackId) {
             
             updatePaginationCounts();
             
-            // Re-render main view
-            renderInsights();
+            // Re-render main view based on current view mode
+            if (viewMode === 'stack' && activeStackId === stackId) {
+                // We're in stack view and this is the active stack
+                const updatedStack = stacks.get(stackId);
+                if (updatedStack && updatedStack.cards.length > 0) {
+                    // Stack still has items - refresh with updated data
+                    renderStackInsights(updatedStack);
+                } else {
+                    // Stack is now empty - show empty state
+                    const emptyStack = { id: stackId, cards: [], name: 'Empty Stack' };
+                    renderStackInsights(emptyStack);
+                }
+            } else {
+                // We're in home view - render normally
+                renderInsights();
+            }
         } else {
             throw new Error(response.message || 'Failed to remove card from stack');
         }

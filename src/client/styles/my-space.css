@@ -6737,6 +6737,137 @@ body.modal-open { overflow: hidden; }
     }
 }
 
+/* ===== SEARCH CONTROLS STYLES ===== */
+
+/* compact search control beside Edit */
+.search-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 12px; /* space before Edit */
+}
+
+.search-input {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    font-size: 14px;
+    width: 220px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: var(--transition-normal);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--quest-purple);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+}
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    width: 34px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    background: var(--btn-bg, #fff);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    color: var(--text-secondary);
+}
+
+.icon-btn:hover {
+    background: var(--hover-bg, #f7f7f7);
+    border-color: var(--quest-purple);
+    color: var(--quest-purple);
+}
+
+/* shrink on small screens */
+@media (max-width: 640px) {
+    .search-input { 
+        width: 140px; 
+    }
+}
+
+/* ===== STACK DESCRIPTION STYLES ===== */
+
+.stack-description {
+    position: relative;
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    transition: all 0.2s ease;
+}
+
+.stack-description:hover {
+    border-color: var(--quest-light-purple);
+    background: var(--bg-hover);
+}
+
+.description-text {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.4;
+    margin: 0;
+    min-height: 20px;
+    word-wrap: break-word;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.description-text:hover {
+    color: var(--text-primary);
+}
+
+.edit-description-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stack-description:hover .edit-description-btn {
+    opacity: 1;
+}
+
+.edit-description-btn:hover {
+    background: var(--quest-light-purple);
+    color: var(--quest-purple);
+    transform: scale(1.1);
+}
+
+.stack-description-edit-input {
+    background: var(--bg-primary) !important;
+    border: 2px solid var(--quest-purple) !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    color: var(--text-primary) !important;
+    width: 100% !important;
+    min-height: 60px !important;
+    max-height: 120px !important;
+    resize: vertical !important;
+    outline: none !important;
+    line-height: 1.4 !important;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1) !important;
+}
+
 /* ===== EMPTY STACK STATE STYLES ===== */
 
 /* Make empty stack state span all columns and center itself */
