@@ -1,5 +1,16 @@
 {
   "version": 2,
+  "headers": [
+    {
+      "source": "/src/client/styles/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
   "builds": [
     {
       "src": "src/client/**/*",
