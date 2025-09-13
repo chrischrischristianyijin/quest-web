@@ -13,6 +13,8 @@ const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
 const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;  // 主要聊天接口
 const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;  // 健康检查
 const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;  // 会话管理 - 根据API文档修正
+// 备用会话端点（如果主要端点不可用）
+const SESSIONS_ENDPOINT_ALT = `${API_BASE_URL}/api/v1/sessions`;
 
 // 获取当前用户信息 - 使用现有的认证系统
 function getCurrentUserInfo() {
@@ -120,13 +122,25 @@ class SessionManager {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const url = `${SESSIONS_ENDPOINT}?user_id=${userId}&page=${page}&size=${size}`;
+            // 尝试主要端点
+            let url = `${SESSIONS_ENDPOINT}?user_id=${userId}&page=${page}&size=${size}`;
             console.log('🔍 获取会话列表请求:', url);
             console.log('🔍 尝试的端点:', SESSIONS_ENDPOINT);
 
-            const response = await fetch(url, {
+            let response = await fetch(url, {
                 headers
             });
+
+            // 如果主要端点失败，尝试备用端点
+            if (!response.ok && response.status === 404) {
+                console.log('🔄 主要端点404，尝试备用端点...');
+                url = `${SESSIONS_ENDPOINT_ALT}?user_id=${userId}&page=${page}&size=${size}`;
+                console.log('🔍 尝试备用端点:', url);
+                
+                response = await fetch(url, {
+                    headers
+                });
+            }
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -134,10 +148,10 @@ class SessionManager {
                 console.log('🔍 尝试的URL:', url);
                 console.log('🔍 请求头:', headers);
                 
-                // 如果是404，尝试不同的端点格式
+                // 如果是404，说明会话端点不存在，返回空列表
                 if (response.status === 404) {
-                    console.log('🔄 404错误，会话端点可能不正确');
-                    console.log('💡 建议检查后端API的会话端点配置');
+                    console.log('🔄 会话端点不存在，返回空会话列表');
+                    return { sessions: [], total: 0 };
                 }
                 
                 throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
@@ -149,6 +163,7 @@ class SessionManager {
             return data;
         } catch (error) {
             console.error('❌ 获取会话列表失败:', error);
+            // 如果获取会话列表失败，返回空列表而不是抛出错误
             return { sessions: [], total: 0 };
         }
     }
@@ -1176,8 +1191,11 @@ async function sendToQuestAPI(message, typingMessage = null) {
         if (currentSession?.id) {
             sessionManager.setCurrentSession(currentSession.id);
             console.log('🔍 使用现有会话ID:', currentSession.id);
+            console.log('🔍 构建的URL:', url);
         } else {
             console.log('🆕 没有当前会话，将让后端创建新会话');
+            console.log('🔍 构建的URL:', url);
+            console.warn('⚠️ 会话ID缺失！localStorage状态:', localStorage.getItem('quest-current-session'));
         }
         
         console.log('🔍 发送聊天请求，用户ID:', userId);
@@ -1217,26 +1235,9 @@ async function sendToQuestAPI(message, typingMessage = null) {
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
-        // 从响应头获取会话ID
-        const sessionIdFromResponse = response.headers.get('X-Session-ID');
-        console.log('📨 响应头中的会话ID:', sessionIdFromResponse);
+        // 注意：会话ID现在通过SSE流式数据返回，而不是响应头
         console.log('📨 发送时的会话ID:', currentSession?.id);
-        
-        if (sessionIdFromResponse) {
-            // 更新或设置当前会话ID
-            if (!sessionManager.currentSession || sessionManager.currentSession.id !== sessionIdFromResponse) {
-                sessionManager.setCurrentSession(sessionIdFromResponse);
-                console.log('🔄 更新会话ID:', sessionIdFromResponse);
-                
-                // 如果响应中的会话ID与发送的不一致，说明后端创建了新会话
-                if (currentSession?.id && currentSession.id !== sessionIdFromResponse) {
-                    console.warn('⚠️ 会话ID不匹配！发送:', currentSession.id, '接收:', sessionIdFromResponse);
-                    console.warn('⚠️ 这可能导致会话重复创建问题');
-                }
-            } else {
-                console.log('✅ 会话ID保持一致:', sessionIdFromResponse);
-            }
-        }
+        console.log('🔍 开始监听SSE流式数据...');
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -1277,7 +1278,19 @@ async function sendToQuestAPI(message, typingMessage = null) {
                     try {
                         const data = JSON.parse(line.slice(6));
                         
-                        if (data.type === 'content') {
+                        if (data.type === 'session_info') {
+                            // 处理会话信息
+                            if (data.session_id) {
+                                sessionManager.setCurrentSession(data.session_id);
+                                console.log('📨 收到会话ID:', data.session_id);
+                                
+                                // 如果这是新会话，更新会话列表
+                                if (!currentSession?.id) {
+                                    console.log('🆕 新会话创建成功，更新会话列表');
+                                    chatUI.loadSessions().catch(err => console.warn('更新会话列表失败:', err));
+                                }
+                            }
+                        } else if (data.type === 'content') {
                             fullResponse += data.content;
                             completeResponse += data.content;
                             
@@ -1305,6 +1318,12 @@ async function sendToQuestAPI(message, typingMessage = null) {
                             sources = data.sources;
                             requestId = data.request_id;
                             latency = data.latency_ms;
+                            
+                            // 如果done事件中包含会话ID，确保保存
+                            if (data.session_id) {
+                                sessionManager.setCurrentSession(data.session_id);
+                                console.log('📨 会话结束，确认会话ID:', data.session_id);
+                            }
                             
                             // 清除打字超时
                             if (typingTimeout) {
