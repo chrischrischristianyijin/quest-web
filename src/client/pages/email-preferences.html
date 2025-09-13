@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Preferences - Quest</title>
+  <link rel="stylesheet" href="../styles/common.css">
+  <link rel="stylesheet" href="../styles/email-preferences.css">
+</head>
+
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <a href="my-space.html" class="logo">
+          <img src="../public/logo.png" alt="Quest" class="logo-img">
+        </a>
+        <nav class="nav">
+          <a href="my-space.html" class="nav-link">My Space</a>
+          <a href="index.html" class="nav-link">Home</a>
+          <button id="logoutBtn" class="btn btn-outline">Logout</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="page-header">
+        <h1>Email Preferences</h1>
+        <p>Manage your email notifications and digest settings</p>
+      </div>
+
+      <div class="email-preferences-container">
+        <form id="emailPreferencesForm" class="email-preferences-form">
+          <div class="form-section">
+            <h2>Weekly Digest</h2>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="weeklyDigestEnabled" class="checkbox">
+                <span class="checkmark"></span>
+                Enable weekly digest emails
+              </label>
+              <p class="form-help">Receive a weekly summary of your insights and activity</p>
+            </div>
+          </div>
+
+          <div class="form-section email-preference-field">
+            <h2>Delivery Schedule</h2>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="preferredDay" class="form-label">Preferred Day</label>
+                <select id="preferredDay" class="form-select" disabled>
+                  <option value="0">Sunday</option>
+                  <option value="1">Monday</option>
+                  <option value="2">Tuesday</option>
+                  <option value="3">Wednesday</option>
+                  <option value="4">Thursday</option>
+                  <option value="5">Friday</option>
+                  <option value="6">Saturday</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="preferredHour" class="form-label">Preferred Hour</label>
+                <select id="preferredHour" class="form-select" disabled>
+                  <option value="6">6:00 AM</option>
+                  <option value="7">7:00 AM</option>
+                  <option value="8">8:00 AM</option>
+                  <option value="9">9:00 AM</option>
+                  <option value="10">10:00 AM</option>
+                  <option value="11">11:00 AM</option>
+                  <option value="12">12:00 PM</option>
+                  <option value="13">1:00 PM</option>
+                  <option value="14">2:00 PM</option>
+                  <option value="15">3:00 PM</option>
+                  <option value="16">4:00 PM</option>
+                  <option value="17">5:00 PM</option>
+                  <option value="18">6:00 PM</option>
+                  <option value="19">7:00 PM</option>
+                  <option value="20">8:00 PM</option>
+                  <option value="21">9:00 PM</option>
+                  <option value="22">10:00 PM</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section email-preference-field">
+            <h2>Timezone</h2>
+            <div class="form-group">
+              <label for="timezone" class="form-label">Your Timezone</label>
+              <select id="timezone" class="form-select" disabled>
+                <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
+                <option value="America/Denver">Mountain Time (Denver)</option>
+                <option value="America/Chicago">Central Time (Chicago)</option>
+                <option value="America/New_York">Eastern Time (New York)</option>
+                <option value="Europe/London">London (GMT)</option>
+                <option value="Europe/Paris">Paris (CET)</option>
+                <option value="Asia/Tokyo">Tokyo (JST)</option>
+                <option value="Asia/Shanghai">Shanghai (CST)</option>
+                <option value="Australia/Sydney">Sydney (AEST)</option>
+                <option value="UTC">UTC</option>
+              </select>
+              <p class="form-help">We'll send your digest at your preferred time in this timezone</p>
+            </div>
+          </div>
+
+          <div class="form-section email-preference-field">
+            <h2>No Activity Policy</h2>
+            <div class="form-group">
+              <label for="noActivityPolicy" class="form-label">When you have no activity this week</label>
+              <select id="noActivityPolicy" class="form-select" disabled>
+                <option value="skip">Skip sending (don't send email)</option>
+                <option value="brief">Send brief email with suggestions</option>
+                <option value="suggestions">Send email with "what you missed" content</option>
+              </select>
+              <p class="form-help">Choose how to handle weeks when you haven't added any insights</p>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="saveEmailPreferences" class="btn btn-primary">
+              Save Preferences
+            </button>
+            <button type="button" id="previewDigestBtn" class="btn btn-secondary" disabled>
+              Preview Digest
+            </button>
+            <button type="button" id="sendTestEmail" class="btn btn-outline">
+              Send Test Email
+            </button>
+          </div>
+        </form>
+
+        <div class="email-info">
+          <h3>About Your Digest</h3>
+          <ul>
+            <li>📝 <strong>Weekly Summary:</strong> Get a curated overview of your insights from the past week</li>
+            <li>🎯 <strong>Personalized Content:</strong> Highlights are chosen based on your engagement and recency
+            </li>
+            <li>📚 <strong>Stack Updates:</strong> See what's new in your knowledge stacks</li>
+            <li>💡 <strong>Smart Suggestions:</strong> Get recommendations to improve your knowledge management</li>
+            <li>🔒 <strong>Privacy First:</strong> Your data stays private and secure</li>
+          </ul>
+
+          <h3>Unsubscribe</h3>
+          <p>You can unsubscribe at any time by:</p>
+          <ul>
+            <li>Using the unsubscribe link in any digest email</li>
+            <li>Disabling the weekly digest option above</li>
+            <li>Contacting support at <a href="mailto:support@quest.example.com">support@quest.example.com</a></li>
+          </ul>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>&copy; 2024 Quest. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <script type="module" src="../js/email-preferences.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/api.js"></script>
+  <script type="module" src="../js/paths.js"></script>
+</body>
+
+</html>

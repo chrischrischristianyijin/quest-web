@@ -36,6 +36,10 @@
       "dest": "/src/client/pages/demo-chat.html"
     },
     {
+      "src": "/email-preferences",
+      "dest": "/src/client/pages/email-preferences.html"
+    },
+    {
       "src": "/pages/demo-chat.html",
       "dest": "/src/client/pages/demo-chat.html"
     },
