@@ -60,6 +60,53 @@ class SessionManager {
         this.currentSession = null;
         this.sessions = [];
         this.memories = [];
+        
+        // 尝试从localStorage恢复会话状态
+        this.restoreSessionFromStorage();
+    }
+    
+    // 从localStorage恢复会话状态
+    restoreSessionFromStorage() {
+        try {
+            const storedSession = localStorage.getItem('quest-current-session');
+            if (storedSession) {
+                const sessionData = JSON.parse(storedSession);
+                this.currentSession = { id: sessionData.id };
+                console.log('🔄 从localStorage恢复会话:', sessionData.id);
+            }
+        } catch (error) {
+            console.warn('⚠️ 恢复会话状态失败:', error);
+        }
+    }
+    
+    // 保存会话状态到localStorage
+    saveSessionToStorage() {
+        try {
+            if (this.currentSession && this.currentSession.id) {
+                const sessionData = { id: this.currentSession.id };
+                localStorage.setItem('quest-current-session', JSON.stringify(sessionData));
+                console.log('💾 保存会话状态到localStorage:', this.currentSession.id);
+            } else {
+                localStorage.removeItem('quest-current-session');
+                console.log('🗑️ 清除localStorage中的会话状态');
+            }
+        } catch (error) {
+            console.warn('⚠️ 保存会话状态失败:', error);
+        }
+    }
+    
+    // 设置当前会话
+    setCurrentSession(sessionId) {
+        this.currentSession = { id: sessionId };
+        this.saveSessionToStorage();
+        console.log('✅ 设置当前会话:', sessionId);
+    }
+    
+    // 清除当前会话
+    clearCurrentSession() {
+        this.currentSession = null;
+        this.saveSessionToStorage();
+        console.log('🗑️ 清除当前会话');
     }
 
     // 获取会话列表
@@ -141,7 +188,8 @@ class SessionManager {
             }
 
             const session = await response.json();
-            this.currentSession = session;
+            // 使用统一的方法设置会话，确保保存到localStorage
+            this.setCurrentSession(session.id);
             console.log('✅ 创建会话成功:', session);
             return session;
         } catch (error) {
@@ -276,6 +324,19 @@ function debugSessionState() {
     console.log('  - currentSession:', sessionManager.currentSession);
     console.log('  - sessions数量:', sessionManager.sessions.length);
     console.log('  - memories数量:', sessionManager.memories.length);
+    
+    // 检查localStorage中的会话状态
+    const storedSession = localStorage.getItem('quest-current-session');
+    console.log('  - localStorage中的会话:', storedSession);
+    
+    if (storedSession) {
+        try {
+            const sessionData = JSON.parse(storedSession);
+            console.log('  - 解析后的会话数据:', sessionData);
+        } catch (error) {
+            console.log('  - localStorage数据解析失败:', error);
+        }
+    }
 }
 
 // 将调试函数暴露到全局，方便在控制台调用
@@ -542,7 +603,7 @@ class ChatUI {
             if (!sessionManager.currentSession && data.sessions && data.sessions.length > 0) {
                 const recentSession = data.sessions[0]; // 假设第一个是最新的
                 console.log('🔄 尝试恢复最近的会话:', recentSession.id);
-                sessionManager.currentSession = { id: recentSession.id };
+                sessionManager.setCurrentSession(recentSession.id);
                 console.log('✅ 会话恢复成功，当前会话ID:', sessionManager.currentSession.id);
                 
                 // 可选：自动加载最近会话的消息
@@ -630,7 +691,7 @@ class ChatUI {
             
             console.log('🔄 切换到会话:', sessionId);
             const context = await sessionManager.getSessionContext(sessionId);
-            sessionManager.currentSession = { id: sessionId };
+            sessionManager.setCurrentSession(sessionId);
             
             // 更新UI
             this.updateChatTitle(context.title || 'Chat');
@@ -662,7 +723,7 @@ class ChatUI {
                 if (sessionManager.currentSession?.id === sessionId) {
                     this.clearMessages();
                     this.updateChatTitle('Quest AI Assistant');
-                    sessionManager.currentSession = null;
+                    sessionManager.clearCurrentSession();
                 }
                 
                 // 重新加载会话列表
@@ -1117,6 +1178,8 @@ async function sendToQuestAPI(message, typingMessage = null) {
             if (sessionManager.currentSession && sessionManager.currentSession.id) {
                 sessionId = sessionManager.currentSession.id;
                 url = `${CHAT_ENDPOINT}?session_id=${sessionId}`;
+                // 确保会话ID保存到localStorage
+                sessionManager.setCurrentSession(sessionId);
                 console.log('🔍 使用现有会话ID:', sessionId);
             } else {
                 // 如果没有当前会话，先创建一个新会话
@@ -1125,6 +1188,7 @@ async function sendToQuestAPI(message, typingMessage = null) {
                     const newSession = await sessionManager.createSession(userId, 'Demo Chat');
                     sessionId = newSession.id;
                     url = `${CHAT_ENDPOINT}?session_id=${sessionId}`;
+                    sessionManager.setCurrentSession(sessionId);
                     console.log('✅ 创建新会话成功，ID:', sessionId);
                     
                     // 更新会话列表（异步执行，不阻塞当前请求）
@@ -1184,7 +1248,7 @@ async function sendToQuestAPI(message, typingMessage = null) {
         if (sessionIdFromResponse) {
             // 更新或设置当前会话ID
             if (!sessionManager.currentSession || sessionManager.currentSession.id !== sessionIdFromResponse) {
-                sessionManager.currentSession = { id: sessionIdFromResponse };
+                sessionManager.setCurrentSession(sessionIdFromResponse);
                 console.log('🔄 更新会话ID:', sessionIdFromResponse);
                 
                 // 如果响应中的会话ID与发送的不一致，说明后端创建了新会话
@@ -1449,7 +1513,7 @@ auth.subscribe((authState) => {
         chatUI.loadSessions();
     } else {
         // 用户未登录时清空会话状态
-        sessionManager.currentSession = null;
+        sessionManager.clearCurrentSession();
         console.log('🚫 用户未登录，清空会话状态');
     }
 });
