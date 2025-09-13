@@ -78,9 +78,9 @@ async function handleLogin(email, password) {
             
             // Delay redirect to show success message
             setTimeout(() => {
-                // Login successful, redirect to My Space page
+                // Login successful, redirect to My Space page with full page reload
                 console.log('✅ Login successful, redirecting to My Space page');
-                navigateTo(PATHS.MY_SPACE);
+                navigateTo(PATHS.MY_SPACE, { fromAuth: true });
             }, 1000);
         } else {
             // Login failed, show error message
@@ -127,7 +127,7 @@ passwordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // If user is already logged in, redirect directly
     if (auth.checkAuth()) {
-        navigateTo(PATHS.MY_SPACE);
+        navigateTo(PATHS.MY_SPACE, { fromAuth: true });
     }
     
     // Focus on email input
