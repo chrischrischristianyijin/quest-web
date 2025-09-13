@@ -13,7 +13,6 @@ html, body, .MySpace {
 
 /* 3) Make key text neutral again */
 .content-card-title,
-.btn-primary,
 .available-tag.selected,
 .content-card-desc,
 .template-card-text h3,
@@ -27,6 +26,7 @@ html, body, .MySpace {
 /* 4) Secondary text back to secondary tone */
 .date-chip,
 .tag-pill,
+.btn-primary:not(.empty-stack-actions .btn-primary),
 .filter-option-info {
   color: var(--text-secondary) !important;
 }
