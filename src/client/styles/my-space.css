@@ -3512,6 +3512,14 @@ body .tag-selector-dropdown.open .tag-selector-options {
 .summary-text { 
   color: #475569; 
   line-height: 1.6; 
+  font-style: italic;
+  min-height: 1.5em;
+}
+
+.summary-text:empty::before {
+  content: "AI summary is being generated...";
+  color: #94a3b8;
+  font-style: italic;
 }
 
 /* Make it great on tablets/phones */
@@ -3560,6 +3568,36 @@ body.modal-open { overflow: hidden; }
 /* Old modal styles removed - using new polished design above */
 
 /* Old modal styles removed */
+
+/* Title with edit button container */
+.title-with-edit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+/* Edit title button */
+.edit-title-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-title-btn:hover {
+    background: var(--quest-purple);
+    color: white;
+    opacity: 1;
+    transform: scale(1.05);
+}
 
 /* Title edit mode styles */
 .title-edit-mode .content-title {

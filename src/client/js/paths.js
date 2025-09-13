@@ -7,6 +7,7 @@ export const PATHS = {
     LOGIN: '/login',
     SIGNUP: '/signup',
     MY_SPACE: '/my-space',
+    EMAIL_PREFERENCES: '/email-preferences',
     
     // 静态资源
     STYLES: '/styles',
@@ -45,8 +46,15 @@ export const navigateTo = (path) => {
     
     // Check if this is the home/my-space route (SPA route)
     if (path === '/my-space' || path === '/') {
-        // Use History API for SPA navigation
-        history.pushState({ viewMode: 'home' }, '', path);
+        // Use full page navigation for redirects from other pages
+        window.location.href = path;
+        return;
+    }
+    
+    // Check if this is email-preferences route
+    if (path === '/email-preferences') {
+        // Use full page navigation for email preferences
+        window.location.href = path;
         return;
     }
     
