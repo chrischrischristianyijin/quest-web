@@ -5796,16 +5796,28 @@ function populateModalContent(insight) {
         }
     }
     
-    // 用户评论
-    const commentElement = document.getElementById('modalCommentText');
+    // 用户评论 - 从insight_contents表中获取thought字段
+    const commentElement = document.getElementById('commentDisplay');
     if (commentElement) {
-        commentElement.textContent = insight.thought || 'No comment added yet.';
+        // 优先从insight_contents中获取thought，如果没有则使用insight.thought作为后备
+        let thought = null;
+        if (insight.insight_contents && insight.insight_contents.length > 0) {
+            thought = insight.insight_contents[0].thought;
+        }
+        thought = thought || insight.thought; // 后备方案
+        commentElement.textContent = thought || 'No comment added yet.';
     }
     
     // 填充评论编辑表单
-    const commentTextarea = document.getElementById('commentEditTextarea');
+    const commentTextarea = document.getElementById('commentTextarea');
     if (commentTextarea) {
-        commentTextarea.value = insight.thought || '';
+        // 优先从insight_contents中获取thought，如果没有则使用insight.thought作为后备
+        let thought = null;
+        if (insight.insight_contents && insight.insight_contents.length > 0) {
+            thought = insight.insight_contents[0].thought;
+        }
+        thought = thought || insight.thought; // 后备方案
+        commentTextarea.value = thought || '';
     }
     
     // 填充AI摘要
@@ -6213,18 +6225,31 @@ function setupCommentEditing() {
     
     if (!editCommentBtn || !commentDisplay || !commentTextarea) return;
     
+    // 移除现有的事件监听器（防止重复添加）
+    const newEditBtn = editCommentBtn.cloneNode(true);
+    editCommentBtn.parentNode.replaceChild(newEditBtn, editCommentBtn);
+    
+    // 重新获取按钮引用
+    const freshEditBtn = document.getElementById('editCommentBtn');
+    
     // 编辑按钮点击事件
-    editCommentBtn.addEventListener('click', () => {
+    freshEditBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         // 如果当前是编辑模式，则保存
-        if (editCommentBtn.textContent === 'Save') {
+        if (freshEditBtn.textContent === 'Save') {
             saveComment();
             return;
         }
         
         // 防止重复进入编辑模式
         if (isCommentEditing) {
+            console.log('⚠️ Already in editing mode, ignoring click');
             return;
         }
+        
+        console.log('🖱️ Entering edit mode...');
         
         // 进入编辑模式
         commentDisplay.style.display = 'none';
@@ -6235,19 +6260,30 @@ function setupCommentEditing() {
         isCommentEditing = true;
         
         // 更新按钮文本
-        editCommentBtn.textContent = 'Save';
+        freshEditBtn.textContent = 'Save';
         
         // 添加取消按钮
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'ghost-btn';
         cancelBtn.textContent = 'Cancel';
         cancelBtn.style.marginLeft = '8px';
-        cancelBtn.addEventListener('click', cancelComment);
-        editCommentBtn.parentNode.appendChild(cancelBtn);
+        cancelBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            cancelComment();
+        });
+        freshEditBtn.parentNode.appendChild(cancelBtn);
     });
     
     // 保存评论函数
     async function saveComment() {
+        // 防止重复保存
+        if (isCommentEditing === false) {
+            console.log('⚠️ Not in editing mode, ignoring save');
+            return;
+        }
+        
+        console.log('💾 Saving comment...');
         const newComment = commentTextarea.value.trim();
         
         try {
@@ -6264,18 +6300,31 @@ function setupCommentEditing() {
                 return;
             }
             
+            console.log('📡 Calling API to update comment...');
+            
             // 调用API更新评论
             const response = await api.updateInsight(currentInsight.id, { 
                 thought: newComment 
             });
             
             if (response.success) {
+                console.log('✅ Comment saved successfully via API');
+                
                 // 更新显示的评论
                 commentDisplay.textContent = newComment || 'No comment added yet.';
                 
-                // 更新本地数据
+                // 更新本地数据 - 同时更新insight_contents和thought字段
                 if (currentInsight) {
                     currentInsight.thought = newComment;
+                    // 确保insight_contents数组存在
+                    if (!currentInsight.insight_contents) {
+                        currentInsight.insight_contents = [{}];
+                    }
+                    if (currentInsight.insight_contents.length === 0) {
+                        currentInsight.insight_contents = [{}];
+                    }
+                    // 更新thought字段
+                    currentInsight.insight_contents[0].thought = newComment;
                 }
                 
                 // 更新全局insights数组
@@ -6283,7 +6332,35 @@ function setupCommentEditing() {
                     const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
                     if (insightIndex !== -1) {
                         window.currentInsights[insightIndex].thought = newComment;
+                        // 确保insight_contents数组存在
+                        if (!window.currentInsights[insightIndex].insight_contents) {
+                            window.currentInsights[insightIndex].insight_contents = [{}];
+                        }
+                        if (window.currentInsights[insightIndex].insight_contents.length === 0) {
+                            window.currentInsights[insightIndex].insight_contents = [{}];
+                        }
+                        // 更新thought字段
+                        window.currentInsights[insightIndex].insight_contents[0].thought = newComment;
                     }
+                }
+                
+                // 更新stacks中的insight数据
+                if (stacks) {
+                    stacks.forEach(stack => {
+                        const insightIndex = stack.cards.findIndex(card => card.id === currentInsight.id);
+                        if (insightIndex !== -1) {
+                            stack.cards[insightIndex].thought = newComment;
+                            // 确保insight_contents数组存在
+                            if (!stack.cards[insightIndex].insight_contents) {
+                                stack.cards[insightIndex].insight_contents = [{}];
+                            }
+                            if (stack.cards[insightIndex].insight_contents.length === 0) {
+                                stack.cards[insightIndex].insight_contents = [{}];
+                            }
+                            // 更新thought字段
+                            stack.cards[insightIndex].insight_contents[0].thought = newComment;
+                        }
+                    });
                 }
                 
                 // 更新页面缓存
@@ -6301,13 +6378,13 @@ function setupCommentEditing() {
         // 切换回显示模式
         commentDisplay.style.display = 'block';
         commentTextarea.style.display = 'none';
-        editCommentBtn.textContent = 'Edit';
+        freshEditBtn.textContent = 'Edit';
         
         // 清除编辑模式标志
         isCommentEditing = false;
         
         // 移除取消按钮
-        const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
+        const cancelBtn = freshEditBtn.parentNode.querySelector('.ghost-btn:last-child');
         if (cancelBtn && cancelBtn.textContent === 'Cancel') {
             cancelBtn.remove();
         }
@@ -6315,19 +6392,21 @@ function setupCommentEditing() {
     
     // 取消评论函数
     function cancelComment() {
+        console.log('❌ Canceling comment edit...');
+        
         // 恢复原始内容
         commentTextarea.value = commentDisplay.textContent;
         
         // 切换回显示模式
         commentDisplay.style.display = 'block';
         commentTextarea.style.display = 'none';
-        editCommentBtn.textContent = 'Edit';
+        freshEditBtn.textContent = 'Edit';
         
         // 清除编辑模式标志
         isCommentEditing = false;
         
         // 移除取消按钮
-        const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
+        const cancelBtn = freshEditBtn.parentNode.querySelector('.ghost-btn:last-child');
         if (cancelBtn && cancelBtn.textContent === 'Cancel') {
             cancelBtn.remove();
         }
@@ -6579,7 +6658,11 @@ function addTemplateCard() {
             </div>
             <div class="template-card-text">
                 <h3>Add New Content</h3>
-                <p>Click to add a new content card</p>
+                <p>Click to add a new insight or create a stack</p>
+                <div class="template-card-options">
+                    <span class="template-option">📄 Insight</span>
+                    <span class="template-option">📚 Stack</span>
+                </div>
             </div>
         </div>
     `;
@@ -9519,5 +9602,224 @@ function updatePrimaryTagDisplay(primaryTag) {
         }, { once: true });
     }
 })();
+
+// ===== DEBUG AND TEST FUNCTIONS =====
+
+// Test function to debug comment functionality
+window.testCommentFunctionality = async function() {
+    console.log('🧪 Starting comment functionality tests...');
+    
+    // Test 1: Check if modal elements exist
+    console.log('\n📋 Test 1: Checking modal elements...');
+    const commentElement = document.getElementById('commentDisplay');
+    const commentTextarea = document.getElementById('commentTextarea');
+    const commentDisplay = document.getElementById('commentDisplay');
+    const editCommentBtn = document.getElementById('editCommentBtn');
+    
+    console.log('commentDisplay:', commentElement);
+    console.log('commentTextarea:', commentTextarea);
+    console.log('commentDisplay:', commentDisplay);
+    console.log('editCommentBtn:', editCommentBtn);
+    
+    if (!commentElement || !commentTextarea || !commentDisplay || !editCommentBtn) {
+        console.error('❌ Missing modal elements!');
+        return;
+    }
+    
+    // Test 2: Check current insight data
+    console.log('\n📋 Test 2: Checking current insight data...');
+    console.log('currentDetailInsight:', currentDetailInsight);
+    
+    if (currentDetailInsight) {
+        console.log('insight.thought:', currentDetailInsight.thought);
+        console.log('insight.insight_contents:', currentDetailInsight.insight_contents);
+        
+        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
+            console.log('insight.insight_contents[0].thought:', currentDetailInsight.insight_contents[0].thought);
+        }
+    } else {
+        console.warn('⚠️ No current insight selected');
+    }
+    
+    // Test 3: Check current display values
+    console.log('\n📋 Test 3: Checking current display values...');
+    console.log('commentElement.textContent:', commentElement.textContent);
+    console.log('commentTextarea.value:', commentTextarea.value);
+    console.log('commentDisplay.textContent:', commentDisplay.textContent);
+    
+    // Test 4: Test comment extraction logic
+    console.log('\n📋 Test 4: Testing comment extraction logic...');
+    if (currentDetailInsight) {
+        let thought = null;
+        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
+            thought = currentDetailInsight.insight_contents[0].thought;
+        }
+        thought = thought || currentDetailInsight.thought;
+        console.log('Extracted thought:', thought);
+    }
+    
+    // Test 5: Test API call
+    console.log('\n📋 Test 5: Testing API call...');
+    if (currentDetailInsight && currentDetailInsight.id) {
+        try {
+            const response = await api.getInsight(currentDetailInsight.id);
+            console.log('API response:', response);
+            
+            if (response.success && response.data) {
+                console.log('API data.thought:', response.data.thought);
+                console.log('API data.insight_contents:', response.data.insight_contents);
+            }
+        } catch (error) {
+            console.error('API call failed:', error);
+        }
+    }
+    
+    console.log('\n✅ Comment functionality tests completed!');
+};
+
+// Test function to debug edit button behavior
+window.testEditButtonBehavior = function() {
+    console.log('🧪 Testing edit button behavior...');
+    
+    const editCommentBtn = document.getElementById('editCommentBtn');
+    const commentDisplay = document.getElementById('commentDisplay');
+    const commentTextarea = document.getElementById('commentTextarea');
+    
+    if (!editCommentBtn || !commentDisplay || !commentTextarea) {
+        console.error('❌ Missing elements for edit button test');
+        return;
+    }
+    
+    console.log('Initial state:');
+    console.log('Button text:', editCommentBtn.textContent);
+    console.log('isCommentEditing:', isCommentEditing);
+    console.log('commentDisplay.style.display:', commentDisplay.style.display);
+    console.log('commentTextarea.style.display:', commentTextarea.style.display);
+    
+    // Check for multiple event listeners
+    console.log('Event listeners on button:', getEventListeners ? getEventListeners(editCommentBtn) : 'getEventListeners not available');
+    
+    // Simulate click
+    console.log('\n🖱️ Simulating edit button click...');
+    editCommentBtn.click();
+    
+    setTimeout(() => {
+        console.log('After click:');
+        console.log('Button text:', editCommentBtn.textContent);
+        console.log('isCommentEditing:', isCommentEditing);
+        console.log('commentDisplay.style.display:', commentDisplay.style.display);
+        console.log('commentTextarea.style.display:', commentTextarea.style.display);
+        console.log('commentTextarea.value:', commentTextarea.value);
+    }, 100);
+};
+
+// Test function to force populate comment data
+window.testPopulateComment = function(testComment = 'Test comment from console') {
+    console.log('🧪 Testing comment population...');
+    
+    const commentElement = document.getElementById('commentDisplay');
+    const commentTextarea = document.getElementById('commentTextarea');
+    const commentDisplay = document.getElementById('commentDisplay');
+    
+    if (!commentElement || !commentTextarea || !commentDisplay) {
+        console.error('❌ Missing elements for comment population test');
+        return;
+    }
+    
+    console.log('Setting comment to:', testComment);
+    
+    // Update all comment elements
+    commentElement.textContent = testComment;
+    commentTextarea.value = testComment;
+    commentDisplay.textContent = testComment;
+    
+    console.log('Updated values:');
+    console.log('commentElement.textContent:', commentElement.textContent);
+    console.log('commentTextarea.value:', commentTextarea.value);
+    console.log('commentDisplay.textContent:', commentDisplay.textContent);
+};
+
+// Test function to check all insights for thought data
+window.testAllInsightsThoughts = function() {
+    console.log('🧪 Testing all insights for thought data...');
+    
+    if (window.currentInsights) {
+        console.log(`Found ${window.currentInsights.length} insights`);
+        
+        window.currentInsights.forEach((insight, index) => {
+            console.log(`\nInsight ${index + 1} (${insight.id}):`);
+            console.log('  title:', insight.title);
+            console.log('  thought:', insight.thought);
+            console.log('  insight_contents:', insight.insight_contents);
+            
+            if (insight.insight_contents && insight.insight_contents.length > 0) {
+                console.log('  insight_contents[0].thought:', insight.insight_contents[0].thought);
+            }
+        });
+    } else {
+        console.warn('⚠️ No currentInsights found');
+    }
+    
+    if (stacks && stacks.size > 0) {
+        console.log(`\nFound ${stacks.size} stacks`);
+        stacks.forEach((stackData, stackId) => {
+            console.log(`\nStack ${stackId} (${stackData.name}):`);
+            stackData.cards.forEach((card, index) => {
+                console.log(`  Card ${index + 1} (${card.id}):`);
+                console.log('    title:', card.title);
+                console.log('    thought:', card.thought);
+                console.log('    insight_contents:', card.insight_contents);
+                
+                if (card.insight_contents && card.insight_contents.length > 0) {
+                    console.log('    insight_contents[0].thought:', card.insight_contents[0].thought);
+                }
+            });
+        });
+    }
+};
+
+// Test function to simulate API update
+window.testCommentUpdate = async function(testComment = 'Updated comment from console test') {
+    console.log('🧪 Testing comment update...');
+    
+    if (!currentDetailInsight || !currentDetailInsight.id) {
+        console.error('❌ No current insight selected');
+        return;
+    }
+    
+    try {
+        console.log('Updating insight:', currentDetailInsight.id, 'with comment:', testComment);
+        
+        const response = await api.updateInsight(currentDetailInsight.id, { 
+            thought: testComment 
+        });
+        
+        console.log('API response:', response);
+        
+        if (response.success) {
+            console.log('✅ Update successful');
+            // Refresh the modal to see the changes
+            if (typeof showDetailModal === 'function') {
+                showDetailModal(currentDetailInsight.id);
+            }
+        } else {
+            console.error('❌ Update failed:', response.message);
+        }
+    } catch (error) {
+        console.error('❌ Update error:', error);
+    }
+};
+
+// Quick test runner
+window.runAllCommentTests = async function() {
+    console.log('🚀 Running all comment tests...');
+    
+    await window.testCommentFunctionality();
+    window.testEditButtonBehavior();
+    window.testAllInsightsThoughts();
+    
+    console.log('\n🎯 To test comment update, run: testCommentUpdate("Your test comment")');
+    console.log('🎯 To test comment population, run: testPopulateComment("Your test comment")');
+};
 
 
