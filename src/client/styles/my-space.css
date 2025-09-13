@@ -1,6 +1,43 @@
 /* My Space 页面样式 */
 @import url('./common.css');
 
+/* Base text color reset to prevent purple cascade */
+html, body, .MySpace { 
+    color: var(--text-primary); 
+}
+
+/* Links inherit base color unless explicitly styled as buttons/tags */
+.MySpace a { 
+    color: inherit; 
+}
+
+/* 3) Make key text neutral again */
+.content-card-title,
+.btn-primary,
+.available-tag.selected,
+.content-card-desc,
+.template-card-text h3,
+.template-card-text p,
+.UsernamePlaceholder,
+.content-card-source-name,
+.stack-name-inline {
+  color: var(--text-primary) !important;
+}
+
+/* 4) Secondary text back to secondary tone */
+.date-chip,
+.tag-pill,
+.filter-option-info {
+  color: var(--text-secondary) !important;
+}
+
+/* 5) Keep purple only where it’s an accent (buttons/badges) */
+.pagination-page.active,
+.stack-badge {
+  color: #fff !important;
+}
+
+
 body {
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
@@ -480,7 +517,7 @@ body {
 
 .filter-option-info {
     font-size: 0.75rem;
-    color: var(--quest-purple);
+    color: var(--text-secondary);
     cursor: help;
     opacity: 0.7;
     transition: opacity 0.2s ease;
@@ -2916,7 +2953,7 @@ body .tag-selector-dropdown.open .tag-selector-options {
 }
 
 .clickable-profile:hover .edit-overlay {
-    opacity: 1;
+    opacity: 0;
 }
 
 .edit-icon {
@@ -4180,7 +4217,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .template-card-text h3 {
-    color: var(--quest-purple);
+    color: var(--text-primary);
     margin: 0 0 var(--spacing-md) 0;
     font-size: 1.75rem;
     font-weight: 700;
@@ -4189,7 +4226,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .template-card-text p {
-    color: var(--quest-purple);
+    color: var(--text-primary);
     margin: 0;
     font-size: 1.1rem;
     font-weight: 500;
@@ -5482,7 +5519,7 @@ body.modal-open { overflow: hidden; }
 
 .content-card-source-name {
     font-size: 0.875rem;
-    color: var(--quest-purple);
+    color: var(--text-primary);
     font-weight: 500;
 }
 
