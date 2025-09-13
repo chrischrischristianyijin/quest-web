@@ -5003,12 +5003,106 @@ window.checkCurrentState = function() {
     }
 };
 
+// 测试AI摘要数据
+window.testAISummaryData = function() {
+    console.log('🧪 Testing AI Summary Data...');
+    
+    if (!currentInsights || currentInsights.length === 0) {
+        console.log('❌ No insights available for testing');
+        return;
+    }
+    
+    console.log('📊 Testing insights data structure:');
+    currentInsights.forEach((insight, index) => {
+        console.log(`\n🔍 Insight ${index + 1}:`, {
+            id: insight.id,
+            title: insight.title,
+            hasInsightContents: !!insight.insight_contents,
+            insightContentsLength: insight.insight_contents ? insight.insight_contents.length : 0
+        });
+        
+        if (insight.insight_contents && insight.insight_contents.length > 0) {
+            const content = insight.insight_contents[0];
+            console.log('  📝 Content data:', {
+                hasSummary: !!content.summary,
+                summaryLength: content.summary ? content.summary.length : 0,
+                summaryPreview: content.summary ? content.summary.substring(0, 100) + '...' : 'No summary',
+                hasThought: !!content.thought,
+                thoughtLength: content.thought ? content.thought.length : 0
+            });
+        } else {
+            console.log('  ❌ No insight_contents data found');
+        }
+    });
+    
+    // 测试API响应
+    console.log('\n🌐 Testing API response...');
+    api.getInsightsPaginated(1, 9, null, true)
+        .then(response => {
+            console.log('✅ API Response received:', response);
+            if (response.data && response.data.insights) {
+                console.log('📊 API insights count:', response.data.insights.length);
+                response.data.insights.forEach((insight, index) => {
+                    console.log(`API Insight ${index + 1}:`, {
+                        id: insight.id,
+                        title: insight.title,
+                        hasInsightContents: !!insight.insight_contents,
+                        insightContentsLength: insight.insight_contents ? insight.insight_contents.length : 0
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error('❌ API test failed:', error);
+        });
+};
+
+// 测试模态框摘要显示
+window.testModalSummaryDisplay = function() {
+    console.log('🧪 Testing Modal Summary Display...');
+    
+    if (!currentInsights || currentInsights.length === 0) {
+        console.log('❌ No insights available for testing');
+        return;
+    }
+    
+    // 找到第一个有insight_contents的insight
+    const insightWithContent = currentInsights.find(insight => 
+        insight.insight_contents && insight.insight_contents.length > 0
+    );
+    
+    if (!insightWithContent) {
+        console.log('❌ No insights with content data found');
+        return;
+    }
+    
+    console.log('✅ Found insight with content:', insightWithContent.title);
+    console.log('📝 Content data:', insightWithContent.insight_contents[0]);
+    
+    // 打开模态框进行测试
+    openContentDetailModal(insightWithContent);
+    
+    // 检查模态框中的摘要元素
+    setTimeout(() => {
+        const summaryElement = document.getElementById('summaryText');
+        if (summaryElement) {
+            console.log('✅ Summary element found:', summaryElement);
+            console.log('📝 Summary text content:', summaryElement.textContent);
+            console.log('📝 Summary innerHTML:', summaryElement.innerHTML);
+        } else {
+            console.log('❌ Summary element not found');
+        }
+    }, 100);
+};
+
 console.log('🧪 Test functions loaded. Available commands:');
 console.log('  - checkCurrentState() - Check current app state (viewMode, activeStackId)');
 console.log('  - testFix() - Quick test of the stack_id fix');
 console.log('  - testStackFiltering() - Test stack filtering logic');
 console.log('  - testStackIdFunctionality() - Test creating insight with stack_id');
 console.log('  - testDatabaseStackId() - Check database for stack_id values');
+console.log('  - testAISummaryData() - Test AI summary data structure and API response');
+console.log('  - testModalSummaryDisplay() - Test modal summary display functionality');
 console.log('  - testStackContent(stackId) - Check specific stack content');
 console.log('  - testBackendDebug() - Call backend debug endpoint');
 console.log('  - testCreateAndVerify() - Create insight and verify stack_id immediately');
@@ -5516,6 +5610,14 @@ function closeContentDetailModal() {
 
 // 填充模态框内容
 function populateModalContent(insight) {
+    
+    // 调试：打印insight数据结构
+    console.log('🔍 DEBUG: populateModalContent called with insight:', insight);
+    console.log('🔍 DEBUG: insight.insight_contents:', insight.insight_contents);
+    if (insight.insight_contents && insight.insight_contents.length > 0) {
+        console.log('🔍 DEBUG: First insight_contents item:', insight.insight_contents[0]);
+        console.log('🔍 DEBUG: Summary from insight_contents:', insight.insight_contents[0].summary);
+    }
     
     // 标题
     const titleElement = document.getElementById('modalContentTitle');
