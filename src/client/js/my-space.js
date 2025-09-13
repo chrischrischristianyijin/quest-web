@@ -894,7 +894,6 @@ async function initPage() {
         
         // 确保内容卡片容器可见
         if (contentCards) {
-            contentCards.style.display = 'block';
             contentCards.style.opacity = '1';
             contentCards.style.visibility = 'visible';
         }
