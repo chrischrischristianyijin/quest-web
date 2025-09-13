@@ -77,6 +77,9 @@ const renderedInsightIds = new Set();
 let hasLoadedStacksOnce = false;
 let hasLoadedInsightsOnce = false;
 
+// Flag to prevent auto-save during comment editing
+let isCommentEditing = false;
+
 // Keep a reference if you're using autosave elsewhere
 const saveOnUnload = () => {
   try {
@@ -4926,7 +4929,7 @@ window.testFix = async function() {
                 if (found) {
                     console.log('🔍 Stack item stack_id:', found.stack_id);
                     console.log('🔍 Stack item stack_id type:', typeof found.stack_id);
-                }
+                }   
             }
         } else {
             console.error('❌ Insight creation failed:', result);
@@ -5553,6 +5556,22 @@ function populateModalContent(insight) {
         commentTextarea.value = insight.thought || '';
     }
     
+    // 填充AI摘要
+    const summaryText = document.getElementById('summaryText');
+    if (summaryText) {
+        // 获取summary，优先从insight_contents中获取
+        let summary = null;
+        if (insight.insight_contents && insight.insight_contents.length > 0) {
+            summary = insight.insight_contents[0].summary;
+        }
+        
+        if (summary) {
+            summaryText.textContent = summary;
+        } else {
+            summaryText.textContent = 'AI summary is being generated...';
+        }
+    }
+    
     // 填充AI摘要日期
     const aiSummaryDate = document.querySelector('.ai-summary-date');
     if (aiSummaryDate) {
@@ -5893,6 +5912,9 @@ function setupModalActions(insight) {
     // 设置评论编辑功能
     setupCommentEditing();
     
+    // 设置标题编辑功能
+    setupTitleEditing();
+    
     // Note: Share button removed from user info section
     
     // 设置分享我的空间按钮
@@ -5947,10 +5969,18 @@ function setupCommentEditing() {
             return;
         }
         
+        // 防止重复进入编辑模式
+        if (isCommentEditing) {
+            return;
+        }
+        
         // 进入编辑模式
         commentDisplay.style.display = 'none';
         commentTextarea.style.display = 'block';
         commentTextarea.focus();
+        
+        // 设置编辑模式标志
+        isCommentEditing = true;
         
         // 更新按钮文本
         editCommentBtn.textContent = 'Save';
@@ -5960,7 +5990,7 @@ function setupCommentEditing() {
         cancelBtn.className = 'ghost-btn';
         cancelBtn.textContent = 'Cancel';
         cancelBtn.style.marginLeft = '8px';
-        cancelBtn.onclick = cancelComment;
+        cancelBtn.addEventListener('click', cancelComment);
         editCommentBtn.parentNode.appendChild(cancelBtn);
     });
     
@@ -6021,6 +6051,9 @@ function setupCommentEditing() {
         commentTextarea.style.display = 'none';
         editCommentBtn.textContent = 'Edit';
         
+        // 清除编辑模式标志
+        isCommentEditing = false;
+        
         // 移除取消按钮
         const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
         if (cancelBtn && cancelBtn.textContent === 'Cancel') {
@@ -6038,6 +6071,9 @@ function setupCommentEditing() {
         commentTextarea.style.display = 'none';
         editCommentBtn.textContent = 'Edit';
         
+        // 清除编辑模式标志
+        isCommentEditing = false;
+        
         // 移除取消按钮
         const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
         if (cancelBtn && cancelBtn.textContent === 'Cancel') {
@@ -6045,6 +6081,156 @@ function setupCommentEditing() {
         }
     }
     
+}
+
+// 设置标题编辑功能
+function setupTitleEditing() {
+    const editTitleBtn = document.getElementById('editTitleBtn');
+    const titleElement = document.getElementById('modalContentTitle');
+    const titleContainer = document.querySelector('.title-with-edit');
+    
+    if (!editTitleBtn || !titleElement || !titleContainer) return;
+    
+    // 编辑按钮点击事件
+    editTitleBtn.addEventListener('click', () => {
+        enterTitleEditMode();
+    });
+    
+    // 进入标题编辑模式
+    function enterTitleEditMode() {
+        const currentTitle = titleElement.textContent;
+        
+        // 添加编辑模式类
+        titleContainer.classList.add('title-edit-mode');
+        
+        // 创建输入框
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'title-edit-input';
+        input.value = currentTitle;
+        input.id = 'titleEditInput';
+        
+        // 创建操作按钮容器
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'title-edit-actions';
+        
+        // 创建保存按钮
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'title-edit-save';
+        saveBtn.innerHTML = '✓';
+        saveBtn.title = 'Save';
+        saveBtn.addEventListener('click', () => saveTitleEdit(input.value.trim()));
+        
+        // 创建取消按钮
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'title-edit-cancel';
+        cancelBtn.innerHTML = '✕';
+        cancelBtn.title = 'Cancel';
+        cancelBtn.addEventListener('click', () => cancelTitleEdit());
+        
+        // 添加按钮到容器
+        actionsContainer.appendChild(saveBtn);
+        actionsContainer.appendChild(cancelBtn);
+        
+        // 插入输入框和按钮
+        titleContainer.appendChild(input);
+        titleContainer.appendChild(actionsContainer);
+        
+        // 聚焦并选中文本
+        input.focus();
+        input.select();
+        
+        // 添加键盘事件监听
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveTitleEdit(input.value.trim());
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelTitleEdit();
+            }
+        });
+    }
+    
+    // 保存标题编辑
+    async function saveTitleEdit(newTitle) {
+        if (!newTitle) {
+            showErrorMessage('Title cannot be empty');
+            return;
+        }
+        
+        try {
+            // 检查认证状态
+            if (!auth.checkAuth()) {
+                showErrorMessage('Please log in to update content');
+                return;
+            }
+            
+            // 获取当前洞察的ID
+            const currentInsight = currentDetailInsight;
+            if (!currentInsight || !currentInsight.id) {
+                showErrorMessage('Unable to identify content to update');
+                return;
+            }
+            
+            // 调用API更新标题
+            const response = await api.updateInsight(currentInsight.id, { 
+                title: newTitle 
+            });
+            
+            if (response.success) {
+                // 更新显示的标题
+                titleElement.textContent = newTitle;
+                
+                // 更新本地数据
+                if (currentInsight) {
+                    currentInsight.title = newTitle;
+                }
+                
+                // 更新全局insights数组
+                if (window.currentInsights) {
+                    const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
+                    if (insightIndex !== -1) {
+                        window.currentInsights[insightIndex].title = newTitle;
+                    }
+                }
+                
+                // 更新页面缓存
+                updatePageCacheWithInsight(currentInsight.id, { title: newTitle });
+                
+                // 重新渲染页面以更新卡片标题
+                renderInsights();
+                
+                showSuccessMessage('Title updated successfully!');
+            } else {
+                showErrorMessage(response.message || 'Failed to update title');
+            }
+        } catch (error) {
+            console.error('Error updating title:', error);
+            showErrorMessage('Failed to update title. Please try again.');
+        }
+        
+        // 退出编辑模式
+        exitTitleEditMode();
+    }
+    
+    // 取消标题编辑
+    function cancelTitleEdit() {
+        exitTitleEditMode();
+    }
+    
+    // 退出标题编辑模式
+    function exitTitleEditMode() {
+        // 移除编辑模式类
+        titleContainer.classList.remove('title-edit-mode');
+        
+        // 移除输入框和操作按钮
+        const input = document.getElementById('titleEditInput');
+        const actionsContainer = titleContainer.querySelector('.title-edit-actions');
+        
+        if (input) input.remove();
+        if (actionsContainer) actionsContainer.remove();
+    }
 }
 
 // 绑定模态框事件监听器
@@ -6814,6 +7000,12 @@ function checkLocalStorageHealth() {
 // Auto-save stacks and insights more frequently to prevent data loss
 if (!window.__QUEST_AUTOSAVE_ID__) {
     window.__QUEST_AUTOSAVE_ID__ = setInterval(() => {
+        // Skip auto-save if user is editing a comment
+        if (isCommentEditing) {
+            console.log('↩︎ skip auto-save: comment editing in progress');
+            return;
+        }
+        
         if (checkLocalStorageHealth()) {
             // Only save stacks if they've been loaded at least once
             if (hasLoadedStacksOnce) {

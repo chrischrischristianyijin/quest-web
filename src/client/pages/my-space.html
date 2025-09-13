@@ -439,7 +439,16 @@
                 <div class="details-scroll">
                     <div class="title-row">
                         <div>
-                            <h1 class="content-title" id="modalContentTitle">Wikipedia, the free encyclopedia</h1>
+                            <div class="title-with-edit">
+                                <h1 class="content-title" id="modalContentTitle">Wikipedia, the free encyclopedia</h1>
+                                <button class="edit-title-btn" id="editTitleBtn" title="Edit title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                            </div>
                             <div class="chip-row">
                                 <span class="tag-pill" id="primaryTag">Archive</span>
                                 <span class="date-chip" id="summaryDate">09/07/2025</span>
@@ -479,11 +488,7 @@
                         <div class="section-head">
                             <h3>AI Summary</h3>
                         </div>
-                        <p class="summary-text" id="summaryText">Lorem ipsum dolor sit amet, consectetur adipiscing
-                            elit. Maecenas facilisis tempor
-                            elementum. Mauris eu bibendum est, nec iaculis nunc. Lorem ipsum dolor sit amet,
-                            consectetur adipiscing elit. Maecenas facilisis tempor elementum. Mauris eu bibendum
-                            est, nec iaculis nunc.</p>
+                        <p class="summary-text" id="summaryText">Loading AI summary...</p>
                     </div>
                 </div>
             </div>
