@@ -525,22 +525,23 @@ body {
 /* 内容卡片区域 */
 .ContentCards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px));
     gap: var(--spacing-lg);
     margin-top: var(--spacing-xl);
+    justify-content: center;
 }
 
 .content-card {
     background: var(--bg-primary);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-light);
-    justify-self: stretch;    /* ensure cards take full width of their grid cell */
     border: 1px solid var(--border-light);
     transition: var(--transition-normal);
     position: relative;
     overflow: visible;
     display: flex;
     flex-direction: column;
+    width: 100%;
 }
 
 .content-card-image-container {
@@ -587,8 +588,37 @@ body {
     100% { background-position: -200% 0; }
 }
 
-/* 响应式图片设计 */
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .ContentCards {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+    }
+    
+    .loading-skeleton {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+    }
+    
+    .stack-cards-grid-inline {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+    }
+}
+
 @media (max-width: 768px) {
+    .ContentCards {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 350px));
+        gap: var(--spacing-md);
+    }
+    
+    .loading-skeleton {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 350px));
+        gap: var(--spacing-md);
+    }
+    
+    .stack-cards-grid-inline {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 350px));
+        gap: var(--spacing-md);
+    }
+    
     .content-card-image-container {
         height: 150px;
     }
@@ -599,6 +629,23 @@ body {
 }
 
 @media (max-width: 480px) {
+    .ContentCards {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+        padding: 0 var(--spacing-md);
+    }
+    
+    .loading-skeleton {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+        padding: 0 var(--spacing-md);
+    }
+    
+    .stack-cards-grid-inline {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
     .content-card-image-container {
         height: 120px;
     }
@@ -1850,9 +1897,10 @@ body .add-content-modal-content {
 /* Loading Skeleton Styles */
 .loading-skeleton {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px));
     gap: var(--spacing-lg);
     margin-top: var(--spacing-xl);
+    justify-content: center;
 }
 
 /* Skeleton overlay with smooth transitions */
@@ -4897,9 +4945,10 @@ body.modal-open { overflow: hidden; }
 
 .stack-cards-grid-inline {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px));
     gap: var(--spacing-lg);
     margin-bottom: 32px;
+    justify-content: center;
 }
 
 .stack-footer-inline {
