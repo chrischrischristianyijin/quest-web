@@ -22,13 +22,6 @@
             <a href="/" class="logo">
                 <img src="/public/logo.png" alt="Quest">
             </a>
-            <div class="nav-links" id="navLinks">
-                <a href="#home" class="nav-link">HOME</a>
-                <a href="#extension" class="nav-link">EXTENSION</a>
-                <a href="#explore" class="nav-link">EXPLORE</a>
-                <a href="#more" class="nav-link">MORE</a>
-                <a href="#contact" class="nav-link">CONTACT</a>
-            </div>
             <div class="auth-buttons" id="authButtons">
                 <!-- Auth buttons will be dynamically updated -->
             </div>
@@ -38,45 +31,52 @@
 
 
     <main class="main-content">
-        <!-- Home Section -->
-        <section id="home" class="home-section">
+        <!-- Unified Hero Section -->
+        <section id="home" class="unified-hero-section">
             <div class="hero-background-blur"></div>
-            <div class="hero-content">
-                <h1 class="hero-title" id="welcomeTitle">Welcome to</h1>
-                <p class="hero-subtitle">- YOUR SECOND BRAIN -</p>
-                <div class="hero-date">Sep 13, 2025 | Coming Soon</div>
-                <div class="waitlist-container">
-                    <div class="waitlist-input-container">
-                        <input type="email" class="waitlist-input" placeholder="Enter Email to Join Waitlist"
-                            id="waitlistEmail">
-                        <button class="waitlist-button" id="waitlistButton">Done</button>
+            <div class="hero-container">
+                <!-- Left Content -->
+                <div class="hero-content">
+                    <div class="hero-header">
+                        <h1 class="hero-title" id="welcomeTitle">Welcome to Quest</h1>
+                        <p class="hero-tagline">- YOUR SECOND BRAIN -</p>
+                    </div>
+                    <h2 class="hero-main-text">Click Less. Remember More.</h2>
+                    <p class="hero-description">
+                        Save anything with <span class="highlight">one click</span>.<br>
+                        Build your <span class="highlight">knowledge vault</span> effortlessly.
+                    </p>
+                    <div class="hero-actions">
+                        <div class="first-row-actions">
+                            <a href="#" id="dynamicExploreBtn" class="explore-features-btn">
+                                Explore Features Signup
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </a>
+                            <div class="social-buttons">
+                                <a href="https://xhslink.com/m/6IUc0kEKeRy" target="_blank" class="xiaohongshu-btn" title="关注Quest小红书 - 1081 likes & cols">
+                                    <img src="public/XiaohongshuLOGO.svg.png" alt="小红书" class="social-icon">
+                                </a>
+                                <a href="https://www.instagram.com/quest_official2025?igsh=NTc4MTIwNjQ2YQ==" target="_blank" class="instagram-btn" title="关注Quest官方Instagram">
+                                    <img src="public/Instagram_icon.png" alt="Instagram" class="social-icon">
+                                </a>
+                            </div>
+                        </div>
+                        <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac"
+                            class="extension-cta">
+                            Get the Extension - It's Free!
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </a>
                     </div>
                 </div>
-            </div>
-        </section>
-
-
-        <!-- Extension Section -->
-        <section id="extension" class="extension-section">
-            <div class="extension-container">
-                <div class="showcase-content">
-                    <h2 class="showcase-title">Click Less. Remember More.</h2>
-                    <p class="showcase-description">
-                        With <span class="showcase-highlight">Insight Collector</span>, saving articles, tweets, and
-                        ideas takes just one click.<br>
-                        Everything goes straight into your <span class="showcase-highlight">Personal Knowledge
-                            Vault.</span>
-                    </p>
-                    <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac"
-                        class="showcase-cta">
-                        Get the Extension - It's Free!
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </a>
-                </div>
-                <div class="showcase-visual">
+                
+                <!-- Right Visual -->
+                <div class="hero-visual">
                     <div class="extension-carousel">
                         <div class="carousel-slide active">
                             <img src="/public/extension1.png" alt="Quest Extension 1">
