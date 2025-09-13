@@ -8,40 +8,37 @@ const tryButton = document.getElementById('tryButton');
 
 // Update navigation based on login status
 function updateNavigation(isLoggedIn, user = null) {
-    const navLinks = document.getElementById('navLinks');
     const authButtons = document.getElementById('authButtons');
+    const dynamicExploreBtn = document.getElementById('dynamicExploreBtn');
     
-    if (!navLinks || !authButtons) return;
+    if (!authButtons) return;
     
     if (isLoggedIn && user) {
-        // User is logged in - show section links + My Space link and logout button
-        navLinks.innerHTML = `
-            <a href="#home" class="nav-link">HOME</a>
-            <a href="#extension" class="nav-link">EXTENSION</a>
-            <a href="#explore" class="nav-link">EXPLORE</a>
-            <a href="#more" class="nav-link">MORE</a>
-            <a href="${PATHS.MY_SPACE}" class="nav-link">MY SPACE</a>
-        `;
-        
+        // User is logged in - show logout button
         authButtons.innerHTML = `
+            <a href="${PATHS.MY_SPACE}" class="auth-btn auth-btn-secondary">My Space</a>
             <button class="auth-btn auth-btn-secondary" onclick="handleLogout()">
                 Logout
             </button>
         `;
-    } else {
-        // User is not logged in - show section links only (auth buttons temporarily hidden)
-        navLinks.innerHTML = `
-            <a href="#home" class="nav-link">HOME</a>
-            <a href="#extension" class="nav-link">EXTENSION</a>
-            <a href="#explore" class="nav-link">EXPLORE</a>
-            <a href="#more" class="nav-link">MORE</a>
-        `;
         
-        // Show auth buttons for login and signup
+        // Update explore button to go to My Space
+        if (dynamicExploreBtn) {
+            dynamicExploreBtn.textContent = 'Go to My Space';
+            dynamicExploreBtn.href = PATHS.MY_SPACE;
+        }
+    } else {
+        // User is not logged in - show login and signup buttons
         authButtons.innerHTML = `
             <a href="${PATHS.LOGIN}" class="auth-btn auth-btn-secondary">Login</a>
             <a href="${PATHS.SIGNUP}" class="auth-btn auth-btn-primary">Sign Up</a>
         `;
+        
+        // Update explore button to go to Sign Up
+        if (dynamicExploreBtn) {
+            dynamicExploreBtn.textContent = 'Explore Features Signup';
+            dynamicExploreBtn.href = PATHS.SIGNUP;
+        }
     }
 }
 
@@ -61,6 +58,9 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
             tryButton.textContent = 'Go to My Space';
             tryButton.href = PATHS.MY_SPACE;
         }
+        
+        // Update navigation buttons
+        updateNavigation(true, user);
         
         console.log('✅ UI updated for logged in user');
     } else {
@@ -82,6 +82,9 @@ function updateUIForLoginStatus(isLoggedIn, user = null) {
             `;
             tryButton.href = PATHS.SIGNUP;
         }
+        
+        // Update navigation buttons
+        updateNavigation(false);
         
         console.log('✅ UI updated for guest user');
     }
@@ -411,16 +414,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         if (auth.checkAuth()) {
             const user = auth.getCurrentUser();
-            updateUIForLoginStatus(true, user);
-            updateNavigation(true, user); // Update navigation bar
+            updateUIForLoginStatus(true, user); // This now calls updateNavigation internally
         } else {
-            updateUIForLoginStatus(false);
-            updateNavigation(false); // Update navigation bar
+            updateUIForLoginStatus(false); // This now calls updateNavigation internally
         }
     } catch (error) {
         console.error('Error checking auth status:', error);
-        updateUIForLoginStatus(false);
-        updateNavigation(false); // Update navigation bar
+        updateUIForLoginStatus(false); // This now calls updateNavigation internally
     }
     
     // Initialize other features
