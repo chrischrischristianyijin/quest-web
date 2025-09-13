@@ -6658,7 +6658,11 @@ function addTemplateCard() {
             </div>
             <div class="template-card-text">
                 <h3>Add New Content</h3>
-                <p>Click to add a new content card</p>
+                <p>Click to add a new insight or create a stack</p>
+                <div class="template-card-options">
+                    <span class="template-option">📄 Insight</span>
+                    <span class="template-option">📚 Stack</span>
+                </div>
             </div>
         </div>
     `;
