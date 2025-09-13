@@ -15,23 +15,38 @@
     --quest-blue: #6287E4;
     --quest-gradient: linear-gradient(135deg, #4B264F 0%, #8E4F9D 100%);
     
-    /* 基础颜色 */
-    --text-primary: #333;
-    --text-secondary: #666;
-    --text-light: #999;
+    /* 基础颜色 - 使用现代设计系统 */
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-light: #64748b;
     --border-default: #ddd;
     --border-light: #eee;
     --bg-primary: #fff;
     --bg-secondary: #f5f5f5;
     --bg-light: #fafafa;
     
-    /* 间距系统 */
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 32px;
-    --spacing-xxl: 48px;
+    /* 间距系统 - 统一使用rem单位 */
+    --spacing-xs: 0.25rem;  /* 4px */
+    --spacing-sm: 0.5rem;   /* 8px */
+    --spacing-md: 1rem;     /* 16px */
+    --spacing-lg: 1.5rem;   /* 24px */
+    --spacing-xl: 2rem;     /* 32px */
+    --spacing-xxl: 3rem;    /* 48px */
+    
+    /* 兼容性映射到--space-*系统 */
+    --space-1: var(--spacing-xs);
+    --space-2: var(--spacing-sm);
+    --space-3: var(--spacing-md);
+    --space-4: var(--spacing-lg);
+    --space-5: var(--spacing-xl);
+    --space-6: var(--spacing-xxl);
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-20: 5rem;
+    --space-24: 6rem;
+    --space-32: 8rem;
     
     /* 圆角系统 */
     --radius-sm: 4px;

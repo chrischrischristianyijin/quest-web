@@ -1,6 +1,19 @@
 /* 首页特定样式 */
 @import url('./common.css');
 
+/* 注意：CSS变量系统现在在common.css中统一定义，避免冲突 */
+
+/* 确保Vercel部署的一致性 */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+}
+
 /* 苹果风格全局设置 */
 :root {
     /* 苹果风格色彩系统 */
@@ -17,8 +30,7 @@
     
     /* 极简色彩系统 */
     --base-white: #ffffff;
-    --text-primary: #1e293b;
-    --text-secondary: #475569;
+    /* 文本颜色系统现在在common.css中统一定义 */
     --text-muted: #64748b;
     --border-light: rgba(226, 232, 240, 0.7);
     
@@ -46,20 +58,7 @@
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     
-    /* 苹果风格间距系统 */
-    --space-1: 0.25rem;
-    --space-2: 0.5rem;
-    --space-3: 0.75rem;
-    --space-4: 1rem;
-    --space-5: 1.25rem;
-    --space-6: 1.5rem;
-    --space-8: 2rem;
-    --space-10: 2.5rem;
-    --space-12: 3rem;
-    --space-16: 4rem;
-    --space-20: 5rem;
-    --space-24: 6rem;
-    --space-32: 8rem;
+    /* 间距系统现在在common.css中统一定义 */
 }
 
 /* 全局字体设置 - 苹果风格 */
@@ -368,29 +367,41 @@ body::before {
     justify-content: center;
     padding: var(--space-16) var(--space-6);
     background: 
-        radial-gradient(circle at 20% 30%, rgba(53, 39, 107, 0.08) 0%, transparent 60%),
-        radial-gradient(circle at 80% 70%, rgba(139, 95, 191, 0.06) 0%, transparent 60%),
-        radial-gradient(circle at 50% 50%, rgba(199, 125, 255, 0.04) 0%, transparent 70%);
+        radial-gradient(circle at 20% 30%, rgba(139, 95, 191, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 80% 70%, rgba(199, 125, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 50% 50%, rgba(168, 101, 184, 0.06) 0%, transparent 70%),
+        linear-gradient(135deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.95) 100%);
+    backdrop-filter: blur(60px) saturate(200%);
     position: relative;
     z-index: 10;
     overflow: hidden;
     margin-top: 0;
+    box-shadow: 
+        0 20px 60px rgba(139, 95, 191, 0.08),
+        0 8px 30px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.2);
 }
 
 .hero-background-blur {
     position: absolute;
-    width: 1233px;
-    height: 590px;
+    width: 1400px;
+    height: 700px;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, rgba(53, 39, 107, 0.15) 0%, rgba(139, 95, 191, 0.12) 50%, rgba(199, 125, 255, 0.08) 100%);
-    box-shadow: 100px 100px 100px rgba(53, 39, 107, 0.1);
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(139, 95, 191, 0.25) 0%, transparent 60%),
+        radial-gradient(circle at 70% 70%, rgba(199, 125, 255, 0.2) 0%, transparent 60%),
+        radial-gradient(circle at 50% 50%, rgba(168, 101, 184, 0.15) 0%, transparent 70%);
+    box-shadow: 
+        120px 120px 120px rgba(139, 95, 191, 0.15),
+        80px 80px 80px rgba(199, 125, 255, 0.1);
     border-radius: 9999px;
-    filter: blur(60px);
+    filter: blur(80px);
     z-index: 1;
     pointer-events: none;
-    animation: heroGlow 8s ease-in-out infinite;
+    animation: heroGlow 12s ease-in-out infinite;
 }
 
 @keyframes heroGlow {
@@ -410,11 +421,11 @@ body::before {
     margin: 0 auto;
     position: relative;
     z-index: 15;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 60px;
+    display: flex;
+    justify-content: center;
     align-items: center;
     width: 100%;
+    gap: 60px;
 }
 
 .hero-content {
@@ -424,8 +435,8 @@ body::before {
     gap: 0;
     padding: 0;
     text-align: center;
-    max-width: 500px;
-    margin: 0 auto;
+    max-width: 600px;
+    flex: 1;
 }
 
 .hero-header {
@@ -490,8 +501,11 @@ body::before {
 .hero-main-text {
     font-size: clamp(0.9rem, 2vw, 1.1rem);
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-weight: 400;
-    color: var(--text-secondary);
+    font-weight: 500;
+    background: linear-gradient(135deg, #8B5FBF 0%, #C77DFF 50%, #A865B8 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     margin-bottom: var(--space-4);
     line-height: 1.6;
     letter-spacing: -0.01em;
@@ -500,7 +514,8 @@ body::before {
     z-index: 20;
     animation: pageLoad 1s ease forwards;
     animation-delay: 0.5s;
-    opacity: 0.85;
+    opacity: 1;
+    text-shadow: 0 2px 8px rgba(139, 95, 191, 0.3), 0 1px 4px rgba(168, 101, 184, 0.2);
 }
 
 
@@ -508,19 +523,27 @@ body::before {
     font-size: clamp(0.9rem, 2vw, 1.1rem);
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-weight: 400;
-    color: var(--text-secondary);
+    background: linear-gradient(135deg, #8B5FBF 0%, #C77DFF 50%, #A865B8 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     line-height: 1.6;
     margin-bottom: var(--space-6);
-    opacity: 0.85;
+    opacity: 1;
     max-width: 500px;
     text-align: center;
     animation: pageLoad 1s ease forwards;
     animation-delay: 0.6s;
+    text-shadow: 0 2px 8px rgba(139, 95, 191, 0.25), 0 1px 4px rgba(168, 101, 184, 0.15);
 }
 
 .highlight {
-    color: var(--accent-color);
+    background: linear-gradient(135deg, #C77DFF 0%, #8B5FBF 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     font-weight: 600;
+    text-shadow: 0 2px 8px rgba(199, 125, 255, 0.4), 0 1px 4px rgba(139, 95, 191, 0.3);
 }
 
 @keyframes subtitleGlow {
@@ -561,20 +584,21 @@ body::before {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 14px 28px;
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(60px) saturate(220%);
+    padding: 16px 32px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(80px) saturate(250%);
     color: var(--text-primary);
     text-decoration: none;
-    border-radius: 35px;
+    border-radius: 40px;
     font-weight: 600;
     font-size: 16px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(139, 95, 191, 0.2);
     box-shadow: 
-        0 8px 30px rgba(0, 0, 0, 0.08), 
-        0 4px 15px rgba(0, 0, 0, 0.05), 
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 12px 40px rgba(139, 95, 191, 0.15), 
+        0 6px 20px rgba(0, 0, 0, 0.08), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(139, 95, 191, 0.1);
     position: relative;
     overflow: hidden;
     animation: pageLoad 1s ease forwards;
@@ -584,13 +608,14 @@ body::before {
 }
 
 .explore-features-btn:hover {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px) scale(1.02);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(139, 95, 191, 0.3);
+    transform: translateY(-3px) scale(1.03);
     box-shadow: 
-        0 12px 40px rgba(0, 0, 0, 0.12), 
-        0 6px 20px rgba(0, 0, 0, 0.08), 
-        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        0 16px 50px rgba(139, 95, 191, 0.2), 
+        0 8px 25px rgba(0, 0, 0, 0.1), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(139, 95, 191, 0.15);
 }
 
 .xiaohongshu-btn {
@@ -732,6 +757,7 @@ body::before {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    flex: 1;
     gap: 20px;
     animation: pageLoad 1s ease forwards;
     animation-delay: 1s;
@@ -1950,7 +1976,7 @@ body::before {
     }
     
     .hero-container {
-        grid-template-columns: 1fr;
+        flex-direction: column;
         gap: 40px;
         text-align: center;
         max-width: 600px;
@@ -1960,8 +1986,8 @@ body::before {
         align-items: center;
         text-align: center;
         order: 2;
-        max-width: 500px;
-        margin: 0 auto;
+        max-width: 100%;
+        flex: none;
     }
     
     .hero-header {
