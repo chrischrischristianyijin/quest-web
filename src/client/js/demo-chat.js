@@ -1167,44 +1167,21 @@ async function sendToQuestAPI(message, typingMessage = null) {
         const userId = user ? (user.id || user.user_id) : null;
         
         // 构建URL，根据是否有会话ID决定URL格式
-        let url;
-        let sessionId = null;
+        const currentSession = sessionManager.currentSession;
+        const url = currentSession?.id 
+            ? `${CHAT_ENDPOINT}?session_id=${currentSession.id}`
+            : CHAT_ENDPOINT;
         
-        if (userId) {
-            console.log('🔍 发送聊天请求，用户ID:', userId);
-            console.log('🔍 当前会话状态:', sessionManager.currentSession);
-            
-            // 如果有当前会话，使用现有会话ID
-            if (sessionManager.currentSession && sessionManager.currentSession.id) {
-                sessionId = sessionManager.currentSession.id;
-                url = `${CHAT_ENDPOINT}?session_id=${sessionId}`;
-                // 确保会话ID保存到localStorage
-                sessionManager.setCurrentSession(sessionId);
-                console.log('🔍 使用现有会话ID:', sessionId);
-            } else {
-                // 如果没有当前会话，先创建一个新会话
-                console.log('🆕 没有当前会话，创建新会话...');
-                try {
-                    const newSession = await sessionManager.createSession(userId, 'Demo Chat');
-                    sessionId = newSession.id;
-                    url = `${CHAT_ENDPOINT}?session_id=${sessionId}`;
-                    sessionManager.setCurrentSession(sessionId);
-                    console.log('✅ 创建新会话成功，ID:', sessionId);
-                    
-                    // 更新会话列表（异步执行，不阻塞当前请求）
-                    chatUI.loadSessions().catch(err => console.warn('更新会话列表失败:', err));
-                } catch (error) {
-                    console.error('❌ 创建会话失败:', error);
-                    // 即使创建会话失败，也继续发送请求，让后端处理
-                    url = CHAT_ENDPOINT;
-                    console.log('⚠️ 继续发送请求，让后端创建会话');
-                }
-            }
+        // 确保会话ID保存到localStorage（如果有的话）
+        if (currentSession?.id) {
+            sessionManager.setCurrentSession(currentSession.id);
+            console.log('🔍 使用现有会话ID:', currentSession.id);
         } else {
-            // 用户未登录的请求格式
-            url = CHAT_ENDPOINT;
-            console.warn('⚠️ 用户未登录，发送匿名请求');
+            console.log('🆕 没有当前会话，将让后端创建新会话');
         }
+        
+        console.log('🔍 发送聊天请求，用户ID:', userId);
+        console.log('🔍 当前会话状态:', currentSession);
         
         // 构建请求体
         const requestBody = {
@@ -1243,7 +1220,7 @@ async function sendToQuestAPI(message, typingMessage = null) {
         // 从响应头获取会话ID
         const sessionIdFromResponse = response.headers.get('X-Session-ID');
         console.log('📨 响应头中的会话ID:', sessionIdFromResponse);
-        console.log('📨 发送时的会话ID:', sessionId);
+        console.log('📨 发送时的会话ID:', currentSession?.id);
         
         if (sessionIdFromResponse) {
             // 更新或设置当前会话ID
@@ -1252,8 +1229,8 @@ async function sendToQuestAPI(message, typingMessage = null) {
                 console.log('🔄 更新会话ID:', sessionIdFromResponse);
                 
                 // 如果响应中的会话ID与发送的不一致，说明后端创建了新会话
-                if (sessionId && sessionId !== sessionIdFromResponse) {
-                    console.warn('⚠️ 会话ID不匹配！发送:', sessionId, '接收:', sessionIdFromResponse);
+                if (currentSession?.id && currentSession.id !== sessionIdFromResponse) {
+                    console.warn('⚠️ 会话ID不匹配！发送:', currentSession.id, '接收:', sessionIdFromResponse);
                     console.warn('⚠️ 这可能导致会话重复创建问题');
                 }
             } else {
