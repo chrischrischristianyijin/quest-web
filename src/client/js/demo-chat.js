@@ -897,6 +897,49 @@ async function testApiIntegration() {
     }
 }
 
+// 渲染sources列表（可展开版本）
+function renderSourcesList(sources) {
+    if (!sources || sources.length === 0) return '';
+    
+    const sourcesList = sources.map((source, index) => {
+        const title = source.title || `Source ${index + 1}`;
+        const url = source.url || '#';
+        const score = source.score ? `${Math.round(source.score * 100)}%` : '';
+        
+        return `
+            <div class="source-item" data-index="${index}">
+                <div class="source-header" onclick="toggleSourceDetails(${index})">
+                    <span class="source-index">${index + 1}.</span>
+                    <span class="source-title">${title}</span>
+                    ${score ? `<span class="source-score">${score}</span>` : ''}
+                    <span class="source-toggle">▼</span>
+                </div>
+                <div class="source-details" id="source-details-${index}" style="display: none;">
+                    ${url !== '#' ? `<a href="${url}" target="_blank" class="source-url">🔗 ${url}</a>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    return `<div class="sources-list">${sourcesList}</div>`;
+}
+
+// 切换source详情显示 - 全局函数
+window.toggleSourceDetails = function(index) {
+    const details = document.getElementById(`source-details-${index}`);
+    const toggle = document.querySelector(`[data-index="${index}"] .source-toggle`);
+    
+    if (details && toggle) {
+        if (details.style.display === 'none') {
+            details.style.display = 'block';
+            toggle.textContent = '▲';
+        } else {
+            details.style.display = 'none';
+            toggle.textContent = '▼';
+        }
+    }
+};
+
 function addMessage(text, isUser = false, isError = false, sources = null) {
     // 创建消息容器
     const containerDiv = document.createElement('div');
@@ -930,6 +973,7 @@ function addMessage(text, isUser = false, isError = false, sources = null) {
             <div>${text}</div>
             <div class="sources-info">
                 <strong>Sources:</strong> ${sources.length} reference(s) found
+                ${renderSourcesList(sources)}
             </div>
         `;
     } else {
@@ -1157,6 +1201,7 @@ async function sendToQuestAPI(message, typingMessage = null) {
                                         <div class="sources-info">
                                             <strong>Sources:</strong> ${sources.length} reference(s) found
                                             ${latency ? ` • Response time: ${latency}ms` : ''}
+                                            ${renderSourcesList(sources)}
                                         </div>
                                     `;
                                 } else {
