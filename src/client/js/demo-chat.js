@@ -12,7 +12,7 @@ const apiStatus = document.getElementById('apiStatus');
 const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
 const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;  // 主要聊天接口
 const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;  // 健康检查
-const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/sessions`;  // 会话管理 - 修正端点
+const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;  // 会话管理 - 根据API文档修正
 
 // 获取当前用户信息 - 使用现有的认证系统
 function getCurrentUserInfo() {
@@ -122,7 +122,11 @@ class SessionManager {
                 title: title || '新对话'
             };
 
-            console.log('🔍 创建会话请求:', requestBody);
+            console.log('🔍 创建会话API请求:');
+            console.log('  - URL:', SESSIONS_ENDPOINT);
+            console.log('  - Method: POST');
+            console.log('  - Headers:', headers);
+            console.log('  - Body:', requestBody);
 
             const response = await fetch(SESSIONS_ENDPOINT, {
                 method: 'POST',
@@ -442,13 +446,24 @@ class ChatUI {
     // 会话管理
     async createNewSession() {
         try {
+            console.log('🆕 开始创建新会话...');
+            
             const user = getCurrentUserInfo();
             if (!user) {
+                console.warn('⚠️ 用户未登录，无法创建会话');
                 alert('Please login first');
                 return;
             }
 
+            console.log('👤 用户信息:', {
+                id: user.id || user.user_id,
+                email: user.email,
+                nickname: user.nickname
+            });
+
             const session = await sessionManager.createSession(user.id || user.user_id, 'New Chat');
+            console.log('✅ 会话创建成功:', session);
+            
             this.updateChatTitle(session.title || 'New Chat');
             this.closeSidebar();
             
@@ -459,11 +474,16 @@ class ChatUI {
             this.renderMemories([]);
             
             // 重新加载会话列表
+            console.log('🔄 重新加载会话列表...');
             await this.loadSessions();
             
-            console.log('✅ 创建新会话成功:', session);
+            console.log('✅ 创建新会话流程完成');
         } catch (error) {
             console.error('❌ 创建新会话失败:', error);
+            console.log('🔍 错误详情:', {
+                message: error.message,
+                stack: error.stack
+            });
             alert('Failed to create new session, please try again');
         }
     }
@@ -692,6 +712,53 @@ class ChatUI {
 // 创建UI管理器实例
 const chatUI = new ChatUI();
 
+// 打字机效果函数
+function typeWriter(element, text, speed = 30) {
+    let i = 0;
+    element.textContent = '';
+    
+    function type() {
+        if (i < text.length) {
+            element.textContent += text.charAt(i);
+            i++;
+            setTimeout(type, speed);
+        }
+    }
+    
+    type();
+}
+
+// 带光标的打字机效果
+function typeWriterWithCursor(element, text, speed = 20) {
+    let i = 0;
+    element.innerHTML = '<span class="typing-cursor">|</span>';
+    
+    function type() {
+        if (i < text.length) {
+            const currentText = text.substring(0, i + 1);
+            element.innerHTML = currentText + '<span class="typing-cursor">|</span>';
+            i++;
+            
+            // 根据字符类型调整速度
+            let currentSpeed = speed;
+            if (text.charAt(i - 1) === ' ') {
+                currentSpeed = speed * 0.5; // 空格后稍快
+            } else if (text.charAt(i - 1) === '.' || text.charAt(i - 1) === '!' || text.charAt(i - 1) === '?') {
+                currentSpeed = speed * 3; // 句号后停顿
+            }
+            
+            setTimeout(type, currentSpeed);
+        } else {
+            // 打字完成后移除光标
+            setTimeout(() => {
+                element.innerHTML = text;
+            }, 1000);
+        }
+    }
+    
+    type();
+}
+
 // 聊天完成后更新记忆显示
 async function updateMemoriesAfterChat() {
     try {
@@ -839,10 +906,13 @@ function addTypingIndicator() {
     
     // 创建消息框
     const messageDiv = document.createElement('div');
-    messageDiv.className = 'message assistant';
+    messageDiv.className = 'message assistant typing-message';
     messageDiv.innerHTML = `
         <div class="typing-indicator">
-            <span>Gathering insights from your knowledge base</span>
+            <div class="typing-text">
+                <span class="typing-main">思考中</span>
+                <span class="typing-sub">正在分析您的知识库...</span>
+            </div>
             <div class="typing-dots">
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
@@ -963,6 +1033,10 @@ async function sendToQuestAPI(message) {
         containerDiv.appendChild(responseMessage);
         chatMessages.appendChild(containerDiv);
         
+        // 用于存储完整的响应文本
+        let completeResponse = '';
+        let isTyping = false;
+        
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -977,29 +1051,44 @@ async function sendToQuestAPI(message) {
                         
                         if (data.type === 'content') {
                             fullResponse += data.content;
-                            // 更新消息内容
-                            responseMessage.textContent = fullResponse;
+                            completeResponse += data.content;
+                            
+                            // 使用打字机效果显示内容
+                            if (!isTyping) {
+                                isTyping = true;
+                                typeWriterWithCursor(responseMessage, fullResponse, 20);
+                            } else {
+                                // 如果正在打字，更新内容
+                                responseMessage.innerHTML = fullResponse + '<span class="typing-cursor">|</span>';
+                            }
+                            
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         } else if (data.type === 'done') {
                             sources = data.sources;
                             requestId = data.request_id;
                             latency = data.latency_ms;
                             
-                            // Update message with sources info
-                            if (sources && sources.length > 0) {
-                                responseMessage.innerHTML = `
-                                    <div>${fullResponse}</div>
-                                    <div class="sources-info">
-                                        <strong>Sources:</strong> ${sources.length} reference(s) found
-                                        ${latency ? ` • Response time: ${latency}ms` : ''}
-                                    </div>
-                                `;
-                            } else {
-                                // 如果没有找到来源，只显示响应内容
-                                responseMessage.innerHTML = `
-                                    <div>${fullResponse}</div>
-                                `;
-                            }
+                            // 完成打字效果
+                            isTyping = false;
+                            responseMessage.innerHTML = fullResponse;
+                            
+                            // 延迟一点再添加来源信息，让打字效果完成
+                            setTimeout(() => {
+                                if (sources && sources.length > 0) {
+                                    responseMessage.innerHTML = `
+                                        <div>${fullResponse}</div>
+                                        <div class="sources-info">
+                                            <strong>Sources:</strong> ${sources.length} reference(s) found
+                                            ${latency ? ` • Response time: ${latency}ms` : ''}
+                                        </div>
+                                    `;
+                                } else {
+                                    responseMessage.innerHTML = `
+                                        <div>${fullResponse}</div>
+                                    `;
+                                }
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            }, 500);
                             
                             // 聊天完成后，更新记忆显示
                             await updateMemoriesAfterChat();
