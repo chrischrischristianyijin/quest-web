@@ -1594,10 +1594,13 @@ function renderInsights() {
         }
     }
     
-    contentCards.appendChild(fragment);
-    
-    // Re-setup event delegation for the newly rendered cards
-    setupCardEventDelegation();
+    // 延迟添加内容，确保骨架屏淡出动画完成
+    setTimeout(() => {
+        contentCards.appendChild(fragment);
+        
+        // Re-setup event delegation for the newly rendered cards
+        setupCardEventDelegation();
+    }, 150); // 稍微延迟，让骨架屏开始淡出
     
     const insightsCount = hasActiveTagFilter ? 
         Math.min(insightsPerPage, Math.max(0, filteredInsights.length - (currentPage - 1) * insightsPerPage)) :
