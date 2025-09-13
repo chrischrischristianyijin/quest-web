@@ -929,7 +929,7 @@ async function initPage() {
             return;
         }
         
-        showErrorMessage('页面初始化失败，请刷新重试');
+        showErrorMessage('Page initialization failed, please refresh and try again');
     }
 }
 
@@ -2608,7 +2608,7 @@ async function shareInsight(insight) {
 
 // 删除见解
 async function deleteInsight(id) {
-    if (!confirm('确定要删除这个内容吗？')) {
+    if (!confirm('Are you sure you want to delete this content?')) {
         return;
     }
     
@@ -2638,7 +2638,7 @@ async function deleteInsight(id) {
         alert('Content deleted successfully!');
     } catch (error) {
         console.error('删除内容失败:', error);
-        alert(error.message || '删除内容失败，请重试');
+        alert(error.message || 'Failed to delete content, please try again');
     }
 }
 
