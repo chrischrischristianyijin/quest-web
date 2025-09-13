@@ -1024,6 +1024,9 @@ async function testApiIntegration() {
 function renderSourcesList(sources) {
     if (!sources || sources.length === 0) return '';
     
+    // 生成唯一的ID
+    const uniqueId = 'references-' + Math.random().toString(36).substr(2, 9);
+    
     const sourcesList = sources.map((source, index) => {
         const title = source.title || `Source ${index + 1}`;
         const url = source.url || '#';
@@ -1031,19 +1034,19 @@ function renderSourcesList(sources) {
         return `
             <div class="source-item">
                 <span class="source-title">${title}</span>
-                ${url !== '#' ? `<a href="${url}" target="_blank" class="source-link">🔗 link</a>` : ''}
+                ${url !== '#' ? `<a href="${url}" target="_blank" class="source-link" rel="noopener noreferrer">🔗 查看原文</a>` : ''}
             </div>
         `;
     }).join('');
     
     return `
         <div class="references-collapsible">
-            <div class="references-header" onclick="toggleReferences()">
+            <div class="references-header" onclick="toggleReferences('${uniqueId}')">
                 <span class="references-title">References</span>
                 <span class="references-count">${sources.length}</span>
-                <span class="references-toggle">▼</span>
+                <span class="references-toggle" id="toggle-${uniqueId}">▼</span>
             </div>
-            <div class="references-content" id="referencesContent" style="display: none;">
+            <div class="references-content" id="${uniqueId}" style="display: none;">
                 ${sourcesList}
             </div>
         </div>
@@ -1051,9 +1054,9 @@ function renderSourcesList(sources) {
 }
 
 // 切换References显示 - 全局函数
-window.toggleReferences = function() {
-    const content = document.getElementById('referencesContent');
-    const toggle = document.querySelector('.references-toggle');
+window.toggleReferences = function(referencesId) {
+    const content = document.getElementById(referencesId);
+    const toggle = document.getElementById('toggle-' + referencesId);
     
     if (content && toggle) {
         if (content.style.display === 'none') {
