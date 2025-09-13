@@ -728,13 +728,16 @@ function typeWriter(element, text, speed = 30) {
     type();
 }
 
-// 带光标的打字机效果
+// 带光标的打字机效果（改进版）
 function typeWriterWithCursor(element, text, speed = 20) {
     let i = 0;
+    let isTyping = true;
+    
+    // 清除元素内容并显示光标
     element.innerHTML = '<span class="typing-cursor">|</span>';
     
     function type() {
-        if (i < text.length) {
+        if (i < text.length && isTyping) {
             const currentText = text.substring(0, i + 1);
             element.innerHTML = currentText + '<span class="typing-cursor">|</span>';
             i++;
@@ -748,15 +751,29 @@ function typeWriterWithCursor(element, text, speed = 20) {
             }
             
             setTimeout(type, currentSpeed);
-        } else {
+        } else if (isTyping) {
             // 打字完成后移除光标
             setTimeout(() => {
-                element.innerHTML = text;
+                if (isTyping) { // 确保没有被中断
+                    element.innerHTML = text;
+                    isTyping = false;
+                }
             }, 1000);
         }
     }
     
     type();
+    
+    // 返回停止函数
+    return () => {
+        isTyping = false;
+        element.innerHTML = text;
+    };
+}
+
+// 流式打字机效果（用于SSE响应）
+function streamTypeWriter(element, text, cursor = true) {
+    element.innerHTML = text + (cursor ? '<span class="typing-cursor">|</span>' : '');
 }
 
 // 聊天完成后更新记忆显示
@@ -907,19 +924,36 @@ function addTypingIndicator() {
     // 创建消息框
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant typing-message';
-    messageDiv.innerHTML = `
-        <div class="typing-indicator">
-            <div class="typing-text">
-                <span class="typing-main">思考中</span>
-                <span class="typing-sub">正在分析您的知识库...</span>
+    
+    // 选择显示方式：英文版本或思考框版本
+    const useThinkingBox = true; // 设置为true使用思考框，false使用英文版本
+    
+    if (useThinkingBox) {
+        // 优雅的思考框版本
+        messageDiv.innerHTML = `
+            <div class="thinking-box">
+                <div class="thinking-content">
+                    <div class="thinking-icon"></div>
+                    <span>Thinking...</span>
+                </div>
             </div>
-            <div class="typing-dots">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
+        `;
+    } else {
+        // 英文版本
+        messageDiv.innerHTML = `
+            <div class="typing-indicator">
+                <div class="typing-text">
+                    <span class="typing-main">Thinking</span>
+                    <span class="typing-sub">Analyzing your knowledge base...</span>
+                </div>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    }
     
     // 创建头像
     const avatarDiv = document.createElement('div');
@@ -1033,9 +1067,10 @@ async function sendToQuestAPI(message) {
         containerDiv.appendChild(responseMessage);
         chatMessages.appendChild(containerDiv);
         
-        // 用于存储完整的响应文本
+        // 用于存储完整的响应文本和打字状态
         let completeResponse = '';
         let isTyping = false;
+        let typingTimeout = null;
         
         while (true) {
             const { done, value } = await reader.read();
@@ -1053,14 +1088,21 @@ async function sendToQuestAPI(message) {
                             fullResponse += data.content;
                             completeResponse += data.content;
                             
-                            // 使用打字机效果显示内容
-                            if (!isTyping) {
-                                isTyping = true;
-                                typeWriterWithCursor(responseMessage, fullResponse, 20);
-                            } else {
-                                // 如果正在打字，更新内容
-                                responseMessage.innerHTML = fullResponse + '<span class="typing-cursor">|</span>';
+                            // 清除之前的打字超时
+                            if (typingTimeout) {
+                                clearTimeout(typingTimeout);
                             }
+                            
+                            // 使用流式打字机效果显示内容
+                            streamTypeWriter(responseMessage, fullResponse, true);
+                            
+                            // 设置超时来移除光标（如果没有新内容到达）
+                            if (typingTimeout) {
+                                clearTimeout(typingTimeout);
+                            }
+                            typingTimeout = setTimeout(() => {
+                                streamTypeWriter(responseMessage, fullResponse, false);
+                            }, 1500);
                             
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         } else if (data.type === 'done') {
@@ -1068,11 +1110,15 @@ async function sendToQuestAPI(message) {
                             requestId = data.request_id;
                             latency = data.latency_ms;
                             
-                            // 完成打字效果
-                            isTyping = false;
-                            responseMessage.innerHTML = fullResponse;
+                            // 清除打字超时
+                            if (typingTimeout) {
+                                clearTimeout(typingTimeout);
+                            }
                             
-                            // 延迟一点再添加来源信息，让打字效果完成
+                            // 完成响应，移除光标
+                            streamTypeWriter(responseMessage, fullResponse, false);
+                            
+                            // 延迟一点再添加来源信息
                             setTimeout(() => {
                                 if (sources && sources.length > 0) {
                                     responseMessage.innerHTML = `
