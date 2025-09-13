@@ -35,7 +35,13 @@ export const PATHS = {
 };
 
 // 页面跳转函数
-export const navigateTo = (path) => {
+export const navigateTo = (path, options = {}) => {
+    // If forceReload is true, always use full page navigation
+    if (options.forceReload) {
+        window.location.href = path;
+        return;
+    }
+    
     // Check if this is a stack navigation (SPA route)
     if (path.startsWith('/stacks/')) {
         // Use History API for SPA navigation
@@ -45,7 +51,12 @@ export const navigateTo = (path) => {
     
     // Check if this is the home/my-space route (SPA route)
     if (path === '/my-space' || path === '/') {
-        // Use History API for SPA navigation
+        // For login/signup redirects, use full page navigation to ensure proper initialization
+        if (options.fromAuth) {
+            window.location.href = path;
+            return;
+        }
+        // Use History API for SPA navigation within the app
         history.pushState({ viewMode: 'home' }, '', path);
         return;
     }

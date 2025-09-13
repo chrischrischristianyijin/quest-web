@@ -764,16 +764,13 @@ function checkDataRecoveryStatus() {
     }
 })();
 
-// 在页面初始化时调用翻页初始化
-document.addEventListener('DOMContentLoaded', function() {
-    // 其他初始化代码...
-    initPagination();
-});
-
 // 页面初始化
 async function initPage() {
     try {
         console.log('🚀 开始初始化 My Space 页面...');
+        console.log('🔍 当前页面路径:', window.location.pathname);
+        console.log('🔍 DOM 加载状态:', document.readyState);
+        console.log('🔍 页面标题:', document.title);
         
         // 恢复会话状态
         const restored = auth.restoreSession();
@@ -862,6 +859,9 @@ async function initPage() {
         
         // Initialize search functionality
         initSearch();
+        
+        // Initialize pagination
+        initPagination();
         
         // Handle deep linking for stack views
         const { viewMode: initialViewMode, stackId } = parseRoute();
