@@ -523,10 +523,44 @@ async function loadUserInsightsWithPagination() {
             }
         }
         
-        const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
-        const endTime = Date.now();
-        console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
-        console.log('📡 First page API response:', firstPageResponse);
+        let firstPageResponse;
+        try {
+            firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
+            const endTime = Date.now();
+            console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
+            console.log('📡 First page API response:', firstPageResponse);
+        } catch (apiError) {
+            console.warn('⚠️ API请求失败，尝试从本地备份加载:', apiError.message);
+            // 如果API请求失败（可能是认证问题），尝试从本地备份加载
+            const backupInsights = localStorage.getItem('quest_insights_backup');
+            if (backupInsights) {
+                try {
+                    const backup = JSON.parse(backupInsights);
+                    if (backup.data && backup.data.length > 0) {
+                        console.log('📦 从本地备份加载 insights:', backup.data.length, '个');
+                        firstPageResponse = {
+                            success: true,
+                            data: {
+                                items: backup.data,
+                                pagination: {
+                                    page: 1,
+                                    total_pages: 1,
+                                    total: backup.data.length,
+                                    has_more: false
+                                }
+                            }
+                        };
+                    } else {
+                        throw new Error('本地备份为空');
+                    }
+                } catch (backupError) {
+                    console.error('❌ 解析本地备份失败:', backupError);
+                    throw apiError; // 重新抛出原始API错误
+                }
+            } else {
+                throw apiError; // 重新抛出原始API错误
+            }
+        }
         
         if (firstPageResponse?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
@@ -733,36 +767,32 @@ function checkDataRecoveryStatus() {
     }
 })();
 
-// 在页面初始化时调用翻页初始化
-document.addEventListener('DOMContentLoaded', function() {
-    // 其他初始化代码...
-    initPagination();
-});
-
 // 页面初始化
 async function initPage() {
     try {
-        // 恢复会话状态
-        try {
-            auth.restoreSession();
-        } catch (sessionError) {
-            console.error('❌ Session restore failed:', sessionError);
-        }
+        console.log('🚀 开始初始化 My Space 页面...');
+        console.log('🔍 当前页面路径:', window.location.pathname);
+        console.log('🔍 DOM 加载状态:', document.readyState);
+        console.log('🔍 页面标题:', document.title);
         
-        // 检查认证状态（放宽：先尝试恢复会话后再判断，避免闪跳）
+        // 恢复会话状态
+        const restored = auth.restoreSession();
+        console.log('🔍 会话恢复结果:', restored);
+        
+        // 检查认证状态
         const isAuthenticated = auth.checkAuth();
+        console.log('🔍 认证状态:', isAuthenticated);
         
         if (!isAuthenticated) {
-            const restored = auth.restoreSession();
+            console.log('⚠️ 用户未认证，显示错误信息并加载本地备份');
+            showErrorMessage('Please sign in. Showing last local backup.');
             
-            if (!restored) {
-                showErrorMessage('Please sign in. Showing last local backup.');
-                
-                // 即使未认证，也绑定基础UI事件（如用户资料编辑）
-                bindProfileEditEvents();
-                
-                // 不要return，允许加载本地备份数据
-            }
+            // 即使未认证，也绑定基础UI事件（如用户资料编辑）
+            bindProfileEditEvents();
+            
+            // 不要return，允许加载本地备份数据
+        } else {
+            console.log('✅ 用户已认证，继续加载数据');
         }
         
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
@@ -833,6 +863,9 @@ async function initPage() {
         // Initialize search functionality
         initSearch();
         
+        // Initialize pagination
+        initPagination();
+        
         // Handle deep linking for stack views
         const { viewMode: initialViewMode, stackId } = parseRoute();
         if (initialViewMode === 'stack' && stackId) {
@@ -850,6 +883,41 @@ async function initPage() {
             isEditMode = false;
             updateEditModeState();
         }
+        
+        // 强制显示内容区域，确保页面可见
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '1';
+            mainContent.style.visibility = 'visible';
+        }
+        
+        // 确保内容卡片容器可见
+        if (contentCards) {
+            contentCards.style.display = 'block';
+            contentCards.style.opacity = '1';
+            contentCards.style.visibility = 'visible';
+        }
+        
+        console.log('✅ 页面内容区域已强制显示');
+        
+        // 如果没有任何内容，确保显示空状态
+        setTimeout(() => {
+            if (contentCards && contentCards.children.length === 0) {
+                console.log('⚠️ 没有检测到内容，强制显示空状态');
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = `
+                    <div class="empty-state-icon">📚</div>
+                    <h3>Welcome to My Space!</h3>
+                    <p>Start adding your favorite media content to your collection</p>
+                    <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
+                        Add Content
+                    </button>
+                `;
+                contentCards.appendChild(emptyState);
+            }
+        }, 100);
         
         // 分页模式：不需要无限滚动
     } catch (error) {
@@ -1108,9 +1176,16 @@ function setupAuthListener() {
 // 加载用户资料
 async function loadUserProfile() {
     try {
-        // 再次检查认证状态
+        // 检查认证状态，如果未认证则使用本地数据
         if (!auth.checkAuth()) {
-            throw new Error('用户未认证');
+            console.log('⚠️ 用户未认证，使用本地用户数据');
+            const localUser = auth.getCurrentUser();
+            if (localUser) {
+                currentUser = localUser;
+                updateUserProfileUI();
+                return;
+            }
+            throw new Error('用户未认证且无本地数据');
         }
         
         // 总是尝试从 API 获取最新的用户资料
@@ -3088,6 +3163,14 @@ function normalizePaginatedInsightsResponse(response) {
 // 加载用户标签
 async function loadUserTags() {
     try {
+        // 检查认证状态
+        if (!auth.checkAuth()) {
+            console.log('⚠️ 用户未认证，使用空标签列表');
+            renderTagSelector([]);
+            updateFilterButtons([]);
+            return;
+        }
+        
         // 使用缓存的API方法获取标签
         const response = await getCachedUserTags();
         
@@ -3106,20 +3189,19 @@ async function loadUserTags() {
     } catch (error) {
         console.error('❌ 加载用户标签失败:', error);
         
-        // 检查是否是后端服务问题
-        if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+        // 检查是否是认证问题
+        if (error.message.includes('401') || error.message.includes('403') || error.message.includes('认证')) {
+            console.log('⚠️ 认证失败，使用空标签列表');
+            renderTagSelector([]);
+            updateFilterButtons([]);
+            // 不要显示错误信息或重定向，让用户继续使用页面
+        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
             showErrorMessage('Backend service temporarily unavailable. Please try again later.');
-        } else if (error.message.includes('401') || error.message.includes('403')) {
-            showErrorMessage('Authentication failed. Please log in again.');
-            // 重定向到登录页面
-            setTimeout(() => {
-                window.location.href = PATHS.LOGIN;
-            }, 2000);
+            renderTagSelector([]);
         } else {
-            showErrorMessage('Failed to load tags. Please refresh and try again.');
+            console.log('⚠️ 其他错误，使用空标签列表');
+            renderTagSelector([]);
         }
-        
-        renderTagSelector([]);
     }
 }
 

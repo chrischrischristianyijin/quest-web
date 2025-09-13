@@ -103,10 +103,10 @@ async function handleSignup(email, nickname, password) {
                 console.warn('Auto-login after signup failed:', e);
             }
 
-            // Signup successful, redirect to My Space page
+            // Signup successful, redirect to My Space page with full page reload
             console.log('✅ Signup successful, redirecting to My Space page');
             setTimeout(() => {
-                navigateTo(PATHS.MY_SPACE);
+                navigateTo(PATHS.MY_SPACE, { fromAuth: true });
             }, 1000);
         }
     } catch (error) {
@@ -176,7 +176,7 @@ confirmPasswordInput.addEventListener('input', hideMessages);
 document.addEventListener('DOMContentLoaded', () => {
     // If user is already logged in, redirect directly
     if (auth.checkAuth()) {
-        navigateTo(PATHS.MY_SPACE);
+        navigateTo(PATHS.MY_SPACE, { fromAuth: true });
     }
     
     // Focus on email input
