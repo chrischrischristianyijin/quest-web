@@ -270,6 +270,17 @@ class SessionManager {
 // 创建全局会话管理器实例
 const sessionManager = new SessionManager();
 
+// 调试函数：显示当前会话状态
+function debugSessionState() {
+    console.log('🔍 当前会话状态调试:');
+    console.log('  - currentSession:', sessionManager.currentSession);
+    console.log('  - sessions数量:', sessionManager.sessions.length);
+    console.log('  - memories数量:', sessionManager.memories.length);
+}
+
+// 将调试函数暴露到全局，方便在控制台调用
+window.debugSessionState = debugSessionState;
+
 // UI组件管理
 class ChatUI {
     constructor() {
@@ -532,9 +543,14 @@ class ChatUI {
                 const recentSession = data.sessions[0]; // 假设第一个是最新的
                 console.log('🔄 尝试恢复最近的会话:', recentSession.id);
                 sessionManager.currentSession = { id: recentSession.id };
+                console.log('✅ 会话恢复成功，当前会话ID:', sessionManager.currentSession.id);
                 
                 // 可选：自动加载最近会话的消息
                 // await this.loadRecentSessionMessages(recentSession.id);
+            } else if (sessionManager.currentSession) {
+                console.log('ℹ️ 已有当前会话，ID:', sessionManager.currentSession.id);
+            } else {
+                console.log('ℹ️ 没有历史会话，等待首次消息创建新会话');
             }
         } catch (error) {
             console.error('❌ 加载会话列表失败:', error);
@@ -1095,6 +1111,7 @@ async function sendToQuestAPI(message, typingMessage = null) {
         
         if (userId) {
             console.log('🔍 发送聊天请求，用户ID:', userId);
+            console.log('🔍 当前会话状态:', sessionManager.currentSession);
             
             // 如果有当前会话，使用现有会话ID
             if (sessionManager.currentSession && sessionManager.currentSession.id) {
@@ -1161,11 +1178,22 @@ async function sendToQuestAPI(message, typingMessage = null) {
 
         // 从响应头获取会话ID
         const sessionIdFromResponse = response.headers.get('X-Session-ID');
+        console.log('📨 响应头中的会话ID:', sessionIdFromResponse);
+        console.log('📨 发送时的会话ID:', sessionId);
+        
         if (sessionIdFromResponse) {
             // 更新或设置当前会话ID
             if (!sessionManager.currentSession || sessionManager.currentSession.id !== sessionIdFromResponse) {
                 sessionManager.currentSession = { id: sessionIdFromResponse };
                 console.log('🔄 更新会话ID:', sessionIdFromResponse);
+                
+                // 如果响应中的会话ID与发送的不一致，说明后端创建了新会话
+                if (sessionId && sessionId !== sessionIdFromResponse) {
+                    console.warn('⚠️ 会话ID不匹配！发送:', sessionId, '接收:', sessionIdFromResponse);
+                    console.warn('⚠️ 这可能导致会话重复创建问题');
+                }
+            } else {
+                console.log('✅ 会话ID保持一致:', sessionIdFromResponse);
             }
         }
 
@@ -1411,16 +1439,26 @@ updateUserStatus();
 // 初始化memory按钮显示 - 不显示记忆，等待会话加载
 // chatUI.renderMemories([]);  // 注释掉，让记忆按钮在会话加载时自动显示
 
-// 加载会话列表
-chatUI.loadSessions();
-
 // 监听认证状态变化
 auth.subscribe((authState) => {
     console.log('🔔 认证状态变化:', authState.isAuthenticated ? '已登录' : '未登录');
     updateUserStatus();
-    // 重新加载会话列表
-    chatUI.loadSessions();
+    // 只有在用户登录后才加载会话列表
+    if (authState.isAuthenticated) {
+        console.log('🔄 用户已登录，加载会话列表...');
+        chatUI.loadSessions();
+    } else {
+        // 用户未登录时清空会话状态
+        sessionManager.currentSession = null;
+        console.log('🚫 用户未登录，清空会话状态');
+    }
 });
+
+// 初始加载会话列表（如果用户已经登录）
+if (auth.checkAuth()) {
+    console.log('🔄 页面加载时用户已登录，加载会话列表...');
+    chatUI.loadSessions();
+}
 
 // Elegant welcome messages
 const welcomeMessages = [
