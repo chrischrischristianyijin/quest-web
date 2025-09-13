@@ -1,0 +1,151 @@
+
+/* === My Space: Professional Loading Skeleton & Smooth Transition ===
+   Drop this file AFTER my-space.css
+   --------------------------------------------------------------- */
+:root{
+  --quest-purple:#8b5cf6;
+  --quest-blue:#4f46e5;
+  --skeleton-base:#e5e7eb;
+  --skeleton-plate:#eef2f7;
+  --skeleton-overlay:rgba(250,250,255,.72);
+}
+
+/* Reduce layout shift by reserving space while loading */
+.ContentCards{ position:relative; }
+
+/* Overlay that sits above cards during fetch */
+.loading-overlay{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  padding: 6px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg,var(--skeleton-overlay),rgba(255,255,255,.40));
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none; /* block clicks visually without trapping focus */
+  animation: fadeIn .22s ease-out both;
+}
+
+.loading-overlay.fade-out{ animation: fadeOut .18s ease-in both; }
+
+/* Grid matches the real card grid to prevent jumps */
+.loading-overlay .skeleton-grid{
+  height:100%;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px,1fr));
+  gap:16px;
+}
+
+/* Card placeholder */
+.skeleton-card{
+  position:relative;
+  min-height: 300px;
+  border-radius:16px;
+  background: var(--skeleton-plate);
+  box-shadow: 0 1px 2px rgba(17,24,39,.06), 0 6px 16px rgba(17,24,39,.07);
+  overflow:hidden;
+}
+
+/* Media area */
+.skeleton-card::after{
+  content:"";
+  position:absolute; left:0; right:0; top:0;
+  height: 46%;
+  background: var(--skeleton-base);
+}
+
+/* Title/lines and tag chip using layered gradients */
+.skeleton-card{
+  background-image:
+    /* shimmering stripe */
+    linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.85), rgba(255,255,255,0)),
+    /* line 1 */ linear-gradient(var(--skeleton-base) 14px, transparent 0),
+    /* line 2 */ linear-gradient(var(--skeleton-base) 14px, transparent 0),
+    /* chip */   radial-gradient(circle 10px at 92% 62%, var(--skeleton-base) 99%, transparent 100%);
+  background-repeat:no-repeat;
+  background-size:
+    30% 100%,
+    60% 14px,
+    40% 14px,
+    20px 20px;
+  background-position:
+    -30% 0,              /* shimmering will animate via transform */
+    16px calc(52% + 8px),
+    16px calc(52% + 32px),
+    calc(100% - 16px) calc(100% - 24px);
+  transform: translateZ(0);
+}
+
+@keyframes shimmerMove{ to { transform: translateX(160%);} }
+
+/* Use a dedicated inner element so we can animate only the stripe */
+.skeleton-card::before{
+  content:"";
+  position:absolute; inset:0;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.85), rgba(255,255,255,0));
+  transform: translateX(-60%);
+  animation: shimmerMove 1.15s ease-in-out infinite;
+  mix-blend-mode: screen;
+  opacity:.85;
+}
+
+/* Avatar / Username / Filter button skeletons already in HTML */
+.avatar-skeleton,
+.username-skeleton,
+.filter-skeleton-btn{
+  position:relative;
+  overflow:hidden;
+  background: var(--skeleton-base);
+  border-radius: 999px;
+  display:inline-block;
+}
+
+.avatar-skeleton{ width:0px; height:0px; border-radius:0%; }
+.profile-loaded .avatar-skeleton{ display: none !important; }
+.username-skeleton{ width:160px; height:18px; border-radius:8px; margin-top:8px; display:block; }
+.filter-skeleton-btn{ width:104px; height:34px; border-radius:10px; }
+
+.avatar-skeleton::after,
+.username-skeleton::after,
+.filter-skeleton-btn::after{
+  content:"";
+  position:absolute; inset:0;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.85), rgba(255,255,255,0));
+  transform: translateX(-60%);
+  animation: shimmerMove 1.15s ease-in-out infinite;
+}
+
+/* Smooth fade for real content - removed to prevent text color issues */
+/* Using overlay approach instead of fading existing content */
+
+/* gentle top progress bar (optional) */
+.progress-bar{
+  position: absolute;
+  left:0; right:0; top:-3px; height:3px;
+  background: linear-gradient(90deg, var(--quest-purple), var(--quest-blue));
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  animation: progress 1.2s ease-out infinite;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+@keyframes progress{
+  0%  { transform: scaleX(0); opacity:.7; }
+  60% { transform: scaleX(.7); opacity:.9; }
+  100%{ transform: scaleX(1); opacity:.25; }
+}
+
+/* Fade helpers */
+@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+@keyframes fadeOut{ from{opacity:1} to{opacity:0} }
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .skeleton-card::before,
+  .avatar-skeleton::after,
+  .username-skeleton::after,
+  .filter-skeleton-btn::after{ animation: none; }
+  .loading-overlay{ animation: none; }
+}

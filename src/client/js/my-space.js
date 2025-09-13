@@ -2733,6 +2733,7 @@ function bindEvents() {
         });
     }
     
+    
     // 添加内容表单
     if (addContentForm) {
         addContentForm.addEventListener('submit', async (e) => {
@@ -3734,6 +3735,9 @@ function navigateToHome() {
 async function renderStackView(stackId) {
     console.log(`🎯 Rendering stack view for stack ${stackId}`);
     
+    // Show loading state immediately to prevent layout shift
+    showStackLoadingState();
+    
     // Enable stack view mode (hides profile/controls sections)
     setStackViewEnabled(true);
     
@@ -3804,6 +3808,7 @@ async function renderStackView(stackId) {
             }
         } catch (error) {
             console.error('❌ Failed to fetch stack data:', error);
+            hideStackLoadingState();
             showErrorMessage('Failed to load stack data');
             return;
         }
@@ -3854,6 +3859,7 @@ async function renderStackView(stackId) {
     
     if (!stack) {
         console.error('❌ Stack not found:', stackId);
+        hideStackLoadingState();
         showErrorMessage('Stack not found');
         navigateToHome();
         return;
@@ -3869,8 +3875,63 @@ async function renderStackView(stackId) {
     // Render stack insights
     renderStackInsights(stack);
     
+    // Hide loading state
+    hideStackLoadingState();
+    
     // Hide pagination
     hidePagination();
+}
+
+// Professional skeleton loading state with smooth transitions and layout stability
+let __SKELETON_STARTED_AT__ = 0;
+
+function skeletonMarkup(count = 6) {
+    const cards = Array.from({length: count}, () => '<div class="skeleton-card"></div>').join('');
+    return `<div class="progress-bar" role="progressbar" aria-valuetext="Loading"></div>
+            <div class="skeleton-grid" aria-hidden="true">${cards}</div>`;
+}
+
+// Show loading state for stack view to prevent layout shift
+function showStackLoadingState() {
+    const container = document.getElementById('contentCards');
+    if (!container) return;
+
+    // signal busy for a11y
+    container.setAttribute('aria-busy', 'true');
+
+    // Prefer a dedicated overlay to avoid removing the static skeleton block in HTML
+    let overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = skeletonMarkup(6);
+        container.appendChild(overlay);
+    } else {
+        overlay.classList.remove('fade-out');
+        overlay.classList.add('fade-in');
+    }
+    __SKELETON_STARTED_AT__ = performance.now();
+}
+
+// Hide loading state for stack view
+function hideStackLoadingState() {
+    const container = document.getElementById('contentCards');
+    const overlay = document.getElementById('loadingOverlay');
+    if (!container) return;
+
+    // ensure skeleton shows for at least 300ms to prevent flash/flicker
+    const MIN_MS = 300;
+    const elapsed = performance.now() - (__SKELETON_STARTED_AT__ || 0);
+    const delay = Math.max(0, MIN_MS - elapsed);
+
+    window.setTimeout(() => {
+        if (overlay) {
+            overlay.classList.add('fade-out');
+            overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
+        }
+        container.removeAttribute('aria-busy');
+    }, delay);
 }
 
 // Update stack context bar with stack data
@@ -9420,5 +9481,20 @@ function updatePrimaryTagDisplay(primaryTag) {
         primaryTagElement.textContent = primaryTag.name;
     }
 }
+
+/* Optional: if your HTML includes a <div id="loadingSkeleton"> block from old code,
+   you can keep it for first paint and then hide it gracefully once JS runs.
+*/
+(function hydrateInitialSkeleton() {
+    const initial = document.getElementById('loadingSkeleton');
+    if (initial) {
+        initial.style.opacity = '1';
+        initial.style.transition = 'opacity .18s ease';
+        window.addEventListener('load', () => { 
+            initial.style.opacity = '0'; 
+            initial.remove(); 
+        }, { once: true });
+    }
+})();
 
 
