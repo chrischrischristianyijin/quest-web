@@ -904,14 +904,11 @@ function renderSourcesList(sources) {
     const sourcesList = sources.map((source, index) => {
         const title = source.title || `Source ${index + 1}`;
         const url = source.url || '#';
-        const score = source.score ? `${Math.round(source.score * 100)}%` : '';
         
         return `
             <div class="source-item" data-index="${index}">
                 <div class="source-header" onclick="toggleSourceDetails(${index})">
-                    <span class="source-index">${index + 1}.</span>
                     <span class="source-title">${title}</span>
-                    ${score ? `<span class="source-score">${score}</span>` : ''}
                     <span class="source-toggle">▼</span>
                 </div>
                 <div class="source-details" id="source-details-${index}" style="display: none;">
@@ -972,7 +969,7 @@ function addMessage(text, isUser = false, isError = false, sources = null) {
         messageDiv.innerHTML = `
             <div>${text}</div>
             <div class="sources-info">
-                <strong>Sources:</strong> ${sources.length} reference(s) found
+                <strong>References:</strong>
                 ${renderSourcesList(sources)}
             </div>
         `;
@@ -1199,8 +1196,7 @@ async function sendToQuestAPI(message, typingMessage = null) {
                                     responseMessage.innerHTML = `
                                         <div>${fullResponse}</div>
                                         <div class="sources-info">
-                                            <strong>Sources:</strong> ${sources.length} reference(s) found
-                                            ${latency ? ` • Response time: ${latency}ms` : ''}
+                                            <strong>References:</strong>
                                             ${renderSourcesList(sources)}
                                         </div>
                                     `;
