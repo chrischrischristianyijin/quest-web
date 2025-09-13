@@ -33,6 +33,7 @@ const usernamePlaceholder = getCachedElementById('usernamePlaceholder');
 const contentCards = getCachedElementById('contentCards');
 const headerLogout = getCachedElementById('headerLogout');
 const headerEditProfile = getCachedElementById('headerEditProfile');
+const headerEmailPreferences = getCachedElementById('headerEmailPreferences');
 const headerAvatar = getCachedElementById('headerAvatar');
 const addContentForm = getCachedElementById('addContentForm');
 const addContentModal = getCachedElementById('addContentModal');
@@ -2733,6 +2734,13 @@ function bindEvents() {
         });
     }
     
+    // Header email preferences button
+    if (headerEmailPreferences) {
+        headerEmailPreferences.addEventListener('click', () => {
+            // Navigate to email preferences page
+            window.location.href = '/email-preferences';
+        });
+    }
     
     // 添加内容表单
     if (addContentForm) {
@@ -7052,6 +7060,17 @@ async function joinStack(card, targetStack) {
         const response = await api.addItemToStack(parseInt(stackId), insight.id);
         
         if (response.success) {
+            // Update the insight's stack_id to reflect it's now in a stack
+            insight.stack_id = parseInt(stackId);
+            
+            // Also update the insight in allInsightsForFiltering if it exists
+            if (window.allInsightsForFiltering) {
+                const insightInGlobalArray = window.allInsightsForFiltering.find(i => i.id === insight.id);
+                if (insightInGlobalArray) {
+                    insightInGlobalArray.stack_id = parseInt(stackId);
+                }
+            }
+            
             // Update local stack data
             targetStackData.cards.push(insight);
             targetStackData.modifiedAt = new Date().toISOString();
@@ -7084,8 +7103,12 @@ async function joinStack(card, targetStack) {
             // Update pagination counts
             updatePaginationCounts();
             
-            // Re-render to show the updated stack
-            renderInsights();
+            // Update the display to reflect the removed card
+            // Only re-render if we're not in stack view mode
+            if (viewMode !== 'stack') {
+                // Force a complete re-render to ensure the card is properly removed
+                renderInsights();
+            }
             
             // Update stack actions if we're in stack view
             if (viewMode === 'stack' && activeStackId === stackId) {
