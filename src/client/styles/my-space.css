@@ -525,22 +525,25 @@ body {
 /* 内容卡片区域 */
 .ContentCards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px));
     gap: var(--spacing-lg);
     margin-top: var(--spacing-xl);
+    justify-content: center;
 }
 
 .content-card {
     background: var(--bg-primary);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-light);
-    justify-self: stretch;    /* ensure cards take full width of their grid cell */
     border: 1px solid var(--border-light);
     transition: var(--transition-normal);
     position: relative;
     overflow: visible;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 400px;
+    justify-self: center;
 }
 
 .content-card-image-container {
@@ -587,8 +590,37 @@ body {
     100% { background-position: -200% 0; }
 }
 
-/* 响应式图片设计 */
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .ContentCards {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+    }
+    
+    .loading-skeleton {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+    }
+    
+    .stack-cards-grid-inline {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+    }
+}
+
 @media (max-width: 768px) {
+    .ContentCards {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 350px));
+        gap: var(--spacing-md);
+    }
+    
+    .loading-skeleton {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 350px));
+        gap: var(--spacing-md);
+    }
+    
+    .stack-cards-grid-inline {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 350px));
+        gap: var(--spacing-md);
+    }
+    
     .content-card-image-container {
         height: 150px;
     }
@@ -599,6 +631,23 @@ body {
 }
 
 @media (max-width: 480px) {
+    .ContentCards {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+        padding: 0 var(--spacing-md);
+    }
+    
+    .loading-skeleton {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+        padding: 0 var(--spacing-md);
+    }
+    
+    .stack-cards-grid-inline {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
     .content-card-image-container {
         height: 120px;
     }
@@ -1850,9 +1899,10 @@ body .add-content-modal-content {
 /* Loading Skeleton Styles */
 .loading-skeleton {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px));
     gap: var(--spacing-lg);
     margin-top: var(--spacing-xl);
+    justify-content: center;
 }
 
 /* Skeleton overlay with smooth transitions */
@@ -1875,9 +1925,10 @@ body .add-content-modal-content {
 .skeleton-grid {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-    padding: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px));
+    gap: var(--spacing-lg);
+    justify-content: center;
+    padding: 0;
 }
 
 .skeleton-card {
@@ -1888,6 +1939,9 @@ body .add-content-modal-content {
     animation: shimmer 1.5s infinite linear;
     position: relative;
     overflow: hidden;
+    max-width: 400px;
+    width: 100%;
+    justify-self: center;
 }
 
 .skeleton-card::before {
@@ -2013,7 +2067,10 @@ body .add-content-modal-content {
     opacity: 0;
     transform: translateY(20px);
     animation: fadeInUp 0.6s ease-out forwards;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    max-width: 400px;
+    width: 100%;
+    justify-self: center;
 }
 
 /* Stack cards with smooth appearance */
@@ -2021,7 +2078,10 @@ body .add-content-modal-content {
     opacity: 0;
     transform: translateY(20px);
     animation: fadeInUp 0.6s ease-out forwards;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    max-width: 400px;
+    width: 100%;
+    justify-self: center;
 }
 
 /* Empty state with smooth appearance */
@@ -3512,6 +3572,14 @@ body .tag-selector-dropdown.open .tag-selector-options {
 .summary-text { 
   color: #475569; 
   line-height: 1.6; 
+  font-style: italic;
+  min-height: 1.5em;
+}
+
+.summary-text:empty::before {
+  content: "AI summary is being generated...";
+  color: #94a3b8;
+  font-style: italic;
 }
 
 /* Make it great on tablets/phones */
@@ -3560,6 +3628,36 @@ body.modal-open { overflow: hidden; }
 /* Old modal styles removed - using new polished design above */
 
 /* Old modal styles removed */
+
+/* Title with edit button container */
+.title-with-edit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+/* Edit title button */
+.edit-title-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-title-btn:hover {
+    background: var(--quest-purple);
+    color: white;
+    opacity: 1;
+    transform: scale(1.05);
+}
 
 /* Title edit mode styles */
 .title-edit-mode .content-title {
@@ -4043,6 +4141,57 @@ body.modal-open { overflow: hidden; }
     pointer-events: auto;
 }
 
+/* 强制限制卡片最大宽度 - 防止卡片变得过大 */
+.content-card,
+.stack-card,
+.stack-expanded-card,
+.skeleton-card {
+    max-width: 400px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 确保网格容器不会让卡片拉伸过大 */
+.ContentCards,
+.loading-skeleton,
+.stack-cards-grid,
+.stack-cards-grid-inline {
+    max-width: none !important;
+}
+
+/* 在大屏幕上确保卡片居中且不会过大 */
+@media (min-width: 1200px) {
+    .ContentCards,
+    .loading-skeleton,
+    .stack-cards-grid-inline {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 400px)) !important;
+        justify-content: center !important;
+    }
+}
+
+/* 确保所有卡片状态都保持一致的尺寸 */
+.content-card,
+.stack-card,
+.stack-expanded-card,
+.skeleton-card {
+    min-width: 350px !important;
+    max-width: 400px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+}
+
+/* 防止网格拉伸卡片 */
+.ContentCards,
+.loading-skeleton,
+.stack-cards-grid,
+.stack-cards-grid-inline,
+.skeleton-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px)) !important;
+    justify-content: center !important;
+    align-items: start !important;
+}
+
 .edit-mode-btn:focus {
     outline: 2px solid var(--quest-purple);
     outline-offset: 2px;
@@ -4439,6 +4588,8 @@ body.modal-open { overflow: hidden; }
 .stack-card {
     border: 2px solid var(--quest-purple);
     background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.1) 100%);
+    max-width: 400px;
+    justify-self: center;
 }
 
 .stack-card::before {
@@ -4605,10 +4756,11 @@ body.modal-open { overflow: hidden; }
 .stack-cards-grid {
     padding: 24px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 400px));
     gap: 20px;
     max-height: 60vh;
     overflow-y: auto;
+    justify-content: center;
 }
 
 .stack-expanded-card {
@@ -4621,6 +4773,8 @@ body.modal-open { overflow: hidden; }
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(10px);
+    max-width: 400px;
+    justify-self: center;
 }
 
 .stack-expanded-card::before {
@@ -4897,9 +5051,10 @@ body.modal-open { overflow: hidden; }
 
 .stack-cards-grid-inline {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 400px));
     gap: var(--spacing-lg);
     margin-bottom: 32px;
+    justify-content: center;
 }
 
 .stack-footer-inline {

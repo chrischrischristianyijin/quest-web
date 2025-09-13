@@ -77,6 +77,9 @@ const renderedInsightIds = new Set();
 let hasLoadedStacksOnce = false;
 let hasLoadedInsightsOnce = false;
 
+// Flag to prevent auto-save during comment editing
+let isCommentEditing = false;
+
 // Keep a reference if you're using autosave elsewhere
 const saveOnUnload = () => {
   try {
@@ -520,10 +523,44 @@ async function loadUserInsightsWithPagination() {
             }
         }
         
-        const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
-        const endTime = Date.now();
-        console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
-        console.log('📡 First page API response:', firstPageResponse);
+        let firstPageResponse;
+        try {
+            firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
+            const endTime = Date.now();
+            console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
+            console.log('📡 First page API response:', firstPageResponse);
+        } catch (apiError) {
+            console.warn('⚠️ API请求失败，尝试从本地备份加载:', apiError.message);
+            // 如果API请求失败（可能是认证问题），尝试从本地备份加载
+            const backupInsights = localStorage.getItem('quest_insights_backup');
+            if (backupInsights) {
+                try {
+                    const backup = JSON.parse(backupInsights);
+                    if (backup.data && backup.data.length > 0) {
+                        console.log('📦 从本地备份加载 insights:', backup.data.length, '个');
+                        firstPageResponse = {
+                            success: true,
+                            data: {
+                                items: backup.data,
+                                pagination: {
+                                    page: 1,
+                                    total_pages: 1,
+                                    total: backup.data.length,
+                                    has_more: false
+                                }
+                            }
+                        };
+                    } else {
+                        throw new Error('本地备份为空');
+                    }
+                } catch (backupError) {
+                    console.error('❌ 解析本地备份失败:', backupError);
+                    throw apiError; // 重新抛出原始API错误
+                }
+            } else {
+                throw apiError; // 重新抛出原始API错误
+            }
+        }
         
         if (firstPageResponse?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
@@ -730,36 +767,32 @@ function checkDataRecoveryStatus() {
     }
 })();
 
-// 在页面初始化时调用翻页初始化
-document.addEventListener('DOMContentLoaded', function() {
-    // 其他初始化代码...
-    initPagination();
-});
-
 // 页面初始化
 async function initPage() {
     try {
-        // 恢复会话状态
-        try {
-            auth.restoreSession();
-        } catch (sessionError) {
-            console.error('❌ Session restore failed:', sessionError);
-        }
+        console.log('🚀 开始初始化 My Space 页面...');
+        console.log('🔍 当前页面路径:', window.location.pathname);
+        console.log('🔍 DOM 加载状态:', document.readyState);
+        console.log('🔍 页面标题:', document.title);
         
-        // 检查认证状态（放宽：先尝试恢复会话后再判断，避免闪跳）
+        // 恢复会话状态
+        const restored = auth.restoreSession();
+        console.log('🔍 会话恢复结果:', restored);
+        
+        // 检查认证状态
         const isAuthenticated = auth.checkAuth();
+        console.log('🔍 认证状态:', isAuthenticated);
         
         if (!isAuthenticated) {
-            const restored = auth.restoreSession();
+            console.log('⚠️ 用户未认证，显示错误信息并加载本地备份');
+            showErrorMessage('Please sign in. Showing last local backup.');
             
-            if (!restored) {
-                showErrorMessage('Please sign in. Showing last local backup.');
-                
-                // 即使未认证，也绑定基础UI事件（如用户资料编辑）
-                bindProfileEditEvents();
-                
-                // 不要return，允许加载本地备份数据
-            }
+            // 即使未认证，也绑定基础UI事件（如用户资料编辑）
+            bindProfileEditEvents();
+            
+            // 不要return，允许加载本地备份数据
+        } else {
+            console.log('✅ 用户已认证，继续加载数据');
         }
         
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
@@ -830,6 +863,9 @@ async function initPage() {
         // Initialize search functionality
         initSearch();
         
+        // Initialize pagination
+        initPagination();
+        
         // Handle deep linking for stack views
         const { viewMode: initialViewMode, stackId } = parseRoute();
         if (initialViewMode === 'stack' && stackId) {
@@ -847,6 +883,41 @@ async function initPage() {
             isEditMode = false;
             updateEditModeState();
         }
+        
+        // 强制显示内容区域，确保页面可见
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '1';
+            mainContent.style.visibility = 'visible';
+        }
+        
+        // 确保内容卡片容器可见
+        if (contentCards) {
+            contentCards.style.display = 'block';
+            contentCards.style.opacity = '1';
+            contentCards.style.visibility = 'visible';
+        }
+        
+        console.log('✅ 页面内容区域已强制显示');
+        
+        // 如果没有任何内容，确保显示空状态
+        setTimeout(() => {
+            if (contentCards && contentCards.children.length === 0) {
+                console.log('⚠️ 没有检测到内容，强制显示空状态');
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = `
+                    <div class="empty-state-icon">📚</div>
+                    <h3>Welcome to My Space!</h3>
+                    <p>Start adding your favorite media content to your collection</p>
+                    <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
+                        Add Content
+                    </button>
+                `;
+                contentCards.appendChild(emptyState);
+            }
+        }, 100);
         
         // 分页模式：不需要无限滚动
     } catch (error) {
@@ -1105,9 +1176,16 @@ function setupAuthListener() {
 // 加载用户资料
 async function loadUserProfile() {
     try {
-        // 再次检查认证状态
+        // 检查认证状态，如果未认证则使用本地数据
         if (!auth.checkAuth()) {
-            throw new Error('用户未认证');
+            console.log('⚠️ 用户未认证，使用本地用户数据');
+            const localUser = auth.getCurrentUser();
+            if (localUser) {
+                currentUser = localUser;
+                updateUserProfileUI();
+                return;
+            }
+            throw new Error('用户未认证且无本地数据');
         }
         
         // 总是尝试从 API 获取最新的用户资料
@@ -3085,6 +3163,14 @@ function normalizePaginatedInsightsResponse(response) {
 // 加载用户标签
 async function loadUserTags() {
     try {
+        // 检查认证状态
+        if (!auth.checkAuth()) {
+            console.log('⚠️ 用户未认证，使用空标签列表');
+            renderTagSelector([]);
+            updateFilterButtons([]);
+            return;
+        }
+        
         // 使用缓存的API方法获取标签
         const response = await getCachedUserTags();
         
@@ -3103,20 +3189,19 @@ async function loadUserTags() {
     } catch (error) {
         console.error('❌ 加载用户标签失败:', error);
         
-        // 检查是否是后端服务问题
-        if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+        // 检查是否是认证问题
+        if (error.message.includes('401') || error.message.includes('403') || error.message.includes('认证')) {
+            console.log('⚠️ 认证失败，使用空标签列表');
+            renderTagSelector([]);
+            updateFilterButtons([]);
+            // 不要显示错误信息或重定向，让用户继续使用页面
+        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
             showErrorMessage('Backend service temporarily unavailable. Please try again later.');
-        } else if (error.message.includes('401') || error.message.includes('403')) {
-            showErrorMessage('Authentication failed. Please log in again.');
-            // 重定向到登录页面
-            setTimeout(() => {
-                window.location.href = PATHS.LOGIN;
-            }, 2000);
+            renderTagSelector([]);
         } else {
-            showErrorMessage('Failed to load tags. Please refresh and try again.');
+            console.log('⚠️ 其他错误，使用空标签列表');
+            renderTagSelector([]);
         }
-        
-        renderTagSelector([]);
     }
 }
 
@@ -4926,7 +5011,7 @@ window.testFix = async function() {
                 if (found) {
                     console.log('🔍 Stack item stack_id:', found.stack_id);
                     console.log('🔍 Stack item stack_id type:', typeof found.stack_id);
-                }
+                }   
             }
         } else {
             console.error('❌ Insight creation failed:', result);
@@ -5000,12 +5085,106 @@ window.checkCurrentState = function() {
     }
 };
 
+// 测试AI摘要数据
+window.testAISummaryData = function() {
+    console.log('🧪 Testing AI Summary Data...');
+    
+    if (!currentInsights || currentInsights.length === 0) {
+        console.log('❌ No insights available for testing');
+        return;
+    }
+    
+    console.log('📊 Testing insights data structure:');
+    currentInsights.forEach((insight, index) => {
+        console.log(`\n🔍 Insight ${index + 1}:`, {
+            id: insight.id,
+            title: insight.title,
+            hasInsightContents: !!insight.insight_contents,
+            insightContentsLength: insight.insight_contents ? insight.insight_contents.length : 0
+        });
+        
+        if (insight.insight_contents && insight.insight_contents.length > 0) {
+            const content = insight.insight_contents[0];
+            console.log('  📝 Content data:', {
+                hasSummary: !!content.summary,
+                summaryLength: content.summary ? content.summary.length : 0,
+                summaryPreview: content.summary ? content.summary.substring(0, 100) + '...' : 'No summary',
+                hasThought: !!content.thought,
+                thoughtLength: content.thought ? content.thought.length : 0
+            });
+        } else {
+            console.log('  ❌ No insight_contents data found');
+        }
+    });
+    
+    // 测试API响应
+    console.log('\n🌐 Testing API response...');
+    api.getInsightsPaginated(1, 9, null, true)
+        .then(response => {
+            console.log('✅ API Response received:', response);
+            if (response.data && response.data.insights) {
+                console.log('📊 API insights count:', response.data.insights.length);
+                response.data.insights.forEach((insight, index) => {
+                    console.log(`API Insight ${index + 1}:`, {
+                        id: insight.id,
+                        title: insight.title,
+                        hasInsightContents: !!insight.insight_contents,
+                        insightContentsLength: insight.insight_contents ? insight.insight_contents.length : 0
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error('❌ API test failed:', error);
+        });
+};
+
+// 测试模态框摘要显示
+window.testModalSummaryDisplay = function() {
+    console.log('🧪 Testing Modal Summary Display...');
+    
+    if (!currentInsights || currentInsights.length === 0) {
+        console.log('❌ No insights available for testing');
+        return;
+    }
+    
+    // 找到第一个有insight_contents的insight
+    const insightWithContent = currentInsights.find(insight => 
+        insight.insight_contents && insight.insight_contents.length > 0
+    );
+    
+    if (!insightWithContent) {
+        console.log('❌ No insights with content data found');
+        return;
+    }
+    
+    console.log('✅ Found insight with content:', insightWithContent.title);
+    console.log('📝 Content data:', insightWithContent.insight_contents[0]);
+    
+    // 打开模态框进行测试
+    openContentDetailModal(insightWithContent);
+    
+    // 检查模态框中的摘要元素
+    setTimeout(() => {
+        const summaryElement = document.getElementById('summaryText');
+        if (summaryElement) {
+            console.log('✅ Summary element found:', summaryElement);
+            console.log('📝 Summary text content:', summaryElement.textContent);
+            console.log('📝 Summary innerHTML:', summaryElement.innerHTML);
+        } else {
+            console.log('❌ Summary element not found');
+        }
+    }, 100);
+};
+
 console.log('🧪 Test functions loaded. Available commands:');
 console.log('  - checkCurrentState() - Check current app state (viewMode, activeStackId)');
 console.log('  - testFix() - Quick test of the stack_id fix');
 console.log('  - testStackFiltering() - Test stack filtering logic');
 console.log('  - testStackIdFunctionality() - Test creating insight with stack_id');
 console.log('  - testDatabaseStackId() - Check database for stack_id values');
+console.log('  - testAISummaryData() - Test AI summary data structure and API response');
+console.log('  - testModalSummaryDisplay() - Test modal summary display functionality');
 console.log('  - testStackContent(stackId) - Check specific stack content');
 console.log('  - testBackendDebug() - Call backend debug endpoint');
 console.log('  - testCreateAndVerify() - Create insight and verify stack_id immediately');
@@ -5514,6 +5693,14 @@ function closeContentDetailModal() {
 // 填充模态框内容
 function populateModalContent(insight) {
     
+    // 调试：打印insight数据结构
+    console.log('🔍 DEBUG: populateModalContent called with insight:', insight);
+    console.log('🔍 DEBUG: insight.insight_contents:', insight.insight_contents);
+    if (insight.insight_contents && insight.insight_contents.length > 0) {
+        console.log('🔍 DEBUG: First insight_contents item:', insight.insight_contents[0]);
+        console.log('🔍 DEBUG: Summary from insight_contents:', insight.insight_contents[0].summary);
+    }
+    
     // 标题
     const titleElement = document.getElementById('modalContentTitle');
     if (titleElement) {
@@ -5551,6 +5738,22 @@ function populateModalContent(insight) {
     const commentTextarea = document.getElementById('commentEditTextarea');
     if (commentTextarea) {
         commentTextarea.value = insight.thought || '';
+    }
+    
+    // 填充AI摘要
+    const summaryText = document.getElementById('summaryText');
+    if (summaryText) {
+        // 获取summary，优先从insight_contents中获取
+        let summary = null;
+        if (insight.insight_contents && insight.insight_contents.length > 0) {
+            summary = insight.insight_contents[0].summary;
+        }
+        
+        if (summary) {
+            summaryText.textContent = summary;
+        } else {
+            summaryText.textContent = 'AI summary is being generated...';
+        }
     }
     
     // 填充AI摘要日期
@@ -5893,6 +6096,9 @@ function setupModalActions(insight) {
     // 设置评论编辑功能
     setupCommentEditing();
     
+    // 设置标题编辑功能
+    setupTitleEditing();
+    
     // Note: Share button removed from user info section
     
     // 设置分享我的空间按钮
@@ -5947,10 +6153,18 @@ function setupCommentEditing() {
             return;
         }
         
+        // 防止重复进入编辑模式
+        if (isCommentEditing) {
+            return;
+        }
+        
         // 进入编辑模式
         commentDisplay.style.display = 'none';
         commentTextarea.style.display = 'block';
         commentTextarea.focus();
+        
+        // 设置编辑模式标志
+        isCommentEditing = true;
         
         // 更新按钮文本
         editCommentBtn.textContent = 'Save';
@@ -5960,7 +6174,7 @@ function setupCommentEditing() {
         cancelBtn.className = 'ghost-btn';
         cancelBtn.textContent = 'Cancel';
         cancelBtn.style.marginLeft = '8px';
-        cancelBtn.onclick = cancelComment;
+        cancelBtn.addEventListener('click', cancelComment);
         editCommentBtn.parentNode.appendChild(cancelBtn);
     });
     
@@ -6021,6 +6235,9 @@ function setupCommentEditing() {
         commentTextarea.style.display = 'none';
         editCommentBtn.textContent = 'Edit';
         
+        // 清除编辑模式标志
+        isCommentEditing = false;
+        
         // 移除取消按钮
         const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
         if (cancelBtn && cancelBtn.textContent === 'Cancel') {
@@ -6038,6 +6255,9 @@ function setupCommentEditing() {
         commentTextarea.style.display = 'none';
         editCommentBtn.textContent = 'Edit';
         
+        // 清除编辑模式标志
+        isCommentEditing = false;
+        
         // 移除取消按钮
         const cancelBtn = editCommentBtn.parentNode.querySelector('.ghost-btn:last-child');
         if (cancelBtn && cancelBtn.textContent === 'Cancel') {
@@ -6045,6 +6265,156 @@ function setupCommentEditing() {
         }
     }
     
+}
+
+// 设置标题编辑功能
+function setupTitleEditing() {
+    const editTitleBtn = document.getElementById('editTitleBtn');
+    const titleElement = document.getElementById('modalContentTitle');
+    const titleContainer = document.querySelector('.title-with-edit');
+    
+    if (!editTitleBtn || !titleElement || !titleContainer) return;
+    
+    // 编辑按钮点击事件
+    editTitleBtn.addEventListener('click', () => {
+        enterTitleEditMode();
+    });
+    
+    // 进入标题编辑模式
+    function enterTitleEditMode() {
+        const currentTitle = titleElement.textContent;
+        
+        // 添加编辑模式类
+        titleContainer.classList.add('title-edit-mode');
+        
+        // 创建输入框
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'title-edit-input';
+        input.value = currentTitle;
+        input.id = 'titleEditInput';
+        
+        // 创建操作按钮容器
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'title-edit-actions';
+        
+        // 创建保存按钮
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'title-edit-save';
+        saveBtn.innerHTML = '✓';
+        saveBtn.title = 'Save';
+        saveBtn.addEventListener('click', () => saveTitleEdit(input.value.trim()));
+        
+        // 创建取消按钮
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'title-edit-cancel';
+        cancelBtn.innerHTML = '✕';
+        cancelBtn.title = 'Cancel';
+        cancelBtn.addEventListener('click', () => cancelTitleEdit());
+        
+        // 添加按钮到容器
+        actionsContainer.appendChild(saveBtn);
+        actionsContainer.appendChild(cancelBtn);
+        
+        // 插入输入框和按钮
+        titleContainer.appendChild(input);
+        titleContainer.appendChild(actionsContainer);
+        
+        // 聚焦并选中文本
+        input.focus();
+        input.select();
+        
+        // 添加键盘事件监听
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveTitleEdit(input.value.trim());
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelTitleEdit();
+            }
+        });
+    }
+    
+    // 保存标题编辑
+    async function saveTitleEdit(newTitle) {
+        if (!newTitle) {
+            showErrorMessage('Title cannot be empty');
+            return;
+        }
+        
+        try {
+            // 检查认证状态
+            if (!auth.checkAuth()) {
+                showErrorMessage('Please log in to update content');
+                return;
+            }
+            
+            // 获取当前洞察的ID
+            const currentInsight = currentDetailInsight;
+            if (!currentInsight || !currentInsight.id) {
+                showErrorMessage('Unable to identify content to update');
+                return;
+            }
+            
+            // 调用API更新标题
+            const response = await api.updateInsight(currentInsight.id, { 
+                title: newTitle 
+            });
+            
+            if (response.success) {
+                // 更新显示的标题
+                titleElement.textContent = newTitle;
+                
+                // 更新本地数据
+                if (currentInsight) {
+                    currentInsight.title = newTitle;
+                }
+                
+                // 更新全局insights数组
+                if (window.currentInsights) {
+                    const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
+                    if (insightIndex !== -1) {
+                        window.currentInsights[insightIndex].title = newTitle;
+                    }
+                }
+                
+                // 更新页面缓存
+                updatePageCacheWithInsight(currentInsight.id, { title: newTitle });
+                
+                // 重新渲染页面以更新卡片标题
+                renderInsights();
+                
+                showSuccessMessage('Title updated successfully!');
+            } else {
+                showErrorMessage(response.message || 'Failed to update title');
+            }
+        } catch (error) {
+            console.error('Error updating title:', error);
+            showErrorMessage('Failed to update title. Please try again.');
+        }
+        
+        // 退出编辑模式
+        exitTitleEditMode();
+    }
+    
+    // 取消标题编辑
+    function cancelTitleEdit() {
+        exitTitleEditMode();
+    }
+    
+    // 退出标题编辑模式
+    function exitTitleEditMode() {
+        // 移除编辑模式类
+        titleContainer.classList.remove('title-edit-mode');
+        
+        // 移除输入框和操作按钮
+        const input = document.getElementById('titleEditInput');
+        const actionsContainer = titleContainer.querySelector('.title-edit-actions');
+        
+        if (input) input.remove();
+        if (actionsContainer) actionsContainer.remove();
+    }
 }
 
 // 绑定模态框事件监听器
@@ -6814,6 +7184,12 @@ function checkLocalStorageHealth() {
 // Auto-save stacks and insights more frequently to prevent data loss
 if (!window.__QUEST_AUTOSAVE_ID__) {
     window.__QUEST_AUTOSAVE_ID__ = setInterval(() => {
+        // Skip auto-save if user is editing a comment
+        if (isCommentEditing) {
+            console.log('↩︎ skip auto-save: comment editing in progress');
+            return;
+        }
+        
         if (checkLocalStorageHealth()) {
             // Only save stacks if they've been loaded at least once
             if (hasLoadedStacksOnce) {
