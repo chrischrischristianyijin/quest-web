@@ -183,6 +183,22 @@ body::before {
     box-shadow: 0 4px 12px rgba(142, 79, 157, 0.3);
 }
 
+/* 禁用状态的New Chat按钮 */
+.new-session-btn:disabled,
+.new-session-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(142, 79, 157, 0.3) 0%, rgba(75, 38, 79, 0.3) 100%);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.new-session-btn:disabled:hover,
+.new-session-btn.disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
 .close-btn {
     background: rgba(108, 117, 125, 0.1);
     border: 1px solid rgba(108, 117, 125, 0.2);
@@ -204,6 +220,25 @@ body::before {
     border-color: rgba(108, 117, 125, 0.3);
     color: #495057;
     transform: translateY(-1px);
+}
+
+/* 禁用状态的关闭按钮 */
+.close-btn:disabled,
+.close-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: rgba(108, 117, 125, 0.05);
+    border-color: rgba(108, 117, 125, 0.1);
+    color: rgba(108, 117, 125, 0.4);
+}
+
+.close-btn:disabled:hover,
+.close-btn.disabled:hover {
+    background: rgba(108, 117, 125, 0.05);
+    border-color: rgba(108, 117, 125, 0.1);
+    color: rgba(108, 117, 125, 0.4);
+    transform: none;
 }
 
 .sessions-list {
@@ -492,6 +527,25 @@ body::before {
     border-color: rgba(142, 79, 157, 0.3);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(142, 79, 157, 0.1);
+}
+
+/* 禁用状态的记忆指示器 */
+.memory-indicator:disabled,
+.memory-indicator.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: rgba(142, 79, 157, 0.08);
+    color: rgba(142, 79, 157, 0.4);
+    border: 1px solid rgba(142, 79, 157, 0.1);
+}
+
+.memory-indicator:disabled:hover,
+.memory-indicator.disabled:hover {
+    background: rgba(142, 79, 157, 0.08);
+    border-color: rgba(142, 79, 157, 0.1);
+    transform: none;
+    box-shadow: none;
 }
 
 .chat-header::before {

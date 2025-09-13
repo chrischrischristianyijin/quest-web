@@ -296,17 +296,45 @@ class ChatUI {
 
         // 聊天相关元素
         this.chatLogo = document.getElementById('chatLogo');
+        
+        // 禁用侧边栏按钮
+        this.disableSidebarButtons();
+    }
+
+    // 禁用侧边栏按钮
+    disableSidebarButtons() {
+        // 禁用New Chat按钮
+        if (this.newSessionBtn) {
+            this.newSessionBtn.disabled = true;
+            this.newSessionBtn.classList.add('disabled');
+        }
+        
+        // 禁用关闭按钮
+        if (this.closeSidebarBtn) {
+            this.closeSidebarBtn.disabled = true;
+            this.closeSidebarBtn.classList.add('disabled');
+        }
+        
+        // 禁用记忆指示器
+        if (this.memoryIndicator) {
+            this.memoryIndicator.disabled = true;
+            this.memoryIndicator.classList.add('disabled');
+        }
+        
+        console.log('🚫 侧边栏按钮已禁用');
     }
 
     bindEvents() {
         // 侧边栏事件
         this.sidebarToggle?.addEventListener('click', () => this.toggleSidebar());
-        this.closeSidebarBtn?.addEventListener('click', () => this.closeSidebar());
-        this.newSessionBtn?.addEventListener('click', () => this.createNewSession());
+        // 注释掉已禁用的按钮事件
+        // this.closeSidebarBtn?.addEventListener('click', () => this.closeSidebar());
+        // this.newSessionBtn?.addEventListener('click', () => this.createNewSession());
 
         // 记忆面板事件
         this.closeMemoryBtn?.addEventListener('click', () => this.closeMemoryPanel());
-        this.memoryIndicator?.addEventListener('click', () => this.toggleMemoryPanel());
+        // 注释掉已禁用的记忆指示器事件
+        // this.memoryIndicator?.addEventListener('click', () => this.toggleMemoryPanel());
 
         // Logo点击事件
         this.chatLogo?.addEventListener('click', () => {
@@ -968,7 +996,7 @@ function addTypingIndicator() {
     return { container: containerDiv, message: messageDiv };
 }
 
-async function sendToQuestAPI(message) {
+async function sendToQuestAPI(message, typingMessage = null) {
     try {
         const headers = {
             'Content-Type': 'application/json'
@@ -1088,6 +1116,12 @@ async function sendToQuestAPI(message) {
                             fullResponse += data.content;
                             completeResponse += data.content;
                             
+                            // 第一次接收到内容时，立即移除思考框
+                            if (typingMessage && typingMessage.container) {
+                                typingMessage.container.remove();
+                                typingMessage = null; // 防止重复移除
+                            }
+                            
                             // 清除之前的打字超时
                             if (typingTimeout) {
                                 clearTimeout(typingTimeout);
@@ -1097,9 +1131,6 @@ async function sendToQuestAPI(message) {
                             streamTypeWriter(responseMessage, fullResponse, true);
                             
                             // 设置超时来移除光标（如果没有新内容到达）
-                            if (typingTimeout) {
-                                clearTimeout(typingTimeout);
-                            }
                             typingTimeout = setTimeout(() => {
                                 streamTypeWriter(responseMessage, fullResponse, false);
                             }, 1500);
@@ -1211,10 +1242,9 @@ chatForm.addEventListener('submit', async function(e) {
 
     try {
         // Try to send to Quest API
-        const result = await sendToQuestAPI(userMessage);
+        const result = await sendToQuestAPI(userMessage, typingMessage);
         
-        // Remove typing indicator
-        typingMessage.container.remove();
+        // 思考框已经在API响应开始时移除，这里不需要再移除
         
         if (result.success) {
             // API response was successful, message already added
@@ -1225,8 +1255,10 @@ chatForm.addEventListener('submit', async function(e) {
     } catch (error) {
         console.error('Chat Error:', error);
         
-        // Remove typing indicator
-        typingMessage.container.remove();
+        // Remove typing indicator on error
+        if (typingMessage && typingMessage.container) {
+            typingMessage.container.remove();
+        }
         
         // Add elegant error message with proper avatar
         const containerDiv = document.createElement('div');
