@@ -1178,16 +1178,34 @@ body::before {
 
 .sources-info {
     margin-top: 16px;
-    padding: 16px;
-    background: rgba(248, 250, 252, 0.8);
-    border-radius: 12px;
     font-size: 0.9rem;
     color: #64748b;
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    backdrop-filter: blur(10px);
 }
 
-.sources-info strong {
+/* References 可折叠样式 */
+.references-collapsible {
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.references-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.references-header:hover {
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.references-title {
     color: #334155;
     font-weight: 600;
     font-size: 0.85rem;
@@ -1195,39 +1213,38 @@ body::before {
     letter-spacing: 0.5px;
 }
 
-/* Sources列表样式 - 可展开版本 */
-.sources-list {
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+.references-count {
+    background: rgba(148, 163, 184, 0.2);
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.references-toggle {
+    color: #64748b;
+    font-size: 0.8rem;
+    transition: transform 0.2s ease;
+    margin-left: auto;
+}
+
+.references-content {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.3);
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
 }
 
 .source-item {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    transition: all 0.2s ease;
-    overflow: hidden;
-}
-
-.source-item:hover {
-    background: rgba(255, 255, 255, 1);
-    border-color: rgba(148, 163, 184, 0.4);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.source-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.4);
 }
 
-.source-header:hover {
-    background: rgba(248, 250, 252, 0.8);
+.source-item:last-child {
+    border-bottom: none;
 }
 
 .source-title {
@@ -1238,52 +1255,22 @@ body::before {
     line-height: 1.4;
 }
 
-.source-score {
-    background: linear-gradient(135deg, #8E4F9D 0%, #4B264F 100%);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    min-width: 35px;
-    text-align: center;
-}
-
-.source-toggle {
-    color: #8E4F9D;
-    font-size: 0.8rem;
-    transition: all 0.3s ease;
-    margin-left: 4px;
-}
-
-.source-details {
-    padding: 0 12px 12px 12px;
-    background: rgba(142, 79, 157, 0.03);
-    border-top: 1px solid rgba(142, 79, 157, 0.1);
-}
-
-.source-url {
+.source-link {
     color: #64748b;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     text-decoration: none;
-    display: block;
-    word-break: break-all;
-    line-height: 1.4;
-    padding: 10px 16px;
-    background: rgba(248, 250, 252, 0.8);
-    border-radius: 6px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    padding: 4px 8px;
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 4px;
     transition: all 0.2s ease;
-    margin-top: 8px;
 }
 
-.source-url:hover {
-    background: rgba(255, 255, 255, 1);
-    border-color: rgba(148, 163, 184, 0.4);
-    text-decoration: none;
+.source-link:hover {
+    background: rgba(148, 163, 184, 0.2);
     color: #475569;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    text-decoration: none;
 }
+
 
 /* 记忆面板样式 */
 .memory-panel {

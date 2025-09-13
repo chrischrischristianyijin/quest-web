@@ -897,7 +897,7 @@ async function testApiIntegration() {
     }
 }
 
-// 渲染sources列表（可展开版本）
+// 渲染sources列表（可折叠版本）
 function renderSourcesList(sources) {
     if (!sources || sources.length === 0) return '';
     
@@ -906,32 +906,38 @@ function renderSourcesList(sources) {
         const url = source.url || '#';
         
         return `
-            <div class="source-item" data-index="${index}">
-                <div class="source-header" onclick="toggleSourceDetails(${index})">
-                    <span class="source-title">${title}</span>
-                    <span class="source-toggle">▼</span>
-                </div>
-                <div class="source-details" id="source-details-${index}" style="display: none;">
-                    ${url !== '#' ? `<a href="${url}" target="_blank" class="source-url">🔗 ${url}</a>` : ''}
-                </div>
+            <div class="source-item">
+                <span class="source-title">${title}</span>
+                ${url !== '#' ? `<a href="${url}" target="_blank" class="source-link">🔗 link</a>` : ''}
             </div>
         `;
     }).join('');
     
-    return `<div class="sources-list">${sourcesList}</div>`;
+    return `
+        <div class="references-collapsible">
+            <div class="references-header" onclick="toggleReferences()">
+                <span class="references-title">References</span>
+                <span class="references-count">${sources.length}</span>
+                <span class="references-toggle">▼</span>
+            </div>
+            <div class="references-content" id="referencesContent" style="display: none;">
+                ${sourcesList}
+            </div>
+        </div>
+    `;
 }
 
-// 切换source详情显示 - 全局函数
-window.toggleSourceDetails = function(index) {
-    const details = document.getElementById(`source-details-${index}`);
-    const toggle = document.querySelector(`[data-index="${index}"] .source-toggle`);
+// 切换References显示 - 全局函数
+window.toggleReferences = function() {
+    const content = document.getElementById('referencesContent');
+    const toggle = document.querySelector('.references-toggle');
     
-    if (details && toggle) {
-        if (details.style.display === 'none') {
-            details.style.display = 'block';
+    if (content && toggle) {
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
             toggle.textContent = '▲';
         } else {
-            details.style.display = 'none';
+            content.style.display = 'none';
             toggle.textContent = '▼';
         }
     }
@@ -969,7 +975,6 @@ function addMessage(text, isUser = false, isError = false, sources = null) {
         messageDiv.innerHTML = `
             <div>${text}</div>
             <div class="sources-info">
-                <strong>References:</strong>
                 ${renderSourcesList(sources)}
             </div>
         `;
@@ -1196,7 +1201,6 @@ async function sendToQuestAPI(message, typingMessage = null) {
                                     responseMessage.innerHTML = `
                                         <div>${fullResponse}</div>
                                         <div class="sources-info">
-                                            <strong>References:</strong>
                                             ${renderSourcesList(sources)}
                                         </div>
                                     `;
