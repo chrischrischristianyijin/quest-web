@@ -526,9 +526,40 @@ class ChatUI {
 
             const data = await sessionManager.getSessions(user.id || user.user_id);
             this.renderSessions(data.sessions || []);
+            
+            // 如果没有当前会话，尝试恢复最近的会话
+            if (!sessionManager.currentSession && data.sessions && data.sessions.length > 0) {
+                const recentSession = data.sessions[0]; // 假设第一个是最新的
+                console.log('🔄 尝试恢复最近的会话:', recentSession.id);
+                sessionManager.currentSession = { id: recentSession.id };
+                
+                // 可选：自动加载最近会话的消息
+                // await this.loadRecentSessionMessages(recentSession.id);
+            }
         } catch (error) {
             console.error('❌ 加载会话列表失败:', error);
             this.sessionsList.innerHTML = '<div class="error-sessions">Failed to load</div>';
+        }
+    }
+
+    // 加载最近会话的消息（可选功能）
+    async loadRecentSessionMessages(sessionId) {
+        try {
+            console.log('🔄 加载最近会话消息:', sessionId);
+            const context = await sessionManager.getSessionContext(sessionId);
+            
+            if (context.messages && context.messages.length > 0) {
+                this.renderMessages(context.messages);
+                console.log('✅ 加载了', context.messages.length, '条消息');
+            }
+            
+            // 更新记忆显示
+            if (context.memories && context.memories.length > 0) {
+                this.renderMemories(context.memories);
+                console.log('🧠 恢复了', context.memories.length, '条记忆');
+            }
+        } catch (error) {
+            console.error('❌ 加载最近会话消息失败:', error);
         }
     }
 
@@ -1074,6 +1105,21 @@ async function sendToQuestAPI(message, typingMessage = null) {
             if (sessionManager.currentSession && sessionManager.currentSession.id) {
                 requestBody.session_id = sessionManager.currentSession.id;
                 console.log('🔍 使用现有会话ID:', sessionManager.currentSession.id);
+            } else {
+                // 如果没有当前会话，先创建一个新会话
+                console.log('🆕 没有当前会话，创建新会话...');
+                try {
+                    const newSession = await sessionManager.createSession(userId, 'Demo Chat');
+                    requestBody.session_id = newSession.id;
+                    console.log('✅ 创建新会话成功，ID:', newSession.id);
+                    
+                    // 更新会话列表（异步执行，不阻塞当前请求）
+                    chatUI.loadSessions().catch(err => console.warn('更新会话列表失败:', err));
+                } catch (error) {
+                    console.error('❌ 创建会话失败:', error);
+                    // 即使创建会话失败，也继续发送请求，让后端处理
+                    console.log('⚠️ 继续发送请求，让后端创建会话');
+                }
             }
         } else {
             // 用户未登录的请求格式
@@ -1113,10 +1159,12 @@ async function sendToQuestAPI(message, typingMessage = null) {
 
         // 从响应头获取会话ID
         const sessionIdFromResponse = response.headers.get('X-Session-ID');
-        if (sessionIdFromResponse && !sessionManager.currentSession) {
-            // 如果是新会话，创建会话对象
-            sessionManager.currentSession = { id: sessionIdFromResponse };
-            console.log('🆕 创建新会话:', sessionIdFromResponse);
+        if (sessionIdFromResponse) {
+            // 更新或设置当前会话ID
+            if (!sessionManager.currentSession || sessionManager.currentSession.id !== sessionIdFromResponse) {
+                sessionManager.currentSession = { id: sessionIdFromResponse };
+                console.log('🔄 更新会话ID:', sessionIdFromResponse);
+            }
         }
 
         const reader = response.body.getReader();
