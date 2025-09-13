@@ -1089,54 +1089,56 @@ async function sendToQuestAPI(message, typingMessage = null) {
         const user = getCurrentUserInfo();
         const userId = user ? (user.id || user.user_id) : null;
         
-        // 构建请求体，尝试不同的格式
-        let requestBody;
+        // 构建URL，根据是否有会话ID决定URL格式
+        let url;
+        let sessionId = null;
         
         if (userId) {
-            // 用户已登录的请求格式
-            requestBody = {
-                message: message,  // 尝试使用message而不是question
-                user_id: userId
-            };
-            
             console.log('🔍 发送聊天请求，用户ID:', userId);
             
-            // 如果有当前会话，添加会话ID
+            // 如果有当前会话，使用现有会话ID
             if (sessionManager.currentSession && sessionManager.currentSession.id) {
-                requestBody.session_id = sessionManager.currentSession.id;
-                console.log('🔍 使用现有会话ID:', sessionManager.currentSession.id);
+                sessionId = sessionManager.currentSession.id;
+                url = `${CHAT_ENDPOINT}?session_id=${sessionId}`;
+                console.log('🔍 使用现有会话ID:', sessionId);
             } else {
                 // 如果没有当前会话，先创建一个新会话
                 console.log('🆕 没有当前会话，创建新会话...');
                 try {
                     const newSession = await sessionManager.createSession(userId, 'Demo Chat');
-                    requestBody.session_id = newSession.id;
-                    console.log('✅ 创建新会话成功，ID:', newSession.id);
+                    sessionId = newSession.id;
+                    url = `${CHAT_ENDPOINT}?session_id=${sessionId}`;
+                    console.log('✅ 创建新会话成功，ID:', sessionId);
                     
                     // 更新会话列表（异步执行，不阻塞当前请求）
                     chatUI.loadSessions().catch(err => console.warn('更新会话列表失败:', err));
                 } catch (error) {
                     console.error('❌ 创建会话失败:', error);
                     // 即使创建会话失败，也继续发送请求，让后端处理
+                    url = CHAT_ENDPOINT;
                     console.log('⚠️ 继续发送请求，让后端创建会话');
                 }
             }
         } else {
             // 用户未登录的请求格式
-            requestBody = {
-                message: message
-            };
+            url = CHAT_ENDPOINT;
             console.warn('⚠️ 用户未登录，发送匿名请求');
         }
         
+        // 构建请求体
+        const requestBody = {
+            message: message,
+            ...(userId && { user_id: userId })
+        };
+        
         // 添加调试信息
         console.log('🚀 API请求信息:');
-        console.log('  - URL:', CHAT_ENDPOINT);
+        console.log('  - URL:', url);
         console.log('  - Method: POST');
         console.log('  - Headers:', headers);
         console.log('  - Body:', requestBody);
         
-        const response = await fetch(CHAT_ENDPOINT, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(requestBody)
