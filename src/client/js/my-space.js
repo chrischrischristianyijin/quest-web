@@ -881,6 +881,41 @@ async function initPage() {
             updateEditModeState();
         }
         
+        // 强制显示内容区域，确保页面可见
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '1';
+            mainContent.style.visibility = 'visible';
+        }
+        
+        // 确保内容卡片容器可见
+        if (contentCards) {
+            contentCards.style.display = 'block';
+            contentCards.style.opacity = '1';
+            contentCards.style.visibility = 'visible';
+        }
+        
+        console.log('✅ 页面内容区域已强制显示');
+        
+        // 如果没有任何内容，确保显示空状态
+        setTimeout(() => {
+            if (contentCards && contentCards.children.length === 0) {
+                console.log('⚠️ 没有检测到内容，强制显示空状态');
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = `
+                    <div class="empty-state-icon">📚</div>
+                    <h3>Welcome to My Space!</h3>
+                    <p>Start adding your favorite media content to your collection</p>
+                    <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
+                        Add Content
+                    </button>
+                `;
+                contentCards.appendChild(emptyState);
+            }
+        }, 100);
+        
         // 分页模式：不需要无限滚动
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
