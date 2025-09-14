@@ -3514,11 +3514,6 @@ async function deleteTagInManagement(userTagId) {
 
 // Bind tag-related events
 function bindTagEvents() {
-    // Create tag button
-    const createTagBtn = document.getElementById('createTagBtn');
-    if (createTagBtn) {
-        createTagBtn.addEventListener('click', showCreateTagModal);
-    }
     
     // Manage tags button
     // 标签管理按钮已删除，使用简单的标签下拉选择器
@@ -5847,16 +5842,6 @@ function populateModalContent(insight) {
         aiSummaryDate.textContent = date;
     }
     
-            // 绑定编辑标签按钮事件 - 内联编辑
-        const editTagsBtn = document.getElementById('modalEditTagsBtn');
-        if (editTagsBtn) {
-            // Remove any existing event listeners
-            editTagsBtn.onclick = null;
-            // Add new event listener for inline editing
-            editTagsBtn.onclick = () => {
-                showInlineTagEditor(insight);
-            };
-        }
     
     // 更新标签显示
     const projectTag = document.querySelector('.project-tag');
@@ -6190,14 +6175,6 @@ function setupModalActions(insight) {
         };
     }
     
-    // 设置编辑标签按钮
-    const editTagsBtn = document.querySelector('.edit-tags-btn');
-    if (editTagsBtn) {
-        editTagsBtn.onclick = () => {
-            // TODO: Implement edit tags functionality
-            console.log('Edit Tags clicked');
-        };
-    }
 }
 
 // 更新页面缓存中的洞察数据
