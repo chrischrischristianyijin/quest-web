@@ -1,8 +1,10 @@
 {
   "version": 2,
+  "buildCommand": "echo 'No build step required for static site'",
+  "outputDirectory": "src/client",
   "headers": [
     {
-      "source": "/src/client/styles/(.*)",
+      "source": "/styles/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
