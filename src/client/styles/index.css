@@ -251,6 +251,7 @@ body::before {
 .auth-btn-primary:hover {
     background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
     border-color: rgba(255, 255, 255, 0.4);
+    color: white;
     box-shadow: 
         0 12px 40px rgba(45, 27, 48, 0.4), 
         0 6px 18px rgba(0, 0, 0, 0.2), 
@@ -610,6 +611,7 @@ body::before {
 .explore-features-btn:hover {
     background: rgba(255, 255, 255, 0.2);
     border-color: rgba(139, 95, 191, 0.3);
+    color: var(--text-primary);
     transform: translateY(-3px) scale(1.03);
     box-shadow: 
         0 16px 50px rgba(139, 95, 191, 0.2), 
@@ -741,6 +743,7 @@ body::before {
     transform: translateY(-2px) scale(1.02);
     background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
     border-color: rgba(255, 255, 255, 0.4);
+    color: white;
     box-shadow: 
         0 12px 40px rgba(45, 27, 48, 0.4), 
         0 6px 20px rgba(0, 0, 0, 0.2), 
@@ -1107,6 +1110,7 @@ body::before {
     transform: translateY(-4px) scale(1.05);
     background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
     border-color: rgba(255, 255, 255, 0.5);
+    color: white;
     box-shadow: 
         0 20px 70px rgba(45, 27, 48, 0.6), 
         0 10px 30px rgba(0, 0, 0, 0.3), 
@@ -1509,6 +1513,7 @@ body::before {
     transform: translateY(-4px) scale(1.05);
     background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
     border-color: rgba(255, 255, 255, 0.5);
+    color: white;
     box-shadow: 
         0 20px 70px rgba(45, 27, 48, 0.6), 
         0 10px 30px rgba(0, 0, 0, 0.3), 
@@ -1628,6 +1633,7 @@ body::before {
     transform: translateY(-4px) scale(1.05);
     background: linear-gradient(135deg, #1A0F1C 0%, #3D1F42 25%, #5A2E60 50%, #7A3F82 75%, #9B50A4 100%);
     border-color: rgba(255, 255, 255, 0.5);
+    color: white;
     box-shadow: 
         0 20px 70px rgba(45, 27, 48, 0.6), 
         0 10px 30px rgba(0, 0, 0, 0.3), 
