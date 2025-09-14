@@ -4355,6 +4355,12 @@ function bindEnhancedStackActions() {
 function startStackNameEdit(stackNameElement) {
     if (!stackNameElement || stackNameElement.classList.contains('editing')) return;
     
+    // Check if input already exists
+    const existingInput = stackNameElement.querySelector('.stack-name-input');
+    if (existingInput) {
+        return; // Already editing
+    }
+    
     const currentName = stackNameElement.textContent;
     const input = document.createElement('input');
     input.type = 'text';
@@ -7639,7 +7645,19 @@ function createStackCard(stackData) {
 
 // Start inline editing of stack name
 function startInlineNameEdit(stackId, nameElement) {
+    // Check if already editing to prevent multiple inputs
+    if (nameElement.classList.contains('editing')) {
+        return;
+    }
+    
     const currentName = nameElement.textContent;
+    
+    // Check if input already exists in container
+    const container = nameElement.parentElement;
+    const existingInput = container.querySelector('.stack-name-edit-input');
+    if (existingInput) {
+        return; // Already editing
+    }
     
     // Create input element
     const input = document.createElement('input');
@@ -7658,8 +7676,10 @@ function startInlineNameEdit(stackId, nameElement) {
         outline: none;
     `;
     
+    // Mark as editing to prevent multiple instances
+    nameElement.classList.add('editing');
+    
     // Replace the name element with input
-    const container = nameElement.parentElement;
     const editIcon = container.querySelector('.edit-icon');
     
     // Remove both name element and edit icon
@@ -7724,11 +7744,14 @@ function startInlineNameEdit(stackId, nameElement) {
             container.classList.add('edited');
         }
         
-        // Re-attach event listener
+        // Re-attach event listener (only once)
         newNameElement.addEventListener('click', (e) => {
             e.stopPropagation();
             startInlineNameEdit(stackId, newNameElement);
         });
+        
+        // Remove editing class
+        newNameElement.classList.remove('editing');
     };
     
     // Handle cancel on Escape
@@ -7755,11 +7778,14 @@ function startInlineNameEdit(stackId, nameElement) {
         // Preserve the "edited" class if it was already there
         // (don't add it since we're canceling the edit)
         
-        // Re-attach event listener
+        // Re-attach event listener (only once)
         newNameElement.addEventListener('click', (e) => {
             e.stopPropagation();
             startInlineNameEdit(stackId, newNameElement);
         });
+        
+        // Remove editing class
+        newNameElement.classList.remove('editing');
     };
     
     input.addEventListener('blur', saveEdit);

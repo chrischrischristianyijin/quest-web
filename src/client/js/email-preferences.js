@@ -354,3 +354,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export for use in other modules
 export { EmailPreferencesManager };
+
