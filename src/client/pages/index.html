@@ -23,30 +23,36 @@
     </nav>
 
     <main class="main-content">
-        <!-- Part 1: Hero -->
-        <section id="home" class="hero-section">
-            <div class="hero-canvas" aria-hidden="true"></div>
-
-            <div class="hero-grid">
-                <div class="hero-copy">
-                    <h1 class="hero-title">All your knowledge, one <span class="nowrap">Private Space</span></h1>
-                    <p class="hero-subtitle">— Your Second Brain with Quest —</p>
-                    <p class="hero-lead">
-                        Quest Private Space helps you capture fragmented notes, files, and ideas — and turns them
-                        into modular, structured, and retrievable knowledge.
+        <!-- Big Title Section -->
+        <section class="big-title-section">
+            <div class="big-title-container">
+                <h1 class="big-main-title">All Your Knowledge, One <span class="nowrap">Private Space</span></h1>
+                <p class="big-subtitle">— Your Second Brain with Quest —</p>
+                
+                <div class="hero-description">
+                    <p class="description-text">
+                        Quest Private Space helps you capture fragmented notes, files, ideas, and turns them into modular, structured, and retrievable knowledge.
                     </p>
 
-                    <div class="hero-cta-row">
-                        <a id="signupCta" class="btn btn-primary" href="#">Sign up — It’s Free!</a>
+                    <div class="hero-cta">
+                        <a id="signupCta" class="btn btn-primary" href="#">Sign up — It's Free!</a>
                     </div>
                 </div>
+            </div>
+        </section>
 
-                <!-- Right “computer demo” surface (drop a recording or screenshot) -->
-                <div class="hero-screen" id="heroScreen">
-                    <!-- Placeholder for knowledge base demo -->
-                    <div class="kb-video" id="kbVideo">
-                        <img src="/public/picture1.jpg" alt="Knowledge Base Demo"
-                            style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" />
+        <!-- Full Screen Video Section -->
+        <section class="fullscreen-video-section">
+            <div class="video-container">
+                <div class="video-placeholder">
+                    <img src="/public/picture1.jpg" alt="Quest Demo Video"
+                        style="width: 100%; height: 100%; object-fit: cover;" />
+                    <div class="video-overlay">
+                        <div class="play-button">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 5V19L19 12L8 5Z" fill="white"/>
+                            </svg>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -74,92 +80,108 @@
             </div>
         </section>
 
-        <!-- Part 3: Roadmap (connected line) -->
-        <section id="features" class="features-section roadmap-section">
+        <!-- Part 3: Key Features Pipeline -->
+        <section id="features" class="features-section">
             <div class="container">
                 <h2 class="section-title center">Key Features</h2>
+                <p class="section-subtitle center">Your knowledge journey from capture to insights</p>
 
-                <ol class="roadmap" aria-label="Quest feature roadmap from capture to reflection">
-                    <!-- 1 -->
-                    <li class="rm-step">
-                        <div class="rm-node" aria-hidden="true"><span class="rm-index">1</span></div>
-                        <div class="rm-card">
-                            <figure class="rm-fig">
+                <div class="pipeline-container">
+                    <!-- Feature 1: Capture -->
+                    <div class="pipeline-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-image">
                                 <img src="/public/feat-capture.png" alt="Capture with one-click save" loading="lazy">
-                            </figure>
-                            <h3>[ Capture ] One-Click Save</h3>
-                            <p>Save anything instantly — web pages, notes, or media — into your vault with just one
-                                click. No friction, no clutter.</p>
+                            </div>
+                            <div class="step-text">
+                                <h3>Capture</h3>
+                                <h4>One-Click Save</h4>
+                                <p>Save anything instantly — web pages, notes, or media — into your vault with just one click. No friction, no clutter.</p>
+                            </div>
                         </div>
-                    </li>
+                        <div class="pipeline-connector"></div>
+                    </div>
 
-                    <!-- 2 -->
-                    <li class="rm-step">
-                        <div class="rm-node" aria-hidden="true"><span class="rm-index">2</span></div>
-                        <div class="rm-card">
-                            <figure class="rm-fig">
-                                <img src="/public/feat-organize.png" alt="PARA structured knowledge space"
-                                    loading="lazy">
-                            </figure>
-                            <h3>[ Organize ] PARA Structured Knowledge Space</h3>
-                            <p>Your content is automatically organized into the PARA framework (Projects, Areas,
-                                Resources, Archives), giving you clarity from day one.</p>
+                    <!-- Feature 2: Organize -->
+                    <div class="pipeline-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-organize.png" alt="PARA structured knowledge space" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Organize</h3>
+                                <h4>PARA Structured Space</h4>
+                                <p>Your content is automatically organized into the PARA framework (Projects, Areas, Resources, Archives), giving you clarity from day one.</p>
+                            </div>
                         </div>
-                    </li>
+                        <div class="pipeline-connector"></div>
+                    </div>
 
-                    <!-- 3 -->
-                    <li class="rm-step">
-                        <div class="rm-node" aria-hidden="true"><span class="rm-index">3</span></div>
-                        <div class="rm-card">
-                            <figure class="rm-fig">
+                    <!-- Feature 3: Manage -->
+                    <div class="pipeline-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-image">
                                 <img src="/public/feat-manage.png" alt="Manage your space and stacks" loading="lazy">
-                            </figure>
-                            <h3>[ Manage ] Build Your Space Your Way</h3>
-                            <p>Easily create custom stacks, delete items, or classify articles — full control to keep
-                                your second brain tidy and personal.</p>
+                            </div>
+                            <div class="step-text">
+                                <h3>Manage</h3>
+                                <h4>Build Your Space</h4>
+                                <p>Easily create custom stacks, delete items, or classify articles — full control to keep your second brain tidy and personal.</p>
+                            </div>
                         </div>
-                    </li>
+                        <div class="pipeline-connector"></div>
+                    </div>
 
-                    <!-- 4 -->
-                    <li class="rm-step">
-                        <div class="rm-node" aria-hidden="true"><span class="rm-index">4</span></div>
-                        <div class="rm-card">
-                            <figure class="rm-fig">
+                    <!-- Feature 4: Summarize -->
+                    <div class="pipeline-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <div class="step-image">
                                 <img src="/public/feat-summarize.png" alt="AI summaries for stacks" loading="lazy">
-                            </figure>
-                            <h3>[ Summarize ] AI-Powered Insights</h3>
-                            <p>Each stack comes with an AI-generated summary, helping you distill key takeaways without
-                                rereading everything.</p>
+                            </div>
+                            <div class="step-text">
+                                <h3>Summarize</h3>
+                                <h4>AI-Powered Insights</h4>
+                                <p>Each stack comes with an AI-generated summary, helping you distill key takeaways without rereading everything.</p>
+                            </div>
                         </div>
-                    </li>
+                        <div class="pipeline-connector"></div>
+                    </div>
 
-                    <!-- 5 -->
-                    <li class="rm-step">
-                        <div class="rm-node" aria-hidden="true"><span class="rm-index">5</span></div>
-                        <div class="rm-card">
-                            <figure class="rm-fig">
+                    <!-- Feature 5: Reflect -->
+                    <div class="pipeline-step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <div class="step-image">
                                 <img src="/public/feat-reflect.png" alt="Weekly email digest" loading="lazy">
-                            </figure>
-                            <h3>[ Reflect ] Weekly Insight Emails</h3>
-                            <p>Get a personalized email digest of your saved content plus curated content cards —
-                                keeping you in sync with your own knowledge growth.</p>
+                            </div>
+                            <div class="step-text">
+                                <h3>Reflect</h3>
+                                <h4>Weekly Insights</h4>
+                                <p>Get a personalized email digest of your saved content plus curated content cards — keeping you in sync with your own knowledge growth.</p>
+                            </div>
                         </div>
-                    </li>
+                        <div class="pipeline-connector"></div>
+                    </div>
 
-                    <!-- 6 (bridge tile; optional rename later) -->
-                    <li class="rm-step">
-                        <div class="rm-node" aria-hidden="true"><span class="rm-index">6</span></div>
-                        <div class="rm-card">
-                            <figure class="rm-fig">
-                                <img src="/public/feat-retrieve.png" alt="Retrieve and chat with your knowledge"
-                                    loading="lazy">
-                            </figure>
-                            <h3>Retrieve &amp; Chat</h3>
-                            <p>Find anything fast and (optionally) chat with it — a natural bridge to your Knowledge Bot
-                                beta.</p>
+                    <!-- Feature 6: Retrieve -->
+                    <div class="pipeline-step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-retrieve.png" alt="Retrieve and chat with your knowledge" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Retrieve</h3>
+                                <h4>Chat & Discover</h4>
+                                <p>Find anything fast and (optionally) chat with it — a natural bridge to your Knowledge Bot beta.</p>
+                            </div>
                         </div>
-                    </li>
-                </ol>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -167,12 +189,14 @@
         <section id="beta" class="beta-section">
             <div class="beta-grid">
                 <div class="beta-copy">
-                    <h2 class="section-title">Chat with Your Knowledge Bot</h2>
+                    <h2 class="section-title">Beta Features</h2>
                     <p class="section-lead">
                         Talk directly to your AI chatbot trained on your saved content.
                         Retrieve notes, recall articles, and spark insights — all in conversation.
                     </p>
-                    <a class="btn btn-secondary" href="/login">Try the Beta</a>
+                    <div class="btn-spacing">
+                        <a class="btn btn-secondary" href="/login">Try the Beta</a>
+                    </div>
                 </div>
                 <div class="beta-visual">
                     <img src="/public/3d_avatar_12.png" alt="Knowledge Bot Preview" class="beta-img" />
@@ -225,6 +249,7 @@
     </footer>
 
     <script type="module" src="/js/index.js"></script>
+    <script type="module" src="/js/scroll-animations.js"></script>
 </body>
 
 </html>
