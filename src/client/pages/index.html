@@ -2,236 +2,226 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quest - Curate your world</title>
-    <!-- 苹果风格字体系统 -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=SF+Pro+Display:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/index.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quest – Private Space</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/index.css" />
 </head>
 
 <body>
-    <div class="bg-decoration"></div>
-
-    <!-- 导航栏 -->
+    <div class="site-bg" aria-hidden="true"></div>
+    <!-- Nav (unchanged structure; links updated in JS to match new sections) -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="/" class="logo">
-                <img src="/public/logo.png" alt="Quest">
-            </a>
-            <div class="nav-links" id="navLinks">
-                <a href="#home" class="nav-link">HOME</a>
-                <a href="#extension" class="nav-link">EXTENSION</a>
-                <a href="#explore" class="nav-link">EXPLORE</a>
-                <a href="#more" class="nav-link">MORE</a>
-                <a href="#contact" class="nav-link">CONTACT</a>
-            </div>
-            <div class="auth-buttons" id="authButtons">
-                <!-- Auth buttons will be dynamically updated -->
-            </div>
+            <a href="/" class="logo"><img src="/public/logo.png" alt="Quest" /></a>
+            <div class="nav-links" id="navLinks"></div>
+            <div class="auth-buttons" id="authButtons"></div>
         </div>
     </nav>
 
-
-
     <main class="main-content">
-        <!-- Home Section -->
-        <section id="home" class="home-section">
-            <div class="hero-background-blur"></div>
-            <div class="hero-content">
-                <h1 class="hero-title" id="welcomeTitle">Welcome to</h1>
-                <p class="hero-subtitle">- YOUR SECOND BRAIN -</p>
-                <div class="hero-date">Sep 13, 2025 | Coming Soon</div>
-                <div class="waitlist-container">
-                    <div class="waitlist-input-container">
-                        <input type="email" class="waitlist-input" placeholder="Enter Email to Join Waitlist"
-                            id="waitlistEmail">
-                        <button class="waitlist-button" id="waitlistButton">Done</button>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <!-- Part 1: Hero -->
+        <section id="home" class="hero-section">
+            <div class="hero-canvas" aria-hidden="true"></div>
 
-
-        <!-- Extension Section -->
-        <section id="extension" class="extension-section">
-            <div class="extension-container">
-                <div class="showcase-content">
-                    <h2 class="showcase-title">Click Less. Remember More.</h2>
-                    <p class="showcase-description">
-                        With <span class="showcase-highlight">Insight Collector</span>, saving articles, tweets, and
-                        ideas takes just one click.<br>
-                        Everything goes straight into your <span class="showcase-highlight">Personal Knowledge
-                            Vault.</span>
+            <div class="hero-grid">
+                <div class="hero-copy">
+                    <h1 class="hero-title">All your knowledge, one <span class="nowrap">Private Space</span></h1>
+                    <p class="hero-subtitle">— Your Second Brain with Quest —</p>
+                    <p class="hero-lead">
+                        Quest Private Space helps you capture fragmented notes, files, and ideas — and turns them
+                        into modular, structured, and retrievable knowledge.
                     </p>
-                    <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac"
-                        class="showcase-cta">
-                        Get the Extension - It's Free!
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </a>
-                </div>
-                <div class="showcase-visual">
-                    <div class="extension-carousel">
-                        <div class="carousel-slide active">
-                            <img src="/public/extension1.png" alt="Quest Extension 1">
-                        </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension2.png" alt="Quest Extension 2">
-                        </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension3.png" alt="Quest Extension 3">
-                        </div>
+
+                    <div class="hero-cta-row">
+                        <a id="signupCta" class="btn btn-primary" href="#">Sign up — It’s Free!</a>
                     </div>
-                    <div class="carousel-indicators">
-                        <span class="carousel-indicator active"></span>
-                        <span class="carousel-indicator"></span>
-                        <span class="carousel-indicator"></span>
+                </div>
+
+                <!-- Right “computer demo” surface (drop a recording or screenshot) -->
+                <div class="hero-screen" id="heroScreen">
+                    <!-- Placeholder for knowledge base demo -->
+                    <div class="kb-video" id="kbVideo">
+                        <img src="/public/picture1.jpg" alt="Knowledge Base Demo"
+                            style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" />
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Explore Section -->
-        <section id="explore" class="explore-section">
-            <div class="explore-container">
-                <div class="explore-visual">
-                    <div class="explore-image-container">
-                        <img src="/public/Explore1.png" alt="Explore Knowledge Universe">
-                    </div>
+        <!-- Part 2: Extension (left video, right copy) -->
+        <section id="extension" class="extension2-section">
+            <div class="ext2-grid">
+                <div class="ext2-visual">
+                    <img src="/public/extension1.png" alt="Browser Extension Demo" class="ext2-video" />
                 </div>
-                <div class="explore-content">
-                    <h2 class="explore-title">Discover Your Knowledge Universe</h2>
-                    <p class="explore-description">
-                        Explore your <span class="explore-highlight">Personal Knowledge Vault</span> with intelligent
-                        search and smart connections.<br>
-                        Find exactly what you need, when you need it, with our advanced discovery tools.
+                <div class="ext2-copy">
+                    <h2 class="section-title">Save Anything, Anywhere — With One Click.</h2>
+                    <p class="section-lead">
+                        Quest’s browser extension makes remembering effortless. Whether it’s a lecture video,
+                        research article, or random inspiration, capture it instantly into your private space.
+                        No more scattered notes — just a unified, searchable context layer built for you.
                     </p>
-                    <a href="#" class="explore-cta">
-                        Start Exploring
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </a>
+                    <a class="btn btn-primary"
+                        href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac"
+                        target="_blank" rel="noopener">Add to Chrome</a>
                 </div>
             </div>
         </section>
 
+        <!-- Part 3: Roadmap (connected line) -->
+        <section id="features" class="features-section roadmap-section">
+            <div class="container">
+                <h2 class="section-title center">Key Features</h2>
+                <p class="section-kicker center">上面三个下面三个，配图，并且连在一起，像一个 roadmap 一样</p>
 
+                <ol class="roadmap" aria-label="Quest feature roadmap from capture to reflection">
+                    <!-- 1 -->
+                    <li class="rm-step">
+                        <div class="rm-node" aria-hidden="true"><span class="rm-index">1</span></div>
+                        <div class="rm-card">
+                            <figure class="rm-fig">
+                                <img src="/public/feat-capture.png" alt="Capture with one-click save" loading="lazy">
+                            </figure>
+                            <h3>[ Capture ] One-Click Save</h3>
+                            <p>Save anything instantly — web pages, notes, or media — into your vault with just one
+                                click. No friction, no clutter.</p>
+                        </div>
+                    </li>
 
+                    <!-- 2 -->
+                    <li class="rm-step">
+                        <div class="rm-node" aria-hidden="true"><span class="rm-index">2</span></div>
+                        <div class="rm-card">
+                            <figure class="rm-fig">
+                                <img src="/public/feat-organize.png" alt="PARA structured knowledge space"
+                                    loading="lazy">
+                            </figure>
+                            <h3>[ Organize ] PARA Structured Knowledge Space</h3>
+                            <p>Your content is automatically organized into the PARA framework (Projects, Areas,
+                                Resources, Archives), giving you clarity from day one.</p>
+                        </div>
+                    </li>
 
-        <!-- More Section -->
-        <section id="more" class="more-section">
-            <div class="more-container">
-                <div class="more-content">
-                    <h2 class="more-title">Discover More with Quest</h2>
-                    <p class="more-description">
-                        Explore advanced features and tools to enhance your knowledge journey
+                    <!-- 3 -->
+                    <li class="rm-step">
+                        <div class="rm-node" aria-hidden="true"><span class="rm-index">3</span></div>
+                        <div class="rm-card">
+                            <figure class="rm-fig">
+                                <img src="/public/feat-manage.png" alt="Manage your space and stacks" loading="lazy">
+                            </figure>
+                            <h3>[ Manage ] Build Your Space Your Way</h3>
+                            <p>Easily create custom stacks, delete items, or classify articles — full control to keep
+                                your second brain tidy and personal.</p>
+                        </div>
+                    </li>
+
+                    <!-- 4 -->
+                    <li class="rm-step">
+                        <div class="rm-node" aria-hidden="true"><span class="rm-index">4</span></div>
+                        <div class="rm-card">
+                            <figure class="rm-fig">
+                                <img src="/public/feat-summarize.png" alt="AI summaries for stacks" loading="lazy">
+                            </figure>
+                            <h3>[ Summarize ] AI-Powered Insights</h3>
+                            <p>Each stack comes with an AI-generated summary, helping you distill key takeaways without
+                                rereading everything.</p>
+                        </div>
+                    </li>
+
+                    <!-- 5 -->
+                    <li class="rm-step">
+                        <div class="rm-node" aria-hidden="true"><span class="rm-index">5</span></div>
+                        <div class="rm-card">
+                            <figure class="rm-fig">
+                                <img src="/public/feat-reflect.png" alt="Weekly email digest" loading="lazy">
+                            </figure>
+                            <h3>[ Reflect ] Weekly Insight Emails</h3>
+                            <p>Get a personalized email digest of your saved content plus curated content cards —
+                                keeping you in sync with your own knowledge growth.</p>
+                        </div>
+                    </li>
+
+                    <!-- 6 (bridge tile; optional rename later) -->
+                    <li class="rm-step">
+                        <div class="rm-node" aria-hidden="true"><span class="rm-index">6</span></div>
+                        <div class="rm-card">
+                            <figure class="rm-fig">
+                                <img src="/public/feat-retrieve.png" alt="Retrieve and chat with your knowledge"
+                                    loading="lazy">
+                            </figure>
+                            <h3>Retrieve &amp; Chat</h3>
+                            <p>Find anything fast and (optionally) chat with it — a natural bridge to your Knowledge Bot
+                                beta.</p>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Part 4: Beta Feature -->
+        <section id="beta" class="beta-section">
+            <div class="beta-grid">
+                <div class="beta-copy">
+                    <h2 class="section-title">Chat with Your Knowledge Bot</h2>
+                    <p class="section-lead">
+                        Talk directly to your AI chatbot trained on your saved content.
+                        Retrieve notes, recall articles, and spark insights — all in conversation.
                     </p>
-                    <div class="more-features">
-                        <div class="more-feature">
-                            <div class="more-feature-icon">📚</div>
-                            <h3>Advanced Search</h3>
-                            <p>Find exactly what you need with intelligent search algorithms</p>
-                        </div>
-                        <div class="more-feature">
-                            <div class="more-feature-icon">🔗</div>
-                            <h3>Smart Connections</h3>
-                            <p>Discover hidden relationships between your saved content</p>
-                        </div>
-                        <div class="more-feature">
-                            <div class="more-feature-icon">📊</div>
-                            <h3>Analytics Dashboard</h3>
-                            <p>Track your learning progress and insights</p>
-                        </div>
-                    </div>
-                    <!-- Sign Up link temporarily hidden -->
-                    <div class="more-cta" style="opacity: 0.5; cursor: not-allowed;">
-                        Coming Soon - Explore All Features
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </div>
+                    <a class="btn btn-secondary" href="/login">Try the Beta</a>
+                </div>
+                <div class="beta-visual">
+                    <img src="/public/3d_avatar_12.png" alt="Knowledge Bot Preview" class="beta-img" />
                 </div>
             </div>
         </section>
 
-        <!-- Contact Us Section -->
+        <!-- Contact (kept simple) -->
         <section id="contact" class="contact-section">
             <div class="contact-container">
-                <div class="contact-content">
-                    <h2 class="contact-title">Talk to Our Team</h2>
-                    <p class="contact-description">
-                        Have questions about Quest? We'd love to hear from you.
-                    </p>
-                    <a href="mailto:contact@myquestspace.com" class="contact-button">
-                        📧 Send Email
-                    </a>
-                </div>
+                <h2 class="section-title center">Talk to Our Team</h2>
+                <p class="section-lead center">Have questions about Quest? We'd love to hear from you.</p>
+                <a href="mailto:contact@myquestspace.com" class="btn btn-secondary">📧 Send Email</a>
             </div>
         </section>
     </main>
 
-    <!-- Footer -->
+    <!-- Footer (kept) -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-brand">
-                <div class="footer-logo">
-                    <img src="/public/logo.png" alt="Quest" class="footer-logo-img">
+                <div class="footer-logo"><img src="/public/logo.png" class="footer-logo-img" alt="Quest" />
                     <h3>Quest</h3>
                 </div>
-                <p class="footer-description">Your personal knowledge hub for discovering and sharing meaningful content
-                    across the web.</p>
+                <p class="footer-description">Your personal knowledge hub for discovering and organizing what matters.
+                </p>
             </div>
-
             <div class="footer-links-section">
                 <h4>Quick Links</h4>
                 <div class="footer-links">
-                    <a href="#home">Home</a>
-                    <a href="#extension">Extension</a>
-                    <a href="#explore">Explore</a>
-                    <a href="#more">More</a>
-                    <a href="#contact">Contact</a>
+                    <a href="#home">Home</a><a href="#extension">Extension</a><a href="#features">Features</a><a
+                        href="#beta">Beta</a><a href="#contact">Contact</a>
                 </div>
             </div>
-
             <div class="footer-contact-section">
                 <h4>Get in Touch</h4>
                 <div class="contact-info">
-                    <div class="contact-item">
-                        <span class="contact-icon">📧</span>
-                        <a href="mailto:contact@myquestspace.com">contact@myquestspace.com</a>
-                    </div>
-                </div>
-                <div class="footer-social">
-                    <span class="social-text">Follow us</span>
-                    <div class="social-links">
-                        <a href="#" class="social-link" title="Twitter">🐦</a>
-                        <a href="#" class="social-link" title="LinkedIn">💼</a>
-                        <a href="#" class="social-link" title="GitHub">🐙</a>
+                    <div class="contact-item">📧 <a href="mailto:contact@myquestspace.com">contact@myquestspace.com</a>
                     </div>
                 </div>
             </div>
         </div>
-
         <div class="footer-bottom">
             <div class="footer-bottom-content">
-                <p class="copyright">&copy; 2025 Quest. All rights reserved.</p>
+                <p class="copyright">© 2025 Quest. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
-    <!-- 引入核心脚本 -->
     <script type="module" src="/js/index.js"></script>
-
-    <!-- Vercel Analytics - Disabled to prevent 404 errors -->
 </body>
 
 </html>
