@@ -90,22 +90,96 @@ const saveOnUnload = () => {
 };
 window.addEventListener('beforeunload', saveOnUnload);
 
-// 🔐 Global auth-expired handler: immediate logout + redirect
+// 🔐 Global auth-expired handler: immediate logout + show modal
 window.addEventListener('quest-auth-expired', async (e) => {
   console.warn('🔒 Auth expired; logging out...', e?.detail);
   try {
+    // 设置标志阻止insights恢复
+    window.__QUEST_AUTH_EXPIRED__ = true;
+    
     // stop autosave if running
     if (window.__QUEST_AUTOSAVE_ID__) {
       clearInterval(window.__QUEST_AUTOSAVE_ID__);
       window.__QUEST_AUTOSAVE_ID__ = null;
     }
     window.removeEventListener('beforeunload', saveOnUnload);
+    
+    // 清除本地insights备份，防止恢复
+    localStorage.removeItem('quest_insights_backup');
+    console.log('🗑️ Cleared insights backup due to auth expiration');
+    
     // clear local session via auth manager
     await auth.logout();
-  } catch (_) {}
-  // hard redirect to login
-  navigateTo(PATHS.LOGIN);
+    
+    // 显示认证过期弹窗
+    const { handleAuthExpired } = await import('./auth-modal.js');
+    handleAuthExpired();
+  } catch (error) {
+    console.error('❌ Error handling auth expiration:', error);
+    // 即使出错也要显示弹窗
+    try {
+      const { handleAuthExpired } = await import('./auth-modal.js');
+      handleAuthExpired();
+    } catch (modalError) {
+      console.error('❌ Error showing auth modal:', modalError);
+      // 最后回退到直接跳转
+      navigateTo(PATHS.LOGIN);
+    }
+  }
 });
+
+// 🔐 定期检查token有效性 (每5分钟检查一次)
+let tokenValidationInterval = null;
+
+function startTokenValidation() {
+  if (tokenValidationInterval) {
+    clearInterval(tokenValidationInterval);
+  }
+  
+  tokenValidationInterval = setInterval(async () => {
+    try {
+      // 检查token是否过期
+      if (auth.isTokenExpired()) {
+        console.log('⏰ Token已过期，触发认证过期事件');
+        window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
+          detail: { 
+            status: 401, 
+            reason: 'Token expired during periodic check' 
+          } 
+        }));
+        return;
+      }
+      
+      // 如果用户已认证，验证token有效性
+      if (auth.checkAuth()) {
+        const isValid = await auth.validateToken();
+        if (!isValid) {
+          console.log('❌ Token验证失败，触发认证过期事件');
+          // validateToken内部已经会触发quest-auth-expired事件
+        }
+      }
+    } catch (error) {
+      console.error('❌ Token验证检查出错:', error);
+    }
+  }, 5 * 60 * 1000); // 5分钟检查一次
+}
+
+function stopTokenValidation() {
+  if (tokenValidationInterval) {
+    clearInterval(tokenValidationInterval);
+    tokenValidationInterval = null;
+  }
+}
+
+// 页面加载时启动token验证
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startTokenValidation);
+} else {
+  startTokenValidation();
+}
+
+// 页面卸载时停止验证
+window.addEventListener('beforeunload', stopTokenValidation);
 
 // 翻页功能相关变量
 let currentPage = 1;
@@ -304,7 +378,7 @@ async function goToPage(pageNum, { force = false } = {}) {
             
             // 使用分页API加载目标页面 (over-fetch on page 1 to account for stacked insights)
             const effectiveLimit = effectiveFetchLimitForPage(pageNum);
-            const uid = (auth?.user?.id || currentUser?.id || undefined);
+            const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
             
             console.log(`🔍 DEBUG: API call parameters - pageNum=${pageNum}, effectiveLimit=${effectiveLimit}, uid=${uid}`);
             
@@ -498,7 +572,7 @@ async function loadUserInsightsWithPagination() {
         console.log('🚀 开始请求第一页数据...');
         const startTime = Date.now();
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
         
         console.log('🔍 API Request Details:', {
             page: 1,
@@ -532,6 +606,13 @@ async function loadUserInsightsWithPagination() {
             console.log('📡 First page API response:', firstPageResponse);
         } catch (apiError) {
             console.warn('⚠️ API请求失败，尝试从本地备份加载:', apiError.message);
+            
+            // 检查是否因认证过期导致，如果是则不恢复本地数据
+            if (window.__QUEST_AUTH_EXPIRED__) {
+                console.log('🚫 Auth expired, skipping backup restore');
+                throw apiError;
+            }
+            
             // 如果API请求失败（可能是认证问题），尝试从本地备份加载
             const backupInsights = localStorage.getItem('quest_insights_backup');
             if (backupInsights) {
@@ -669,6 +750,15 @@ async function loadUserInsightsWithPagination() {
 // 从备份加载数据
 function loadFromBackup() {
     console.log('🔄 Loading from backup...');
+    
+    // 检查是否因认证过期导致，如果是则不恢复本地数据
+    if (window.__QUEST_AUTH_EXPIRED__) {
+        console.log('🚫 Auth expired, skipping backup restore');
+        currentInsights = [];
+        window.currentInsights = currentInsights;
+        return;
+    }
+    
     const backupInsights = localStorage.getItem('quest_insights_backup');
     let restoredFromBackup = false;
     
@@ -718,10 +808,10 @@ function loadFromBackup() {
     renderInsights();
     updatePaginationUI();
     
-    // Notify user if data was restored from backup
-    if (restoredFromBackup) {
-        showSuccessMessage(`Restored ${currentInsights.length} insights from local backup. Your data is safe!`);
-    }
+    // Notify user if data was restored from backup (disabled)
+    // if (restoredFromBackup) {
+    //     showSuccessMessage(`Restored ${currentInsights.length} insights from local backup. Your data is safe!`);
+    // }
 }
 
 // Check data recovery status on page load
@@ -969,7 +1059,7 @@ async function loadUserStacks() {
         
         // Load stacks and populate them with ALL insights to show correct counts
         let allInsights = [];
-        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
         
         // Load stacks directly from the stack API
         console.log('🔍 Loading stacks from API...');
@@ -1317,7 +1407,7 @@ async function loadUserInsights() {
         // 使用分页API方法获取insights
         insightsLoading = true;
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
         const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response?.success) {
@@ -1395,6 +1485,14 @@ async function loadUserInsights() {
         console.error('❌ 加载用户insights失败:', error);
         
         // Try loading from localStorage backup before showing error
+        // 检查是否因认证过期导致，如果是则不恢复本地数据
+        if (window.__QUEST_AUTH_EXPIRED__) {
+            console.log('🚫 Auth expired, skipping backup restore in error handler');
+            currentInsights = [];
+            window.currentInsights = currentInsights;
+            return;
+        }
+        
         const backupInsights = localStorage.getItem('quest_insights_backup');
         const isAuthErr = /401|403|unauthor/i.test(error?.message || '');
         const isNetErr = (typeof navigator !== 'undefined' && navigator.onLine === false) ||
@@ -2183,7 +2281,7 @@ async function fetchAllInsightsForFiltering() {
         let allInsights = [];
         
         try {
-            const uid = (auth?.user?.id || currentUser?.id || undefined);
+            const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
             const response = await api.getInsightsPaginated(1, 100, uid, '', true); // Reasonable limit to get all
             
             if (response?.success) {
@@ -7309,18 +7407,8 @@ function saveInsightsToLocalStorage({ force = false } = {}) {
                 console.log('↩︎ skip auto-save: no insights yet');
                 return;
             }
-            // Don't shrink a non-empty backup unintentionally
-            const prevRaw = localStorage.getItem('quest_insights_backup');
-            const prevLen = (() => {
-                try { 
-                    const prev = prevRaw ? JSON.parse(prevRaw) : null; 
-                    return Array.isArray(prev?.data) ? prev.data.length : 0; 
-                } catch { return 0; }
-            })();
-            if (prevLen && curLen < prevLen) {
-                console.log(`↩︎ skip auto-save: would shrink backup ${prevLen}→${curLen}`);
-                return;
-            }
+            // Allow backup to shrink when insights are deleted (user action)
+            // This ensures deleted insights don't persist in backup
         }
 
         const backup = { data: [...cur], timestamp: Date.now(), version: '1.0' };
