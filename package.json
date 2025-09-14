@@ -2,6 +2,7 @@
   "name": "quest-web",
   "version": "1.0.0",
   "description": "Quest Web Application",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "node src/server/dev-server.js",
