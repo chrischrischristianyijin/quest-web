@@ -7267,3 +7267,210 @@ body.modal-open { overflow: hidden; }
     text-align: center;
     padding: 20px;
 }
+
+/* ===========================
+   My Space — Index Theme Bridge
+   (non-breaking, CSS-only)
+   =========================== */
+
+/* --- Index brand tokens (titles + text scale) --- */
+:root{
+  /* Match new index page color system */
+  --brand-purple: #322563;          /* titles */
+  --brand-purple-on-dark: #C6BEE6;  /* titles on dark */
+  --text-900: #1A1830;
+  --text-700: #3E3B59;              /* primary body */
+  --text-600: #5C5976;              /* secondary body */
+}
+
+/* Gently align existing tokens (don't force purple everywhere) */
+:root{
+  --text-primary: var(--text-700);
+  --text-secondary: var(--text-600);
+}
+
+/* Headings & key titles (keep body neutral) */
+.MySpace h1, .MySpace h2, .MySpace h3, .MySpace h4, .MySpace h5, .MySpace h6,
+.MySpace .section-title,
+.MySpace .content-card-title,
+.MySpace .modal-title{
+  color: var(--brand-purple) !important; /* index title tone */
+}
+
+/* --- Global purple canvas borrowed from index --- */
+.site-bg{
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.30;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 248, 255, 0.9) 0%, transparent 70%),
+    radial-gradient(circle at 80% 70%, rgba(250, 245, 255, 0.8) 0%, transparent 75%),
+    radial-gradient(circle at 60% 20%, rgba(255, 252, 255, 0.7) 0%, transparent 65%),
+    radial-gradient(circle at 40% 80%, rgba(248, 242, 255, 0.9) 0%, transparent 70%),
+    radial-gradient(circle at 90% 40%, rgba(255, 250, 255, 0.6) 0%, transparent 60%),
+    radial-gradient(circle at 10% 90%, rgba(245, 238, 255, 0.8) 0%, transparent 65%),
+    radial-gradient(circle at 70% 10%, rgba(252, 248, 255, 0.7) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(255, 249, 255, 0.5) 0%, transparent 80%),
+    linear-gradient(135deg,
+      #fefcff 0%,
+      #fdfaff 12%,
+      #fcf8ff 24%,
+      #fbf6ff 36%,
+      #faf4ff 48%,
+      #f9f2ff 60%,
+      #f8f0ff 72%,
+      #f7eeff 84%,
+      #f6ecff 96%,
+      #f5eaff 100%
+    );
+  background-size: 1000% 1000%, 900% 900%, 1100% 1100%, 950% 950%, 1050% 1050%, 800% 800%, 900% 900%, 600% 600%, 500% 500%;
+}
+
+/* Keep your existing header gradient; canvas just sits behind */
+
+/* ===========================
+   Modal polish (no behavior change)
+   Targets: Add Content, Create Tag, Manage Tags, Edit Tags
+   =========================== */
+
+/* Backdrop unify */
+.add-content-modal,
+.create-tag-modal,
+.manage-tags-modal,
+.edit-tags-modal,       /* created dynamically in JS */
+.tag-edit-modal{        /* already present */
+  /* existing display toggles remain controlled by original CSS/JS */
+  backdrop-filter: blur(2px);
+}
+
+/* Content container: glass card */
+.add-content-modal .add-content-modal-content,
+.create-tag-modal .create-tag-modal-content,
+.manage-tags-modal .manage-tags-modal-content,
+.edit-tags-modal .edit-tags-modal-content,
+.tag-edit-modal .tag-edit-modal-content{
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(50, 37, 99, 0.12); /* subtle purple line */
+  border-radius: 16px;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.10),
+    0 28px 70px rgba(0,0,0,.12);
+  overflow: hidden;
+}
+
+/* Header: spacing + divider */
+.add-content-modal .modal-header,
+.create-tag-modal .modal-header,
+.manage-tags-modal .modal-header,
+.edit-tags-modal .modal-header,
+.tag-edit-modal .modal-header{
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(50, 37, 99, 0.10);
+}
+
+/* Title color matches index headings */
+.add-content-modal .modal-title,
+.create-tag-modal .modal-title,
+.manage-tags-modal .modal-title,
+.edit-tags-modal .modal-title,
+.tag-edit-modal .modal-title{
+  color: var(--brand-purple);
+  font-weight: 700;
+}
+
+/* Close button hover */
+.add-content-modal .modal-close,
+.create-tag-modal .modal-close,
+.manage-tags-modal .modal-close,
+.edit-tags-modal .modal-close,
+.tag-edit-modal .modal-close{
+  color: var(--text-600);
+  border-radius: 8px;
+  transition: background .2s ease, color .2s ease;
+}
+.add-content-modal .modal-close:hover,
+.create-tag-modal .modal-close:hover,
+.manage-tags-modal .modal-close:hover,
+.edit-tags-modal .modal-close:hover,
+.tag-edit-modal .modal-close:hover{
+  background: rgba(50, 37, 99, 0.06);
+  color: var(--text-900);
+}
+
+/* Body spacing */
+.add-content-modal .form-group,
+.create-tag-modal .form-group{
+  margin: 14px 0 0 0;
+}
+
+/* Inputs */
+.add-content-modal .form-input,
+.add-content-modal .form-textarea,
+.create-tag-modal .form-input{
+  border: 1px solid rgba(50, 37, 99, 0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.add-content-modal .form-input:focus,
+.add-content-modal .form-textarea:focus,
+.create-tag-modal .form-input:focus{
+  outline: none;
+  border-color: #8B5CF6; /* purple accent */
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+}
+
+/* Actions row */
+.add-content-modal .modal-actions,
+.create-tag-modal .modal-actions,
+.manage-tags-modal .modal-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 18px 24px 22px;
+  border-top: 1px solid rgba(50, 37, 99, 0.08);
+}
+
+/* Buttons */
+.modal-btn{
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.modal-btn-primary{
+  background: linear-gradient(90deg, #8B5CF6 0%, #6366F1 100%);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(99,102,241,.25);
+}
+.modal-btn-primary:hover{
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.modal-btn-secondary{
+  background: #fff;
+  color: var(--text-700);
+  border-color: rgba(50, 37, 99, 0.18);
+}
+.modal-btn-secondary:hover{
+  background: rgba(50, 37, 99, 0.06);
+}
+
+/* Tag selector within modals: subtle alignment with theme */
+.tag-selector-trigger{
+  border-color: rgba(139, 92, 246, 0.35);
+}
+.tag-selector-trigger:hover{
+  border-color: #8B5CF6;
+}
+
+/* Small improvement to existing "Manage Tags" two-pane layout on narrow screens */
+@media (max-width: 760px){
+  .tags-management{ grid-template-columns: 1fr; }
+}
