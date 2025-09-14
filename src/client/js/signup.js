@@ -108,6 +108,22 @@ async function handleSignup(email, nickname, password) {
             setTimeout(() => {
                 navigateTo(PATHS.MY_SPACE, { fromAuth: true });
             }, 1000);
+        } else {
+            // Handle signup failure from auth layer
+            console.log('❌ Signup failed from auth layer:', result);
+            let errorMessage = result.message || 'Signup failed, please try again';
+            
+            // Check for specific error messages
+            if (errorMessage.includes('该邮箱已被注册') || 
+                errorMessage.includes('already registered') ||
+                errorMessage.includes('duplicate key') ||
+                errorMessage.includes('unique constraint') ||
+                errorMessage.includes('注册失败')) {
+                errorMessage = 'Account creation was unsuccessful. An account has already been registered with this email address. Please try logging in or use a different email.';
+            }
+            
+            console.log('🚨 Displaying auth layer error message:', errorMessage);
+            showMessage(errorMessage, 'error');
         }
     } catch (error) {
         console.error('Signup failed:', error);
@@ -116,18 +132,33 @@ async function handleSignup(email, nickname, password) {
             message: error.message,
             stack: error.stack
         });
+        console.log('🔍 Error message analysis:', {
+            originalMessage: error.message,
+            includesAlreadyRegistered: error.message.includes('already registered'),
+            includesChinese: error.message.includes('该邮箱已被注册'),
+            includesDuplicate: error.message.includes('duplicate key')
+        });
         
         // Improved error handling
         let errorMessage = error.message || 'Signup failed, please try again';
         
-        if (error.message.includes('User already registered') || error.message.includes('already exists')) {
-            errorMessage = 'This email is already registered, please login directly or use another email';
+        if (error.message.includes('User already registered') || 
+            error.message.includes('already exists') ||
+            error.message.includes('该邮箱已被注册') ||
+            error.message.includes('already registered') ||
+            error.message.includes('duplicate key') ||
+            error.message.includes('unique constraint') ||
+            error.message.includes('注册失败')) {
+            errorMessage = 'Account creation was unsuccessful. An account has already been registered with this email address. Please try logging in or use a different email.';
         } else if (error.message.includes('400') || error.message.includes('bad request')) {
             errorMessage = 'Input data is incorrect, please check and try again';
         } else if (error.message.includes('500') || error.message.includes('server error')) {
             errorMessage = 'Server error, please try again later';
+        } else if (error.message.includes('422') || error.message.includes('validation')) {
+            errorMessage = 'Please check your input and try again';
         }
         
+        console.log('🚨 Displaying error message:', errorMessage);
         showMessage(errorMessage, 'error');
     }
 }
