@@ -6,12 +6,13 @@ window.auth = auth;
 
 // === 1) Navigation to match the new sections ===
 function updateNavigation(isLoggedIn, user = null) {
+    const navLinks = document.getElementById('navLinks');
     const authButtons = document.getElementById('authButtons');
     if (!navLinks || !authButtons) return;
-  
+    
     const linksHtml = `
-      <a href="#home" class="nav-link">HOME</a>
-      <a href="#extension" class="nav-link">EXTENSION</a>
+            <a href="#home" class="nav-link">HOME</a>
+            <a href="#extension" class="nav-link">EXTENSION</a>
       <a href="#features" class="nav-link">FEATURES</a>
       <a href="#beta" class="nav-link">BETA</a>
       <a href="#contact" class="nav-link">CONTACT</a>
@@ -66,7 +67,7 @@ function updateNavigation(isLoggedIn, user = null) {
         await window.auth.logout();
         // Redirect to home page after logout
         window.location.href = '/';
-      }
+        }
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -85,4 +86,3 @@ function updateNavigation(isLoggedIn, user = null) {
     wireHeroCta(isLoggedIn);
     initHeroParallax();
   });
-  
