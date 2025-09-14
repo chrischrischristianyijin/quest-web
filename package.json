@@ -7,8 +7,7 @@
   "scripts": {
     "start": "node src/server/dev-server.js",
     "dev": "node src/server/dev-server.js",
-    "build": "echo 'Frontend build completed'",
-    "vercel-build": "echo 'Frontend build completed'"
+    "build": "echo 'Frontend build completed'"
   },
   "devDependencies": {
     "http-server": "^14.1.1"
