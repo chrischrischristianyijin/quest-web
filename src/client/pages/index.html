@@ -2,237 +2,254 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quest - Curate your world</title>
-    <link rel="icon" type="image/png" href="/public/Q.png">
-    <!-- 苹果风格字体系统 -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=SF+Pro+Display:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/index.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quest – Private Space</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/index.css" />
 </head>
 
 <body>
-    <div class="bg-decoration"></div>
-
-    <!-- 导航栏 -->
+    <div class="site-bg" aria-hidden="true"></div>
+    <!-- Nav (unchanged structure; links updated in JS to match new sections) -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="/" class="logo">
-                <img src="/public/logo.png" alt="Quest">
-            </a>
-            <div class="auth-buttons" id="authButtons">
-                <!-- Auth buttons will be dynamically updated -->
-            </div>
+            <a href="/" class="logo"><img src="/public/logo.png" alt="Quest" /></a>
+            <div class="nav-links" id="navLinks"></div>
+            <div class="auth-buttons" id="authButtons"></div>
         </div>
     </nav>
 
-
-
     <main class="main-content">
-        <!-- Unified Hero Section -->
-        <section id="home" class="unified-hero-section">
-            <div class="hero-background-blur"></div>
-            <div class="hero-container">
-                <!-- Left Content -->
-                <div class="hero-content">
-                    <div class="hero-header">
-                        <h1 class="hero-title" id="welcomeTitle">Welcome to Quest</h1>
-                        <p class="hero-tagline">- YOUR SECOND BRAIN -</p>
-                    </div>
-                    <h2 class="hero-main-text">Click Less. Remember More.</h2>
-                    <p class="hero-description">
-                        Save anything with <span class="highlight">one click</span>.<br>
-                        Build your <span class="highlight">knowledge vault</span> effortlessly.
+        <!-- Big Title Section -->
+        <section class="big-title-section">
+            <div class="big-title-container">
+                <h1 class="big-main-title">All Your Knowledge, One <span class="nowrap">Private Space</span></h1>
+                <p class="big-subtitle">— Your Second Brain with Quest —</p>
+                
+                <div class="hero-description">
+                    <p class="description-text">
+                        Quest Private Space helps you capture fragmented notes, files, ideas, and turns them into modular, structured, and retrievable knowledge.
                     </p>
-                    <div class="hero-actions">
-                        <div class="first-row-actions">
-                            <a href="#" id="dynamicExploreBtn" class="explore-features-btn">
-                                Explore Features Signup
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
-                            </a>
-                            <div class="social-buttons">
-                                <a href="https://xhslink.com/m/6IUc0kEKeRy" target="_blank" class="xiaohongshu-btn" title="关注Quest小红书 - 1081 likes & cols">
-                                    <img src="public/XiaohongshuLOGO.svg.png" alt="小红书" class="social-icon">
-                                </a>
-                                <a href="https://www.instagram.com/quest_official2025?igsh=NTc4MTIwNjQ2YQ==" target="_blank" class="instagram-btn" title="关注Quest官方Instagram">
-                                    <img src="public/Instagram_icon.png" alt="Instagram" class="social-icon">
-                                </a>
+
+                    <div class="hero-cta">
+                        <a id="signupCta" class="btn btn-primary" href="#">Sign up — It's Free!</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Full Screen Video Section -->
+        <section class="fullscreen-video-section">
+            <div class="video-container">
+                <div class="video-placeholder">
+                    <img src="/public/picture1.jpg" alt="Quest Demo Video"
+                        style="width: 100%; height: 100%; object-fit: cover;" />
+                    <div class="video-overlay">
+                        <div class="play-button">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 5V19L19 12L8 5Z" fill="white"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Part 2: Extension (left video, right copy) -->
+        <section id="extension" class="extension2-section">
+            <div class="ext2-grid">
+                <div class="ext2-visual">
+                    <img src="/public/extension1.png" alt="Browser Extension Demo" class="ext2-video" />
+                </div>
+                <div class="ext2-copy">
+                    <h2 class="section-title">Save Anything, Anywhere — With One Click.</h2>
+                    <p class="section-lead">
+                        Quest's browser extension makes remembering effortless. Whether it's a lecture video,
+                        research article, or random inspiration, capture it instantly into your private space.
+                        No more scattered notes — just a unified, searchable context layer built for you.
+                    </p>
+                    <div class="btn-spacing">
+                        <a class="btn btn-primary"
+                            href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac"
+                            target="_blank" rel="noopener">Add to Chrome</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Part 3: Key Features Pipeline -->
+        <section id="features" class="features-section">
+            <div class="container">
+                <h2 class="section-title center">Key Features</h2>
+                <p class="section-subtitle center">Your knowledge journey from capture to insights</p>
+
+                <div class="pipeline-container">
+                    <!-- Feature 1: Capture -->
+                    <div class="pipeline-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-capture.png" alt="Capture with one-click save" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Capture</h3>
+                                <h4>One-Click Save</h4>
+                                <p>Save anything instantly — web pages, notes, or media — into your vault with just one click. No friction, no clutter.</p>
                             </div>
                         </div>
-                        <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac"
-                            class="extension-cta">
-                            Get the Extension - It's Free!
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </a>
+                        <div class="pipeline-connector"></div>
                     </div>
-                </div>
-                
-                <!-- Right Visual -->
-                <div class="hero-visual">
-                    <div class="extension-carousel">
-                        <div class="carousel-slide active">
-                            <img src="/public/extension1.png" alt="Quest Extension 1">
+
+                    <!-- Feature 2: Organize -->
+                    <div class="pipeline-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-organize.png" alt="PARA structured knowledge space" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Organize</h3>
+                                <h4>PARA Structured Space</h4>
+                                <p>Your content is automatically organized into the PARA framework (Projects, Areas, Resources, Archives), giving you clarity from day one.</p>
+                            </div>
                         </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension2.png" alt="Quest Extension 2">
-                        </div>
-                        <div class="carousel-slide">
-                            <img src="/public/extension3.png" alt="Quest Extension 3">
-                        </div>
+                        <div class="pipeline-connector"></div>
                     </div>
-                    <div class="carousel-indicators">
-                        <span class="carousel-indicator active"></span>
-                        <span class="carousel-indicator"></span>
-                        <span class="carousel-indicator"></span>
+
+                    <!-- Feature 3: Manage -->
+                    <div class="pipeline-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-manage.png" alt="Manage your space and stacks" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Manage</h3>
+                                <h4>Build Your Space</h4>
+                                <p>Easily create custom stacks, delete items, or classify articles — full control to keep your second brain tidy and personal.</p>
+                            </div>
+                        </div>
+                        <div class="pipeline-connector"></div>
+                    </div>
+
+                    <!-- Feature 4: Summarize -->
+                    <div class="pipeline-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-summarize.png" alt="AI summaries for stacks" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Summarize</h3>
+                                <h4>AI-Powered Insights</h4>
+                                <p>Each stack comes with an AI-generated summary, helping you distill key takeaways without rereading everything.</p>
+                            </div>
+                        </div>
+                        <div class="pipeline-connector"></div>
+                    </div>
+
+                    <!-- Feature 5: Reflect -->
+                    <div class="pipeline-step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-reflect.png" alt="Weekly email digest" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Reflect</h3>
+                                <h4>Weekly Insights</h4>
+                                <p>Get a personalized email digest of your saved content plus curated content cards — keeping you in sync with your own knowledge growth.</p>
+                            </div>
+                        </div>
+                        <div class="pipeline-connector"></div>
+                    </div>
+
+                    <!-- Feature 6: Retrieve -->
+                    <div class="pipeline-step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <div class="step-image">
+                                <img src="/public/feat-retrieve.png" alt="Retrieve and chat with your knowledge" loading="lazy">
+                            </div>
+                            <div class="step-text">
+                                <h3>Retrieve</h3>
+                                <h4>Chat & Discover</h4>
+                                <p>Find anything fast and (optionally) chat with it — a natural bridge to your Knowledge Bot beta.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Explore Section -->
-        <section id="explore" class="explore-section">
-            <div class="explore-container">
-                <div class="explore-visual">
-                    <div class="explore-image-container">
-                        <img src="/public/Explore1.png" alt="Explore Knowledge Universe">
-                    </div>
-                </div>
-                <div class="explore-content">
-                    <h2 class="explore-title">Discover Your Knowledge Universe</h2>
-                    <p class="explore-description">
-                        Explore your <span class="explore-highlight">Personal Knowledge Vault</span> with intelligent
-                        search and smart connections.<br>
-                        Find exactly what you need, when you need it, with our advanced discovery tools.
+        <!-- Part 4: Beta Feature -->
+        <section id="beta" class="beta-section">
+            <div class="beta-grid">
+                <div class="beta-copy">
+                    <h2 class="section-title">Beta Features</h2>
+                    <p class="section-lead">
+                        Talk directly to your AI chatbot trained on your saved content.
+                        Retrieve notes, recall articles, and spark insights — all in conversation.
                     </p>
-                    <a href="#" class="explore-cta">
-                        Start Exploring
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </a>
+                    <div class="btn-spacing">
+                        <a class="btn btn-secondary" href="/login">Try the Beta</a>
+                    </div>
+                </div>
+                <div class="beta-visual">
+                    <img src="/public/3d_avatar_12.png" alt="Knowledge Bot Preview" class="beta-img" />
                 </div>
             </div>
         </section>
 
-
-
-
-        <!-- More Section -->
-        <section id="more" class="more-section">
-            <div class="more-container">
-                <div class="more-content">
-                    <h2 class="more-title">Discover More with Quest</h2>
-                    <p class="more-description">
-                        Explore advanced features and tools to enhance your knowledge journey
-                    </p>
-                    <div class="more-features">
-                        <div class="more-feature">
-                            <div class="more-feature-icon">📚</div>
-                            <h3>Advanced Search</h3>
-                            <p>Find exactly what you need with intelligent search algorithms</p>
-                        </div>
-                        <div class="more-feature">
-                            <div class="more-feature-icon">🔗</div>
-                            <h3>Smart Connections</h3>
-                            <p>Discover hidden relationships between your saved content</p>
-                        </div>
-                        <div class="more-feature">
-                            <div class="more-feature-icon">📊</div>
-                            <h3>Analytics Dashboard</h3>
-                            <p>Track your learning progress and insights</p>
-                        </div>
-                    </div>
-                    <!-- Sign Up link temporarily hidden -->
-                    <div class="more-cta" style="opacity: 0.5; cursor: not-allowed;">
-                        Coming Soon - Explore All Features
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Contact Us Section -->
+        <!-- Contact (kept simple) -->
         <section id="contact" class="contact-section">
             <div class="contact-container">
-                <div class="contact-content">
-                    <h2 class="contact-title">Talk to Our Team</h2>
-                    <p class="contact-description">
-                        Have questions about Quest? We'd love to hear from you.
-                    </p>
-                    <a href="mailto:contact@myquestspace.com" class="contact-button">
-                        📧 Send Email
-                    </a>
+                <h2 class="section-title center">Talk to Our Team</h2>
+                <p class="section-lead center">Have questions about Quest? We'd love to hear from you.</p>
+                <div class="btn-spacing">
+                    <a href="mailto:contact@myquestspace.com" class="btn btn-secondary">📧 Send Email</a>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Footer -->
+    <!-- Footer (kept) -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-brand">
-                <div class="footer-logo">
-                    <img src="/public/logo.png" alt="Quest" class="footer-logo-img">
+                <div class="footer-logo"><img src="/public/logo.png" class="footer-logo-img" alt="Quest" />
                     <h3>Quest</h3>
                 </div>
-                <p class="footer-description">Your personal knowledge hub for discovering and sharing meaningful content
-                    across the web.</p>
+                <p class="footer-description">Your personal knowledge hub for discovering and organizing what matters.
+                </p>
             </div>
-
             <div class="footer-links-section">
                 <h4>Quick Links</h4>
                 <div class="footer-links">
-                    <a href="#home">Home</a>
-                    <a href="https://chromewebstore.google.com/detail/quest-insight-collector/capnkedjpmchlgmepeklpkehgbhpkiac" target="_blank">Extension</a>
-                    <a href="#explore">Explore</a>
-                    <a href="#more">More</a>
-                    <a href="#contact">Contact</a>
+                    <a href="#home">Home</a><a href="#extension">Extension</a><a href="#features">Features</a><a
+                        href="#beta">Beta</a><a href="#contact">Contact</a>
                 </div>
             </div>
-
             <div class="footer-contact-section">
                 <h4>Get in Touch</h4>
                 <div class="contact-info">
-                    <div class="contact-item">
-                        <span class="contact-icon">📧</span>
-                        <a href="mailto:contact@myquestspace.com">contact@myquestspace.com</a>
-                    </div>
-                </div>
-                <div class="footer-social">
-                    <span class="social-text">Follow us</span>
-                    <div class="social-links">
-                        <a href="#" class="social-link" title="Twitter">🐦</a>
-                        <a href="#" class="social-link" title="LinkedIn">💼</a>
-                        <a href="#" class="social-link" title="GitHub">🐙</a>
+                    <div class="contact-item">📧 <a href="mailto:contact@myquestspace.com">contact@myquestspace.com</a>
                     </div>
                 </div>
             </div>
         </div>
-
         <div class="footer-bottom">
             <div class="footer-bottom-content">
-                <p class="copyright">&copy; 2025 Quest. All rights reserved.</p>
+                <p class="copyright">© 2025 Quest. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
-    <!-- 引入核心脚本 -->
     <script type="module" src="/js/index.js"></script>
-
-    <!-- Vercel Analytics - Disabled to prevent 404 errors -->
+    <script type="module" src="/js/scroll-animations.js"></script>
 </body>
 
 </html>
