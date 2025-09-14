@@ -25,7 +25,7 @@ function updateNavigation(isLoggedIn, user = null) {
     } else {
       navLinks.innerHTML = linksHtml;
       authButtons.innerHTML = `
-        <a href="/login" class="auth-btn auth-btn-secondary">Login</a>
+        <a href="/login" class="auth-btn auth-btn-secondary">Log In</a>
         <a href="/signup" class="auth-btn auth-btn-primary">Sign Up</a>
       `;
     }
