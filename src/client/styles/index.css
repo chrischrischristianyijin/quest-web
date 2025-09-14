@@ -80,6 +80,11 @@
   .ext2-video { width: 100%; border-radius: 16px; box-shadow: 0 20px 70px rgba(2,6,23,.2); display:block; object-fit: cover; }
   .section-title { font-size: clamp(1.8rem, 3.2vw, 2.4rem); font-weight: 800; letter-spacing:-.01em; color:#0f172a; }
   .section-lead { margin-top: .75rem; color:#475569; font-size: 1.05rem; line-height: 1.7; }
+  
+  /* Equal spacing for buttons */
+  .btn-spacing {
+    margin-top: .75rem;
+  }
   .center { text-align:center; }
   .nowrap { white-space: nowrap; }
   
@@ -417,6 +422,9 @@
   /* each step */
   .rm-step{
     position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;              /* 让每个step填满grid cell的高度 */
   }
 
   /* node on the track */
@@ -609,6 +617,7 @@
     row-gap: 68px;             /* 两行间距 */
     padding-top: 84px;         /* 给上轨道留空 */
     padding-bottom: 84px;      /* 给下轨道留空 */
+    align-items: stretch;      /* 让所有卡片拉伸到相同高度 */
   }
 
   /* 上轨道线（左->右） */
@@ -678,9 +687,16 @@
     color: var(--rm-card-text);
     min-height: 300px;         /* 提升高度给图片 */
     padding: 18px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;              /* 让卡片填满可用空间 */
+    height: 100%;              /* 确保卡片填满step的高度 */
   }
   .rm-card h3{ color:#f3f4ff; font-weight:800; }
-  .rm-card p { color: var(--rm-card-muted); }
+  .rm-card p { 
+    color: var(--rm-card-muted); 
+    flex-grow: 1;              /* 让段落文本填满剩余空间 */
+  }
 
   .rm-fig{
     aspect-ratio: 4/3;         /* 图片面积更大（从 16:9 -> 4:3） */
@@ -730,4 +746,58 @@
     .rm-node::after{ display:none; }
     .rm-card{ margin-left: 22px; margin-top: 8px; min-height: 260px; }
   }
+
+  /* === Global type colors – unify titles to #322563 and adjust text theme === */
+  :root{
+    /* brand titles */
+    --brand-purple: #322563;
+
+    /* on-dark readable tint derived from #191332 (for dark cards etc.) */
+    --brand-purple-on-dark: #C6BEE6;
+
+    /* body text scale (on light) */
+    --text-900: #1A1830;  /* main body */
+    --text-700: #3E3B59;  /* secondary */
+    --text-600: #5C5976;  /* muted */
+  }
+
+  /* 1) Titles (light sections) */
+  h1,h2,h3,h4,h5,h6,
+  .hero-title,
+  .section-title,
+  .footer-brand h3,
+  .footer-links-section h4,
+  .footer-contact-section h4 {
+    color: var(--brand-purple) !important;
+  }
+
+  /* 2) Titles on dark surfaces (e.g., roadmap cards) */
+  .rm-card h3 { 
+    color: var(--brand-purple-on-dark) !important; 
+  }
+
+  /* 3) General body text colors (light sections) */
+  body,
+  .hero-copy .hero-subtitle,
+  .hero-copy .hero-lead,
+  .section-lead,
+  .feature-card p,
+  .footer-description,
+  .footer-links a,
+  .contact-item,
+  .nav-link { 
+    color: var(--text-700);
+  }
+  .feature-card h3 { color: var(--brand-purple) !important; }
+
+  /* 4) Roadmap (dark cards) – keep body text readable */
+  .rm-card p { color: #C9D1FF; }    /* cool tinted body on dark */
+  .rm-card { color: #E9EDFF; }      /* fallback */
+
+  /* 5) Section headings inside dark gradient sections */
+  .roadmap-section .section-title { color: var(--brand-purple) !important; }
+  .beta-section .section-title     { color: var(--brand-purple) !important; }
+
+  /* 6) Optional: make hero title match instantly */
+  .hero-copy .hero-title { color: var(--brand-purple) !important; }
   
