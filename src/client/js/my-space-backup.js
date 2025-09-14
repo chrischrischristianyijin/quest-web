@@ -33,7 +33,6 @@ const usernamePlaceholder = getCachedElementById('usernamePlaceholder');
 const contentCards = getCachedElementById('contentCards');
 const headerLogout = getCachedElementById('headerLogout');
 const headerEditProfile = getCachedElementById('headerEditProfile');
-const headerEmailPreferences = getCachedElementById('headerEmailPreferences');
 const headerAvatar = getCachedElementById('headerAvatar');
 const addContentForm = getCachedElementById('addContentForm');
 const addContentModal = getCachedElementById('addContentModal');
@@ -53,14 +52,9 @@ let userTagsCacheTime = 0;
 const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
     latest: 'latest',  // 时间排序
-    tags: null,        // 标签筛选
-    search: ''         // 搜索筛选
+    tags: null         // 标签筛选
 };
 let isEditMode = false; // Edit mode state
-
-// Stack view state management
-let viewMode = 'home'; // 'home' | 'stack'
-let activeStackId = null;
 let draggedCard = null;
 let dragOffset = { x: 0, y: 0 };
 let stackHoverTimeout = null;
@@ -78,9 +72,6 @@ const renderedInsightIds = new Set();
 let hasLoadedStacksOnce = false;
 let hasLoadedInsightsOnce = false;
 
-// Flag to prevent auto-save during comment editing
-let isCommentEditing = false;
-
 // Keep a reference if you're using autosave elsewhere
 const saveOnUnload = () => {
   try {
@@ -90,96 +81,22 @@ const saveOnUnload = () => {
 };
 window.addEventListener('beforeunload', saveOnUnload);
 
-// 🔐 Global auth-expired handler: immediate logout + show modal
+// 🔐 Global auth-expired handler: immediate logout + redirect
 window.addEventListener('quest-auth-expired', async (e) => {
   console.warn('🔒 Auth expired; logging out...', e?.detail);
   try {
-    // 设置标志阻止insights恢复
-    window.__QUEST_AUTH_EXPIRED__ = true;
-    
     // stop autosave if running
     if (window.__QUEST_AUTOSAVE_ID__) {
       clearInterval(window.__QUEST_AUTOSAVE_ID__);
       window.__QUEST_AUTOSAVE_ID__ = null;
     }
     window.removeEventListener('beforeunload', saveOnUnload);
-    
-    // 清除本地insights备份，防止恢复
-    localStorage.removeItem('quest_insights_backup');
-    console.log('🗑️ Cleared insights backup due to auth expiration');
-    
     // clear local session via auth manager
     await auth.logout();
-    
-    // 显示认证过期弹窗
-    const { handleAuthExpired } = await import('./auth-modal.js');
-    handleAuthExpired();
-  } catch (error) {
-    console.error('❌ Error handling auth expiration:', error);
-    // 即使出错也要显示弹窗
-    try {
-      const { handleAuthExpired } = await import('./auth-modal.js');
-      handleAuthExpired();
-    } catch (modalError) {
-      console.error('❌ Error showing auth modal:', modalError);
-      // 最后回退到直接跳转
-      navigateTo(PATHS.LOGIN);
-    }
-  }
+  } catch (_) {}
+  // hard redirect to login
+  navigateTo(PATHS.LOGIN);
 });
-
-// 🔐 定期检查token有效性 (每5分钟检查一次)
-let tokenValidationInterval = null;
-
-function startTokenValidation() {
-  if (tokenValidationInterval) {
-    clearInterval(tokenValidationInterval);
-  }
-  
-  tokenValidationInterval = setInterval(async () => {
-    try {
-      // 检查token是否过期
-      if (auth.isTokenExpired()) {
-        console.log('⏰ Token已过期，触发认证过期事件');
-        window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
-          detail: { 
-            status: 401, 
-            reason: 'Token expired during periodic check' 
-          } 
-        }));
-        return;
-      }
-      
-      // 如果用户已认证，验证token有效性
-      if (auth.checkAuth()) {
-        const isValid = await auth.validateToken();
-        if (!isValid) {
-          console.log('❌ Token验证失败，触发认证过期事件');
-          // validateToken内部已经会触发quest-auth-expired事件
-        }
-      }
-    } catch (error) {
-      console.error('❌ Token验证检查出错:', error);
-    }
-  }, 5 * 60 * 1000); // 5分钟检查一次
-}
-
-function stopTokenValidation() {
-  if (tokenValidationInterval) {
-    clearInterval(tokenValidationInterval);
-    tokenValidationInterval = null;
-  }
-}
-
-// 页面加载时启动token验证
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startTokenValidation);
-} else {
-  startTokenValidation();
-}
-
-// 页面卸载时停止验证
-window.addEventListener('beforeunload', stopTokenValidation);
 
 // 翻页功能相关变量
 let currentPage = 1;
@@ -219,8 +136,6 @@ function getTotalInsightsCount() {
 
 // 更新翻页UI
 function updatePaginationUI() {
-    console.log(`🔍 DEBUG: updatePaginationUI called - currentPage=${currentPage}, totalPages=${totalPages}`);
-    
     const currentPageEl = document.getElementById('currentPage');
     const totalPagesEl = document.getElementById('totalPages');
     const totalInsightsEl = document.getElementById('totalInsights');
@@ -228,14 +143,8 @@ function updatePaginationUI() {
     const nextBtn = document.getElementById('nextPageBtn');
     const paginationPages = document.getElementById('paginationPages');
     
-    if (currentPageEl) {
-        currentPageEl.textContent = currentPage;
-        console.log(`🔍 DEBUG: Set currentPageEl to ${currentPage}`);
-    }
-    if (totalPagesEl) {
-        totalPagesEl.textContent = totalPages;
-        console.log(`🔍 DEBUG: Set totalPagesEl to ${totalPages}`);
-    }
+    if (currentPageEl) currentPageEl.textContent = currentPage;
+    if (totalPagesEl) totalPagesEl.textContent = totalPages;
     if (totalInsightsEl) {
         const s = stacks.size;
         
@@ -331,20 +240,13 @@ function createEllipsis(container) {
 
 // 跳转到指定页面
 async function goToPage(pageNum, { force = false } = {}) {
-    console.log(`🔍 DEBUG: goToPage called with pageNum=${pageNum}, force=${force}`);
-    console.log(`🔍 DEBUG: Current state - currentPage=${currentPage}, totalPages=${totalPages}, totalInsights=${totalInsights}`);
-    
     if (!force && (pageNum < 1 || pageNum > totalPages || pageNum === currentPage)) {
-        console.log(`🔍 DEBUG: Skipping page navigation - pageNum=${pageNum}, totalPages=${totalPages}, currentPage=${currentPage}`);
         return;
     }
     
     try {
-        console.log(`🔍 DEBUG: Before setting - currentPage=${currentPage}, pageNum=${pageNum}`);
         currentPage = pageNum;
         insightsPage = pageNum; // 更新全局变量
-        
-        console.log(`🔍 DEBUG: After setting - currentPage=${currentPage}, insightsPage=${insightsPage}`);
         
         // 显示加载状态
         showLoadingState();
@@ -352,22 +254,17 @@ async function goToPage(pageNum, { force = false } = {}) {
         // If force is true, skip cache and fetch fresh data
         if (force) {
             pageCache.delete(pageNum);
-            console.log(`🔍 DEBUG: Force mode - cleared cache for page ${pageNum}`);
         }
         
         // 检查缓存中是否已有该页面数据
         if (!force && pageCache.has(pageNum)) {
             console.log(`📋 从缓存加载第${pageNum}页数据`);
             const cachedData = pageCache.get(pageNum);
-            console.log(`🔍 DEBUG: Cached data for page ${pageNum}:`, cachedData);
             // Defensive normalization for nested array issue
             const maybeNested = cachedData.insights;
             currentInsights = Array.isArray(maybeNested?.[0]) ? maybeNested[0] : maybeNested;
             window.currentInsights = currentInsights;
             insightsHasMore = cachedData.hasMore;
-            
-            console.log(`🔍 DEBUG: Loaded from cache - currentInsights.length=${currentInsights.length}`);
-            console.log(`🔍 DEBUG: Cached insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
             
             // 更新已渲染的ID
             renderedInsightIds.clear();
@@ -378,99 +275,35 @@ async function goToPage(pageNum, { force = false } = {}) {
             
             // 使用分页API加载目标页面 (over-fetch on page 1 to account for stacked insights)
             const effectiveLimit = effectiveFetchLimitForPage(pageNum);
-            const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
-            
-            console.log(`🔍 DEBUG: API call parameters - pageNum=${pageNum}, effectiveLimit=${effectiveLimit}, uid=${uid}`);
-            
-            // For page 2+, we need to get insights that weren't shown on page 1
-            // Since the API doesn't know about stacks, we need to calculate the offset
-            let apiPage = pageNum;
-            let apiLimit = effectiveLimit;
-            
-            if (pageNum > 1) {
-                // Calculate how many insights were actually shown on page 1
-                const stacksCount = stacks.size;
-                const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-                
-                // For page 2, we want to get insights starting from after page 1's insights
-                // But since the API doesn't know about stacks, we need to get all insights and slice them
-                apiPage = 1; // Always get page 1 from API
-                apiLimit = 100; // Get a large number to get all insights
-                console.log(`🔍 DEBUG: Page ${pageNum} - using API page 1 with limit ${apiLimit} to get all insights`);
-            }
-            
-            const targetPageResponse = await api.getInsightsPaginated(apiPage, apiLimit, uid, '', true);
-            console.log(`🔍 DEBUG: API response for page ${pageNum}:`, targetPageResponse);
-            
+            const uid = (auth?.user?.id || currentUser?.id || undefined);
+            const targetPageResponse = await api.getInsightsPaginated(pageNum, effectiveLimit, uid, '', true);
             if (targetPageResponse?.success) {
                 const { items, hasMore } = normalizePaginatedInsightsResponse(targetPageResponse);
-                console.log(`🔍 DEBUG: Normalized response - items.length=${items?.length}, hasMore=${hasMore}`);
-                console.log(`🔍 DEBUG: Raw items:`, items?.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
-                
-                let targetPageInsights = (items || []).filter(x => !x.stack_id);
-                console.log(`🔍 DEBUG: Filtered insights (no stack_id): ${targetPageInsights.length}`);
-                console.log(`🔍 DEBUG: Filtered insights:`, targetPageInsights.map(i => ({ id: i.id, title: i.title })));
-                
-                // For page 2+, slice the insights to get the correct subset
-                if (pageNum > 1) {
-                    const stacksCount = stacks.size;
-                    const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-                    const startIndex = page1SlotsForInsights;
-                    const endIndex = startIndex + insightsPerPage;
-                    
-                    targetPageInsights = targetPageInsights.slice(startIndex, endIndex);
-                    console.log(`🔍 DEBUG: Page ${pageNum} slicing - startIndex=${startIndex}, endIndex=${endIndex}, sliced insights=${targetPageInsights.length}`);
-                    console.log(`🔍 DEBUG: Sliced insights:`, targetPageInsights.map(i => ({ id: i.id, title: i.title })));
-                }
-                
-                // Update pagination info from API response
-                updatePaginationInfo(targetPageResponse.data);
-                console.log(`🔍 DEBUG: Updated pagination - totalPages=${totalPages}, totalInsights=${totalInsights}`);
-                
-                // Fix pagination calculation for stacks
-                // The API doesn't know about stacks, so we need to recalculate totalPages
-                // based on how many insights can actually fit on each page
-                const stacksCount = stacks.size;
-                const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-                const remainingInsights = Math.max(0, totalInsights - page1SlotsForInsights);
-                
-                // Recalculate totalPages based on actual page capacity
-                totalPages = remainingInsights > 0 ? 2 : 1;
-                console.log(`🔍 DEBUG: Recalculated pagination - stacksCount=${stacksCount}, page1SlotsForInsights=${page1SlotsForInsights}, remainingInsights=${remainingInsights}, totalPages=${totalPages}`);
+                const targetPageInsights = (items || []).filter(x => !x.stack_id);
                 
                 // De-dupe page 2+ against what page 1 actually rendered
                 let adjusted = targetPageInsights;
                 
                 // Only de-dupe when not filtering by tag (stacks hidden under filters)
                 const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-                console.log(`🔍 DEBUG: De-duplication check - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
-                
                 if (!hasActiveTagFilter && pageNum > 1) {
                     const prevVisible = getVisibleIdsForPage(pageNum - 1);
-                    console.log(`🔍 DEBUG: Previous page visible IDs:`, Array.from(prevVisible));
                     
                     if (prevVisible.size > 0) {
-                        // De-duplicate against what was actually visible on the previous page
-                        const beforeCount = adjusted.length;
                         adjusted = adjusted.filter(i => !prevVisible.has(i.id));
-                        console.log(`🔄 Page ${pageNum} de-duplicated: ${beforeCount} -> ${adjusted.length} insights`);
-                        console.log(`🔍 DEBUG: After de-duplication:`, adjusted.map(i => ({ id: i.id, title: i.title })));
-                    } else {
-                        // If previous page isn't cached, don't do any de-duplication
-                        // This prevents incorrectly removing insights from page 2
-                        console.log(`⚠️ Page ${pageNum}: Previous page not cached, skipping de-duplication`);
+                    } else if (pageNum === 2) {
+                        // Fallback: if page 1 isn't cached yet, drop the items page 1 over-fetched
+                        let stackedInsightsCount = 0;
+                        stacks.forEach(s => { stackedInsightsCount += (s.cards?.length || 0); });
+                        const borrowed = Math.max(0, stackedInsightsCount - stacks.size); // ht zow many extra we pulled on page 1
+                        adjusted = adjusted.slice(borrowed);
                     }
-                } else {
-                    console.log(`🔍 DEBUG: Skipping de-duplication - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
                 }
                 
                 // 更新当前页面数据
                 currentInsights = adjusted;
                 window.currentInsights = currentInsights;
                 insightsHasMore = hasMore;
-                
-                console.log(`🔍 DEBUG: Final currentInsights for page ${pageNum}:`, currentInsights.length, 'insights');
-                console.log(`🔍 DEBUG: Final insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
                 
                 // 更新已渲染的ID（基于 adjusted）
                 renderedInsightIds.clear();
@@ -498,8 +331,6 @@ async function goToPage(pageNum, { force = false } = {}) {
         
         // 滚动到顶部
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        console.log(`🔍 DEBUG: After goToPage - currentPage=${currentPage}, totalPages=${totalPages}`);
     } catch (error) {
         console.error('❌ Failed to go to page:', error);
         showErrorMessage('Failed to load page. Please try again.');
@@ -513,9 +344,7 @@ function updatePaginationInfo(data) {
     const pagination = data.pagination || {};
     totalPages = pagination.total_pages || 1;
     totalInsights = pagination.total || 0;
-    // Don't update currentPage from API response as it might reset our navigation
-    // currentPage = pagination.page || 1;
-    console.log(`🔍 DEBUG: updatePaginationInfo - totalPages=${totalPages}, totalInsights=${totalInsights}, currentPage=${currentPage} (not updated from API)`);
+    currentPage = pagination.page || 1;
 }
 
 // 显示加载状态
@@ -572,86 +401,14 @@ async function loadUserInsightsWithPagination() {
         console.log('🚀 开始请求第一页数据...');
         const startTime = Date.now();
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
-        
-        console.log('🔍 API Request Details:', {
-            page: 1,
-            limit: effectiveLimit,
-            userId: uid,
-            search: '',
-            includeTags: true
-        });
-        
-        // Debug: Check what's in localStorage backup
-        const backupInsights = localStorage.getItem('quest_insights_backup');
-        if (backupInsights) {
-            try {
-                const backup = JSON.parse(backupInsights);
-                console.log('📦 localStorage backup insights:', backup.data?.length || 0, 'insights');
-                console.log('📦 Sample backup insights:', backup.data?.slice(0, 2));
-                if (backup.data?.length > 0) {
-                    console.log('📦 Backup insight properties:', Object.keys(backup.data[0]));
-                    console.log('📦 Backup insight stack_id values:', backup.data.map(i => ({ id: i.id, stack_id: i.stack_id })));
-                }
-            } catch (e) {
-                console.error('❌ Failed to parse backup for debugging:', e);
-            }
-        }
-        
-        let firstPageResponse;
-        try {
-            firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
-            const endTime = Date.now();
-            console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
-            console.log('📡 First page API response:', firstPageResponse);
-        } catch (apiError) {
-            console.warn('⚠️ API请求失败，尝试从本地备份加载:', apiError.message);
-            
-            // 检查是否因认证过期导致，如果是则不恢复本地数据
-            if (window.__QUEST_AUTH_EXPIRED__) {
-                console.log('🚫 Auth expired, skipping backup restore');
-                throw apiError;
-            }
-            
-            // 如果API请求失败（可能是认证问题），尝试从本地备份加载
-            const backupInsights = localStorage.getItem('quest_insights_backup');
-            if (backupInsights) {
-                try {
-                    const backup = JSON.parse(backupInsights);
-                    if (backup.data && backup.data.length > 0) {
-                        console.log('📦 从本地备份加载 insights:', backup.data.length, '个');
-                        firstPageResponse = {
-                            success: true,
-                            data: {
-                                items: backup.data,
-                                pagination: {
-                                    page: 1,
-                                    total_pages: 1,
-                                    total: backup.data.length,
-                                    has_more: false
-                                }
-                            }
-                        };
-                    } else {
-                        throw new Error('本地备份为空');
-                    }
-                } catch (backupError) {
-                    console.error('❌ 解析本地备份失败:', backupError);
-                    throw apiError; // 重新抛出原始API错误
-                }
-            } else {
-                throw apiError; // 重新抛出原始API错误
-            }
-        }
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
+        const endTime = Date.now();
+        console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
         
         if (firstPageResponse?.success) {
             const { items, hasMore } = normalizePaginatedInsightsResponse(firstPageResponse);
-            console.log('📦 Raw API items before filtering:', items?.length || 0, 'items');
-            console.log('📦 Sample raw items:', items?.slice(0, 2));
-            
             let firstPageInsights = (items || []).filter(x => !x.stack_id);
-            console.log('📦 Filtered insights (no stack_id):', firstPageInsights.length, 'insights');
-            console.log('📦 Sample filtered insights:', firstPageInsights.slice(0, 2));
             
             // Retry once if page 1 returns 0 items and we now have a user ID
             if (firstPageInsights.length === 0 && uid) {
@@ -662,13 +419,10 @@ async function loadUserInsightsWithPagination() {
                 }
                 
                 const retryResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
-                console.log('📡 Retry API response:', retryResponse);
                 if (retryResponse?.success) {
                     const { items: retryItems, hasMore: retryHasMore } = normalizePaginatedInsightsResponse(retryResponse);
-                    console.log('📦 Retry raw items:', retryItems?.length || 0, 'items');
                     firstPageInsights = (retryItems || []).filter(x => !x.stack_id);
                     console.log(`🔄 Retry returned ${firstPageInsights.length} insights`);
-                    console.log('📦 Retry filtered insights:', firstPageInsights.slice(0, 2));
                 }
             }
             
@@ -724,12 +478,6 @@ async function loadUserInsightsWithPagination() {
             
             console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
             console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
-            
-            // If API returned 0 insights, try loading from backup
-            if (firstPageInsights.length === 0) {
-                console.log('🔄 API returned 0 insights, trying to load from backup...');
-                loadFromBackup();
-            }
         } else {
             // 尝试从localStorage加载备份
             loadFromBackup();
@@ -749,36 +497,21 @@ async function loadUserInsightsWithPagination() {
 
 // 从备份加载数据
 function loadFromBackup() {
-    console.log('🔄 Loading from backup...');
-    
-    // 检查是否因认证过期导致，如果是则不恢复本地数据
-    if (window.__QUEST_AUTH_EXPIRED__) {
-        console.log('🚫 Auth expired, skipping backup restore');
-        currentInsights = [];
-        window.currentInsights = currentInsights;
-        return;
-    }
-    
     const backupInsights = localStorage.getItem('quest_insights_backup');
     let restoredFromBackup = false;
-    
-    console.log('📦 Backup insights found:', !!backupInsights);
     
     if (backupInsights) {
         try {
             const backup = JSON.parse(backupInsights);
-            console.log('📦 Parsed backup data:', backup);
             if (Array.isArray(backup.data)) {
                 currentInsights = backup.data;
                 window.currentInsights = currentInsights;
-                console.log('📦 Set currentInsights to:', currentInsights.length, 'insights');
                 if (currentInsights.length > 0) {
                     hasLoadedInsightsOnce = true;
                     restoredFromBackup = true;
                     console.log('✅ Restored insights from backup:', currentInsights.length, 'insights');
                 }
             } else {
-                console.log('⚠️ Backup data is not an array:', backup);
                 currentInsights = [];
                 window.currentInsights = currentInsights;
             }
@@ -798,20 +531,13 @@ function loadFromBackup() {
     totalInsights = currentInsights.length;
     currentPage = 1;
     
-    console.log('📊 Backup loading stats:', { 
-        totalInsights, 
-        totalPages, 
-        currentPage, 
-        restoredFromBackup 
-    });
-    
     renderInsights();
     updatePaginationUI();
     
-    // Notify user if data was restored from backup (disabled)
-    // if (restoredFromBackup) {
-    //     showSuccessMessage(`Restored ${currentInsights.length} insights from local backup. Your data is safe!`);
-    // }
+    // Notify user if data was restored from backup
+    if (restoredFromBackup) {
+        showSuccessMessage(`Restored ${currentInsights.length} insights from local backup. Your data is safe!`);
+    }
 }
 
 // Check data recovery status on page load
@@ -858,32 +584,36 @@ function checkDataRecoveryStatus() {
     }
 })();
 
+// 在页面初始化时调用翻页初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 其他初始化代码...
+    initPagination();
+});
+
 // 页面初始化
 async function initPage() {
     try {
-        console.log('🚀 开始初始化 My Space 页面...');
-        console.log('🔍 当前页面路径:', window.location.pathname);
-        console.log('🔍 DOM 加载状态:', document.readyState);
-        console.log('🔍 页面标题:', document.title);
-        
         // 恢复会话状态
-        const restored = auth.restoreSession();
-        console.log('🔍 会话恢复结果:', restored);
+        try {
+            auth.restoreSession();
+        } catch (sessionError) {
+            console.error('❌ Session restore failed:', sessionError);
+        }
         
-        // 检查认证状态
+        // 检查认证状态（放宽：先尝试恢复会话后再判断，避免闪跳）
         const isAuthenticated = auth.checkAuth();
-        console.log('🔍 认证状态:', isAuthenticated);
         
         if (!isAuthenticated) {
-            console.log('⚠️ 用户未认证，显示错误信息并加载本地备份');
-            showErrorMessage('Please sign in. Showing last local backup.');
+            const restored = auth.restoreSession();
             
-            // 即使未认证，也绑定基础UI事件（如用户资料编辑）
-            bindProfileEditEvents();
-            
-            // 不要return，允许加载本地备份数据
-        } else {
-            console.log('✅ 用户已认证，继续加载数据');
+            if (!restored) {
+                showErrorMessage('Please sign in. Showing last local backup.');
+                
+                // 即使未认证，也绑定基础UI事件（如用户资料编辑）
+                bindProfileEditEvents();
+                
+                // 不要return，允许加载本地备份数据
+            }
         }
         
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
@@ -894,36 +624,19 @@ async function initPage() {
         
         // API服务器已在页面加载时预热
         
-        // 优先加载核心数据，包括stacks
-        const [profileResult, insightsResult, tagsResult, stacksResult] = await Promise.allSettled([
+        // 优先加载核心数据，stacks延迟加载
+        const [profileResult, insightsResult, tagsResult] = await Promise.allSettled([
             loadUserProfile(),
             loadUserInsightsWithPagination(),
-            loadUserTags(),
-            loadUserStacks()
+            loadUserTags()
         ]);
         
-        // 如果stacks加载失败，尝试从localStorage直接恢复
-        if (stacksResult.status === 'rejected') {
-            console.error('❌ 加载stacks失败:', stacksResult.reason);
-            const savedStacks = localStorage.getItem('quest_stacks');
-            if (savedStacks) {
-                try {
-                    const entries = JSON.parse(savedStacks);
-                    console.log('🔄 从localStorage直接恢复stacks:', entries.length, 'entries');
-                    entries.forEach(([id, data]) => {
-                        const stringId = String(id);
-                        data.id = stringId;
-                        stacks.set(stringId, data);
-                    });
-                    if (stacks.size > 0) {
-                        hasLoadedStacksOnce = true;
-                        console.log('✅ 成功从localStorage恢复', stacks.size, '个stacks');
-                    }
-                } catch (e) {
-                    console.error('❌ 解析localStorage stacks失败:', e);
-                }
-            }
-        }
+        // 加载stacks数据以保持持久化
+        setTimeout(() => {
+            loadUserStacks().catch(error => {
+                console.error('❌ 延迟加载stacks失败:', error);
+            });
+        }, 100);
         
         // 检查每个加载结果并记录错误
         if (profileResult.status === 'rejected') {
@@ -948,67 +661,6 @@ async function initPage() {
         // Set up event delegation for card interactions (performance optimization)
         setupCardEventDelegation();
         
-        // Set up authentication listener to reload stacks when user logs in
-        setupAuthListener();
-        
-        // Initialize search functionality
-        initSearch();
-        
-        // Initialize pagination
-        initPagination();
-        
-        // Handle deep linking for stack views
-        const { viewMode: initialViewMode, stackId } = parseRoute();
-        if (initialViewMode === 'stack' && stackId) {
-            // Navigate to stack view
-            renderStackView(stackId);
-        } else {
-            // Final render after all data is loaded
-            renderInsights();
-        }
-        
-        // Ensure edit mode is always off when entering My Space page
-        if (document.body.classList.contains('edit-mode')) {
-            console.log('🔄 My Space page loaded, disabling edit mode');
-            document.body.classList.remove('edit-mode');
-            isEditMode = false;
-            updateEditModeState();
-        }
-        
-        // 强制显示内容区域，确保页面可见
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) {
-            mainContent.style.display = 'block';
-            mainContent.style.opacity = '1';
-            mainContent.style.visibility = 'visible';
-        }
-        
-        // 确保内容卡片容器可见
-        if (contentCards) {
-            contentCards.style.opacity = '1';
-            contentCards.style.visibility = 'visible';
-        }
-        
-        console.log('✅ 页面内容区域已强制显示');
-        
-        // 如果没有任何内容，确保显示空状态
-        setTimeout(() => {
-            if (contentCards && contentCards.children.length === 0) {
-                console.log('⚠️ 没有检测到内容，强制显示空状态');
-                const emptyState = document.createElement('div');
-                emptyState.className = 'empty-state';
-                emptyState.innerHTML = `
-                    <div class="empty-state-icon">📚</div>
-                    <h3>Welcome to My Space!</h3>
-                    <p>Start adding your favorite media content to your collection</p>
-                    <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
-                        Add Content
-                    </button>
-                `;
-                contentCards.appendChild(emptyState);
-            }
-        }, 100);
-        
         // 分页模式：不需要无限滚动
     } catch (error) {
         console.error('❌ 页面初始化失败:', error);
@@ -1019,7 +671,7 @@ async function initPage() {
             return;
         }
         
-        showErrorMessage('Page initialization failed, please refresh and try again');
+        showErrorMessage('页面初始化失败，请刷新重试');
     }
 }
 
@@ -1035,150 +687,88 @@ async function loadUserStacks() {
                 try {
                     const entries = JSON.parse(saved);
                     console.log('📦 Parsed stack entries:', entries.length);
-                    // Don't clear stacks immediately - preserve existing data
-                    // stacks.clear();
-                    entries.forEach(([id, data]) => {
-                        const stringId = String(id); // Ensure string format
-                        data.id = stringId; // Ensure ID is string
-                        stacks.set(stringId, data);
-                    });
+                    stacks.clear();
+                    entries.forEach(([id, data]) => stacks.set(id, data));
                     if (stacks.size > 0) hasLoadedStacksOnce = true;
                     console.log('✅ Loaded', stacks.size, 'stacks from localStorage');
                 } catch (e) {
                     console.error('❌ 解析本地 stacks 失败:', e);
                 }
             }
-            
-            // Mark stacks as loaded regardless of whether any were found
-            hasLoadedStacksOnce = true;
-            console.log('✅ Stacks loading process completed (unauthenticated). Found', stacks.size, 'stacks');
-            
             // 在未认证时不要继续调用后端
             return;
         }
         
-        // Load stacks and populate them with ALL insights to show correct counts
+        // 只加载当前页面的数据来构建stacks，避免加载额外数据
         let allInsights = [];
-        const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
-        
-        // Load stacks directly from the stack API
-        console.log('🔍 Loading stacks from API...');
-        const stacksResponse = await api.getUserStacks(uid);
-        console.log('📡 Stacks API response:', stacksResponse);
-        
-        // Process stacks from API response
-        if (stacksResponse && stacksResponse.success && stacksResponse.data) {
-            console.log('📦 Processing stacks from API:', stacksResponse.data.length, 'stacks');
-            console.log('📦 Raw API response data:', stacksResponse.data);
-            stacksResponse.data.forEach(stack => {
-                const stackData = {
-                    id: String(stack.id),
-                    name: stack.name || 'Stack',
-                    description: stack.description || 'A collection of related content',
-                    cards: [], // Will be populated from insights
-                    createdAt: stack.created_at || new Date().toISOString(),
-                    modifiedAt: stack.updated_at || new Date().toISOString(),
-                    isExpanded: false
-                };
-                console.log('📦 Loading stack:', { id: stack.id, name: stack.name, description: stack.description });
-                stacks.set(String(stack.id), stackData);
-            });
-            console.log('✅ Loaded', stacks.size, 'stacks from API');
-            console.log('📦 Final stacks map:', Array.from(stacks.entries()));
-        } else {
-            console.log('⚠️ No stacks found in API response or API failed');
-        }
-        
-        // Fetch ALL insights to properly populate stack counts
-        console.log('🔍 Fetching ALL insights to populate stack counts...');
-        const response = await api.getInsightsPaginated(1, 100, uid, '', true);
+        const effectiveLimit = effectiveFetchLimitForPage(1);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
+        const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response.success && response.data) {
             const { items } = normalizePaginatedInsightsResponse(response);
             if (items && items.length > 0) {
                 allInsights = items;
-                console.log(`📦 Fetched ${allInsights.length} insights for stack population`);
             }
         }
                 
-                // Debug: Check insights for stack_id
-                console.log('🔍 Debug: Checking insights for stack_id...');
-                allInsights.forEach((insight, index) => {
-                    console.log(`  Insight ${index}:`, {
-                        id: insight.id,
-                        stack_id: insight.stack_id,
-                        hasStackId: !!insight.stack_id,
-                        allKeys: Object.keys(insight),
-                        fullInsight: insight
-                    });
-                });
+                stacks.clear(); // 清空现有stacks
                 
-                // Populate existing stacks with insights that have matching stack_id
+                // Group insights by stack_id
+                const stackGroups = {};
                 allInsights.forEach(insight => {
                     if (insight.stack_id) {
-                        const stackId = String(insight.stack_id);
-                        if (stacks.has(stackId)) {
-                            const stack = stacks.get(stackId);
-                            stack.cards.push(insight);
-                            console.log(`📦 Added insight ${insight.id} to stack ${stackId}`);
-                        } else {
-                            console.warn(`⚠️ Insight ${insight.id} has stack_id ${stackId} but stack not found`);
+                        if (!stackGroups[insight.stack_id]) {
+                            stackGroups[insight.stack_id] = [];
                         }
+                        stackGroups[insight.stack_id].push(insight);
                     }
                 });
                 
-                console.log('🔍 Debug: Stacks populated with insights. Total stacks:', stacks.size);
+                // Create stack objects from grouped insights
+                Object.entries(stackGroups).forEach(([stackId, stackInsights]) => {
+                    if (stackInsights.length > 0) {
+                        const stackData = {
+                            id: stackId,
+                            name: 'Stack',
+                            cards: stackInsights,
+                            createdAt: stackInsights[0].created_at || new Date().toISOString(),
+                            modifiedAt: stackInsights[0].modified_at || new Date().toISOString(),
+                            isExpanded: false
+                        };
+                        
+                        stacks.set(stackId, stackData);
+                    }
+                });
                 
                 // Always try to load metadata from localStorage to preserve user preferences
                 const savedStacks = localStorage.getItem('quest_stacks');
                 console.log('🔍 Loading stacks from localStorage (authenticated):', savedStacks ? 'found' : 'not found');
-                
-                // Debug: Check all localStorage keys that might contain stack data
-                console.log('🔍 Debug: All localStorage keys:', Object.keys(localStorage).filter(key => key.includes('stack') || key.includes('quest')));
-                console.log('🔍 Debug: quest_stacks value:', localStorage.getItem('quest_stacks'));
-                console.log('🔍 Debug: quest_insights_backup value length:', localStorage.getItem('quest_insights_backup')?.length || 0);
-                
-                // Debug: Check all localStorage keys to see if stacks are stored elsewhere
-                console.log('🔍 Debug: All localStorage keys:', Object.keys(localStorage));
-                Object.keys(localStorage).forEach(key => {
-                    if (key.includes('stack') || key.includes('quest')) {
-                        console.log(`🔍 Debug: ${key}:`, localStorage.getItem(key));
-                    }
-                });
                 if (savedStacks) {
                     try {
                         const stackEntries = JSON.parse(savedStacks);
                         console.log('📦 Parsed stack entries from localStorage:', stackEntries.length);
-                        console.log('🔍 Debug: Raw localStorage data:', savedStacks);
-                        console.log('🔍 Debug: Parsed stack entries:', stackEntries);
                         stackEntries.forEach(([stackId, stackData]) => {
-                            const stringStackId = String(stackId); // Ensure string format
-                            if (stacks.has(stringStackId)) {
+                            if (stacks.has(stackId)) {
                                 // Merge metadata from localStorage with database data
-                                const existingStack = stacks.get(stringStackId);
+                                const existingStack = stacks.get(stackId);
                                 if (existingStack && stackData.name) {
                                     existingStack.name = stackData.name;
                                     existingStack.isExpanded = stackData.isExpanded || false;
                                 }
                             } else {
                                 // Load stack from localStorage if not found in database
-                                stackData.id = stringStackId; // Ensure ID is string
-                                stacks.set(stringStackId, stackData);
+                                stacks.set(stackId, stackData);
                             }
                         });
-                        
-                        // If no stacks were loaded from database but we have localStorage data, use it
-                        if (stacks.size === 0 && stackEntries.length > 0) {
-                            console.log('🔄 No database stacks found, using localStorage stacks');
-                        }
                     } catch (error) {
                         console.error('❌ Failed to parse saved stacks:', error);
                     }
                 }
                 
                 // 更新stackIdCounter
-                if (stacks.size > 0) {
-                    const maxTimestamp = Math.max(...Array.from(stacks.keys()).map(id => {
+                if (Object.keys(stackGroups).length > 0) {
+                    const maxTimestamp = Math.max(...Object.keys(stackGroups).map(id => {
                         const timestamp = id.split('_')[1];
                         return timestamp ? parseInt(timestamp) : 0;
                     }));
@@ -1208,35 +798,10 @@ async function loadUserStacks() {
             console.error('❌ 加载用户stacks失败:', error);
             // 如果stacks端点不存在，继续使用本地存储
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('⚠️ Stacks API端点尚未实现，使用本地存储模式');
-            }
-            
-            // 如果认证失败，尝试从localStorage恢复stacks数据
-            if (error.message.includes('401') || error.message.includes('403') || error.message.includes('认证')) {
-                console.log('🔍 认证失败，尝试从localStorage恢复stacks数据...');
-                const savedStacks = localStorage.getItem('quest_stacks');
-                if (savedStacks) {
-                    try {
-                        const entries = JSON.parse(savedStacks);
-                        console.log('📦 从localStorage恢复stacks:', entries.length, 'entries');
-                        entries.forEach(([id, data]) => {
-                            const stringId = String(id);
-                            data.id = stringId;
-                            stacks.set(stringId, data);
-                        });
-                        if (stacks.size > 0) hasLoadedStacksOnce = true;
-                        console.log('✅ 成功从localStorage恢复', stacks.size, '个stacks');
-                    } catch (e) {
-                        console.error('❌ 解析localStorage stacks失败:', e);
-                    }
-                }
+            // Stacks API端点尚未实现，使用本地存储模式
             }
             // 不抛出错误，允许页面继续加载
         }
-        
-        // Mark stacks as loaded regardless of whether any were found
-        hasLoadedStacksOnce = true;
-        console.log('✅ Stacks loading process completed. Found', stacks.size, 'stacks');
         
         // After stacks are known, refill page 1 with correct over-fetch
         if (stacks.size > 0) {
@@ -1244,38 +809,13 @@ async function loadUserStacks() {
         }
 }
 
-// Set up authentication listener to reload stacks when user logs in
-function setupAuthListener() {
-    // Listen for authentication state changes
-    auth.addListener((authState) => {
-        console.log('🔔 Auth state changed:', {
-            isAuthenticated: authState.isAuthenticated,
-            hasUser: !!authState.user
-        });
-        
-        // If user just logged in, reload stacks
-        if (authState.isAuthenticated && authState.user) {
-            console.log('🔄 User logged in, reloading stacks...');
-            loadUserStacks().catch(error => {
-                console.error('❌ Failed to reload stacks after login:', error);
-            });
-        }
-    });
-}
 
 // 加载用户资料
 async function loadUserProfile() {
     try {
-        // 检查认证状态，如果未认证则使用本地数据
+        // 再次检查认证状态
         if (!auth.checkAuth()) {
-            console.log('⚠️ 用户未认证，使用本地用户数据');
-            const localUser = auth.getCurrentUser();
-            if (localUser) {
-                currentUser = localUser;
-                updateUserProfileUI();
-                return;
-            }
-            throw new Error('用户未认证且无本地数据');
+            throw new Error('用户未认证');
         }
         
         // 总是尝试从 API 获取最新的用户资料
@@ -1407,7 +947,7 @@ async function loadUserInsights() {
         // 使用分页API方法获取insights
         insightsLoading = true;
         const effectiveLimit = effectiveFetchLimitForPage(1);
-        const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
+        const uid = (auth?.user?.id || currentUser?.id || undefined);
         const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
         
         if (response?.success) {
@@ -1485,14 +1025,6 @@ async function loadUserInsights() {
         console.error('❌ 加载用户insights失败:', error);
         
         // Try loading from localStorage backup before showing error
-        // 检查是否因认证过期导致，如果是则不恢复本地数据
-        if (window.__QUEST_AUTH_EXPIRED__) {
-            console.log('🚫 Auth expired, skipping backup restore in error handler');
-            currentInsights = [];
-            window.currentInsights = currentInsights;
-            return;
-        }
-        
         const backupInsights = localStorage.getItem('quest_insights_backup');
         const isAuthErr = /401|403|unauthor/i.test(error?.message || '');
         const isNetErr = (typeof navigator !== 'undefined' && navigator.onLine === false) ||
@@ -1591,16 +1123,6 @@ function effectiveFetchLimitForPage(pageNum) {
 
 // 渲染见解列表
 function renderInsights() {
-    console.log('🚨 renderInsights() called - viewMode:', viewMode, 'activeStackId:', activeStackId);
-    console.log('🔍 DEBUG: renderInsights - currentPage:', currentPage, 'totalPages:', totalPages);
-    console.trace('renderInsights call stack');
-    
-    // Guard clause: don't render home view when in stack view mode
-    if (viewMode === 'stack') {
-        console.log('⚠️ renderInsights() called but we are in stack view mode, ignoring');
-        return;
-    }
-    
     if (!contentCards) {
         console.error('❌ contentCards element not found!');
         return;
@@ -1616,20 +1138,17 @@ function renderInsights() {
     contentCards.classList.add('content-loaded');
     
     // Clear existing content cards (but keep skeleton for next time)
-    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
+    const existingCards = contentCards.querySelectorAll('.content-card, .empty-state');
     existingCards.forEach(card => card.remove());
     
     // Get filtered insights for rendering
     const filteredInsights = getFilteredInsights();
     console.log('🎯 Rendering with filtered insights:', filteredInsights.length);
-    console.log('🔍 DEBUG: currentInsights.length:', currentInsights.length);
-    console.log('🔍 DEBUG: currentInsights:', currentInsights.map(i => ({ id: i.id, title: i.title })));
     console.log('🎯 Stacks count:', stacks.size);
     console.log('🎯 Effective limit for page', currentPage, ':', effectiveLimitForPage(currentPage));
     
     // Check if we have any content to render (insights OR stacks)
-    // For page 1, check both insights and stacks. For other pages, only check insights
-    const hasInsights = currentPage === 1 ? filteredInsights.length > 0 : currentInsights.length > 0;
+    const hasInsights = filteredInsights.length > 0;
     const hasStacks = stacks.size > 0;
     
     if (!hasInsights && !hasStacks) {
@@ -1650,17 +1169,12 @@ function renderInsights() {
     const fragment = document.createDocumentFragment();
     
     // Page 1: render stacks first (each stack is ONE tile)
-    // Only show stacks if no specific tag filter is active AND we're on page 1
+    // Only show stacks if no specific tag filter is active
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
-    
     if (currentPage === 1 && hasStacks && !hasActiveTagFilter) {
-        console.log(`🔍 DEBUG: Rendering ${stacks.size} stacks on page 1`);
         for (const [, stackData] of stacks) {
             fragment.appendChild(createStackCard(stackData));
         }
-    } else {
-        console.log(`🔍 DEBUG: Not rendering stacks - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
     }
     
     // Then render insights (using filtered insights)
@@ -1670,26 +1184,15 @@ function renderInsights() {
             const startIndex = (currentPage - 1) * insightsPerPage;
             const endIndex = startIndex + insightsPerPage;
             const list = filteredInsights.slice(startIndex, endIndex);
-            
-            console.log(`🔍 DEBUG: Tag filter rendering - startIndex=${startIndex}, endIndex=${endIndex}, list.length=${list.length}`);
-            console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, insightsPerPage=${insightsPerPage}`);
-            
             for (const insight of list) {
                 fragment.appendChild(createInsightCard(insight));
             }
         } else {
             // When not filtering, use normal pagination with stack accounting
             const limit = effectiveLimitForPage(currentPage);
-            console.log(`🔍 DEBUG: Rendering logic - currentPage=${currentPage}, limit=${limit}`);
-            console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, currentInsights.length=${currentInsights.length}`);
-            
-            // For page 1, slice to account for stacks. For other pages, use the insights loaded for that page
-            const list = currentPage === 1 ? filteredInsights.slice(0, limit) : currentInsights;
-            console.log(`🔍 DEBUG: Final list to render:`, list.length, 'insights');
-            console.log(`🔍 DEBUG: List items:`, list.map(i => ({ id: i.id, title: i.title })));
-            
+            // Only slice for page 1 (to account for stacks), other pages use full array
+            const list = currentPage === 1 ? filteredInsights.slice(0, limit) : filteredInsights;
             for (const insight of list) {
-                console.log(`🔍 DEBUG: Creating card for insight:`, insight.id, insight.title);
                 fragment.appendChild(createInsightCard(insight));
             }
         }
@@ -1697,16 +1200,12 @@ function renderInsights() {
     
     contentCards.appendChild(fragment);
     
-    // Re-setup event delegation for the newly rendered cards
-    setupCardEventDelegation();
-    
     const insightsCount = hasActiveTagFilter ? 
         Math.min(insightsPerPage, Math.max(0, filteredInsights.length - (currentPage - 1) * insightsPerPage)) :
         Math.min(filteredInsights.length, effectiveLimitForPage(currentPage));
     const stacksCount = currentPage === 1 && !hasActiveTagFilter ? stacks.size : 0;
     const totalCards = insightsCount + stacksCount;
     console.log(`📊 渲染第${currentPage}页: ${insightsCount}个insights + ${stacksCount}个stacks = ${totalCards}个卡片总计`);
-    console.log(`🔍 DEBUG: Final rendering stats - currentPage=${currentPage}, insightsCount=${insightsCount}, stacksCount=${stacksCount}, totalCards=${totalCards}`);
     
     // Update edit mode state after rendering cards
     updateEditModeState();
@@ -1746,31 +1245,9 @@ function resetInsightsPaginationAndRerender() {
     console.log('📊 Filtered insights for rendering:', filteredInsights.length);
     
     // Update pagination with filtered insights count (insights only)
-    // For "All" filter, use the total available insights for proper pagination
-    if (currentFilters.tags === 'all' && !currentFilters.search) {
-        // Use all available insights for proper pagination when showing all
-        const allAvailableInsights = window.allInsightsForFiltering || [];
-        totalInsights = allAvailableInsights.length;
-        console.log(`🔍 DEBUG: Using all available insights for pagination: ${totalInsights}`);
-        
-        // For "All" filter, calculate pagination the same way as normal pagination
-        // Page 1 shows (insightsPerPage - stacksCount) insights + stacks
-        // Remaining insights go to page 2
-        const stacksCount = stacks.size;
-        const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-        const remainingInsights = Math.max(0, totalInsights - page1SlotsForInsights);
-        
-        // Calculate total pages based on actual page capacity
-        totalPages = remainingInsights > 0 ? 2 : 1;
-        console.log(`🔍 DEBUG: All filter pagination - page1Slots=${page1SlotsForInsights}, remaining=${remainingInsights}, totalPages=${totalPages}`);
-    } else {
-        totalInsights = filteredInsights.length;
-        console.log(`🔍 DEBUG: Using filtered insights for pagination: ${totalInsights}`);
-        totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
-    }
+    totalInsights = filteredInsights.length;
+    totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
     currentPage = 1; // Reset to first page when filtering
-    
-    console.log(`🔍 DEBUG: Pagination calculation - totalInsights=${totalInsights}, insightsPerPage=${insightsPerPage}, totalPages=${totalPages}`);
     
     // DON'T overwrite currentInsights - keep original data for future filtering
     // The renderInsights function will call getFilteredInsights() to get the right data
@@ -1848,13 +1325,9 @@ async function loadTagsForInsights(insights) {
 
 // 创建见解卡片
 function createInsightCard(insight) {
-    console.log('🔨 Creating insight card for:', insight.title, 'ID:', insight.id);
-    
     const card = document.createElement('div');
     card.className = 'content-card';
     card.dataset.insightId = insight.id;
-    
-    console.log('🔨 Card element created with classes:', card.className, 'and dataset:', card.dataset);
     
     // Add delete button for edit mode
     const editDeleteBtn = document.createElement('button');
@@ -2005,13 +1478,6 @@ function createInsightCard(insight) {
     // 组装完整卡片
     card.appendChild(cardContent);
     
-    console.log('✅ Insight card created successfully:', {
-        title: insight.title,
-        id: insight.id,
-        classes: card.className,
-        dataset: card.dataset
-    });
-    
     return card;
 }
 
@@ -2081,7 +1547,7 @@ async function initFilterButtons() {
                     { key: 'project', label: 'Project', category: 'P' },
                     { key: 'area', label: 'Area', category: 'A' },
                     { key: 'resource', label: 'Resource', category: 'R' },
-                    { key: 'archive', label: 'Archive', category: 'Archive' }
+                    { key: 'archive', label: 'Archive', category: 'A' }
                 ]
             }
         ];
@@ -2277,61 +1743,30 @@ async function fetchAllInsightsForFiltering() {
     try {
         console.log('🔄 Fetching all insights for tag filtering...');
         
-        // Try to fetch all insights with tags included
-        let allInsights = [];
+        // Fetch all insights with tags included
+        const response = await api.getInsightsPaginated(1, 1000, null, '', true); // Large limit to get all
         
-        try {
-            const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
-            const response = await api.getInsightsPaginated(1, 100, uid, '', true); // Reasonable limit to get all
+        if (response?.success) {
+            const { items } = normalizePaginatedInsightsResponse(response);
+            let allInsights = (items || []).filter(x => !x.stack_id); // Exclude stacked items
             
-            if (response?.success) {
-                const { items } = normalizePaginatedInsightsResponse(response);
-                allInsights = items || [];
-                console.log('✅ Fetched insights from API:', allInsights.length);
+            // Ensure tags are normalized for all insights
+            const insightsWithoutTags = allInsights.filter(insight => !insight.tags || insight.tags.length === 0);
+            if (insightsWithoutTags.length > 0) {
+                console.log('🔄 Loading tags for insights without them...');
+                await loadTagsForInsights(insightsWithoutTags);
             }
-        } catch (apiError) {
-            console.warn('⚠️ API fetch failed, using existing insights:', apiError);
-            console.warn('⚠️ API error details:', apiError.message, apiError.status);
-            // Fallback: use current insights and add insights from stacks
-            allInsights = [...currentInsights];
+            
+            // Store globally for filtering
+            window.allInsightsForFiltering = allInsights;
+            console.log('✅ Fetched all insights for filtering:', allInsights.length);
+            
+            return allInsights;
         }
         
-        // Add insights from stacks to ensure we have all insights
-        const insightsFromStacks = [];
-        stacks.forEach(stackData => {
-            stackData.cards.forEach(card => {
-                // Check if this insight is already in allInsights
-                const exists = allInsights.some(insight => insight.id === card.id);
-                if (!exists) {
-                    insightsFromStacks.push(card);
-                }
-            });
-        });
-        
-        console.log('📊 Before combining:');
-        console.log(`  - API insights: ${allInsights.length}`);
-        console.log(`  - Insights from stacks: ${insightsFromStacks.length}`);
-        console.log(`  - Stack insights details:`, insightsFromStacks.map(i => ({ id: i.id, title: i.title })));
-        
-        // Combine all insights
-        allInsights = [...allInsights, ...insightsFromStacks];
-        console.log('📊 Total insights for filtering (including from stacks):', allInsights.length);
-        console.log('📊 All insights details:', allInsights.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
-        
-        // Ensure tags are normalized for all insights
-        const insightsWithoutTags = allInsights.filter(insight => !insight.tags || insight.tags.length === 0);
-        if (insightsWithoutTags.length > 0) {
-            console.log('🔄 Loading tags for insights without them...');
-            await loadTagsForInsights(insightsWithoutTags);
-        }
-        
-        // Store globally for filtering
-        window.allInsightsForFiltering = allInsights;
-        console.log('✅ Prepared all insights for filtering:', allInsights.length);
-        
-        return allInsights;
+        return [];
     } catch (error) {
-        console.error('❌ Failed to prepare all insights for filtering:', error);
+        console.error('❌ Failed to fetch all insights for filtering:', error);
         return [];
     }
 }
@@ -2354,14 +1789,8 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
         } else {
             // Clear the global insights when showing all
             window.allInsightsForFiltering = null;
-            // Ensure we have all insights available for proper pagination
-            // If we don't have enough insights loaded, fetch them
-            if (currentInsights.length < totalInsights) {
-                console.log('🔄 Switching back to "All" filter - need to fetch all insights for pagination');
-                await fetchAllInsightsForFiltering();
-            } else {
-                console.log('🔄 Switching back to "All" filter - all insights already available');
-            }
+            // Reload the original page data for normal pagination
+            await loadUserInsightsWithPagination();
         }
     }
     
@@ -2480,75 +1909,28 @@ function getFilteredInsights() {
         })));
     }
     
-    // If we have an active tag filter or search filter, we need to work with all insights, not just current page
+    // If we have an active tag filter, we need to work with all insights, not just current page
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-    const hasActiveSearchFilter = currentFilters.search && currentFilters.search.trim() !== '';
-    const hasAnyFilter = hasActiveTagFilter || hasActiveSearchFilter;
     let insightsToFilter = currentInsights;
     
-    if (hasAnyFilter) {
-        if (window.allInsightsForFiltering) {
-            // Use all insights for filtering when any filter is active
-            insightsToFilter = window.allInsightsForFiltering;
-            console.log('🔍 Using all insights for filtering:', insightsToFilter.length);
-        } else {
-            // Fallback: combine current insights with insights from stacks
-            console.log('⚠️ allInsightsForFiltering not available, creating fallback...');
-            const insightsFromStacks = [];
-            stacks.forEach(stackData => {
-                stackData.cards.forEach(card => {
-                    // Check if this insight is already in currentInsights
-                    const exists = currentInsights.some(insight => insight.id === card.id);
-                    if (!exists) {
-                        insightsFromStacks.push(card);
-                    }
-                });
-            });
-            
-            insightsToFilter = [...currentInsights, ...insightsFromStacks];
-            console.log('🔍 Using fallback insights for filtering:', insightsToFilter.length);
-            console.log('📊 Current insights:', currentInsights.length);
-            console.log('📊 Insights from stacks:', insightsFromStacks.length);
-        }
-    } else {
-        // No active filter - use all available insights for proper pagination
-        if (window.allInsightsForFiltering) {
-            insightsToFilter = window.allInsightsForFiltering;
-            console.log('🔍 Using all insights for "All" filter:', insightsToFilter.length);
-        } else {
-            // Fallback: combine current insights with insights from stacks
-            console.log('⚠️ allInsightsForFiltering not available for "All" filter, creating fallback...');
-            const insightsFromStacks = [];
-            stacks.forEach(stackData => {
-                stackData.cards.forEach(card => {
-                    // Check if this insight is already in currentInsights
-                    const exists = currentInsights.some(insight => insight.id === card.id);
-                    if (!exists) {
-                        insightsFromStacks.push(card);
-                    }
-                });
-            });
-            
-            insightsToFilter = [...currentInsights, ...insightsFromStacks];
-            console.log('🔍 Using fallback insights for "All" filter:', insightsToFilter.length);
-        }
+    if (hasActiveTagFilter && window.allInsightsForFiltering) {
+        // Use all insights for filtering when tag filter is active
+        insightsToFilter = window.allInsightsForFiltering;
+        console.log('🔍 Using all insights for tag filtering:', insightsToFilter.length);
     }
     
     let filteredInsights = [...insightsToFilter];
     
-    // Only filter out cards that are in stacks when there's NO active filter
-    // When any filtering is active, we want to show insights from stacks too
-    if (!hasAnyFilter) {
-        // Only remove insights that are actually in stacks based on their stack_id field
-        // Don't rely on the stacks Map which might contain stale data
-        filteredInsights = filteredInsights.filter(insight => {
-            // Keep insights that don't have a stack_id (not in any stack)
-            return !insight.stack_id;
+    // Filter out cards that are already in stacks
+    const cardsInStacks = new Set();
+    stacks.forEach(stackData => {
+        stackData.cards.forEach(card => {
+            cardsInStacks.add(card.id);
         });
-        console.log('📋 Insights after removing stacked cards (no filter):', filteredInsights.length);
-    } else {
-        console.log('📋 Keeping all insights for filtering (including those in stacks):', filteredInsights.length);
-    }
+    });
+    
+    filteredInsights = filteredInsights.filter(insight => !cardsInStacks.has(insight.id));
+    console.log('📋 Insights after removing stacked cards:', filteredInsights.length);
     
     // 1. 排序逻辑（始终应用）
     if (currentFilters.latest === 'latest') {
@@ -2569,36 +1951,7 @@ function getFilteredInsights() {
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
     
-    // 2. Text search filter (title + metadata)
-    if (currentFilters.search && currentFilters.search.trim() !== '') {
-        const q = currentFilters.search.trim().toLowerCase();
-        console.log('🔍 Applying search filter:', q);
-
-        const matchSearch = (insight) => {
-            // title
-            const title = (insight.title || insight.url || '').toLowerCase();
-
-            // try common metadata-ish fields; if you have `metadata` object, this will catch it,
-            // else we fall back to description/summary etc.
-            let metaBlob = '';
-            const metaCandidates = [
-                'metadata', 'meta', 'description', 'summary', 'site_name', 'author'
-            ];
-            metaCandidates.forEach((k) => {
-                const v = insight[k];
-                if (!v) return;
-                metaBlob += ' ' + (typeof v === 'object' ? JSON.stringify(v) : String(v));
-            });
-            metaBlob = metaBlob.toLowerCase();
-
-            return title.includes(q) || metaBlob.includes(q);
-        };
-
-        filteredInsights = filteredInsights.filter(matchSearch);
-        console.log('📋 Insights after search filtering:', filteredInsights.length);
-    }
-    
-    // 3. 标签筛选
+    // 2. 标签筛选
     if (currentFilters.tags && currentFilters.tags !== 'all') {
         console.log('🏷️ Applying tag filter:', currentFilters.tags);
         
@@ -2706,7 +2059,7 @@ async function shareInsight(insight) {
 
 // 删除见解
 async function deleteInsight(id) {
-    if (!confirm('Are you sure you want to delete this content?')) {
+    if (!confirm('确定要删除这个内容吗？')) {
         return;
     }
     
@@ -2719,16 +2072,7 @@ async function deleteInsight(id) {
         }
         
         clearPageCache(); // 清除缓存，因为数据已变化
-        
-        // Handle refresh based on current view mode
-        if (viewMode === 'stack' && activeStackId) {
-            // We're in stack view - refresh the stack view
-            console.log('🔄 Deleting insight in stack view, refreshing stack:', activeStackId);
-            await renderStackView(activeStackId);
-        } else {
-            // We're in home view - refresh normally
-            await loadUserInsightsWithPagination();
-        }
+        await loadUserInsightsWithPagination();
         
         // Also save to localStorage backup
         saveInsightsToLocalStorage({ force: true });
@@ -2736,7 +2080,7 @@ async function deleteInsight(id) {
         alert('Content deleted successfully!');
     } catch (error) {
         console.error('删除内容失败:', error);
-        alert(error.message || 'Failed to delete content, please try again');
+        alert(error.message || '删除内容失败，请重试');
     }
 }
 
@@ -2832,14 +2176,6 @@ function bindEvents() {
         });
     }
     
-    // Header email preferences button
-    if (headerEmailPreferences) {
-        headerEmailPreferences.addEventListener('click', () => {
-            // Navigate to email preferences page
-            window.location.href = '/email-preferences';
-        });
-    }
-    
     // 添加内容表单
     if (addContentForm) {
         addContentForm.addEventListener('submit', async (e) => {
@@ -2889,27 +2225,6 @@ function bindEvents() {
                     url: url
                 };
                 
-                // If we're in stack view mode, add the insight to the current stack
-                console.log('🔍 DEBUG: Checking stack assignment conditions:');
-                console.log('🔍 DEBUG: viewMode:', viewMode);
-                console.log('🔍 DEBUG: activeStackId:', activeStackId);
-                console.log('🔍 DEBUG: viewMode === "stack":', viewMode === 'stack');
-                console.log('🔍 DEBUG: activeStackId truthy:', !!activeStackId);
-                console.log('🔍 DEBUG: Both conditions met:', viewMode === 'stack' && activeStackId);
-                console.log('🔍 DEBUG: insightData before assignment:', JSON.stringify(insightData, null, 2));
-                
-                if (viewMode === 'stack' && activeStackId) {
-                    // Convert stack_id to integer since backend expects integer type
-                    insightData.stack_id = parseInt(activeStackId);
-                    console.log('🔄 Adding insight to current stack:', activeStackId);
-                    console.log('🔄 stack_id value:', insightData.stack_id);
-                    console.log('🔄 Type of stack_id:', typeof insightData.stack_id);
-                    console.log('🔄 insightData after assignment:', JSON.stringify(insightData, null, 2));
-                } else {
-                    console.log('⚠️ Stack assignment skipped - conditions not met');
-                    console.log('⚠️ Reason: viewMode !== "stack" or activeStackId is falsy');
-                }
-                
                 // 获取自定义字段
                 const customTitle = document.getElementById('customTitle')?.value?.trim();
                 const customThought = document.getElementById('customThought')?.value?.trim();
@@ -2919,13 +2234,14 @@ function bindEvents() {
                     const tagIds = selectedTags.map(tag => tag.id);
                     if (tagIds.length > 0) {
                         insightData.tag_ids = tagIds;
-                        console.log('🔍 DEBUG: Using selected tags:', tagIds);
                     }
                 } else {
-                    // TEMPORARY: Use hardcoded Archive tag ID to test
-                    console.log('🔍 DEBUG: No tags selected, using hardcoded Archive tag ID...');
-                    insightData.tag_ids = ["90c083ca-6a03-4431-8469-d541a7e59998"];
-                    console.log('🔍 DEBUG: Set hardcoded tag_ids to:', insightData.tag_ids);
+                    // If no tags selected, assign default "Archive" tag
+                    // First, try to find the Archive tag ID from available tags
+                    const archiveTag = await findOrCreateArchiveTag();
+                    if (archiveTag) {
+                        insightData.tag_ids = [archiveTag.id];
+                    }
                 }
                 
                 // 添加自定义字段（如果用户输入了的话）
@@ -2933,18 +2249,7 @@ function bindEvents() {
                 if (customThought) insightData.thought = customThought;
                 
                 // 使用正确的API端点创建insight
-                console.log('📝 Creating insight with data:', insightData);
-                console.log('🔍 DEBUG: Full insightData object:', JSON.stringify(insightData, null, 2));
-                console.log('🔍 DEBUG: stack_id value:', insightData.stack_id);
-                console.log('🔍 DEBUG: stack_id type:', typeof insightData.stack_id);
-                console.log('🔍 DEBUG: activeStackId:', activeStackId);
-                console.log('🔍 DEBUG: viewMode:', viewMode);
-                console.log('🔍 DEBUG: Final data being sent to API:', JSON.stringify(insightData, null, 2));
-                
-                // Use the correct API endpoint /api/v1/insights/ which supports stack_id
                 const result = await api.createInsight(insightData);
-                console.log('✅ Insight creation result:', result);
-                console.log('🔍 DEBUG: Result data:', JSON.stringify(result, null, 2));
                 
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
@@ -2965,25 +2270,7 @@ function bindEvents() {
                         }
                         
                         clearPageCache(); // 清除缓存，因为数据已变化
-                        
-                        // Check if we're in stack view mode
-                        if (viewMode === 'stack' && activeStackId) {
-                            console.log('🔄 In stack view mode, refreshing current stack');
-                            
-                            try {
-                                // Simply refresh the current stack view to show the new insight
-                                console.log('🎯 Refreshing stack view for stack:', activeStackId);
-                                await renderStackView(activeStackId);
-                                console.log('✅ Stack view refreshed with new insight');
-                            } catch (error) {
-                                console.error('❌ Failed to reload stack data:', error);
-                                // Fallback: just re-render the current stack view
-                                renderStackView(activeStackId);
-                            }
-                        } else {
-                            // Normal home view reload
-                            await loadUserInsightsWithPagination();
-                        }
+                        await loadUserInsightsWithPagination();
                         
                         // Also save to localStorage backup
                         saveInsightsToLocalStorage({ force: true });
@@ -2991,7 +2278,7 @@ function bindEvents() {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
                     }
-                }, 2000);
+                }, 1000);
                 
             } catch (error) {
                 console.error('❌ 添加内容失败:', error);
@@ -3005,11 +2292,9 @@ function bindEvents() {
                     } else if (error.message.includes('422')) {
                         errorMessage = 'Data validation failed. Please check your input and try again.';
                         console.error('🔍 422错误详情 - 错误信息:', error.message);
-                        console.error('🔍 422错误详情 - 完整错误对象:', error);
                         console.error('🔍 422错误详情 - URL:', url);
-                        console.error('🔍 422错误详情 - 标签数量:', tag_ids ? tag_ids.length : 0);
+                        console.error('🔍 422错误详情 - 标签数量:', selectedTags ? selectedTags.length : 0);
                         console.error('🔍 422错误详情 - 标签ID数组:', insightData.tag_ids);
-                        console.error('🔍 422错误详情 - 完整insightData:', insightData);
                     } else if (error.message.includes('500') || error.message.includes('server error')) {
                         errorMessage = 'Server error. Please try again later.';
                     } else {
@@ -3049,6 +2334,11 @@ function bindEvents() {
         });
     }
 
+    // 左上角添加内容按钮
+    const addContentBtnLeft = document.getElementById('addContentBtnLeft');
+    if (addContentBtnLeft) {
+        addContentBtnLeft.addEventListener('click', showAddContentModal);
+    }
     
     // 绑定标签相关事件
     bindTagEvents();
@@ -3067,156 +2357,41 @@ function bindEvents() {
         
         // 绑定标题编辑事件
         bindTitleEditEvents();
-        
-        // 绑定堆叠视图事件
-        bindStackViewEvents();
 }
 
 // Event delegation for card interactions (performance optimization)
 function setupCardEventDelegation() {
-    if (!contentCards) {
-        console.error('❌ setupCardEventDelegation: contentCards element not found!');
-        return;
-    }
-    
-    console.log('🔧 Setting up card event delegation on:', contentCards);
-    console.log('🔧 Current cards in DOM:', contentCards.querySelectorAll('.content-card').length);
-    
-    // Remove any existing event listeners to avoid duplicates
-    contentCards.removeEventListener('click', handleCardClick);
+    if (!contentCards) return;
     
     // Single event listener for all card interactions
-    contentCards.addEventListener('click', handleCardClick);
-    
-    console.log('✅ Card event delegation set up successfully');
-}
-
-// Separate function for card click handling to allow removal
-function handleCardClick(e) {
-    console.log('🖱️ Card click detected:', e.target);
-    console.log('🖱️ Clicked element classes:', e.target.className);
-    console.log('🖱️ Event target:', e.target);
-    
-    // Handle delete button clicks
-    if (e.target.matches('.content-card-delete-btn') || e.target.closest('.content-card-delete-btn')) {
-        console.log('🗑️ Delete button clicked');
-        e.stopPropagation();
-        const deleteBtn = e.target.matches('.content-card-delete-btn') ? e.target : e.target.closest('.content-card-delete-btn');
-        const insightId = deleteBtn.dataset.insightId;
-        if (insightId) {
-            deleteInsight(insightId);
+    contentCards.addEventListener('click', (e) => {
+        // Handle delete button clicks
+        if (e.target.matches('.content-card-delete-btn') || e.target.closest('.content-card-delete-btn')) {
+            e.stopPropagation();
+            const deleteBtn = e.target.matches('.content-card-delete-btn') ? e.target : e.target.closest('.content-card-delete-btn');
+            const insightId = deleteBtn.dataset.insightId;
+            if (insightId) {
+                deleteInsight(insightId);
+            }
+            return;
         }
-        return;
-    }
-    
-    // Handle card clicks for details
-    const card = e.target.closest('.content-card');
-    console.log('🖱️ Closest card element:', card);
-    
-    if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn')) {
-        const insightId = card.dataset.insightId;
-        console.log('🖱️ Card clicked with insight ID:', insightId);
         
-        if (insightId) {
-            // Find the insight data - check both currentInsights and active stack
-            let insight = window.currentInsights?.find(i => i.id === insightId);
-            console.log('🖱️ Found insight in currentInsights:', insight);
-            
-            // If not found in currentInsights and we're in stack view, check the active stack
-            if (!insight && viewMode === 'stack' && activeStackId) {
-                const activeStack = stacks.get(activeStackId);
-                if (activeStack && activeStack.cards) {
-                    insight = activeStack.cards.find(card => card.id === insightId);
-                    console.log('🖱️ Found insight in active stack:', insight);
+        // Handle card clicks for details
+        const card = e.target.closest('.content-card');
+        if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn')) {
+            const insightId = card.dataset.insightId;
+            if (insightId) {
+                // Find the insight data and open the modal
+                const insight = window.currentInsights?.find(i => i.id === insightId);
+                if (insight) {
+                    openContentDetailModal(insight);
+                } else {
+                    console.error('❌ Insight not found for ID:', insightId);
                 }
             }
-            
-            if (insight) {
-                console.log('✅ Opening content detail modal for insight:', insight.title);
-                openContentDetailModal(insight);
-            } else {
-                console.error('❌ Insight not found for ID:', insightId);
-                console.log('❌ Available insights in currentInsights:', window.currentInsights);
-                console.log('❌ Active stack ID:', activeStackId);
-                console.log('❌ Active stack cards:', activeStackId ? stacks.get(activeStackId)?.cards : 'No active stack');
-            }
-        } else {
-            console.error('❌ No insight ID found on card');
         }
-    } else {
-        console.log('🖱️ Click not on a card or on delete button');
-    }
-}
-
-// Test function to debug card clickability issues
-function testCardClickability() {
-    console.log('🧪 Testing card clickability...');
-    
-    // Check if contentCards exists
-    if (!contentCards) {
-        console.error('❌ contentCards element not found');
-        return;
-    }
-    
-    // Check how many cards are in the DOM
-    const cards = contentCards.querySelectorAll('.content-card');
-    console.log(`📊 Found ${cards.length} cards in DOM`);
-    
-    // Check if event listener is attached
-    const hasEventListener = contentCards.onclick !== null || 
-                           contentCards.addEventListener !== undefined;
-    console.log(`🔧 Event listener attached:`, hasEventListener);
-    
-    // Check each card's structure
-    cards.forEach((card, index) => {
-        const insightId = card.dataset.insightId;
-        const classes = card.className;
-        console.log(`📄 Card ${index + 1}:`, {
-            insightId,
-            classes,
-            hasClickHandler: card.onclick !== null
-        });
     });
-    
-    // Test clicking on the first card programmatically
-    if (cards.length > 0) {
-        console.log('🖱️ Testing programmatic click on first card...');
-        const firstCard = cards[0];
-        const clickEvent = new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-        });
-        firstCard.dispatchEvent(clickEvent);
-    }
-    
-    // Check window.currentInsights
-    console.log('📋 window.currentInsights:', window.currentInsights);
-    
-    // Check current view mode and active stack
-    console.log('📋 Current view mode:', viewMode);
-    console.log('📋 Active stack ID:', activeStackId);
-    
-    if (viewMode === 'stack' && activeStackId) {
-        const activeStack = stacks.get(activeStackId);
-        console.log('📋 Active stack data:', activeStack);
-        console.log('📋 Active stack cards:', activeStack?.cards);
-    }
-    
-    return {
-        cardCount: cards.length,
-        hasEventListener,
-        viewMode,
-        activeStackId,
-        cards: Array.from(cards).map(card => ({
-            insightId: card.dataset.insightId,
-            classes: card.className
-        }))
-    };
 }
-
-// Make test function available globally
-window.testCardClickability = testCardClickability;
 
 // Cached version of getUserTags to reduce API calls
 async function getCachedUserTags() {
@@ -3269,14 +2444,6 @@ function normalizePaginatedInsightsResponse(response) {
 // 加载用户标签
 async function loadUserTags() {
     try {
-        // 检查认证状态
-        if (!auth.checkAuth()) {
-            console.log('⚠️ 用户未认证，使用空标签列表');
-            renderTagSelector([]);
-            updateFilterButtons([]);
-            return;
-        }
-        
         // 使用缓存的API方法获取标签
         const response = await getCachedUserTags();
         
@@ -3295,19 +2462,20 @@ async function loadUserTags() {
     } catch (error) {
         console.error('❌ 加载用户标签失败:', error);
         
-        // 检查是否是认证问题
-        if (error.message.includes('401') || error.message.includes('403') || error.message.includes('认证')) {
-            console.log('⚠️ 认证失败，使用空标签列表');
-            renderTagSelector([]);
-            updateFilterButtons([]);
-            // 不要显示错误信息或重定向，让用户继续使用页面
-        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+        // 检查是否是后端服务问题
+        if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
             showErrorMessage('Backend service temporarily unavailable due to expired token, please relogin.');
-            renderTagSelector([]);
+        } else if (error.message.includes('401') || error.message.includes('403')) {
+            showErrorMessage('Authentication failed. Please log in again.');
+            // 重定向到登录页面
+            setTimeout(() => {
+                window.location.href = PATHS.LOGIN;
+            }, 2000);
         } else {
-            console.log('⚠️ 其他错误，使用空标签列表');
-            renderTagSelector([]);
+            showErrorMessage('Failed to load tags. Please refresh and try again.');
         }
+        
+        renderTagSelector([]);
     }
 }
 
@@ -3612,6 +2780,11 @@ async function deleteTagInManagement(userTagId) {
 
 // Bind tag-related events
 function bindTagEvents() {
+    // Create tag button
+    const createTagBtn = document.getElementById('createTagBtn');
+    if (createTagBtn) {
+        createTagBtn.addEventListener('click', showCreateTagModal);
+    }
     
     // Manage tags button
     // 标签管理按钮已删除，使用简单的标签下拉选择器
@@ -3728,692 +2901,6 @@ async function createNewTag() {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initPage);
-
-// ===== SEARCH FUNCTIONALITY =====
-
-// Helper to apply search and re-render both views consistently
-async function applySearch(query) {
-    currentFilters.search = (query || '').trim();
-    // keep inputs in sync across bars
-    const homeInput = document.getElementById('searchInput');
-    const stackInput = document.getElementById('stackSearchInput');
-    if (homeInput && homeInput.value !== currentFilters.search) homeInput.value = currentFilters.search;
-    if (stackInput && stackInput.value !== currentFilters.search) stackInput.value = currentFilters.search;
-
-    // If search is active, fetch all insights for filtering (similar to tag filtering)
-    if (currentFilters.search.trim() !== '') {
-        try {
-            console.log('🔍 Search active, fetching all insights for filtering...');
-            await fetchAllInsightsForFiltering();
-        } catch (error) {
-            console.warn('⚠️ Failed to fetch all insights for search, using fallback:', error);
-        }
-    } else {
-        // Clear the global insights when search is cleared
-        window.allInsightsForFiltering = null;
-    }
-
-    renderInsights();         // re-renders lists with new filter
-    updatePaginationUI?.();   // update pagination counts
-}
-
-// Initialize search functionality
-function initSearch() {
-    // Wire home bar
-    const searchInput = document.getElementById('searchInput');
-    const searchBtn = document.getElementById('searchBtn');
-    if (searchInput) {
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') applySearch(searchInput.value);
-        });
-    }
-    if (searchBtn) {
-        searchBtn.addEventListener('click', () => applySearch(searchInput?.value || ''));
-    }
-
-    // Wire stack bar
-    const stackSearchInput = document.getElementById('stackSearchInput');
-    const stackSearchBtn = document.getElementById('stackSearchBtn');
-    if (stackSearchInput) {
-        stackSearchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') applySearch(stackSearchInput.value);
-        });
-    }
-    if (stackSearchBtn) {
-        stackSearchBtn.addEventListener('click', () => applySearch(stackSearchInput?.value || ''));
-    }
-
-    // Optional: keep inputs populated on first render, e.g. after restoring state
-    applySearch(currentFilters.search || '');
-}
-
-// ===== STACK VIEW FUNCTIONALITY =====
-
-// Toggle stack view class on root element
-function setStackViewEnabled(enabled) {
-    const root = document.querySelector('.MySpace');
-    if (!root) return;
-    root.classList.toggle('stack-view', !!enabled);
-}
-
-// Parse route and determine view mode
-function parseRoute() {
-    const path = window.location.pathname;
-    const stackMatch = path.match(/^\/stacks\/(\d+)$/);
-    
-    if (stackMatch) {
-        const stackId = stackMatch[1];
-        viewMode = 'stack';
-        activeStackId = stackId;
-        return { viewMode, stackId };
-    }
-    
-    viewMode = 'home';
-    activeStackId = null;
-    return { viewMode, stackId: null };
-}
-
-// Navigate to stack view
-function navigateToStack(stackId) {
-    const url = `/stacks/${stackId}`;
-    navigateTo(url);
-    viewMode = 'stack';
-    activeStackId = stackId;
-    renderStackView(stackId);
-}
-
-// Navigate back to home view
-function navigateToHome() {
-    navigateTo(PATHS.MY_SPACE);
-    // The renderHomeView() will be called by the popstate event listener
-    // or we can call it directly for immediate UI update
-    viewMode = 'home';
-    activeStackId = null;
-    renderHomeView();
-}
-
-// Render stack view
-async function renderStackView(stackId) {
-    console.log(`🎯 Rendering stack view for stack ${stackId}`);
-    
-    // Show loading state immediately to prevent layout shift
-    showStackLoadingState();
-    
-    // Enable stack view mode (hides profile/controls sections)
-    setStackViewEnabled(true);
-    
-    // Show stack context bar
-    const stackContextBar = getCachedElementById('stackContextBar');
-    if (stackContextBar) {
-        stackContextBar.style.display = 'block';
-    }
-    
-    // Hide filters in stack view
-    if (filterButtons) {
-        filterButtons.style.display = 'none';
-    }
-    
-    // Get stack data
-    let stack = stacks.get(stackId);
-    if (!stack) {
-        // Try to fetch from API if not in memory
-        try {
-            // First get the stack metadata
-            const stacksResponse = await api.getUserStacks(currentUser?.id);
-            if (stacksResponse.success && stacksResponse.data) {
-                const stackData = stacksResponse.data.find(s => String(s.id) === String(stackId));
-                if (stackData) {
-                    // Then get the insights for this specific stack
-                    const insightsResponse = await api.getStackItems(stackId);
-                    console.log(`🔍 Fetching insights for stack ${stackId}:`, insightsResponse);
-                    const stackInsights = insightsResponse.success && insightsResponse.data ? 
-                        (insightsResponse.data.items || insightsResponse.data.insights || insightsResponse.data) : [];
-                    console.log(`📦 Found ${stackInsights.length} insights for stack ${stackId}:`, stackInsights.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
-                    
-                    // TEMPORARY WORKAROUND: If backend filtering isn't working, filter on frontend
-                    let validInsights;
-                    if (stackInsights.length > 0 && stackInsights.every(insight => insight.stack_id === null)) {
-                        console.warn('⚠️ Backend filtering not working - all insights have stack_id null. Using frontend fallback...');
-                        // Fallback: Get all insights and filter by stack_id on frontend
-                        const allInsightsResponse = await api.getInsightsPaginated(1, 100, null, '', true);
-                        if (allInsightsResponse.success && allInsightsResponse.data) {
-                            const allInsights = allInsightsResponse.data.items || allInsightsResponse.data.insights || [];
-                            validInsights = allInsights.filter(insight => parseInt(insight.stack_id) === parseInt(stackId));
-                            console.log(`📦 Frontend fallback: Found ${validInsights.length} insights with stack_id ${stackId}`);
-                        } else {
-                            validInsights = [];
-                        }
-                    } else {
-                        // Normal validation
-                        validInsights = stackInsights.filter(insight => {
-                            const belongsToStack = insight.stack_id === stackId;
-                            if (!belongsToStack) {
-                                console.warn(`⚠️ Insight ${insight.id} has stack_id ${insight.stack_id} but expected ${stackId}`);
-                            }
-                            return belongsToStack;
-                        });
-                    }
-                    console.log(`📦 Valid insights for stack ${stackId}: ${validInsights.length} (filtered from ${stackInsights.length})`);
-                    
-                    stack = {
-                        id: String(stackId),
-                        name: stackData.name,
-                        description: stackData.description,
-                        cards: validInsights, // Use validated insights
-                        createdAt: stackData.created_at,
-                        updatedAt: stackData.updated_at,
-                        modifiedAt: new Date().toISOString()
-                    };
-                    stacks.set(stackId, stack);
-                }
-            }
-        } catch (error) {
-            console.error('❌ Failed to fetch stack data:', error);
-            hideStackLoadingState();
-            showErrorMessage('Failed to load stack data');
-            return;
-        }
-    } else {
-        // If stack exists in memory, refresh its insights
-        try {
-            const insightsResponse = await api.getStackItems(stackId);
-            console.log(`🔍 Refreshing insights for stack ${stackId}:`, insightsResponse);
-            const stackInsights = insightsResponse.success && insightsResponse.data ? 
-                (insightsResponse.data.items || insightsResponse.data.insights || insightsResponse.data) : [];
-            console.log(`📦 Refreshed stack ${stackId} with ${stackInsights.length} insights:`, stackInsights.map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
-            
-            // TEMPORARY WORKAROUND: If backend filtering isn't working, filter on frontend
-            let validInsights;
-            if (stackInsights.length > 0 && stackInsights.every(insight => insight.stack_id === null)) {
-                console.warn('⚠️ Backend filtering not working - all insights have stack_id null. Using frontend fallback...');
-                // Fallback: Get all insights and filter by stack_id on frontend
-                const allInsightsResponse = await api.getInsightsPaginated(1, 100, null, '', true);
-                if (allInsightsResponse.success && allInsightsResponse.data) {
-                    const allInsights = allInsightsResponse.data.items || allInsightsResponse.data.insights || [];
-                    validInsights = allInsights.filter(insight => parseInt(insight.stack_id) === parseInt(stackId));
-                    console.log(`📦 Frontend fallback: Found ${validInsights.length} insights with stack_id ${stackId}`);
-                } else {
-                    validInsights = [];
-                }
-            } else {
-                // Normal validation
-                validInsights = stackInsights.filter(insight => {
-                    // Convert both to numbers for comparison since stack_id is stored as integer
-                    const insightStackId = parseInt(insight.stack_id);
-                    const expectedStackId = parseInt(stackId);
-                    const belongsToStack = insightStackId === expectedStackId;
-                    if (!belongsToStack) {
-                        console.warn(`⚠️ Insight ${insight.id} has stack_id ${insight.stack_id} (${typeof insight.stack_id}) but expected ${stackId} (${typeof stackId})`);
-                    }
-                    return belongsToStack;
-                });
-            }
-            console.log(`📦 Valid refreshed insights for stack ${stackId}: ${validInsights.length} (filtered from ${stackInsights.length})`);
-            
-            // Update the stack with validated insights
-            stack.cards = validInsights;
-            stacks.set(stackId, stack);
-        } catch (error) {
-            console.error('❌ Failed to refresh stack insights:', error);
-        }
-    }
-    
-    if (!stack) {
-        console.error('❌ Stack not found:', stackId);
-        hideStackLoadingState();
-        showErrorMessage('Stack not found');
-        navigateToHome();
-        return;
-    }
-    
-    // Update context bar
-    updateStackContextBar(stack);
-    
-    // Enhance stack actions
-    enhanceStackActions();
-    bindEnhancedStackActions();
-    
-    // Render stack insights
-    renderStackInsights(stack);
-    
-    // Hide loading state
-    hideStackLoadingState();
-    
-    // Hide pagination
-    hidePagination();
-}
-
-// Professional skeleton loading state with smooth transitions and layout stability
-let __SKELETON_STARTED_AT__ = 0;
-
-function skeletonMarkup(count = 6) {
-    const cards = Array.from({length: count}, () => '<div class="skeleton-card"></div>').join('');
-    return `<div class="progress-bar" role="progressbar" aria-valuetext="Loading"></div>
-            <div class="skeleton-grid" aria-hidden="true">${cards}</div>`;
-}
-
-// Show loading state for stack view to prevent layout shift
-function showStackLoadingState() {
-    const container = document.getElementById('contentCards');
-    if (!container) return;
-
-    // signal busy for a11y
-    container.setAttribute('aria-busy', 'true');
-
-    // Prefer a dedicated overlay to avoid removing the static skeleton block in HTML
-    let overlay = document.getElementById('loadingOverlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'loadingOverlay';
-        overlay.className = 'loading-overlay';
-        overlay.innerHTML = skeletonMarkup(6);
-        container.appendChild(overlay);
-    } else {
-        overlay.classList.remove('fade-out');
-        overlay.classList.add('fade-in');
-    }
-    __SKELETON_STARTED_AT__ = performance.now();
-}
-
-// Hide loading state for stack view
-function hideStackLoadingState() {
-    const container = document.getElementById('contentCards');
-    const overlay = document.getElementById('loadingOverlay');
-    if (!container) return;
-
-    // ensure skeleton shows for at least 300ms to prevent flash/flicker
-    const MIN_MS = 300;
-    const elapsed = performance.now() - (__SKELETON_STARTED_AT__ || 0);
-    const delay = Math.max(0, MIN_MS - elapsed);
-
-    window.setTimeout(() => {
-        if (overlay) {
-            overlay.classList.add('fade-out');
-            overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
-        }
-        container.removeAttribute('aria-busy');
-    }, delay);
-}
-
-// Update stack context bar with stack data
-function updateStackContextBar(stack) {
-    const stackBreadcrumbName = getCachedElementById('stackBreadcrumbName');
-    const stackCount = getCachedElementById('stackCount');
-    const stackDates = getCachedElementById('stackDates');
-    
-    if (stackBreadcrumbName) {
-        stackBreadcrumbName.textContent = stack.name || 'Untitled';
-    }
-    
-    if (stackCount) {
-        const n = Array.isArray(stack.cards) ? stack.cards.length : 0;
-        stackCount.textContent = `${n} insight${n === 1 ? '' : 's'}`;
-    }
-    
-    if (stackDates) {
-        const created = stack.createdAt ? new Date(stack.createdAt) : null;
-        // prefer updatedAt; if missing, fall back to modifiedAt you stamp locally
-        const updated = stack.updatedAt ? new Date(stack.updatedAt)
-                      : (stack.modifiedAt ? new Date(stack.modifiedAt) : null);
-
-        const parts = [];
-        if (created && !isNaN(created)) {
-            const createdFormatted = created.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-            parts.push(`Created ${createdFormatted}`);
-        }
-        if (updated && !isNaN(updated)) {
-            const updatedFormatted = updated.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-            parts.push(`Modified ${updatedFormatted}`);
-        }
-
-        stackDates.textContent = parts.join(' • ');
-    }
-}
-
-// Render insights for stack view
-function renderStackInsights(stack) {
-    console.log('🎯 renderStackInsights called with stack:', stack);
-    console.log('🎯 Current viewMode:', viewMode, 'activeStackId:', activeStackId);
-    
-    // Guard clause: only render stack insights when in stack view mode
-    if (viewMode !== 'stack') {
-        console.log('⚠️ renderStackInsights called but not in stack view mode, ignoring');
-        return;
-    }
-    
-    if (!contentCards) {
-        console.error('❌ contentCards element not found in renderStackInsights');
-        return;
-    }
-    
-    // Clear existing content
-    console.log('🧹 Clearing existing content');
-    contentCards.innerHTML = '';
-    
-    if (!stack.cards || stack.cards.length === 0) {
-        console.log('📭 No cards in stack, rendering empty state');
-        renderEmptyStackState(stack);
-        console.log('🔍 After renderEmptyStackState, contentCards children:', contentCards.children.length);
-        console.log('🔍 Template card exists:', !!contentCards.querySelector('.template-card'));
-        return;
-    }
-    
-    console.log(`📋 Rendering ${stack.cards.length} insights for stack ${stack.id}`);
-    
-    // Render stack insights using existing card creation logic
-    stack.cards.forEach((insight, index) => {
-        console.log(`📄 Creating card ${index + 1} for insight:`, insight.title, 'ID:', insight.id);
-        const card = createInsightCard(insight);
-        if (card) {
-            console.log(`✅ Card created successfully, appending to DOM`);
-            contentCards.appendChild(card);
-        } else {
-            console.error(`❌ Failed to create card for insight:`, insight.title);
-        }
-    });
-    
-    console.log(`🔍 After rendering, contentCards has ${contentCards.children.length} children`);
-    console.log(`🔍 ContentCards HTML:`, contentCards.innerHTML.substring(0, 200) + '...');
-    
-    console.log(`📊 Total cards in DOM after rendering:`, contentCards.querySelectorAll('.content-card').length);
-    
-    // Add template card if in edit mode
-    if (document.body.classList.contains('edit-mode')) {
-        addTemplateCard();
-    }
-    
-    // Re-setup event delegation for the newly rendered cards
-    console.log('🔧 Re-setting up event delegation');
-    setupCardEventDelegation();
-    
-    console.log(`✅ Rendered ${stack.cards.length} insights for stack ${stack.id}`);
-}
-
-// Render empty stack state
-function renderEmptyStackState(stack) {
-    // Guard clause: only render empty stack state when in stack view mode
-    if (viewMode !== 'stack') {
-        console.log('⚠️ renderEmptyStackState called but not in stack view mode, ignoring');
-        return;
-    }
-    
-    const emptyState = document.createElement('div');
-    emptyState.className = 'empty-stack-state';
-    emptyState.innerHTML = `
-        <div class="empty-stack-content">
-            <div class="empty-stack-icon">📚</div>
-            <h3>No insights yet</h3>
-            <p>This stack is empty. Add some insights to get started!</p>
-            <div class="empty-stack-actions">
-                <button class="btn-primary" id="emptyStackAddInsightBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Add Insight
-                </button>
-                <button class="btn-secondary" id="emptyStackBackToHomeBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Back to My Space
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // Add event listeners for the buttons
-    const addInsightBtn = emptyState.querySelector('#emptyStackAddInsightBtn');
-    const backToHomeBtn = emptyState.querySelector('#emptyStackBackToHomeBtn');
-    
-    if (addInsightBtn) {
-        addInsightBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🖱️ Empty stack add insight button clicked');
-            showAddContentModal();
-        });
-    }
-    
-    if (backToHomeBtn) {
-        backToHomeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🖱️ Empty stack back to home button clicked');
-            navigateToHome();
-        });
-    }
-    
-    contentCards.appendChild(emptyState);
-    console.log('🔍 After appending emptyState, contentCards children:', contentCards.children.length);
-    console.log('🔍 Template card exists after emptyState:', !!contentCards.querySelector('.template-card'));
-    
-    // Disable edit mode when showing empty stack state
-    if (document.body.classList.contains('edit-mode')) {
-        console.log('📭 Empty stack detected, disabling edit mode');
-        document.body.classList.remove('edit-mode');
-        isEditMode = false; // Update the edit mode state variable
-        updateEditModeState();
-    }
-    
-    console.log('🔍 After disabling edit mode, contentCards children:', contentCards.children.length);
-    console.log('🔍 Template card exists after edit mode disabled:', !!contentCards.querySelector('.template-card'));
-}
-
-// Render home view (existing functionality)
-function renderHomeView() {
-    console.log('🏠 Rendering home view');
-    
-    // Ensure we're in home view mode
-    viewMode = 'home';
-    activeStackId = null;
-    
-    // Disable stack view mode (shows profile/controls sections)
-    setStackViewEnabled(false);
-    
-    // Ensure edit mode is always off when entering home view
-    if (document.body.classList.contains('edit-mode')) {
-        console.log('🏠 Home view loaded, disabling edit mode');
-        document.body.classList.remove('edit-mode');
-        isEditMode = false;
-        updateEditModeState();
-    }
-    
-    // Hide stack context bar
-    const stackContextBar = getCachedElementById('stackContextBar');
-    if (stackContextBar) {
-        stackContextBar.style.display = 'none';
-    }
-    
-    // Show filters
-    if (filterButtons) {
-        filterButtons.style.display = 'flex';
-    }
-    
-    // Show pagination
-    showPagination();
-    
-    // Clear any existing empty stack states
-    if (contentCards) {
-        const existingEmptyStackStates = contentCards.querySelectorAll('.empty-stack-state');
-        existingEmptyStackStates.forEach(state => state.remove());
-    }
-    
-    // Render normal insights
-    renderInsights();
-}
-
-// Hide pagination controls
-function hidePagination() {
-    const paginationContainer = getCachedElementById('paginationContainer');
-    if (paginationContainer) {
-        paginationContainer.style.display = 'none';
-    }
-}
-
-// Show pagination controls
-function showPagination() {
-    const paginationContainer = getCachedElementById('paginationContainer');
-    if (paginationContainer) {
-        paginationContainer.style.display = 'flex';
-    }
-}
-
-// Handle browser back/forward navigation
-window.addEventListener('popstate', function(event) {
-    const { viewMode: newViewMode, stackId } = parseRoute();
-    
-    if (newViewMode === 'stack' && stackId) {
-        renderStackView(stackId);
-    } else {
-        // Navigate to home view
-        viewMode = 'home';
-        activeStackId = null;
-        renderHomeView();
-    }
-});
-
-// Enhance stack actions with Edit, Add, and proper Exit button
-function enhanceStackActions() {
-    const actions = document.querySelector('.stack-actions');
-    if (!actions) return;
-
-    // Check if current stack is empty
-    const currentStack = stacks.get(activeStackId);
-    const isEmpty = !currentStack || !currentStack.cards || currentStack.cards.length === 0;
-    
-    if (isEmpty) {
-        // Show Add button for empty stacks
-        actions.innerHTML = `
-            <button class="stack-action-btn primary" id="stackAddBtn" aria-label="Add content">Add</button>
-        `;
-    } else {
-        // Show Edit button for stacks with content
-        actions.innerHTML = `
-            <button class="stack-action-btn primary" id="stackEditModeBtn" aria-label="Toggle edit mode">Edit</button>
-        `;
-    }
-}
-
-// Bind enhanced stack actions
-function bindEnhancedStackActions() {
-    const editBtn = document.getElementById('stackEditModeBtn');
-    if (editBtn) {
-        editBtn.onclick = () => {
-            if (typeof toggleEditMode === 'function') {
-                toggleEditMode();
-            }
-        };
-    }
-    
-    const addBtn = document.getElementById('stackAddBtn');
-    if (addBtn) {
-        addBtn.onclick = () => {
-            console.log('🖱️ Stack Add button clicked');
-            showAddContentModal();
-        };
-    }
-
-
-    // Back button
-    const backBtn = document.getElementById('backToMySpaceBtn');
-    if (backBtn) {
-        backBtn.addEventListener('click', function() {
-            navigateToHome();
-        });
-    }
-    
-    // Make stack name clickable for inline editing
-    const stackName = document.getElementById('stackBreadcrumbName');
-    if (stackName) {
-        stackName.addEventListener('click', function() {
-            startStackNameEdit(stackName);
-        });
-    }
-    
-    // Make edit icon clickable too
-    const editIcon = document.querySelector('.edit-hint-icon');
-    if (editIcon) {
-        editIcon.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const stackName = document.getElementById('stackBreadcrumbName');
-            if (stackName) {
-                startStackNameEdit(stackName);
-            }
-        });
-    }
-}
-
-// Start inline editing of stack name
-function startStackNameEdit(stackNameElement) {
-    if (!stackNameElement || stackNameElement.classList.contains('editing')) return;
-    
-    // Check if input already exists
-    const existingInput = stackNameElement.querySelector('.stack-name-input');
-    if (existingInput) {
-        return; // Already editing
-    }
-    
-    const currentName = stackNameElement.textContent;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = currentName;
-    input.className = 'stack-name-input';
-    
-    // Replace text with input
-    stackNameElement.textContent = '';
-    stackNameElement.appendChild(input);
-    stackNameElement.classList.add('editing');
-    
-    // Focus and select text
-    input.focus();
-    input.select();
-    
-    // Handle save on Enter or blur
-    const saveEdit = () => {
-        const newName = input.value.trim();
-        if (newName && newName !== currentName) {
-            updateStackName(activeStackId, newName);
-            // Mark as edited to hide the hint icon
-            const container = stackNameElement.closest('.stack-name-container');
-            if (container) {
-                container.classList.add('edited');
-            }
-        }
-        stackNameElement.textContent = newName || currentName;
-        stackNameElement.classList.remove('editing');
-    };
-    
-    const cancelEdit = () => {
-        stackNameElement.textContent = currentName;
-        stackNameElement.classList.remove('editing');
-    };
-    
-    input.addEventListener('blur', saveEdit);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            saveEdit();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            cancelEdit();
-        }
-    });
-}
-
-
-// Bind stack view events
-function bindStackViewEvents() {
-    // This function is kept for compatibility but enhanced actions are handled above
-    bindEnhancedStackActions();
-}
 
 // 标签管理弹窗已删除，使用简单的标签下拉选择器
 
@@ -4604,759 +3091,6 @@ window.editUserTag = editUserTag;
 window.updateUserTag = updateUserTag;
 window.deleteUserTag = deleteUserTag;
 window.editTagInManagement = editTagInManagement;
-
-// 测试函数 - 可以在控制台调用
-window.testStackIdFunctionality = async function() {
-    console.log('🧪 Starting stack_id functionality test...');
-    
-    // 检查当前状态
-    console.log('🔍 Current viewMode:', viewMode);
-    console.log('🔍 Current activeStackId:', activeStackId);
-    console.log('🔍 Current stacks:', Array.from(stacks.entries()));
-    
-    // 测试数据
-    const testData = {
-        url: 'https://example.com/test-stack-insight',
-        title: 'Test Stack Insight',
-        thought: 'This is a test insight for stack functionality',
-        stack_id: isNaN(activeStackId) ? activeStackId : parseInt(activeStackId)
-    };
-    
-    console.log('🧪 Test data:', testData);
-    console.log('🧪 Test data stack_id type:', typeof testData.stack_id);
-    
-    try {
-        // 测试API调用
-        console.log('🧪 Testing API call...');
-        const result = await api.createInsight(testData);
-        console.log('🧪 API result:', result);
-        
-        // 检查结果
-        if (result.success && result.data) {
-            console.log('✅ Insight created successfully');
-            console.log('🔍 Created insight data:', result.data);
-            console.log('🔍 Created insight stack_id:', result.data.stack_id);
-            console.log('🔍 Created insight stack_id type:', typeof result.data.stack_id);
-        } else {
-            console.error('❌ Insight creation failed:', result);
-        }
-        
-    } catch (error) {
-        console.error('❌ Test failed with error:', error);
-    }
-};
-
-// 测试函数 - 检查数据库中的stack_id
-window.testDatabaseStackId = async function() {
-    console.log('🧪 Testing database stack_id storage...');
-    
-    try {
-        // 获取最新的insights
-        const response = await api.getInsightsPaginated(1, 10, null, '', true);
-        console.log('🧪 Latest insights from API:', response);
-        
-        if (response.success && response.data) {
-            const insights = response.data.items || response.data.insights || [];
-            console.log('🧪 Found insights:', insights.length);
-            
-            insights.forEach((insight, index) => {
-                console.log(`🧪 Insight ${index + 1}:`, {
-                    id: insight.id,
-                    title: insight.title,
-                    stack_id: insight.stack_id,
-                    stack_id_type: typeof insight.stack_id,
-                    url: insight.url
-                });
-            });
-            
-            // 检查是否有任何 insights with stack_id
-            const insightsWithStackId = insights.filter(i => i.stack_id);
-            console.log('🧪 Insights with stack_id:', insightsWithStackId.length);
-            console.log('🧪 Insights with stack_id details:', insightsWithStackId);
-        }
-        
-    } catch (error) {
-        console.error('❌ Database test failed:', error);
-    }
-};
-
-// 测试函数 - 检查特定stack的内容
-window.testStackContent = async function(stackId = null) {
-    const targetStackId = stackId || activeStackId;
-    console.log('🧪 Testing stack content for stack:', targetStackId);
-    
-    if (!targetStackId) {
-        console.error('❌ No stack ID provided and no active stack');
-        return;
-    }
-    
-    try {
-        // 获取stack数据
-        const stackResponse = await api.getUserStacksWithInsights(currentUser?.id);
-        console.log('🧪 Stack API response:', stackResponse);
-        
-        if (stackResponse.success && stackResponse.data) {
-            const targetStack = stackResponse.data.find(s => String(s.id) === String(targetStackId));
-            console.log('🧪 Target stack:', targetStack);
-            
-            if (targetStack) {
-                console.log('🧪 Stack insights count:', targetStack.insights?.length || 0);
-                console.log('🧪 Stack insights:', targetStack.insights || []);
-                
-                // 检查每个insight的stack_id
-                if (targetStack.insights) {
-                    targetStack.insights.forEach((insight, index) => {
-                        console.log(`🧪 Stack insight ${index + 1}:`, {
-                            id: insight.id,
-                            title: insight.title,
-                            stack_id: insight.stack_id,
-                            stack_id_type: typeof insight.stack_id,
-                            matches_stack: insight.stack_id === targetStackId
-                        });
-                    });
-                }
-            } else {
-                console.error('❌ Stack not found:', targetStackId);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Stack content test failed:', error);
-    }
-};
-
-// 测试函数 - 调用后端调试端点
-// 调试函数 - 检查后端数据库状态
-window.debugBackendDatabase = async function() {
-    console.log('🔍 Checking backend database state...');
-    
-    try {
-        const response = await fetch('https://quest-api-edz1.onrender.com/api/v1/insights/debug/stack-ids', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${api.authToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('📡 Backend debug response:', data);
-            
-            if (data.success && data.data) {
-                console.log('📦 Recent insights from database:');
-                data.data.insights.forEach(insight => {
-                    console.log(`  - ${insight.id}: "${insight.title}" (stack_id: ${insight.stack_id}, type: ${typeof insight.stack_id})`);
-                });
-                
-                console.log('📦 All stacks from database:');
-                data.data.stacks.forEach(stack => {
-                    console.log(`  - Stack ${stack.id}: "${stack.name}"`);
-                });
-            }
-            
-            return data;
-        } else {
-            console.error('❌ Backend debug failed:', response.status, response.statusText);
-            return null;
-        }
-    } catch (error) {
-        console.error('❌ Backend debug error:', error);
-        return null;
-    }
-};
-
-window.testBackendDebug = async function() {
-    console.log('🧪 Testing backend debug endpoint...');
-    
-    try {
-        const response = await api.request('/api/v1/insights/debug/stack-ids');
-        console.log('🧪 Backend debug response:', response);
-        
-        if (response.success && response.data) {
-            console.log('🧪 Recent insights from backend:', response.data.insights);
-            console.log('🧪 All stacks from backend:', response.data.stacks);
-            
-            // 分析stack_id状态
-            const insights = response.data.insights || [];
-            const stacks = response.data.stacks || [];
-            
-            console.log('🧪 Analysis:');
-            console.log(`  - Total insights: ${insights.length}`);
-            console.log(`  - Total stacks: ${stacks.length}`);
-            
-            const insightsWithStackId = insights.filter(i => i.stack_id);
-            console.log(`  - Insights with stack_id: ${insightsWithStackId.length}`);
-            
-            if (insightsWithStackId.length > 0) {
-                console.log('🧪 Insights with stack_id details:', insightsWithStackId);
-            } else {
-                console.log('🧪 No insights have stack_id - this is the problem!');
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Backend debug test failed:', error);
-    }
-};
-
-// 调试函数 - 检查数据库中的stack_id状态
-window.debugStackInsights = async function(stackId) {
-    console.log(`🔍 Debugging stack insights for stack ${stackId}...`);
-    
-    try {
-        // 1. 检查API返回的数据
-        const insightsResponse = await api.getStackItems(stackId);
-        console.log('📡 Raw API response:', insightsResponse);
-        
-        if (insightsResponse.success && insightsResponse.data) {
-            const stackInsights = insightsResponse.data.items || insightsResponse.data.insights || insightsResponse.data;
-            console.log(`📦 Found ${stackInsights.length} insights from API:`, stackInsights);
-            
-            // 2. 检查每个insight的stack_id
-            stackInsights.forEach((insight, index) => {
-                console.log(`🔍 Insight ${index + 1}:`, {
-                    id: insight.id,
-                    title: insight.title,
-                    stack_id: insight.stack_id,
-                    stack_id_type: typeof insight.stack_id,
-                    expected_stack_id: stackId,
-                    expected_type: typeof stackId,
-                    matches: parseInt(insight.stack_id) === parseInt(stackId),
-                    strict_matches: insight.stack_id === stackId
-                });
-            });
-            
-            // 3. 检查验证逻辑
-                const validInsights = stackInsights.filter(insight => {
-                const belongsToStack = parseInt(insight.stack_id) === parseInt(stackId);
-                console.log(`🔍 Validation for ${insight.id}: stack_id=${insight.stack_id} (${typeof insight.stack_id}), expected=${stackId} (${typeof stackId}), valid=${belongsToStack}`);
-                return belongsToStack;
-            });
-            
-            console.log(`📊 Validation results: ${validInsights.length} valid out of ${stackInsights.length} total`);
-            
-            return {
-                total: stackInsights.length,
-                valid: validInsights.length,
-                insights: stackInsights,
-                validInsights: validInsights
-            };
-        } else {
-            console.error('❌ API response failed:', insightsResponse);
-            return null;
-        }
-    } catch (error) {
-        console.error('❌ Debug failed:', error);
-        return null;
-    }
-};
-
-// 调试函数 - 检查所有insights的stack_id
-window.debugAllInsights = async function() {
-    console.log('🔍 Debugging all insights...');
-    
-    try {
-        const response = await api.getInsightsPaginated(1, 50, null, '', true);
-        console.log('📡 All insights API response:', response);
-        
-        if (response.success && response.data) {
-            const insights = response.data.items || response.data.insights || [];
-            console.log(`📦 Found ${insights.length} total insights`);
-            
-            // 按stack_id分组
-            const byStackId = {};
-            insights.forEach(insight => {
-                const stackId = insight.stack_id;
-                if (!byStackId[stackId]) {
-                    byStackId[stackId] = [];
-                }
-                byStackId[stackId].push(insight);
-            });
-            
-            console.log('📊 Insights by stack_id:', byStackId);
-            
-            // 显示有stack_id的insights
-            Object.keys(byStackId).forEach(stackId => {
-                if (stackId !== 'null' && stackId !== null) {
-                    console.log(`📦 Stack ${stackId} has ${byStackId[stackId].length} insights:`, 
-                        byStackId[stackId].map(i => ({ id: i.id, title: i.title, stack_id: i.stack_id })));
-                }
-            });
-            
-            return byStackId;
-        }
-    } catch (error) {
-        console.error('❌ Debug all insights failed:', error);
-        return null;
-    }
-};
-
-// 测试函数 - 创建insight并立即验证stack_id
-window.testCreateAndVerify = async function() {
-    console.log('🧪 Testing create insight and verify stack_id...');
-    
-    if (!activeStackId) {
-        console.error('❌ No active stack. Please navigate to a stack first.');
-        return;
-    }
-    
-    const testData = {
-        url: `https://example.com/test-${Date.now()}`,
-        title: `Test Insight ${Date.now()}`,
-        thought: 'This is a test insight to verify stack_id storage',
-        stack_id: parseInt(activeStackId)  // Convert to integer for backend
-    };
-    
-    console.log('🧪 Creating insight with data:', testData);
-    console.log('🧪 Active stack ID type:', typeof activeStackId);
-    console.log('🧪 Active stack ID value:', activeStackId);
-    
-    try {
-        // 创建insight
-        const result = await api.createInsight(testData);
-        console.log('🧪 Creation result:', result);
-        
-        if (result.success && result.data) {
-            console.log('✅ Insight created successfully');
-            console.log('🔍 Created insight stack_id:', result.data.stack_id);
-            console.log('🔍 Created insight stack_id type:', typeof result.data.stack_id);
-            console.log('🔍 Expected stack_id:', activeStackId);
-            console.log('🔍 Expected stack_id type:', typeof activeStackId);
-            console.log('🔍 Stack_id matches:', result.data.stack_id === activeStackId);
-            console.log('🔍 Stack_id loose match:', result.data.stack_id == activeStackId);
-            
-            // 立即查询数据库验证
-            console.log('🧪 Verifying in database...');
-            const verifyResponse = await api.getInsightsPaginated(1, 5, null, '', true);
-            
-            if (verifyResponse.success && verifyResponse.data) {
-                const insights = verifyResponse.data.items || verifyResponse.data.insights || [];
-                const createdInsight = insights.find(i => i.id === result.data.id);
-                
-                if (createdInsight) {
-                    console.log('🔍 Database verification:');
-                    console.log('  - Insight found in database:', !!createdInsight);
-                    console.log('  - Database stack_id:', createdInsight.stack_id);
-                    console.log('  - Database stack_id type:', typeof createdInsight.stack_id);
-                    console.log('  - Expected stack_id:', activeStackId);
-                    console.log('  - Expected stack_id type:', typeof activeStackId);
-                    console.log('  - Stack_id strict match:', createdInsight.stack_id === activeStackId);
-                    console.log('  - Stack_id loose match:', createdInsight.stack_id == activeStackId);
-                    
-                    // Test if we can find it in stack items
-                    console.log('🧪 Testing stack items API...');
-                    const stackItemsResponse = await api.getStackItems(activeStackId);
-                    console.log('🧪 Stack items response:', stackItemsResponse);
-                    
-                    if (stackItemsResponse.success && stackItemsResponse.data) {
-                        const stackItems = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
-                        console.log('🧪 Stack items found:', stackItems.length);
-                        const foundInStack = stackItems.find(item => item.id === result.data.id);
-                        console.log('🧪 Found in stack items:', !!foundInStack);
-                        if (foundInStack) {
-                            console.log('🧪 Stack item stack_id:', foundInStack.stack_id);
-                            console.log('🧪 Stack item stack_id type:', typeof foundInStack.stack_id);
-                        }
-                    }
-                } else {
-                    console.error('❌ Created insight not found in database');
-                }
-            }
-        } else {
-            console.error('❌ Insight creation failed:', result);
-        }
-        
-    } catch (error) {
-        console.error('❌ Test failed:', error);
-    }
-};
-
-// 测试函数 - 直接测试API端点
-window.testApiDirectly = async function() {
-    console.log('🧪 Testing API endpoints directly...');
-    
-    if (!activeStackId) {
-        console.error('❌ No active stack. Please navigate to a stack first.');
-        return;
-    }
-    
-    console.log('🧪 Current stack ID:', activeStackId);
-    console.log('🧪 Current stack ID type:', typeof activeStackId);
-    
-    // Test 1: Check what the stack items API returns
-    console.log('🧪 Test 1: Checking stack items API...');
-    try {
-        const stackItemsResponse = await api.getStackItems(activeStackId);
-        console.log('🧪 Stack items response:', stackItemsResponse);
-        
-        if (stackItemsResponse.success && stackItemsResponse.data) {
-            const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
-            console.log('🧪 Current stack items:', items.length);
-            if (items.length > 0) {
-                console.log('🧪 First item stack_id:', items[0].stack_id);
-                console.log('🧪 First item stack_id type:', typeof items[0].stack_id);
-            }
-        }
-    } catch (error) {
-        console.error('❌ Stack items API error:', error);
-    }
-    
-    // Test 2: Create insight with different stack_id formats
-    console.log('🧪 Test 2: Testing different stack_id formats...');
-    const testCases = [
-        { name: 'Integer', stack_id: parseInt(activeStackId) },
-        { name: 'String', stack_id: activeStackId },
-        { name: 'Null', stack_id: null }
-    ].filter(test => test.stack_id !== null);
-    
-    for (const testCase of testCases) {
-        console.log(`🧪 Testing ${testCase.name}:`, testCase.stack_id);
-        
-        const testData = {
-            url: `https://example.com/test-${testCase.name}-${Date.now()}`,
-            title: `Test ${testCase.name} ${Date.now()}`,
-            thought: `Testing ${testCase.name} format`,
-            stack_id: testCase.stack_id
-        };
-        
-        try {
-            const result = await api.createInsight(testData);
-            console.log(`🧪 ${testCase.name} result:`, result);
-            
-            if (result.success && result.data) {
-                console.log(`✅ ${testCase.name} created successfully`);
-                console.log(`🔍 ${testCase.name} returned stack_id:`, result.data.stack_id);
-                console.log(`🔍 ${testCase.name} returned stack_id type:`, typeof result.data.stack_id);
-                
-                // Immediately check if it appears in stack items
-                const stackItemsResponse = await api.getStackItems(activeStackId);
-                if (stackItemsResponse.success && stackItemsResponse.data) {
-                    const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
-                    const found = items.find(item => item.id === result.data.id);
-                    console.log(`🔍 ${testCase.name} found in stack items:`, !!found);
-                    if (found) {
-                        console.log(`🔍 ${testCase.name} stack_id in items:`, found.stack_id);
-                    }
-                }
-            } else {
-                console.error(`❌ ${testCase.name} failed:`, result);
-            }
-        } catch (error) {
-            console.error(`❌ ${testCase.name} error:`, error);
-        }
-        
-        // Wait a bit between tests
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-};
-
-// 测试函数 - 检查后端API响应格式
-window.testBackendResponse = async function() {
-    console.log('🧪 Testing backend API response format...');
-    
-    if (!activeStackId) {
-        console.error('❌ No active stack. Please navigate to a stack first.');
-        return;
-    }
-    
-    // Test creating an insight and examine the full response
-    const testData = {
-        url: `https://example.com/backend-test-${Date.now()}`,
-        title: `Backend Test ${Date.now()}`,
-        thought: 'Testing backend response format',
-        stack_id: parseInt(activeStackId)
-    };
-    
-    console.log('🧪 Sending data to backend:', testData);
-    
-    try {
-        // Make the API call and capture the full response
-        const response = await fetch(`${API_CONFIG.API_BASE_URL}${API_CONFIG.INSIGHTS.CREATE}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${api.authToken}`
-            },
-            body: JSON.stringify(testData)
-        });
-        
-        console.log('🧪 Raw response status:', response.status);
-        console.log('🧪 Raw response headers:', Object.fromEntries(response.headers.entries()));
-        
-        const responseText = await response.text();
-        console.log('🧪 Raw response text:', responseText);
-        
-        let responseData;
-        try {
-            responseData = JSON.parse(responseText);
-            console.log('🧪 Parsed response data:', responseData);
-        } catch (e) {
-            console.error('❌ Failed to parse response as JSON:', e);
-            return;
-        }
-        
-        if (responseData.success && responseData.data) {
-            console.log('✅ Insight created via direct API call');
-            console.log('🔍 Created insight:', responseData.data);
-            console.log('🔍 Stack_id in response:', responseData.data.stack_id);
-            console.log('🔍 Stack_id type in response:', typeof responseData.data.stack_id);
-            
-            // Now test the stack items endpoint
-            console.log('🧪 Testing stack items endpoint...');
-            const stackItemsUrl = `${API_CONFIG.API_BASE_URL}${API_CONFIG.INSIGHTS.LIST}?stack_id=${activeStackId}`;
-            console.log('🧪 Stack items URL:', stackItemsUrl);
-            
-            const stackResponse = await fetch(stackItemsUrl, {
-                headers: {
-                    'Authorization': `Bearer ${api.authToken}`
-                }
-            });
-            
-            const stackResponseText = await stackResponse.text();
-            console.log('🧪 Stack items raw response:', stackResponseText);
-            
-            try {
-                const stackResponseData = JSON.parse(stackResponseText);
-                console.log('🧪 Stack items parsed response:', stackResponseData);
-                
-                if (stackResponseData.success && stackResponseData.data) {
-                    const items = stackResponseData.data.items || stackResponseData.data.insights || stackResponseData.data;
-                    console.log('🧪 Stack items found:', items.length);
-                    
-                    const found = items.find(item => item.id === responseData.data.id);
-                    console.log('🧪 New insight found in stack items:', !!found);
-                    if (found) {
-                        console.log('🧪 Found item stack_id:', found.stack_id);
-                        console.log('🧪 Found item stack_id type:', typeof found.stack_id);
-                    }
-                }
-            } catch (e) {
-                console.error('❌ Failed to parse stack response:', e);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Direct API test failed:', error);
-    }
-};
-
-// 测试函数 - 快速验证修复
-window.testFix = async function() {
-    console.log('🧪 Testing the fix for stack_id assignment...');
-    
-    if (!activeStackId) {
-        console.error('❌ No active stack. Please navigate to a stack first.');
-        return;
-    }
-    
-    const testData = {
-        url: `https://example.com/fix-test-${Date.now()}`,
-        title: `Fix Test ${Date.now()}`,
-        thought: 'Testing the stack_id fix',
-        stack_id: parseInt(activeStackId)  // Use integer format
-    };
-    
-    console.log('🧪 Creating insight with integer stack_id:', testData);
-    
-    try {
-        const result = await api.createInsight(testData);
-        console.log('🧪 Creation result:', result);
-        
-        if (result.success && result.data) {
-            console.log('✅ Insight created successfully');
-            console.log('🔍 Created insight stack_id:', result.data.stack_id);
-            console.log('🔍 Expected stack_id:', parseInt(activeStackId));
-            console.log('🔍 Stack_id matches:', result.data.stack_id === parseInt(activeStackId));
-            
-            // Check if it appears in stack items
-            const stackItemsResponse = await api.getStackItems(activeStackId);
-            if (stackItemsResponse.success && stackItemsResponse.data) {
-                const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
-                const found = items.find(item => item.id === result.data.id);
-                console.log('🔍 Found in stack items:', !!found);
-                if (found) {
-                    console.log('🔍 Stack item stack_id:', found.stack_id);
-                    console.log('🔍 Stack item stack_id type:', typeof found.stack_id);
-                }   
-            }
-        } else {
-            console.error('❌ Insight creation failed:', result);
-        }
-        
-    } catch (error) {
-        console.error('❌ Test failed:', error);
-    }
-};
-
-// 测试函数 - 验证stack过滤逻辑
-window.testStackFiltering = async function() {
-    console.log('🧪 Testing stack filtering logic...');
-    
-    if (!activeStackId) {
-        console.error('❌ No active stack. Please navigate to a stack first.');
-        return;
-    }
-    
-    console.log('🧪 Testing stack filtering for stack:', activeStackId);
-    console.log('🧪 Stack ID type:', typeof activeStackId);
-    
-    try {
-        const stackItemsResponse = await api.getStackItems(activeStackId);
-        console.log('🧪 Stack items response:', stackItemsResponse);
-        
-        if (stackItemsResponse.success && stackItemsResponse.data) {
-            const items = stackItemsResponse.data.items || stackItemsResponse.data.insights || stackItemsResponse.data;
-            console.log('🧪 Total items returned:', items.length);
-            
-            // Test the filtering logic
-            const validItems = items.filter(insight => parseInt(insight.stack_id) === parseInt(activeStackId));
-            console.log('🧪 Valid items after filtering:', validItems.length);
-            
-            items.forEach((item, index) => {
-                console.log(`🧪 Item ${index}:`, {
-                    id: item.id,
-                    title: item.title,
-                    stack_id: item.stack_id,
-                    stack_id_type: typeof item.stack_id,
-                    matches: parseInt(item.stack_id) === parseInt(activeStackId)
-                });
-            });
-        }
-    } catch (error) {
-        console.error('❌ Stack filtering test failed:', error);
-    }
-};
-
-// 测试函数 - 检查当前状态
-window.checkCurrentState = function() {
-    console.log('🧪 Checking current application state...');
-    console.log('🧪 viewMode:', viewMode);
-    console.log('🧪 activeStackId:', activeStackId);
-    console.log('🧪 activeStackId type:', typeof activeStackId);
-    console.log('🧪 viewMode === "stack":', viewMode === 'stack');
-    console.log('🧪 activeStackId truthy:', !!activeStackId);
-    console.log('🧪 Both conditions for stack assignment:', viewMode === 'stack' && activeStackId);
-    
-    if (viewMode === 'stack' && activeStackId) {
-        console.log('✅ Stack assignment conditions are met');
-        console.log('✅ Should assign stack_id:', parseInt(activeStackId));
-    } else {
-        console.log('❌ Stack assignment conditions NOT met');
-        if (viewMode !== 'stack') {
-            console.log('❌ Reason: viewMode is not "stack", it is:', viewMode);
-        }
-        if (!activeStackId) {
-            console.log('❌ Reason: activeStackId is falsy:', activeStackId);
-        }
-    }
-};
-
-// 测试AI摘要数据
-window.testAISummaryData = function() {
-    console.log('🧪 Testing AI Summary Data...');
-    
-    if (!currentInsights || currentInsights.length === 0) {
-        console.log('❌ No insights available for testing');
-        return;
-    }
-    
-    console.log('📊 Testing insights data structure:');
-    currentInsights.forEach((insight, index) => {
-        console.log(`\n🔍 Insight ${index + 1}:`, {
-            id: insight.id,
-            title: insight.title,
-            hasInsightContents: !!insight.insight_contents,
-            insightContentsLength: insight.insight_contents ? insight.insight_contents.length : 0
-        });
-        
-        if (insight.insight_contents && insight.insight_contents.length > 0) {
-            const content = insight.insight_contents[0];
-            console.log('  📝 Content data:', {
-                hasSummary: !!content.summary,
-                summaryLength: content.summary ? content.summary.length : 0,
-                summaryPreview: content.summary ? content.summary.substring(0, 100) + '...' : 'No summary',
-                hasThought: !!content.thought,
-                thoughtLength: content.thought ? content.thought.length : 0
-            });
-        } else {
-            console.log('  ❌ No insight_contents data found');
-        }
-    });
-    
-    // 测试API响应
-    console.log('\n🌐 Testing API response...');
-    api.getInsightsPaginated(1, 9, null, true)
-        .then(response => {
-            console.log('✅ API Response received:', response);
-            if (response.data && response.data.insights) {
-                console.log('📊 API insights count:', response.data.insights.length);
-                response.data.insights.forEach((insight, index) => {
-                    console.log(`API Insight ${index + 1}:`, {
-                        id: insight.id,
-                        title: insight.title,
-                        hasInsightContents: !!insight.insight_contents,
-                        insightContentsLength: insight.insight_contents ? insight.insight_contents.length : 0
-                    });
-                });
-            }
-        })
-        .catch(error => {
-            console.error('❌ API test failed:', error);
-        });
-};
-
-// 测试模态框摘要显示
-window.testModalSummaryDisplay = function() {
-    console.log('🧪 Testing Modal Summary Display...');
-    
-    if (!currentInsights || currentInsights.length === 0) {
-        console.log('❌ No insights available for testing');
-        return;
-    }
-    
-    // 找到第一个有insight_contents的insight
-    const insightWithContent = currentInsights.find(insight => 
-        insight.insight_contents && insight.insight_contents.length > 0
-    );
-    
-    if (!insightWithContent) {
-        console.log('❌ No insights with content data found');
-        return;
-    }
-    
-    console.log('✅ Found insight with content:', insightWithContent.title);
-    console.log('📝 Content data:', insightWithContent.insight_contents[0]);
-    
-    // 打开模态框进行测试
-    openContentDetailModal(insightWithContent);
-    
-    // 检查模态框中的摘要元素
-    setTimeout(() => {
-        const summaryElement = document.getElementById('summaryText');
-        if (summaryElement) {
-            console.log('✅ Summary element found:', summaryElement);
-            console.log('📝 Summary text content:', summaryElement.textContent);
-            console.log('📝 Summary innerHTML:', summaryElement.innerHTML);
-        } else {
-            console.log('❌ Summary element not found');
-        }
-    }, 100);
-};
-
-console.log('🧪 Test functions loaded. Available commands:');
-console.log('  - checkCurrentState() - Check current app state (viewMode, activeStackId)');
-console.log('  - testFix() - Quick test of the stack_id fix');
-console.log('  - testStackFiltering() - Test stack filtering logic');
-console.log('  - testStackIdFunctionality() - Test creating insight with stack_id');
-console.log('  - testDatabaseStackId() - Check database for stack_id values');
-console.log('  - testAISummaryData() - Test AI summary data structure and API response');
-console.log('  - testModalSummaryDisplay() - Test modal summary display functionality');
-console.log('  - testStackContent(stackId) - Check specific stack content');
-console.log('  - testBackendDebug() - Call backend debug endpoint');
-console.log('  - testCreateAndVerify() - Create insight and verify stack_id immediately');
-console.log('  - testApiDirectly() - Test API endpoints directly with different formats');
-console.log('  - testBackendResponse() - Test backend API response format directly');
 window.deleteTagInManagement = deleteTagInManagement;
 window.createNewTag = createNewTag;
 
@@ -5822,6 +3556,29 @@ let currentDetailInsight = null;
 
 
 // 打开内容详情模态框
+// Helper function to set modal image with fallback
+function setModalImage(url) {
+  const media = document.getElementById('modalMedia');
+  const img = document.getElementById('modalImage');
+
+  // reset previous state
+  media.classList.remove('no-image');
+  img.removeAttribute('src');
+
+  if (!url) {
+    media.classList.add('no-image');
+    return;
+  }
+
+  // optimistic set; swap to fallback if it errors
+  img.onload = () => media.classList.remove('no-image');
+  img.onerror = () => {
+    img.removeAttribute('src');
+    media.classList.add('no-image');
+  };
+  img.src = url;
+}
+
 function openContentDetailModal(insight) {
     currentDetailInsight = insight;
     const modal = document.getElementById('contentDetailModal');
@@ -5831,7 +3588,10 @@ function openContentDetailModal(insight) {
     }
     
     // 填充模态框内容
-        populateModalContent(insight);
+    populateModalContent(insight);
+    
+    // Set the modal image
+    setModalImage(insight.image_url || insight.thumbnail || insight.ogImage || '');
     
     // 显示模态框
     modal.style.display = 'flex';
@@ -5840,7 +3600,7 @@ function openContentDetailModal(insight) {
     modal.classList.add('show');
     
     // 防止页面滚动
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('modal-open');
 }
 
 // 关闭内容详情模态框
@@ -5852,7 +3612,7 @@ function closeContentDetailModal() {
     
     setTimeout(() => {
         modal.style.display = 'none';
-        document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
         currentDetailInsight = null;
     }, 300);
 }
@@ -5860,79 +3620,40 @@ function closeContentDetailModal() {
 // 填充模态框内容
 function populateModalContent(insight) {
     
-    // 调试：打印insight数据结构
-    console.log('🔍 DEBUG: populateModalContent called with insight:', insight);
-    console.log('🔍 DEBUG: insight.insight_contents:', insight.insight_contents);
-    if (insight.insight_contents && insight.insight_contents.length > 0) {
-        console.log('🔍 DEBUG: First insight_contents item:', insight.insight_contents[0]);
-        console.log('🔍 DEBUG: Summary from insight_contents:', insight.insight_contents[0].summary);
-    }
-    
     // 标题
     const titleElement = document.getElementById('modalContentTitle');
     if (titleElement) {
         titleElement.textContent = insight.title || new URL(insight.url).hostname;
     }
     
-    // 图片处理
-    const modalImage = document.getElementById('modalImage');
-    const modalMedia = document.getElementById('modalMedia');
-    
-    if (modalImage && modalMedia) {
+    // 图片占位符
+    const imageContainer = document.getElementById('modalImagePlaceholder');
+    if (imageContainer) {
+        imageContainer.innerHTML = '';
+        
         if (insight.image_url) {
-            modalImage.src = insight.image_url;
-            modalImage.alt = insight.title || 'Content image';
-            modalImage.style.display = 'block';
-            modalMedia.classList.remove('no-image');
-            
-            modalImage.onerror = function() {
-                modalImage.style.display = 'none';
-                modalMedia.classList.add('no-image');
+            const img = document.createElement('img');
+            img.src = insight.image_url;
+            img.alt = insight.title || 'Content image';
+            img.onerror = function() {
+                imageContainer.innerHTML = '<span>No image available</span>';
             };
+            imageContainer.appendChild(img);
         } else {
-            modalImage.style.display = 'none';
-            modalMedia.classList.add('no-image');
+            imageContainer.innerHTML = '<span>No image available</span>';
         }
     }
     
-    // 用户评论 - 从insight_contents表中获取thought字段
-    const commentElement = document.getElementById('commentDisplay');
+    // 用户评论
+    const commentElement = document.getElementById('modalCommentText');
     if (commentElement) {
-        // 优先从insight_contents中获取thought，如果没有则使用insight.thought作为后备
-        let thought = null;
-        if (insight.insight_contents && insight.insight_contents.length > 0) {
-            thought = insight.insight_contents[0].thought;
-        }
-        thought = thought || insight.thought; // 后备方案
-        commentElement.textContent = thought || 'No comment added yet.';
+        commentElement.textContent = insight.thought || 'No comment added yet.';
     }
     
     // 填充评论编辑表单
-    const commentTextarea = document.getElementById('commentTextarea');
+    const commentTextarea = document.getElementById('commentEditTextarea');
     if (commentTextarea) {
-        // 优先从insight_contents中获取thought，如果没有则使用insight.thought作为后备
-        let thought = null;
-        if (insight.insight_contents && insight.insight_contents.length > 0) {
-            thought = insight.insight_contents[0].thought;
-        }
-        thought = thought || insight.thought; // 后备方案
-        commentTextarea.value = thought || '';
-    }
-    
-    // 填充AI摘要
-    const summaryText = document.getElementById('summaryText');
-    if (summaryText) {
-        // 获取summary，优先从insight_contents中获取
-        let summary = null;
-        if (insight.insight_contents && insight.insight_contents.length > 0) {
-            summary = insight.insight_contents[0].summary;
-        }
-        
-        if (summary) {
-            summaryText.textContent = summary;
-        } else {
-            summaryText.textContent = 'AI summary is being generated...';
-        }
+        commentTextarea.value = insight.thought || '';
     }
     
     // 填充AI摘要日期
@@ -5946,6 +3667,17 @@ function populateModalContent(insight) {
         aiSummaryDate.textContent = date;
     }
     
+            // 绑定编辑标签按钮事件
+        const editTagsBtn = document.getElementById('modalEditTagsBtn');
+        if (editTagsBtn) {
+            // Remove any existing event listeners
+            editTagsBtn.onclick = null;
+            // Add new event listener
+            editTagsBtn.onclick = () => {
+                closeContentDetailModal(); // Close current modal first
+                openTagEditModal(insight);  // Open tag edit modal
+            };
+        }
     
     // 更新标签显示
     const projectTag = document.querySelector('.project-tag');
@@ -6265,9 +3997,6 @@ function setupModalActions(insight) {
     // 设置评论编辑功能
     setupCommentEditing();
     
-    // 设置标题编辑功能
-    setupTitleEditing();
-    
     // Note: Share button removed from user info section
     
     // 设置分享我的空间按钮
@@ -6279,6 +4008,14 @@ function setupModalActions(insight) {
         };
     }
     
+    // 设置编辑标签按钮
+    const editTagsBtn = document.querySelector('.edit-tags-btn');
+    if (editTagsBtn) {
+        editTagsBtn.onclick = () => {
+            // TODO: Implement edit tags functionality
+            console.log('Edit Tags clicked');
+        };
+    }
 }
 
 // 更新页面缓存中的洞察数据
@@ -6301,70 +4038,23 @@ function updatePageCacheWithInsight(insightId, updateData) {
 // 设置评论编辑功能
 function setupCommentEditing() {
     const editCommentBtn = document.getElementById('editCommentBtn');
-    const commentDisplay = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
+    const commentContent = document.getElementById('modalCommentContent');
+    const commentEditForm = document.getElementById('commentEditForm');
+    const saveCommentBtn = document.getElementById('saveCommentBtn');
+    const cancelCommentBtn = document.getElementById('cancelCommentBtn');
+    const commentTextarea = document.getElementById('commentEditTextarea');
     
-    if (!editCommentBtn || !commentDisplay || !commentTextarea) return;
-    
-    // 移除现有的事件监听器（防止重复添加）
-    const newEditBtn = editCommentBtn.cloneNode(true);
-    editCommentBtn.parentNode.replaceChild(newEditBtn, editCommentBtn);
-    
-    // 重新获取按钮引用
-    const freshEditBtn = document.getElementById('editCommentBtn');
+    if (!editCommentBtn || !commentContent || !commentEditForm) return;
     
     // 编辑按钮点击事件
-    freshEditBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // 如果当前是编辑模式，则保存
-        if (freshEditBtn.textContent === 'Save') {
-            saveComment();
-            return;
-        }
-        
-        // 防止重复进入编辑模式
-        if (isCommentEditing) {
-            console.log('⚠️ Already in editing mode, ignoring click');
-            return;
-        }
-        
-        console.log('🖱️ Entering edit mode...');
-        
-        // 进入编辑模式
-        commentDisplay.style.display = 'none';
-        commentTextarea.style.display = 'block';
+    editCommentBtn.addEventListener('click', () => {
+        commentContent.style.display = 'none';
+        commentEditForm.style.display = 'block';
         commentTextarea.focus();
-        
-        // 设置编辑模式标志
-        isCommentEditing = true;
-        
-        // 更新按钮文本
-        freshEditBtn.textContent = 'Save';
-        
-        // 添加取消按钮
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'ghost-btn';
-        cancelBtn.textContent = 'Cancel';
-        cancelBtn.style.marginLeft = '8px';
-        cancelBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            cancelComment();
-        });
-        freshEditBtn.parentNode.appendChild(cancelBtn);
     });
     
-    // 保存评论函数
-    async function saveComment() {
-        // 防止重复保存
-        if (isCommentEditing === false) {
-            console.log('⚠️ Not in editing mode, ignoring save');
-            return;
-        }
-        
-        console.log('💾 Saving comment...');
+    // 保存按钮点击事件
+    saveCommentBtn.addEventListener('click', async () => {
         const newComment = commentTextarea.value.trim();
         
         try {
@@ -6381,31 +4071,21 @@ function setupCommentEditing() {
                 return;
             }
             
-            console.log('📡 Calling API to update comment...');
-            
             // 调用API更新评论
             const response = await api.updateInsight(currentInsight.id, { 
                 thought: newComment 
             });
             
             if (response.success) {
-                console.log('✅ Comment saved successfully via API');
-                
                 // 更新显示的评论
-                commentDisplay.textContent = newComment || 'No comment added yet.';
+                const commentText = document.getElementById('modalCommentText');
+                if (commentText) {
+                    commentText.textContent = newComment || 'No comment added yet.';
+                }
                 
-                // 更新本地数据 - 同时更新insight_contents和thought字段
+                // 更新本地数据
                 if (currentInsight) {
                     currentInsight.thought = newComment;
-                    // 确保insight_contents数组存在
-                    if (!currentInsight.insight_contents) {
-                        currentInsight.insight_contents = [{}];
-                    }
-                    if (currentInsight.insight_contents.length === 0) {
-                        currentInsight.insight_contents = [{}];
-                    }
-                    // 更新thought字段
-                    currentInsight.insight_contents[0].thought = newComment;
                 }
                 
                 // 更新全局insights数组
@@ -6413,35 +4093,7 @@ function setupCommentEditing() {
                     const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
                     if (insightIndex !== -1) {
                         window.currentInsights[insightIndex].thought = newComment;
-                        // 确保insight_contents数组存在
-                        if (!window.currentInsights[insightIndex].insight_contents) {
-                            window.currentInsights[insightIndex].insight_contents = [{}];
-                        }
-                        if (window.currentInsights[insightIndex].insight_contents.length === 0) {
-                            window.currentInsights[insightIndex].insight_contents = [{}];
-                        }
-                        // 更新thought字段
-                        window.currentInsights[insightIndex].insight_contents[0].thought = newComment;
                     }
-                }
-                
-                // 更新stacks中的insight数据
-                if (stacks) {
-                    stacks.forEach(stack => {
-                        const insightIndex = stack.cards.findIndex(card => card.id === currentInsight.id);
-                        if (insightIndex !== -1) {
-                            stack.cards[insightIndex].thought = newComment;
-                            // 确保insight_contents数组存在
-                            if (!stack.cards[insightIndex].insight_contents) {
-                                stack.cards[insightIndex].insight_contents = [{}];
-                            }
-                            if (stack.cards[insightIndex].insight_contents.length === 0) {
-                                stack.cards[insightIndex].insight_contents = [{}];
-                            }
-                            // 更新thought字段
-                            stack.cards[insightIndex].insight_contents[0].thought = newComment;
-                        }
-                    });
                 }
                 
                 // 更新页面缓存
@@ -6457,192 +4109,22 @@ function setupCommentEditing() {
         }
         
         // 切换回显示模式
-        commentDisplay.style.display = 'block';
-        commentTextarea.style.display = 'none';
-        freshEditBtn.textContent = 'Edit';
-        
-        // 清除编辑模式标志
-        isCommentEditing = false;
-        
-        // 移除取消按钮
-        const cancelBtn = freshEditBtn.parentNode.querySelector('.ghost-btn:last-child');
-        if (cancelBtn && cancelBtn.textContent === 'Cancel') {
-            cancelBtn.remove();
-        }
-    }
-    
-    // 取消评论函数
-    function cancelComment() {
-        console.log('❌ Canceling comment edit...');
-        
-        // 恢复原始内容
-        commentTextarea.value = commentDisplay.textContent;
-        
-        // 切换回显示模式
-        commentDisplay.style.display = 'block';
-        commentTextarea.style.display = 'none';
-        freshEditBtn.textContent = 'Edit';
-        
-        // 清除编辑模式标志
-        isCommentEditing = false;
-        
-        // 移除取消按钮
-        const cancelBtn = freshEditBtn.parentNode.querySelector('.ghost-btn:last-child');
-        if (cancelBtn && cancelBtn.textContent === 'Cancel') {
-            cancelBtn.remove();
-        }
-    }
-    
-}
-
-// 设置标题编辑功能
-function setupTitleEditing() {
-    const editTitleBtn = document.getElementById('editTitleBtn');
-    const titleElement = document.getElementById('modalContentTitle');
-    const titleContainer = document.querySelector('.title-with-edit');
-    
-    if (!editTitleBtn || !titleElement || !titleContainer) return;
-    
-    // 编辑按钮点击事件
-    editTitleBtn.addEventListener('click', () => {
-        enterTitleEditMode();
+        commentContent.style.display = 'flex';
+        commentEditForm.style.display = 'none';
     });
     
-    // 进入标题编辑模式
-    function enterTitleEditMode() {
-        const currentTitle = titleElement.textContent;
-        
-        // 添加编辑模式类
-        titleContainer.classList.add('title-edit-mode');
-        
-        // 创建输入框
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'title-edit-input';
-        input.value = currentTitle;
-        input.id = 'titleEditInput';
-        
-        // 创建操作按钮容器
-        const actionsContainer = document.createElement('div');
-        actionsContainer.className = 'title-edit-actions';
-        
-        // 创建保存按钮
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'title-edit-save';
-        saveBtn.innerHTML = '✓';
-        saveBtn.title = 'Save';
-        saveBtn.addEventListener('click', () => saveTitleEdit(input.value.trim()));
-        
-        // 创建取消按钮
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'title-edit-cancel';
-        cancelBtn.innerHTML = '✕';
-        cancelBtn.title = 'Cancel';
-        cancelBtn.addEventListener('click', () => cancelTitleEdit());
-        
-        // 添加按钮到容器
-        actionsContainer.appendChild(saveBtn);
-        actionsContainer.appendChild(cancelBtn);
-        
-        // 插入输入框和按钮
-        titleContainer.appendChild(input);
-        titleContainer.appendChild(actionsContainer);
-        
-        // 聚焦并选中文本
-        input.focus();
-        input.select();
-        
-        // 添加键盘事件监听
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveTitleEdit(input.value.trim());
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                cancelTitleEdit();
-            }
-        });
-    }
-    
-    // 保存标题编辑
-    async function saveTitleEdit(newTitle) {
-        if (!newTitle) {
-            showErrorMessage('Title cannot be empty');
-            return;
+    // 取消按钮点击事件
+    cancelCommentBtn.addEventListener('click', () => {
+        // 恢复原始内容
+        const commentText = document.getElementById('modalCommentText');
+        if (commentText) {
+            commentTextarea.value = commentText.textContent;
         }
         
-        try {
-            // 检查认证状态
-            if (!auth.checkAuth()) {
-                showErrorMessage('Please log in to update content');
-                return;
-            }
-            
-            // 获取当前洞察的ID
-            const currentInsight = currentDetailInsight;
-            if (!currentInsight || !currentInsight.id) {
-                showErrorMessage('Unable to identify content to update');
-                return;
-            }
-            
-            // 调用API更新标题
-            const response = await api.updateInsight(currentInsight.id, { 
-                title: newTitle 
-            });
-            
-            if (response.success) {
-                // 更新显示的标题
-                titleElement.textContent = newTitle;
-                
-                // 更新本地数据
-                if (currentInsight) {
-                    currentInsight.title = newTitle;
-                }
-                
-                // 更新全局insights数组
-                if (window.currentInsights) {
-                    const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
-                    if (insightIndex !== -1) {
-                        window.currentInsights[insightIndex].title = newTitle;
-                    }
-                }
-                
-                // 更新页面缓存
-                updatePageCacheWithInsight(currentInsight.id, { title: newTitle });
-                
-                // 重新渲染页面以更新卡片标题
-                renderInsights();
-                
-                showSuccessMessage('Title updated successfully!');
-            } else {
-                showErrorMessage(response.message || 'Failed to update title');
-            }
-        } catch (error) {
-            console.error('Error updating title:', error);
-            showErrorMessage('Failed to update title. Please try again.');
-        }
-        
-        // 退出编辑模式
-        exitTitleEditMode();
-    }
-    
-    // 取消标题编辑
-    function cancelTitleEdit() {
-        exitTitleEditMode();
-    }
-    
-    // 退出标题编辑模式
-    function exitTitleEditMode() {
-        // 移除编辑模式类
-        titleContainer.classList.remove('title-edit-mode');
-        
-        // 移除输入框和操作按钮
-        const input = document.getElementById('titleEditInput');
-        const actionsContainer = titleContainer.querySelector('.title-edit-actions');
-        
-        if (input) input.remove();
-        if (actionsContainer) actionsContainer.remove();
-    }
+        // 切换回显示模式
+        commentContent.style.display = 'flex';
+        commentEditForm.style.display = 'none';
+    });
 }
 
 // 绑定模态框事件监听器
@@ -6684,7 +4166,7 @@ function bindEditModeEvents() {
 }
 
 function toggleEditMode() {
-    isEditMode = !isEditMode;
+            isEditMode = !isEditMode;
     const editModeBtn = document.getElementById('editModeBtn');
     const editBtnText = editModeBtn.querySelector('.edit-btn-text');
     
@@ -6694,11 +4176,8 @@ function toggleEditMode() {
         editBtnText.textContent = 'Done';
         document.body.classList.add('edit-mode');
         
-        // Add template card at the front
-        addTemplateCard();
-        
-        // Add shaking animation to all content cards (excluding template)
-        const contentCards = document.querySelectorAll('.content-card:not(.template-card)');
+        // Add shaking animation to all content cards
+        const contentCards = document.querySelectorAll('.content-card');
         contentCards.forEach(card => {
             card.classList.add('shake');
         });
@@ -6708,231 +4187,11 @@ function toggleEditMode() {
         editBtnText.textContent = 'Edit';
         document.body.classList.remove('edit-mode');
         
-        // Remove template card
-        removeTemplateCard();
-        
         // Remove shaking animation from all content cards
         const contentCards = document.querySelectorAll('.content-card');
         contentCards.forEach(card => {
             card.classList.remove('shake');
         });
-    }
-}
-
-// Add template card for adding new content in edit mode
-function addTemplateCard() {
-    const contentCards = document.getElementById('contentCards');
-    if (!contentCards) return;
-    
-    // Check if template card already exists
-    if (contentCards.querySelector('.template-card')) return;
-    
-    // Create template card
-    const templateCard = document.createElement('div');
-    templateCard.className = 'content-card template-card';
-    templateCard.innerHTML = `
-        <div class="template-card-content">
-            <div class="template-card-icon">
-                <svg width="72" height="72" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-            <div class="template-card-text">
-                <h3>Add New Content</h3>
-                <p>Click to add a new insight or create a stack</p>
-                <div class="template-card-options">
-                    <span class="template-option">📄 Insight</span>
-                    <span class="template-option">📚 Stack</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Insert at the beginning
-    contentCards.insertBefore(templateCard, contentCards.firstChild);
-    
-    // Add click event to show creation options
-    templateCard.addEventListener('click', () => {
-        showCreationOptionsModal();
-    });
-}
-
-// Remove template card when exiting edit mode
-function removeTemplateCard() {
-    const templateCard = document.querySelector('.template-card');
-    if (templateCard) {
-        templateCard.remove();
-    }
-}
-
-// Show modal with options to create card or stack
-function showCreationOptionsModal() {
-    // Create modal overlay
-    const modalOverlay = document.createElement('div');
-    modalOverlay.className = 'modal-overlay creation-options-modal';
-    modalOverlay.innerHTML = `
-        <div class="modal-content creation-options-content">
-            <div class="modal-header">
-                <h2>Create New</h2>
-                <button class="modal-close-btn" id="closeCreationOptionsModal">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="creation-options">
-                    <div class="creation-option" id="createCardOption">
-                        <div class="creation-option-icon">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                        <div class="creation-option-content">
-                            <h3>Content Card</h3>
-                            <p>Create a single content card with a link, title, and description</p>
-                        </div>
-                    </div>
-                    
-                    <div class="creation-option" id="createStackOption">
-                        <div class="creation-option-icon">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                                <rect x="7" y="7" width="10" height="10" rx="1" ry="1" stroke="currentColor" stroke-width="2"/>
-                                <path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-                            </svg>
-                        </div>
-                        <div class="creation-option-content">
-                            <h3>Stack</h3>
-                            <p>Create an empty stack to organize multiple content cards</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modalOverlay);
-    
-    // Add event listeners
-    const closeBtn = document.getElementById('closeCreationOptionsModal');
-    const createCardOption = document.getElementById('createCardOption');
-    const createStackOption = document.getElementById('createStackOption');
-    
-    closeBtn.addEventListener('click', hideCreationOptionsModal);
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-            hideCreationOptionsModal();
-        }
-    });
-    
-    createCardOption.addEventListener('click', () => {
-        hideCreationOptionsModal();
-        showAddContentModal();
-    });
-    
-    createStackOption.addEventListener('click', () => {
-        hideCreationOptionsModal();
-        createEmptyStack();
-    });
-}
-
-// Hide creation options modal
-function hideCreationOptionsModal() {
-    const modal = document.querySelector('.creation-options-modal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Create an empty stack
-async function createEmptyStack() {
-    try {
-        const stackData = {
-            name: 'New Stack',
-            description: 'A new stack for organizing content',
-            items: []
-        };
-        
-        console.log('Creating empty stack with data:', stackData);
-        const response = await api.createStack(stackData);
-        console.log('Stack creation response:', response);
-        
-        if (response && response.success) {
-            // Register the new stack in the stacks Map
-            const stackId = response.data.id;
-            const newStackData = {
-                id: stackId,
-                name: response.data.name,
-                description: response.data.description,
-                cards: [], // Use 'cards' for consistency
-                createdAt: response.data.created_at,
-                modifiedAt: response.data.updated_at,
-                isExpanded: false // Initialize expansion state
-            };
-            
-            stacks.set(String(stackId), newStackData);
-            
-            // Save to localStorage immediately
-            saveStacksToLocalStorage();
-            
-            // Re-render the insights
-            renderInsights();
-            
-            // Show success message
-            showNotification('Empty stack created successfully!', 'success');
-        } else {
-            // Fallback: Create a local stack if API fails
-            console.warn('API createStack failed, creating local stack:', response);
-            const stackId = 'local-stack-' + Date.now();
-            const localStackData = {
-                id: stackId,
-                name: stackData.name,
-                description: stackData.description,
-                cards: [], // Use 'cards' for consistency
-                createdAt: new Date().toISOString(),
-                modifiedAt: new Date().toISOString(),
-                isLocal: true, // Mark as local for debugging
-                isExpanded: false // Initialize expansion state
-            };
-            
-            stacks.set(String(stackId), localStackData);
-            
-            // Save to localStorage immediately
-            saveStacksToLocalStorage();
-            
-            renderInsights();
-            
-            showNotification('Stack created locally (API endpoint not available)', 'warning');
-        }
-    } catch (error) {
-        console.error('Error creating empty stack:', error);
-        
-        // Fallback: Create a local stack if API completely fails
-        console.warn('API completely failed, creating local stack');
-        const stackId = 'local-stack-' + Date.now();
-        const localStackData = {
-            id: stackId,
-            name: 'New Stack',
-            description: 'A new stack for organizing content',
-            cards: [], // Use 'cards' for consistency
-            createdAt: new Date().toISOString(),
-            modifiedAt: new Date().toISOString(),
-            isLocal: true // Mark as local for debugging
-        };
-        
-        stacks.set(String(stackId), localStackData);
-        
-        // Save to localStorage immediately
-        saveStacksToLocalStorage();
-        
-        renderInsights();
-        
-        showNotification('Stack created locally (API unavailable)', 'warning');
     }
 }
 
@@ -6965,57 +4224,20 @@ function getSourceName(url) {
 
 // Function to update edit mode state when content cards are re-rendered
 function updateEditModeState() {
-    const editModeBtn = document.getElementById('editModeBtn');
-    const editBtnText = editModeBtn ? editModeBtn.querySelector('.edit-btn-text') : null;
-    
     if (isEditMode) {
-        // Add template card if it doesn't exist
-        const existingTemplateCard = document.querySelector('.template-card');
-        if (!existingTemplateCard) {
-            addTemplateCard();
-        }
-        
-        // Add shake animation to all content cards (excluding template)
-        const contentCards = document.querySelectorAll('.content-card:not(.template-card)');
+        const contentCards = document.querySelectorAll('.content-card');
         contentCards.forEach(card => {
             card.classList.add('shake');
         });
-        
-        // Update button text and state
-        if (editModeBtn && editBtnText) {
-            editModeBtn.classList.add('active');
-            editBtnText.textContent = 'Done';
-        }
-    } else {
-        // Remove template card when not in edit mode
-        const templateCard = document.querySelector('.template-card');
-        if (templateCard) {
-            templateCard.remove();
-        }
-        
-        // Update button text and state
-        if (editModeBtn && editBtnText) {
-            editModeBtn.classList.remove('active');
-            editBtnText.textContent = 'Edit';
-        }
     }
 }
 
 // Setup drag and drop functionality for a card
 function setupCardDragAndDrop(card, insight) {
-    // Only enable drag in edit mode and only for individual insight cards (not stack cards)
+    // Only enable drag in edit mode
     card.addEventListener('mousedown', (e) => {
-        if (!isEditMode || e.target.closest('.content-card-delete-btn') || card.classList.contains('stack-card')) {
+        if (!isEditMode || e.target.closest('.content-card-delete-btn')) {
             return;
-        }
-        
-        // Check if this insight is already in a stack
-        const insightInStack = Array.from(stacks.values()).some(stack => 
-            stack.cards.some(card => card.id === insight.id)
-        );
-        
-        if (insightInStack) {
-            return; // Don't allow dragging cards that are already in stacks
         }
         
         e.preventDefault();
@@ -7024,17 +4246,8 @@ function setupCardDragAndDrop(card, insight) {
     
     // Touch events for mobile
     card.addEventListener('touchstart', (e) => {
-        if (!isEditMode || e.target.closest('.content-card-delete-btn') || card.classList.contains('stack-card')) {
+        if (!isEditMode || e.target.closest('.content-card-delete-btn')) {
             return;
-        }
-        
-        // Check if this insight is already in a stack
-        const insightInStack = Array.from(stacks.values()).some(stack => 
-            stack.cards.some(card => card.id === insight.id)
-        );
-        
-        if (insightInStack) {
-            return; // Don't allow dragging cards that are already in stacks
         }
         
         e.preventDefault();
@@ -7058,7 +4271,6 @@ function startDrag(card, event) {
     // Create ghost element
     const ghost = card.cloneNode(true);
     ghost.classList.add('drag-ghost');
-    ghost.classList.remove('dragging'); // Remove dragging class from ghost
     ghost.style.position = 'fixed';
     ghost.style.pointerEvents = 'none';
     ghost.style.zIndex = '10000';
@@ -7098,13 +4310,11 @@ function handleDragMove(e) {
 
 // Update ghost position
 function updateGhostPosition(ghost, event) {
-    const left = (event.clientX - dragOffset.x) + 'px';
-    const top = (event.clientY - dragOffset.y) + 'px';
-    ghost.style.left = left;
-    ghost.style.top = top;
+    ghost.style.left = (event.clientX - dragOffset.x) + 'px';
+    ghost.style.top = (event.clientY - dragOffset.y) + 'px';
 }
 
-// Check if dragging over a stack for joining
+// Check if dragging over another card for stack creation
 function checkForStackHover(event) {
     // Temporarily hide the ghost to get element below
     const ghost = document.querySelector('.drag-ghost');
@@ -7118,22 +4328,21 @@ function checkForStackHover(event) {
         elementBelow = document.elementFromPoint(event.clientX, event.clientY);
     }
     
-    // Only allow dropping on existing stacks (not individual cards)
-    const targetStack = elementBelow?.closest('.content-card.stack-card:not(.dragging)');
+    const targetCard = elementBelow?.closest('.content-card:not(.dragging):not(.stack-card)');
     
-    if (targetStack && targetStack !== draggedCard) {
+    if (targetCard && targetCard !== draggedCard) {
         // Clear previous timeout
         if (stackHoverTimeout) {
             clearTimeout(stackHoverTimeout);
         }
         
         // Add hover effect
-        targetStack.classList.add('stack-hover');
+        targetCard.classList.add('stack-hover');
         
-        // Set timeout for joining stack
+        // Set timeout for stack creation
         stackHoverTimeout = setTimeout(() => {
-            joinStack(draggedCard, targetStack);
-        }, 1000); // 1 second hover time
+            createStack(draggedCard, targetCard);
+        }, 1500); // 1.5 seconds hover time
         
     } else {
         // Clear hover effects
@@ -7184,75 +4393,88 @@ function handleDragEnd(e) {
     draggedCard = null;
 }
 
-// Join an insight to an existing stack
-async function joinStack(card, targetStack) {
-    // Get insight data for the card being dragged
-    const insight = getInsightById(card.dataset.insightId);
-    const stackId = targetStack.dataset.stackId;
+// Create a stack from two cards
+async function createStack(card1, card2) {
     
-    if (!insight) {
-        console.error('❌ Cannot find insight data for card');
-        return;
-    }
+    // Get insight data for both cards (moved outside try block for scope)
+    const insight1 = getInsightById(card1.dataset.insightId);
+    const insight2 = getInsightById(card2.dataset.insightId);
     
-    if (!stackId) {
-        console.error('❌ Cannot find stack ID for target stack');
+    if (!insight1 || !insight2) {
+        console.error('❌ Cannot find insight data for cards');
         return;
     }
     
     try {
-        // Check if insight is already in a stack
-        const insightInStack = Array.from(stacks.values()).some(stack => 
-            stack.cards.some(card => card.id === insight.id)
+        // Check if either insight is already in a stack (one-to-one constraint)
+        const insight1InStack = Array.from(stacks.values()).some(stack => 
+            stack.cards.some(card => card.id === insight1.id)
         );
-
-        if (insightInStack) {
-            showErrorMessage('This card is already in a stack. Each card can only be in one stack.');
+        const insight2InStack = Array.from(stacks.values()).some(stack => 
+            stack.cards.some(card => card.id === insight2.id)
+        );
+        
+        if (insight1InStack || insight2InStack) {
+            showErrorMessage('One or both cards are already in a stack. Each card can only be in one stack.');
             return;
         }
         
-        // Get the target stack data (stackId is already a string from dataset)
-        const targetStackData = stacks.get(stackId);
-        if (!targetStackData) {
-            console.error('❌ Cannot find target stack data for stackId:', stackId);
-            console.error('Available stack IDs:', Array.from(stacks.keys()));
-            return;
-        }
+        // Generate a unique stack ID locally
+        const stackId = `stack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        // Add insight to the stack via API
-        // Convert stackId to integer since database expects integer type
-        const response = await api.addItemToStack(parseInt(stackId), insight.id);
+        // Add insights to the stack via insights API (using stack_id field)
+        const updatePromises = [
+            api.addItemToStack(stackId, insight1.id),
+            api.addItemToStack(stackId, insight2.id)
+        ];
         
-        if (response.success) {
-            // Update the insight's stack_id to reflect it's now in a stack
-            insight.stack_id = parseInt(stackId);
+        const responses = await Promise.all(updatePromises);
+        
+        // Check if all updates were successful
+        const allSuccessful = responses.every(response => response.success);
+        
+        if (allSuccessful) {
+            // Create local stack data
+            const localStackData = {
+                id: stackId,
+                name: 'Stack',
+                cards: [insight1, insight2],
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                isExpanded: false
+            };
             
-            // Also update the insight in allInsightsForFiltering if it exists
-            if (window.allInsightsForFiltering) {
-                const insightInGlobalArray = window.allInsightsForFiltering.find(i => i.id === insight.id);
-                if (insightInGlobalArray) {
-                    insightInGlobalArray.stack_id = parseInt(stackId);
-                }
-            }
+            // Add to local stacks collection
+            stacks.set(stackId, localStackData);
             
-            // Update local stack data
-            targetStackData.cards.push(insight);
-            targetStackData.modifiedAt = new Date().toISOString();
-            
-            // Update the stacks Map
-            stacks.set(String(stackId), targetStackData);
-            
-            // Remove card from currentInsights to avoid duplicates
-            currentInsights = currentInsights.filter(currentInsight => 
-                currentInsight.id !== insight.id
+            // Remove cards from currentInsights to avoid duplicates
+            // (This is safe because of one-to-one constraint)
+            currentInsights = currentInsights.filter(insight => 
+                insight.id !== insight1.id && 
+                insight.id !== insight2.id
             );
             
-            // Immediately remove the original card from the DOM
-            card.remove();
+            // Update stackIdCounter
+            stackIdCounter = Math.max(stackIdCounter, parseInt(stackId.split('_')[1]) + 1);
+            
+            // Ensure stacks can be saved by setting the flag
+            hasLoadedStacksOnce = true;
             
             // Save to localStorage for persistence
             saveStacksToLocalStorage();
             saveInsightsToLocalStorage({ force: true });
+            
+            // Also try to create the stack in the backend database
+            try {
+                const stackCreateResponse = await api.createStack({
+                    id: stackId,
+                    name: 'Stack',
+                    created_at: localStackData.createdAt,
+                    modified_at: localStackData.modifiedAt
+                });
+            } catch (stackCreateError) {
+                console.warn('⚠️ Failed to create stack in backend database (this is OK, stack_id approach still works):', stackCreateError);
+            }
             
             // Invalidate ALL page caches since pagination has changed
             pageCache.clear();
@@ -7267,31 +4489,65 @@ async function joinStack(card, targetStack) {
             // Update pagination counts
             updatePaginationCounts();
             
-            // Update the display to reflect the removed card
-            // Only re-render if we're not in stack view mode
-            if (viewMode !== 'stack') {
-                // Force a complete re-render to ensure the card is properly removed
-                renderInsights();
-            }
+            // Refill page 1 using the over-fetch rule
+            console.log('🔄 About to refill page 1 after stack creation...');
+            console.log('🔄 Current stacks count:', stacks.size);
+            console.log('🔄 Current insights before refill:', currentInsights.length);
+            await goToPage(1, { force: true });
+            console.log('🔄 After refill - current insights:', currentInsights.length);
             
-            // Update stack actions if we're in stack view
-            if (viewMode === 'stack' && activeStackId === stackId) {
-                enhanceStackActions();
-                bindEnhancedStackActions();
-            }
-            
-            // Show success message
-            showSuccessMessage('Card added to stack successfully!');
-            
+            showSuccessMessage('Stack created successfully!');
         } else {
-            console.error('❌ Failed to add insight to stack');
-            showErrorMessage('Failed to add card to stack. Please try again.');
+            throw new Error('Failed to update insights with stack information');
         }
-        
-    } catch (error) {
-        console.error('❌ Error joining stack:', error);
-        showErrorMessage('Error adding card to stack: ' + error.message);
-    }
+            } catch (error) {
+            console.error('❌ Failed to create stack via API:', error);
+            
+            // Fallback to local storage if API doesn't support stack_id
+            // Create stack locally
+            const stackId = `stack_${stackIdCounter++}`;
+            const localStackData = {
+                id: stackId,
+                name: 'Stack',
+                cards: [insight1, insight2],
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                isExpanded: false
+            };
+            
+            // Add to local stacks collection
+            stacks.set(stackId, localStackData);
+            
+            // Remove cards from currentInsights
+            currentInsights = currentInsights.filter(insight => 
+                insight.id !== insight1.id && 
+                insight.id !== insight2.id
+            );
+            
+            // Ensure stacks can be saved by setting the flag
+            hasLoadedStacksOnce = true;
+            
+            // Save to localStorage for persistence
+            saveStacksToLocalStorage();
+            
+            // Invalidate ALL page caches since pagination has changed
+            pageCache.clear();
+            loadedPages.clear();
+            
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
+            
+            // Update pagination counts
+            updatePaginationCounts();
+            
+            // Refill page 1 using the over-fetch rule
+            await goToPage(1, { force: true });
+            
+            showSuccessMessage('Stack created successfully! (Local storage)');
+        }
     
     // Clear drag state
     if (stackHoverTimeout) {
@@ -7307,42 +4563,27 @@ function getInsightById(id) {
 
 // Update pagination when stacks or insights change
 function updatePaginationCounts() {
-    // DO NOT overwrite totalInsights or totalPages here; they come from backend pagination
-    // This function should only update the UI, not recalculate pagination values
+    // DO NOT overwrite totalInsights here; it already comes from backend pagination.total
+    const stacksCount = stacks.size;
     
-    // Ensure current page doesn't exceed total pages (safety check)
-    if (currentPage > totalPages) {
-        currentPage = totalPages;
-    }
+    // Count insights that are within stacks (these should not be counted separately)
+    let insightsInStacks = 0;
+    stacks.forEach(stackData => {
+        insightsInStacks += stackData.cards.length;
+    });
     
-    // Update the UI with current pagination values
+    // Calculate actual insights that are not in stacks
+    const standaloneInsights = Math.max(0, totalInsights - insightsInStacks);
+
+    const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+    const remainingInsights = Math.max(0, standaloneInsights - page1SlotsForInsights);
+
+    // 0 insights → still show 1 page (empty state)
+    totalPages = standaloneInsights === 0 && stacksCount === 0 ? 1 : (1 + (remainingInsights > 0 ? Math.ceil(remainingInsights / insightsPerPage) : 0));
+
+    if (currentPage > totalPages) currentPage = totalPages;
     updatePaginationUI();
 }
-
-// Test function for debugging pagination - can be called from browser console
-window.testPagination = function() {
-    console.log('🧪 PAGINATION TEST STARTED');
-    console.log('🧪 Current state:');
-    console.log('  - currentPage:', currentPage);
-    console.log('  - totalPages:', totalPages);
-    console.log('  - totalInsights:', totalInsights);
-    console.log('  - insightsPerPage:', insightsPerPage);
-    console.log('  - currentInsights.length:', currentInsights.length);
-    console.log('  - pageCache size:', pageCache.size);
-    console.log('  - loadedPages:', Array.from(loadedPages));
-    
-    console.log('🧪 Page cache contents:');
-    for (const [pageNum, data] of pageCache) {
-        console.log(`  Page ${pageNum}:`, {
-            insightsCount: data.insights?.length || 0,
-            hasMore: data.hasMore,
-            timestamp: data.timestamp
-        });
-    }
-    
-    console.log('🧪 Testing page 2 navigation...');
-    return goToPage(2, { force: true });
-};
 
 // Save stacks to localStorage (called periodically to prevent data loss)
 function saveStacksToLocalStorage() {
@@ -7352,15 +4593,6 @@ function saveStacksToLocalStorage() {
         // Always save stacks data, even if empty (to properly handle deletions)
         localStorage.setItem('quest_stacks', JSON.stringify(stacksData));
         console.log('💾 Saved stacks to localStorage:', stacksData.length, 'stacks');
-        
-        // Debug: Log stack details if there are any
-        if (stacksData.length > 0) {
-            console.log('🔍 Debug: Stack details being saved:', stacksData.map(([id, data]) => ({
-                id,
-                name: data.name,
-                cardCount: data.cards?.length || 0
-            })));
-        }
     } catch (error) {
         console.error('❌ Failed to save stacks to localStorage:', error);
         // Show user notification about storage issue
@@ -7390,8 +4622,18 @@ function saveInsightsToLocalStorage({ force = false } = {}) {
                 console.log('↩︎ skip auto-save: no insights yet');
                 return;
             }
-            // Allow backup to shrink when insights are deleted (user action)
-            // This ensures deleted insights don't persist in backup
+            // Don't shrink a non-empty backup unintentionally
+            const prevRaw = localStorage.getItem('quest_insights_backup');
+            const prevLen = (() => {
+                try { 
+                    const prev = prevRaw ? JSON.parse(prevRaw) : null; 
+                    return Array.isArray(prev?.data) ? prev.data.length : 0; 
+                } catch { return 0; }
+            })();
+            if (prevLen && curLen < prevLen) {
+                console.log(`↩︎ skip auto-save: would shrink backup ${prevLen}→${curLen}`);
+                return;
+            }
         }
 
         const backup = { data: [...cur], timestamp: Date.now(), version: '1.0' };
@@ -7421,21 +4663,9 @@ function checkLocalStorageHealth() {
 // Auto-save stacks and insights more frequently to prevent data loss
 if (!window.__QUEST_AUTOSAVE_ID__) {
     window.__QUEST_AUTOSAVE_ID__ = setInterval(() => {
-        // Skip auto-save if user is editing a comment
-        if (isCommentEditing) {
-            console.log('↩︎ skip auto-save: comment editing in progress');
-            return;
-        }
-        
         if (checkLocalStorageHealth()) {
-            // Only save stacks if they've been loaded at least once
-            if (hasLoadedStacksOnce) {
-                saveStacksToLocalStorage();
-            }
-            // Only save insights if they've been loaded at least once
-            if (hasLoadedInsightsOnce) {
-                saveInsightsToLocalStorage();
-            }
+            saveStacksToLocalStorage();
+            saveInsightsToLocalStorage();
         }
     }, 15000); // Reduced from 30s to 15s for more frequent saves
 }
@@ -7532,422 +4762,45 @@ function createStackCard(stackData) {
     const content = document.createElement('div');
     content.className = 'content-card-content';
     
-    // Card header - Top row with date and source info (matching insight card structure)
-    const cardHeader = document.createElement('div');
-    cardHeader.className = 'content-card-header';
+    const header = document.createElement('div');
+    header.className = 'content-card-header';
     
-    // Top row: Date on left, item count on right (where source info would be)
-    const topRow = document.createElement('div');
-    topRow.className = 'content-card-top-row';
-    
-    const headerDate = document.createElement('div');
-    headerDate.className = 'content-card-date';
-    headerDate.textContent = new Date(stackData.createdAt).toLocaleDateString('en-US');
-    
-    const itemCountInfo = document.createElement('div');
-    itemCountInfo.className = 'content-card-source';
-    
-    const itemCountLogo = document.createElement('div');
-    itemCountLogo.className = 'content-card-source-logo';
-    itemCountLogo.innerHTML = '📚'; // Stack icon
-    
-    const itemCountName = document.createElement('span');
-    itemCountName.className = 'content-card-source-name';
-    itemCountName.textContent = `${stackData.cards.length} items`;
-    
-    itemCountInfo.appendChild(itemCountLogo);
-    itemCountInfo.appendChild(itemCountName);
-    
-    topRow.appendChild(headerDate);
-    topRow.appendChild(itemCountInfo);
-    
-    // Title below the top row
-    const title = document.createElement('div');
-    title.className = 'content-card-title';
+    const title = document.createElement('h3');
+    title.className = 'content-card-title stack-title';
     title.textContent = stackData.name;
+    header.appendChild(title);
     
-    cardHeader.appendChild(topRow);
-    cardHeader.appendChild(title);
+    const description = document.createElement('p');
+    description.className = 'content-card-description';
+    description.textContent = `${stackData.cards.length} items • Created ${formatDate(stackData.createdAt)}`;
     
-    // Description (editable)
-    const description = document.createElement('div');
-    description.className = 'content-card-description stack-description';
-    description.setAttribute('data-stack-id', stackData.id);
-    description.innerHTML = `
-        <span class="description-text">${stackData.description || 'A collection of related content'}</span>
-        <button class="edit-description-btn" title="Edit description">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </button>
-    `;
+    content.appendChild(header);
+    content.appendChild(description);
     
     // Footer with main tag
     const footer = document.createElement('div');
     footer.className = 'content-card-footer';
     
-    const mainTag = document.createElement('div');
+    const mainTag = document.createElement('span');
     mainTag.className = 'content-card-tag-main';
     mainTag.textContent = 'STACK';
-    
     footer.appendChild(mainTag);
     
-    // Assemble card content
-    content.appendChild(cardHeader);
-    content.appendChild(description);
     content.appendChild(footer);
     card.appendChild(content);
     
-    // Click handler to navigate to stack view
+    // Click handler to expand/collapse stack
     card.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Don't navigate if clicking on delete button or in edit mode
-        if (e.target.closest('.content-card-delete-btn') || isEditMode) {
-            return;
+        if (!e.target.closest('.content-card-delete-btn')) {
+            if (stackData.isExpanded) {
+                collapseStack(stackData.id);
+            } else {
+                expandStack(stackData);
+            }
         }
-        
-        // Ensure stackData is properly initialized
-        if (!stackData || !stackData.id) {
-            console.error('❌ Invalid stack data:', stackData);
-            return;
-        }
-        
-        console.log('🖱️ Stack card clicked, navigating to stack view:', stackData.name);
-        
-        // Navigate to stack view
-        navigateToStack(stackData.id);
     });
-    
-    // Add event listener for edit description button
-    const editDescriptionBtn = description.querySelector('.edit-description-btn');
-    if (editDescriptionBtn) {
-        editDescriptionBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            startInlineDescriptionEdit(stackData.id, description);
-        });
-    }
-    
-    // Add event listener for description text click (also starts editing)
-    const descriptionText = description.querySelector('.description-text');
-    if (descriptionText) {
-        descriptionText.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            startInlineDescriptionEdit(stackData.id, description);
-        });
-    }
     
     return card;
-}
-
-// Start inline editing of stack name
-function startInlineNameEdit(stackId, nameElement) {
-    // Check if already editing to prevent multiple inputs
-    if (nameElement.classList.contains('editing')) {
-        return;
-    }
-    
-    const currentName = nameElement.textContent;
-    
-    // Check if input already exists in container
-    const container = nameElement.parentElement;
-    const existingInput = container.querySelector('.stack-name-edit-input');
-    if (existingInput) {
-        return; // Already editing
-    }
-    
-    // Create input element
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = currentName;
-    input.className = 'stack-name-edit-input';
-    input.style.cssText = `
-        background: transparent;
-        border: 2px solid var(--quest-purple);
-        border-radius: 4px;
-        padding: 4px 8px;
-        font-size: inherit;
-        font-weight: inherit;
-        color: inherit;
-        width: 100%;
-        outline: none;
-    `;
-    
-    // Mark as editing to prevent multiple instances
-    nameElement.classList.add('editing');
-    
-    // Replace the name element with input
-    const editIcon = container.querySelector('.edit-icon');
-    
-    // Remove both name element and edit icon
-    if (container.contains(nameElement)) {
-        container.removeChild(nameElement);
-    }
-    if (editIcon && container.contains(editIcon)) {
-        container.removeChild(editIcon);
-    }
-    
-    container.appendChild(input);
-    
-    // Focus and select text
-    input.focus();
-    input.select();
-    
-    // Handle save on Enter or blur
-    const saveEdit = async () => {
-        const newName = input.value.trim();
-        const wasEdited = newName && newName !== currentName;
-        
-        if (wasEdited) {
-            try {
-                await updateStackName(stackId, newName);
-                // Update the stack data
-                const stackData = stacks.get(stackId);
-                if (stackData) {
-                    stackData.name = newName;
-                    stacks.set(String(stackId), stackData);
-                    
-                    // Save to localStorage immediately
-                    saveStacksToLocalStorage();
-                }
-            } catch (error) {
-                console.error('Failed to update stack name:', error);
-                showNotification('Failed to update stack name', 'error');
-            }
-        }
-        
-        // Restore the name element
-        const newNameElement = document.createElement('h3');
-        newNameElement.className = 'stack-name-horizontal editable-name';
-        newNameElement.setAttribute('data-stack-id', stackId);
-        newNameElement.textContent = newName || currentName;
-        
-        // Add edit icon
-        const editIcon = document.createElement('svg');
-        editIcon.className = 'edit-icon';
-        editIcon.setAttribute('width', '16');
-        editIcon.setAttribute('height', '16');
-        editIcon.setAttribute('viewBox', '0 0 24 24');
-        editIcon.setAttribute('fill', 'none');
-        editIcon.innerHTML = '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />';
-        
-        // Clear container and add new elements
-        container.innerHTML = '';
-        container.appendChild(newNameElement);
-        container.appendChild(editIcon);
-        
-        // Add "edited" class if this was the first edit
-        if (wasEdited) {
-            container.classList.add('edited');
-        }
-        
-        // Re-attach event listener (only once)
-        newNameElement.addEventListener('click', (e) => {
-            e.stopPropagation();
-            startInlineNameEdit(stackId, newNameElement);
-        });
-        
-        // Remove editing class
-        newNameElement.classList.remove('editing');
-    };
-    
-    // Handle cancel on Escape
-    const cancelEdit = () => {
-        const newNameElement = document.createElement('h3');
-        newNameElement.className = 'stack-name-horizontal editable-name';
-        newNameElement.setAttribute('data-stack-id', stackId);
-        newNameElement.textContent = currentName;
-        
-        // Add edit icon
-        const editIcon = document.createElement('svg');
-        editIcon.className = 'edit-icon';
-        editIcon.setAttribute('width', '16');
-        editIcon.setAttribute('height', '16');
-        editIcon.setAttribute('viewBox', '0 0 24 24');
-        editIcon.setAttribute('fill', 'none');
-        editIcon.innerHTML = '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />';
-        
-        // Clear container and add new elements
-        container.innerHTML = '';
-        container.appendChild(newNameElement);
-        container.appendChild(editIcon);
-        
-        // Preserve the "edited" class if it was already there
-        // (don't add it since we're canceling the edit)
-        
-        // Re-attach event listener (only once)
-        newNameElement.addEventListener('click', (e) => {
-            e.stopPropagation();
-            startInlineNameEdit(stackId, newNameElement);
-        });
-        
-        // Remove editing class
-        newNameElement.classList.remove('editing');
-    };
-    
-    input.addEventListener('blur', saveEdit);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            saveEdit();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            cancelEdit();
-        }
-    });
-}
-
-// Update stack name via API
-async function updateStackName(stackId, newName) {
-    try {
-        const response = await api.updateStack(parseInt(stackId), { name: newName });
-        if (response && response.success) {
-            showNotification('Stack name updated successfully', 'success');
-            return response;
-        } else {
-            throw new Error('Failed to update stack name');
-        }
-    } catch (error) {
-        console.error('Error updating stack name:', error);
-        throw error;
-    }
-}
-
-// Start inline editing of stack description
-function startInlineDescriptionEdit(stackId, descriptionElement) {
-    const currentDescription = descriptionElement.querySelector('.description-text').textContent;
-    
-    // Create textarea element
-    const textarea = document.createElement('textarea');
-    textarea.value = currentDescription;
-    textarea.className = 'stack-description-edit-input';
-    textarea.style.cssText = `
-        background: transparent;
-        border: 2px solid var(--quest-purple);
-        border-radius: 6px;
-        padding: 8px 12px;
-        font-size: 14px;
-        font-family: inherit;
-        color: var(--text-secondary);
-        width: 100%;
-        min-height: 60px;
-        max-height: 120px;
-        resize: vertical;
-        outline: none;
-        line-height: 1.4;
-    `;
-    
-    // Replace the description content with textarea
-    const container = descriptionElement;
-    const descriptionText = container.querySelector('.description-text');
-    const editBtn = container.querySelector('.edit-description-btn');
-    
-    // Hide the text and button
-    if (descriptionText) descriptionText.style.display = 'none';
-    if (editBtn) editBtn.style.display = 'none';
-    
-    container.appendChild(textarea);
-    
-    // Focus and select text
-    textarea.focus();
-    textarea.select();
-    
-    // Handle save on Enter (Ctrl+Enter) or blur
-    const saveEdit = async () => {
-        const newDescription = textarea.value.trim();
-        const wasEdited = newDescription !== currentDescription;
-        
-        console.log('💾 Saving description edit:', { 
-            stackId, 
-            currentDescription, 
-            newDescription, 
-            wasEdited 
-        });
-        
-        if (wasEdited) {
-            try {
-                await updateStackDescription(stackId, newDescription);
-                // Update the stack data
-                const stackData = stacks.get(stackId);
-                if (stackData) {
-                    stackData.description = newDescription;
-                    stackData.modifiedAt = new Date().toISOString();
-                    console.log('✅ Updated local stack data:', stackData);
-                }
-                
-                // Update the display
-                if (descriptionText) {
-                    descriptionText.textContent = newDescription || 'A collection of related content';
-                }
-                
-                showNotification('Stack description updated successfully', 'success');
-            } catch (error) {
-                console.error('❌ Error updating stack description:', error);
-                showErrorMessage('Failed to update stack description');
-            }
-        } else {
-            console.log('ℹ️ No changes to save');
-        }
-        
-        // Restore the original display
-        if (descriptionText) descriptionText.style.display = '';
-        if (editBtn) editBtn.style.display = '';
-        
-        // Safely remove textarea if it exists
-        if (textarea && textarea.parentNode) {
-            textarea.parentNode.removeChild(textarea);
-        }
-    };
-    
-    // Handle cancel on Escape
-    const cancelEdit = () => {
-        // Restore the original display
-        if (descriptionText) descriptionText.style.display = '';
-        if (editBtn) editBtn.style.display = '';
-        
-        // Safely remove textarea if it exists
-        if (textarea && textarea.parentNode) {
-            textarea.parentNode.removeChild(textarea);
-        }
-    };
-    
-    // Save on Enter, cancel on Escape
-    textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            saveEdit();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            cancelEdit();
-        }
-    });
-    
-    // Also save on blur as a fallback
-    textarea.addEventListener('blur', saveEdit);
-}
-
-// Update stack description via API
-async function updateStackDescription(stackId, newDescription) {
-    try {
-        console.log('🔄 Updating stack description:', { stackId, newDescription });
-        console.log('🔍 Available stacks:', Array.from(stacks.keys()));
-        console.log('🔍 Stack exists in memory:', stacks.has(stackId));
-        
-        const response = await api.updateStack(parseInt(stackId), { description: newDescription });
-        console.log('✅ Stack description update response:', response);
-        if (response && response.success) {
-            showNotification('Stack description updated successfully', 'success');
-            return response;
-        } else {
-            throw new Error('Failed to update stack description');
-        }
-    } catch (error) {
-        console.error('❌ Error updating stack description:', error);
-        throw error;
-    }
 }
 
 // Remove an item from a stack
@@ -7955,7 +4808,7 @@ async function removeItemFromStack(stackId, insightId) {
     if (confirm('Are you sure you want to remove this item from the stack?')) {
         try {
             // Remove stack_id from the insight via API
-            const response = await api.removeItemFromStack(parseInt(stackId), insightId);
+            const response = await api.removeItemFromStack(stackId, insightId);
             
             if (response.success) {
                 // Get the stack data
@@ -7995,29 +4848,8 @@ async function removeItemFromStack(stackId, insightId) {
                             showSuccessMessage('Item removed from stack.');
                         }
                         
-                        // Re-render content based on current view mode
-                        console.log('🔄 Re-rendering after item removal - viewMode:', viewMode, 'activeStackId:', activeStackId, 'stackId:', stackId);
-                        if (viewMode === 'stack' && activeStackId === stackId) {
-                            // We're in stack view and this is the active stack
-                            const updatedStack = stacks.get(stackId);
-                            console.log('📦 Updated stack from memory:', updatedStack);
-                            console.log('📦 Stack cards count:', updatedStack ? updatedStack.cards.length : 'stack not found');
-                            if (updatedStack && updatedStack.cards.length > 0) {
-                                // Stack still has items - refresh with updated data
-                                console.log('✅ Stack has items, refreshing with updated data');
-                                console.log('📋 Cards to render:', updatedStack.cards.map(c => ({ id: c.id, title: c.title })));
-                                renderStackInsights(updatedStack);
-                            } else {
-                                // Stack is now empty - show empty state
-                                console.log('📭 Stack is empty, showing empty state');
-                                const emptyStack = { id: stackId, cards: [], name: 'Empty Stack' };
-                                renderStackInsights(emptyStack);
-                            }
-                        } else {
-                            // We're in home view - render normally
-                            console.log('🏠 In home view, rendering normally');
-                            renderInsights();
-                        }
+                        // Re-render content
+                        renderInsights();
                     } else {
                         console.warn('⚠️ Insight not found in stack');
                         showErrorMessage('Item not found in stack.');
@@ -8113,7 +4945,7 @@ async function deleteStack(stackId) {
             if (stackData) {
                 // Remove stack_id from all insights in the stack via insights API
                 const removePromises = stackData.cards.map(card => 
-                    api.removeItemFromStack(parseInt(stackId), card.id)
+                    api.removeItemFromStack(stackId, card.id)
                 );
                 
                 const responses = await Promise.all(removePromises);
@@ -8213,19 +5045,14 @@ function expandStack(stackData) {
     stackCard.innerHTML = `
         <div class="stack-expanded-header">
             <div class="stack-info-horizontal">
-                <div class="stack-name-container">
-                    <h3 class="stack-name-horizontal editable-name" data-stack-id="${stackData.id}">${stackData.name}</h3>
-                    <svg class="edit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </div>
+                <h3 class="stack-name-horizontal">${stackData.name}</h3>
                 <div class="stack-meta-horizontal">
                     <span class="stack-created">Created: ${formatDate(stackData.createdAt)}</span>
                     <span class="stack-modified">Last Modified: ${formatDate(stackData.modifiedAt)}</span>
                 </div>
             </div>
             <div class="stack-actions-horizontal">
+                <button class="stack-edit-name-btn-horizontal">Edit Name</button>
                 <button class="stack-collapse-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -8250,9 +5077,14 @@ function expandStack(stackData) {
     `;
     
     // Add event listeners
+    const editNameBtn = stackCard.querySelector('.stack-edit-name-btn-horizontal');
     const collapseBtn = stackCard.querySelector('.stack-collapse-btn');
     const editModeBtn = stackCard.querySelector('.stack-edit-mode-btn-horizontal');
-    const editableName = stackCard.querySelector('.editable-name');
+    
+    editNameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editStackName(stackData.id);
+    });
     
     collapseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -8263,14 +5095,6 @@ function expandStack(stackData) {
         e.stopPropagation();
         toggleStackEditModeHorizontal(stackData.id);
     });
-    
-    // Set up inline name editing
-    if (editableName) {
-        editableName.addEventListener('click', (e) => {
-            e.stopPropagation();
-            startInlineNameEdit(stackData.id, editableName);
-        });
-    }
     
     // Populate cards horizontally
     const stackCardsContainer = document.getElementById(`stackCardsHorizontal-${stackData.id}`);
@@ -8488,8 +5312,7 @@ async function moveCardToStack(insight, newStackId) {
         }
         
         // Move card via API (updates insight's stack_id)
-        // Convert newStackId to integer since database expects integer type
-        const response = await api.moveItemToStack(parseInt(newStackId), insight.id);
+        const response = await api.moveItemToStack(newStackId, insight.id);
         
         if (response.success) {
             // Remove from current stack
@@ -8573,7 +5396,7 @@ async function removeCardFromStack(insight, stackId) {
     
     try {
         // Remove card from stack via API (sets stack_id to null)
-        const response = await api.removeItemFromStack(parseInt(stackId), insight.id);
+        const response = await api.removeItemFromStack(stackId, insight.id);
         
         if (response.success) {
             // Remove card from local stack data
@@ -8591,7 +5414,7 @@ async function removeCardFromStack(insight, stackId) {
                 if (stackData.cards.length === 1) {
                     // Remove the last card from stack
                     const lastCard = stackData.cards[0];
-                    await api.removeItemFromStack(parseInt(stackId), lastCard.id);
+                    await api.removeItemFromStack(stackId, lastCard.id);
                     currentInsights.push(lastCard);
                 }
                 stacks.delete(stackId);
@@ -8628,22 +5451,8 @@ async function removeCardFromStack(insight, stackId) {
             
             updatePaginationCounts();
             
-            // Re-render main view based on current view mode
-            if (viewMode === 'stack' && activeStackId === stackId) {
-                // We're in stack view and this is the active stack
-                const updatedStack = stacks.get(stackId);
-                if (updatedStack && updatedStack.cards.length > 0) {
-                    // Stack still has items - refresh with updated data
-                    renderStackInsights(updatedStack);
-                } else {
-                    // Stack is now empty - show empty state
-                    const emptyStack = { id: stackId, cards: [], name: 'Empty Stack' };
-                    renderStackInsights(emptyStack);
-                }
-            } else {
-                // We're in home view - render normally
-                renderInsights();
-            }
+            // Re-render main view
+            renderInsights();
         } else {
             throw new Error(response.message || 'Failed to remove card from stack');
         }
@@ -8730,11 +5539,13 @@ function closeStackExpansionInline(stackId) {
         backBtn.remove();
     }
     
-    // Show filter buttons and edit mode button
+    // Show filter buttons and add content button
     const filterButtons = document.getElementById('filterButtons');
+    const addContentBtn = document.getElementById('addContentBtnLeft');
     const editModeMainBtn = document.getElementById('editModeBtn');
     
     if (filterButtons) filterButtons.style.display = 'flex';
+    if (addContentBtn) addContentBtn.style.display = 'flex';
     if (editModeMainBtn) editModeMainBtn.style.display = 'flex';
     
     // Re-render main view
@@ -8761,7 +5572,7 @@ async function editStackName(stackId) {
     if (newName && newName.trim() && newName.trim() !== stackData.name) {
         try {
             // Update stack name via API
-            const response = await api.updateStack(parseInt(stackId), {
+            const response = await api.updateStack(stackId, {
                 name: newName.trim()
             });
             
@@ -9079,14 +5890,6 @@ function createStackHorizontalCard(insight, stackId) {
     // Setup drag functionality for horizontal cards
     setupStackHorizontalCardDrag(card, insight, stackId);
     
-    // Click handler to view full content
-    card.addEventListener('click', (e) => {
-        if (!e.target.closest('.content-card-delete-btn')) {
-            // Open content detail modal (reuse existing functionality)
-            openContentDetailModal(insight);
-        }
-    });
-    
     return card;
 }
 
@@ -9307,11 +6110,6 @@ function setupPARATooltips(dropdownOptions) {
             title: 'Resources',
             description: 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
             examples: 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
-        },
-        'Archive': {
-            title: 'Archive',
-            description: 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
-            examples: 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
         }
     };
 
@@ -9352,7 +6150,7 @@ function setupPARATooltips(dropdownOptions) {
                 // Position tooltip
                 const rect = infoIcon.getBoundingClientRect();
                 tooltip.style.left = `${rect.right + 8}px`;
-                tooltip.style.top = `${rect.bottom + 200}px`;
+                tooltip.style.top = `${rect.top - 8}px`;
                 
                 tooltip.style.opacity = '1';
                 tooltip.style.visibility = 'visible';
@@ -9463,454 +6261,5 @@ function clearAllFilters() {
 
 // Make clear filters function globally available
 window.clearAllFilters = clearAllFilters;
-
-// ===== INLINE TAG EDITOR =====
-
-let currentEditingInsight = null;
-let selectedTagIds = new Set();
-
-// Show inline tag editor
-function showInlineTagEditor(insight) {
-    currentEditingInsight = insight;
-    selectedTagIds.clear();
-    
-    // Add current tag to selected set (only one tag allowed)
-    if (insight.tags && insight.tags.length > 0) {
-        const firstTag = insight.tags[0]; // Only take the first tag
-        const tagId = typeof firstTag === 'string' ? firstTag : (firstTag.id || firstTag.tag_id || firstTag.user_tag_id);
-        if (tagId) {
-            selectedTagIds.add(tagId);
-        }
-    }
-    
-    // Show the tag editing section
-    const tagEditingSection = document.getElementById('tagEditingSection');
-    if (tagEditingSection) {
-        tagEditingSection.style.display = 'block';
-        
-        // Populate available tags
-        populateAvailableTags();
-        
-        // Bind save and cancel events
-        bindTagEditorEvents();
-    }
-}
-
-// Populate available tags
-function populateAvailableTags() {
-    const availableTagsList = document.getElementById('availableTagsList');
-    if (!availableTagsList) return;
-    
-    // Get all available tags (user tags + PARA tags)
-    const allTags = [];
-    
-    // Add user tags
-    if (window.userTags && window.userTags.length > 0) {
-        window.userTags.forEach(tag => {
-            allTags.push({
-                id: tag.id,
-                name: tag.name,
-                color: tag.color,
-                type: 'user'
-            });
-        });
-    }
-    
-    // Add PARA tags
-    const paraTags = [
-        { id: 'project', name: 'Project', color: '#3B82F6', type: 'para' },
-        { id: 'area', name: 'Area', color: '#10B981', type: 'para' },
-        { id: 'resource', name: 'Resource', color: '#F59E0B', type: 'para' },
-        { id: 'archive', name: 'Archive', color: '#6B7280', type: 'para' }
-    ];
-    
-    allTags.push(...paraTags);
-    
-    // Clear existing content
-    availableTagsList.innerHTML = '';
-    
-    // Add header
-    const header = document.createElement('h4');
-    header.textContent = 'Available Tags';
-    availableTagsList.appendChild(header);
-    
-    // Create tags container
-    const tagsContainer = document.createElement('div');
-    tagsContainer.className = 'available-tags-list';
-    
-    // Add each tag
-    allTags.forEach(tag => {
-        const tagElement = document.createElement('div');
-        tagElement.className = 'available-tag';
-        tagElement.dataset.tagId = tag.id;
-        tagElement.dataset.tagName = tag.name;
-        tagElement.dataset.tagColor = tag.color;
-        
-        // Add color indicator
-        const colorIndicator = document.createElement('div');
-        colorIndicator.className = 'tag-color';
-        colorIndicator.style.backgroundColor = tag.color;
-        tagElement.appendChild(colorIndicator);
-        
-        // Add tag name
-        const tagName = document.createElement('span');
-        tagName.textContent = tag.name;
-        tagElement.appendChild(tagName);
-        
-        // Add click handler
-        tagElement.onclick = () => toggleTagSelection(tag.id, tag.name, tag.color);
-        
-        // Mark as selected if already selected
-        if (selectedTagIds.has(tag.id)) {
-            tagElement.classList.add('selected');
-        }
-        
-        tagsContainer.appendChild(tagElement);
-    });
-    
-    availableTagsList.appendChild(tagsContainer);
-}
-
-// Toggle tag selection (single tag only)
-function toggleTagSelection(tagId, tagName, tagColor) {
-    if (selectedTagIds.has(tagId)) {
-        // If clicking the same tag, deselect it
-        selectedTagIds.clear();
-    } else {
-        // Clear any existing selection and select the new tag
-        selectedTagIds.clear();
-        selectedTagIds.add(tagId);
-    }
-    
-    // Update UI
-    updateAvailableTagsUI();
-}
-
-// Update available tags UI to show selection state
-function updateAvailableTagsUI() {
-    const availableTags = document.querySelectorAll('.available-tag');
-    availableTags.forEach(tag => {
-        const tagId = tag.dataset.tagId;
-        if (selectedTagIds.has(tagId)) {
-            tag.classList.add('selected');
-        } else {
-            tag.classList.remove('selected');
-        }
-    });
-}
-
-
-// Bind tag editor events
-function bindTagEditorEvents() {
-    const saveBtn = document.getElementById('saveTagsBtn');
-    const cancelBtn = document.getElementById('cancelTagsBtn');
-    
-    if (saveBtn) {
-        saveBtn.onclick = saveTagChanges;
-    }
-    
-    if (cancelBtn) {
-        cancelBtn.onclick = cancelTagEditing;
-    }
-}
-
-// Save tag changes
-async function saveTagChanges() {
-    if (!currentEditingInsight) return;
-    
-    try {
-        // Convert selected tag IDs to tag objects
-        const tagsToSave = Array.from(selectedTagIds).map(tagId => {
-            // Check if it's a PARA tag
-            const paraTags = ['project', 'area', 'resource', 'archive'];
-            if (paraTags.includes(tagId)) {
-                return { id: tagId, name: tagId.charAt(0).toUpperCase() + tagId.slice(1) };
-            }
-            
-            // Find user tag
-            if (window.userTags) {
-                const userTag = window.userTags.find(tag => tag.id === tagId);
-                if (userTag) {
-                    return { id: userTag.id, name: userTag.name, color: userTag.color };
-                }
-            }
-            
-            return { id: tagId, name: tagId };
-        });
-        
-        // Update the insight with new tags
-        currentEditingInsight.tags = tagsToSave;
-        
-        // Update the primary tag display in modal
-        updatePrimaryTagDisplay(tagsToSave[0]);
-        
-        // Hide the tag editor
-        hideInlineTagEditor();
-        
-        // Show success message (optional)
-        console.log('✅ Tags updated successfully');
-        
-    } catch (error) {
-        console.error('❌ Error saving tags:', error);
-    }
-}
-
-// Cancel tag editing
-function cancelTagEditing() {
-    hideInlineTagEditor();
-}
-
-// Hide inline tag editor
-function hideInlineTagEditor() {
-    const tagEditingSection = document.getElementById('tagEditingSection');
-    if (tagEditingSection) {
-        tagEditingSection.style.display = 'none';
-    }
-    
-    currentEditingInsight = null;
-    selectedTagIds.clear();
-}
-
-// Update primary tag display
-function updatePrimaryTagDisplay(primaryTag) {
-    const primaryTagElement = document.getElementById('primaryTag');
-    if (primaryTagElement && primaryTag) {
-        primaryTagElement.textContent = primaryTag.name;
-    }
-}
-
-/* Optional: if your HTML includes a <div id="loadingSkeleton"> block from old code,
-   you can keep it for first paint and then hide it gracefully once JS runs.
-*/
-(function hydrateInitialSkeleton() {
-    const initial = document.getElementById('loadingSkeleton');
-    if (initial) {
-        initial.style.opacity = '1';
-        initial.style.transition = 'opacity .18s ease';
-        window.addEventListener('load', () => { 
-            initial.style.opacity = '0'; 
-            initial.remove(); 
-        }, { once: true });
-    }
-})();
-
-// ===== DEBUG AND TEST FUNCTIONS =====
-
-// Test function to debug comment functionality
-window.testCommentFunctionality = async function() {
-    console.log('🧪 Starting comment functionality tests...');
-    
-    // Test 1: Check if modal elements exist
-    console.log('\n📋 Test 1: Checking modal elements...');
-    const commentElement = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
-    const commentDisplay = document.getElementById('commentDisplay');
-    const editCommentBtn = document.getElementById('editCommentBtn');
-    
-    console.log('commentDisplay:', commentElement);
-    console.log('commentTextarea:', commentTextarea);
-    console.log('commentDisplay:', commentDisplay);
-    console.log('editCommentBtn:', editCommentBtn);
-    
-    if (!commentElement || !commentTextarea || !commentDisplay || !editCommentBtn) {
-        console.error('❌ Missing modal elements!');
-        return;
-    }
-    
-    // Test 2: Check current insight data
-    console.log('\n📋 Test 2: Checking current insight data...');
-    console.log('currentDetailInsight:', currentDetailInsight);
-    
-    if (currentDetailInsight) {
-        console.log('insight.thought:', currentDetailInsight.thought);
-        console.log('insight.insight_contents:', currentDetailInsight.insight_contents);
-        
-        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
-            console.log('insight.insight_contents[0].thought:', currentDetailInsight.insight_contents[0].thought);
-        }
-    } else {
-        console.warn('⚠️ No current insight selected');
-    }
-    
-    // Test 3: Check current display values
-    console.log('\n📋 Test 3: Checking current display values...');
-    console.log('commentElement.textContent:', commentElement.textContent);
-    console.log('commentTextarea.value:', commentTextarea.value);
-    console.log('commentDisplay.textContent:', commentDisplay.textContent);
-    
-    // Test 4: Test comment extraction logic
-    console.log('\n📋 Test 4: Testing comment extraction logic...');
-    if (currentDetailInsight) {
-        let thought = null;
-        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
-            thought = currentDetailInsight.insight_contents[0].thought;
-        }
-        thought = thought || currentDetailInsight.thought;
-        console.log('Extracted thought:', thought);
-    }
-    
-    // Test 5: Test API call
-    console.log('\n📋 Test 5: Testing API call...');
-    if (currentDetailInsight && currentDetailInsight.id) {
-        try {
-            const response = await api.getInsight(currentDetailInsight.id);
-            console.log('API response:', response);
-            
-            if (response.success && response.data) {
-                console.log('API data.thought:', response.data.thought);
-                console.log('API data.insight_contents:', response.data.insight_contents);
-            }
-        } catch (error) {
-            console.error('API call failed:', error);
-        }
-    }
-    
-    console.log('\n✅ Comment functionality tests completed!');
-};
-
-// Test function to debug edit button behavior
-window.testEditButtonBehavior = function() {
-    console.log('🧪 Testing edit button behavior...');
-    
-    const editCommentBtn = document.getElementById('editCommentBtn');
-    const commentDisplay = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
-    
-    if (!editCommentBtn || !commentDisplay || !commentTextarea) {
-        console.error('❌ Missing elements for edit button test');
-        return;
-    }
-    
-    console.log('Initial state:');
-    console.log('Button text:', editCommentBtn.textContent);
-    console.log('isCommentEditing:', isCommentEditing);
-    console.log('commentDisplay.style.display:', commentDisplay.style.display);
-    console.log('commentTextarea.style.display:', commentTextarea.style.display);
-    
-    // Check for multiple event listeners
-    console.log('Event listeners on button:', getEventListeners ? getEventListeners(editCommentBtn) : 'getEventListeners not available');
-    
-    // Simulate click
-    console.log('\n🖱️ Simulating edit button click...');
-    editCommentBtn.click();
-    
-    setTimeout(() => {
-        console.log('After click:');
-        console.log('Button text:', editCommentBtn.textContent);
-        console.log('isCommentEditing:', isCommentEditing);
-        console.log('commentDisplay.style.display:', commentDisplay.style.display);
-        console.log('commentTextarea.style.display:', commentTextarea.style.display);
-        console.log('commentTextarea.value:', commentTextarea.value);
-    }, 100);
-};
-
-// Test function to force populate comment data
-window.testPopulateComment = function(testComment = 'Test comment from console') {
-    console.log('🧪 Testing comment population...');
-    
-    const commentElement = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
-    const commentDisplay = document.getElementById('commentDisplay');
-    
-    if (!commentElement || !commentTextarea || !commentDisplay) {
-        console.error('❌ Missing elements for comment population test');
-        return;
-    }
-    
-    console.log('Setting comment to:', testComment);
-    
-    // Update all comment elements
-    commentElement.textContent = testComment;
-    commentTextarea.value = testComment;
-    commentDisplay.textContent = testComment;
-    
-    console.log('Updated values:');
-    console.log('commentElement.textContent:', commentElement.textContent);
-    console.log('commentTextarea.value:', commentTextarea.value);
-    console.log('commentDisplay.textContent:', commentDisplay.textContent);
-};
-
-// Test function to check all insights for thought data
-window.testAllInsightsThoughts = function() {
-    console.log('🧪 Testing all insights for thought data...');
-    
-    if (window.currentInsights) {
-        console.log(`Found ${window.currentInsights.length} insights`);
-        
-        window.currentInsights.forEach((insight, index) => {
-            console.log(`\nInsight ${index + 1} (${insight.id}):`);
-            console.log('  title:', insight.title);
-            console.log('  thought:', insight.thought);
-            console.log('  insight_contents:', insight.insight_contents);
-            
-            if (insight.insight_contents && insight.insight_contents.length > 0) {
-                console.log('  insight_contents[0].thought:', insight.insight_contents[0].thought);
-            }
-        });
-    } else {
-        console.warn('⚠️ No currentInsights found');
-    }
-    
-    if (stacks && stacks.size > 0) {
-        console.log(`\nFound ${stacks.size} stacks`);
-        stacks.forEach((stackData, stackId) => {
-            console.log(`\nStack ${stackId} (${stackData.name}):`);
-            stackData.cards.forEach((card, index) => {
-                console.log(`  Card ${index + 1} (${card.id}):`);
-                console.log('    title:', card.title);
-                console.log('    thought:', card.thought);
-                console.log('    insight_contents:', card.insight_contents);
-                
-                if (card.insight_contents && card.insight_contents.length > 0) {
-                    console.log('    insight_contents[0].thought:', card.insight_contents[0].thought);
-                }
-            });
-        });
-    }
-};
-
-// Test function to simulate API update
-window.testCommentUpdate = async function(testComment = 'Updated comment from console test') {
-    console.log('🧪 Testing comment update...');
-    
-    if (!currentDetailInsight || !currentDetailInsight.id) {
-        console.error('❌ No current insight selected');
-        return;
-    }
-    
-    try {
-        console.log('Updating insight:', currentDetailInsight.id, 'with comment:', testComment);
-        
-        const response = await api.updateInsight(currentDetailInsight.id, { 
-            thought: testComment 
-        });
-        
-        console.log('API response:', response);
-        
-        if (response.success) {
-            console.log('✅ Update successful');
-            // Refresh the modal to see the changes
-            if (typeof showDetailModal === 'function') {
-                showDetailModal(currentDetailInsight.id);
-            }
-        } else {
-            console.error('❌ Update failed:', response.message);
-        }
-    } catch (error) {
-        console.error('❌ Update error:', error);
-    }
-};
-
-// Quick test runner
-window.runAllCommentTests = async function() {
-    console.log('🚀 Running all comment tests...');
-    
-    await window.testCommentFunctionality();
-    window.testEditButtonBehavior();
-    window.testAllInsightsThoughts();
-    
-    console.log('\n🎯 To test comment update, run: testCommentUpdate("Your test comment")');
-    console.log('🎯 To test comment population, run: testPopulateComment("Your test comment")');
-};
 
 
