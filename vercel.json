@@ -53,12 +53,8 @@
       "dest": "/src/client/pages/email-preferences.html"
     },
     {
-      "src": "/pages/demo-chat.html",
-      "dest": "/src/client/pages/demo-chat.html"
-    },
-    {
       "src": "/",
       "dest": "/src/client/pages/index.html"
     }
   ]
-} 
+}
