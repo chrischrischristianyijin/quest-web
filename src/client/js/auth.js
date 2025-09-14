@@ -316,13 +316,28 @@ class AuthManager {
                 return true;
             } else {
                 console.log('❌ Token验证失败');
+                // 触发认证过期事件
+                window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
+                    detail: { 
+                        status: 401, 
+                        reason: 'Token validation failed' 
+                    } 
+                }));
                 return false;
             }
         } catch (error) {
             console.error('❌ Token验证出错:', error);
             if (error.message.includes('401') || error.message.includes('403')) {
-                console.log('🔑 Token已过期，清除会话');
+                console.log('🔑 Token已过期，清除会话并触发事件');
                 this.clearSession();
+                // 触发认证过期事件
+                window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
+                    detail: { 
+                        status: error.message.includes('401') ? 401 : 403,
+                        reason: 'Token expired during validation',
+                        error: error.message
+                    } 
+                }));
             }
             return false;
         }

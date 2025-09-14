@@ -1,6 +1,99 @@
 // 导入现有的认证系统
 import { auth } from './auth.js';
 
+// 🔐 Global auth-expired handler for chat page
+window.addEventListener('quest-auth-expired', async (e) => {
+  console.warn('🔒 Chat: Auth expired; logging out...', e?.detail);
+  try {
+    // 设置标志阻止insights恢复
+    window.__QUEST_AUTH_EXPIRED__ = true;
+    
+    // 清除聊天相关的定时器和状态
+    if (window.chatAutoSaveInterval) {
+      clearInterval(window.chatAutoSaveInterval);
+      window.chatAutoSaveInterval = null;
+    }
+    
+    // 停止token验证
+    stopChatTokenValidation();
+    
+    // 清除本地insights备份，防止恢复
+    localStorage.removeItem('quest_insights_backup');
+    console.log('🗑️ Chat: Cleared insights backup due to auth expiration');
+    
+    // 清除本地会话
+    await auth.logout();
+    
+    // 显示认证过期弹窗
+    const { handleAuthExpired } = await import('./auth-modal.js');
+    handleAuthExpired();
+  } catch (error) {
+    console.error('❌ Chat: Error handling auth expiration:', error);
+    // 即使出错也要显示弹窗
+    try {
+      const { handleAuthExpired } = await import('./auth-modal.js');
+      handleAuthExpired();
+    } catch (modalError) {
+      console.error('❌ Chat: Error showing auth modal:', modalError);
+      // 最后回退到直接跳转
+      window.location.href = '/src/client/pages/login.html';
+    }
+  }
+});
+
+// 🔐 聊天页面定期检查token有效性 (每5分钟检查一次)
+let chatTokenValidationInterval = null;
+
+function startChatTokenValidation() {
+  if (chatTokenValidationInterval) {
+    clearInterval(chatTokenValidationInterval);
+  }
+  
+  chatTokenValidationInterval = setInterval(async () => {
+    try {
+      // 检查token是否过期
+      if (auth.isTokenExpired()) {
+        console.log('⏰ Chat: Token已过期，触发认证过期事件');
+        window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
+          detail: { 
+            status: 401, 
+            reason: 'Token expired during periodic check' 
+          } 
+        }));
+        return;
+      }
+      
+      // 如果用户已认证，验证token有效性
+      if (auth.checkAuth()) {
+        const isValid = await auth.validateToken();
+        if (!isValid) {
+          console.log('❌ Chat: Token验证失败，触发认证过期事件');
+          // validateToken内部已经会触发quest-auth-expired事件
+        }
+      }
+    } catch (error) {
+      console.error('❌ Chat: Token验证检查出错:', error);
+    }
+  }, 5 * 60 * 1000); // 5分钟检查一次
+}
+
+function stopChatTokenValidation() {
+  if (chatTokenValidationInterval) {
+    clearInterval(chatTokenValidationInterval);
+    chatTokenValidationInterval = null;
+  }
+}
+
+// 页面加载时启动token验证
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startChatTokenValidation);
+} else {
+  startChatTokenValidation();
+}
+
+// 页面卸载时停止验证
+window.addEventListener('beforeunload', stopChatTokenValidation);
+
 // Quest AI Chat functionality
 const chatMessages = document.getElementById('chatMessages');
 const chatForm = document.getElementById('chatForm');
