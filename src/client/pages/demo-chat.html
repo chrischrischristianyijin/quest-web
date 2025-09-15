@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../styles/demo-chat.css">
 </head>
+
 <body>
     <div class="api-status" id="apiStatus" style="display: none;">
         🔄 Connecting to AI...
@@ -22,7 +24,8 @@
                 <div class="sidebar-actions">
                     <button class="close-btn" id="closeSidebarBtn" title="Close sidebar">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
                         </svg>
                     </button>
                 </div>
@@ -30,7 +33,8 @@
             <div class="memory-section">
                 <div class="memory-indicator" id="memoryIndicator">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M9 12l2 2 4-4M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 12l2 2 4-4M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                     <span id="memoryCount">0</span> memories
                 </div>
@@ -41,7 +45,8 @@
             <div class="new-session-section">
                 <button class="new-session-btn" id="newSessionBtn" title="Create new chat">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                     <span>New Chat</span>
                 </button>
@@ -53,7 +58,8 @@
             <div class="chat-header">
                 <button class="sidebar-toggle" id="sidebarToggle" title="Show/Hide chat history">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </button>
                 <div class="logo-container">
@@ -73,26 +79,30 @@
             <div class="chat-main">
                 <div class="chat-messages" id="chatMessages">
                     <div class="demo-notice">
-                        <strong>✨ Welcome to Quest AI:</strong> I'm your intelligent companion, ready to explore your personal knowledge collection and provide thoughtful insights tailored just for you.
+                        <strong>✨ Welcome to Quest AI:</strong> I'm your intelligent companion, ready to explore your
+                        personal knowledge collection and provide thoughtful insights tailored just for you.
                     </div>
-                    
+
                     <div class="message-container assistant">
                         <div class="message-avatar">
-                            <img src="../public/Q.png" alt="Quest AI" style="width: 80%; height: 80%; border-radius: 50%; object-fit: contain;" class="ai-avatar-img">
+                            <img src="../public/Q.png" alt="Quest AI"
+                                style="width: 80%; height: 80%; border-radius: 50%; object-fit: contain;"
+                                class="ai-avatar-img">
                         </div>
                         <div class="message assistant">
                             Hi 👋 I'm Quest's AI assistant.<br>
                             I use your saved content to give smarter, context-based answers.<br>
-                            Ask me about your notes, articles, or research, and I'll pull up what's most relevant for you!
+                            Ask me about your notes, articles, or research, and I'll pull up what's most relevant for
+                            you!
                         </div>
                     </div>
                 </div>
 
                 <div class="chat-input-container">
                     <form class="chat-input-form" id="chatForm">
-                        <textarea class="chat-input" id="chatInput" 
-                                placeholder="Ask me anything about your saved content..." 
-                                autocomplete="off" rows="1"></textarea>
+                        <textarea class="chat-input" id="chatInput"
+                            placeholder="Ask me anything about your saved content..." autocomplete="off"
+                            rows="1"></textarea>
                         <button type="submit" class="send-btn" id="sendBtn">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2"
@@ -114,16 +124,18 @@
                 <h4>AI Memories</h4>
                 <button class="close-memory-btn" id="closeMemoryBtn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </button>
             </div>
             <div class="memories-list" id="memoriesList">
-                <div class="empty-memories">暂无记忆</div>
+                <div class="empty-memories">No memories</div>
             </div>
         </div>
     </div>
 
     <script type="module" src="../js/demo-chat.js"></script>
 </body>
+
 </html>

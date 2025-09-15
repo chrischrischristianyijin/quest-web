@@ -21,18 +21,18 @@ function getCurrentUserInfo() {
     try {
         const user = auth.getCurrentUser();
         if (user) {
-            console.log('👤 找到用户信息:', {
+            console.log('👤 Found user info:', {
                 id: user.id || user.user_id,
                 email: user.email,
                 nickname: user.nickname || user.name
             });
             return user;
         } else {
-            console.warn('⚠️ 未找到用户信息');
+            console.warn('⚠️ User info not found');
             return null;
         }
     } catch (error) {
-        console.error('❌ 获取用户信息失败:', error);
+        console.error('❌ Failed to get user info:', error);
         return null;
     }
 }
@@ -74,10 +74,10 @@ class SessionManager {
             if (storedSession) {
                 const sessionData = JSON.parse(storedSession);
                 this.currentSession = { id: sessionData.id };
-                console.log('🔄 从localStorage恢复会话:', sessionData.id);
+                console.log('🔄 Restoring session from localStorage:', sessionData.id);
             }
         } catch (error) {
-            console.warn('⚠️ 恢复会话状态失败:', error);
+            console.warn('⚠️ Failed to restore session state:', error);
         }
     }
     
@@ -87,13 +87,13 @@ class SessionManager {
             if (this.currentSession && this.currentSession.id) {
                 const sessionData = { id: this.currentSession.id };
                 localStorage.setItem('quest-current-session', JSON.stringify(sessionData));
-                console.log('💾 保存会话状态到localStorage:', this.currentSession.id);
+                console.log('💾 Saving session state to localStorage:', this.currentSession.id);
             } else {
                 localStorage.removeItem('quest-current-session');
-                console.log('🗑️ 清除localStorage中的会话状态');
+                console.log('🗑️ Clearing session state from localStorage');
             }
         } catch (error) {
-            console.warn('⚠️ 保存会话状态失败:', error);
+            console.warn('⚠️ Failed to save session state:', error);
         }
     }
     
@@ -101,7 +101,7 @@ class SessionManager {
     setCurrentSession(sessionId) {
         this.currentSession = { id: sessionId };
         this.saveSessionToStorage();
-        console.log('✅ 设置当前会话:', sessionId);
+        console.log('✅ Set current session:', sessionId);
     }
     
     // 清除当前会话
@@ -181,7 +181,7 @@ class SessionManager {
 
             const requestBody = {
                 user_id: userId,
-                title: title || '新对话'
+                title: title || 'New Conversation'
             };
 
             console.log('🔍 创建会话API请求:');
@@ -607,7 +607,7 @@ class ChatUI {
         try {
             const user = getCurrentUserInfo();
             if (!user) {
-                this.sessionsList.innerHTML = '<div class="no-sessions">请先登录</div>';
+                this.sessionsList.innerHTML = '<div class="no-sessions">Please login first</div>';
                 return;
             }
 
@@ -693,7 +693,7 @@ class ChatUI {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const sessionId = btn.dataset.sessionId;
-                if (confirm('确定要删除这个对话吗？')) {
+                if (confirm('Are you sure you want to delete this conversation?')) {
                     await this.deleteSession(sessionId);
                 }
             });
@@ -702,7 +702,7 @@ class ChatUI {
 
     async switchToSession(sessionId) {
         try {
-            this.sessionsList.innerHTML = '<div class="loading-sessions">加载中...</div>';
+            this.sessionsList.innerHTML = '<div class="loading-sessions">Loading...</div>';
             
             console.log('🔄 切换到会话:', sessionId);
             const context = await sessionManager.getSessionContext(sessionId);
@@ -809,7 +809,7 @@ class ChatUI {
         if (!memories || memories.length === 0) {
             // 没有记忆时隐藏记忆按钮
             this.memoryIndicator.style.display = 'none';
-            this.memoriesList.innerHTML = '<div class="empty-memories">暂无记忆</div>';
+            this.memoriesList.innerHTML = '<div class="empty-memories">No memories</div>';
             this.memoryCount.textContent = '0';
             return;
         }

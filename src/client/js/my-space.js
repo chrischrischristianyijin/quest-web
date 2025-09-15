@@ -27,7 +27,7 @@ function getCachedElementById(id) {
     return DOM_CACHE.get(selector);
 }
 
-// DOM 元素 - Using cached access for better performance
+// DOM Elements - Using cached access for better performance
 const profileAvatar = getCachedElementById('profileAvatar');
 const usernamePlaceholder = getCachedElementById('usernamePlaceholder');
 const contentCards = getCachedElementById('contentCards');
@@ -42,7 +42,7 @@ const cancelAddBtn = getCachedElementById('cancelAddBtn');
 
 const filterButtons = getCachedElementById('filterButtons');
 
-// 页面状态
+// Page state
 let currentUser = null;
 let currentInsights = [];
 // Make currentInsights globally accessible for event handlers
@@ -52,9 +52,9 @@ let cachedUserTags = null;
 let userTagsCacheTime = 0;
 const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
-    latest: 'latest',  // 时间排序
-    tags: null,        // 标签筛选
-    search: ''         // 搜索筛选
+    latest: 'latest',  // Time sorting
+    tags: null,        // Tag filtering
+    search: ''         // Search filtering
 };
 let isEditMode = false; // Edit mode state
 
@@ -107,17 +107,17 @@ window.addEventListener('quest-auth-expired', async (e) => {
   navigateTo(PATHS.LOGIN);
 });
 
-// 翻页功能相关变量
+// Pagination related variables
 let currentPage = 1;
 let totalPages = 1;
 let totalInsights = 0;
-let insightsPerPage = 9; // 每页显示9个insights
+let insightsPerPage = 9; // Display 9 insights per page
 
 // 页面缓存机制
-let pageCache = new Map(); // 缓存每个页面的数据
-let loadedPages = new Set(); // 记录已加载的页面
+let pageCache = new Map(); // Cache data for each page
+let loadedPages = new Set(); // Track loaded pages
 
-// 初始化翻页功能
+// Initialize pagination functionality
 function initPagination() {
     const prevBtn = document.getElementById('prevPageBtn');
     const nextBtn = document.getElementById('nextPageBtn');
@@ -143,7 +143,7 @@ function getTotalInsightsCount() {
     return totalInsights + insightsInStacks;
 }
 
-// 更新翻页UI
+// Update pagination UI
 function updatePaginationUI() {
     console.log(`🔍 DEBUG: updatePaginationUI called - currentPage=${currentPage}, totalPages=${totalPages}`);
     
@@ -180,7 +180,7 @@ function updatePaginationUI() {
             : `${standaloneInsights} insights`;
     }
     
-    // 更新按钮状态
+    // Update button state
     if (prevBtn) {
         prevBtn.disabled = currentPage <= 1;
     }
@@ -189,33 +189,33 @@ function updatePaginationUI() {
         nextBtn.disabled = currentPage >= totalPages;
     }
     
-    // 生成页码按钮
+    // Generate page number buttons
     if (paginationPages) {
         paginationPages.innerHTML = '';
         generatePageNumbers(paginationPages);
     }
 }
 
-// 生成页码按钮
+// Generate page number buttons
 function generatePageNumbers(container) {
-    const maxVisiblePages = 5; // 最多显示5个页码按钮
+    const maxVisiblePages = 5; // Maximum 5 page number buttons
     
     if (totalPages <= maxVisiblePages) {
-        // 如果总页数不多，显示所有页码
+        // If total pages are few, show all page numbers
         for (let i = 1; i <= totalPages; i++) {
             createPageButton(container, i);
         }
     } else {
-        // 如果总页数很多，显示智能分页
+        // If total pages are many, show smart pagination
         let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
         let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
         
-        // 调整起始页，确保显示maxVisiblePages个按钮
+        // Adjust start page to ensure maxVisiblePages buttons are shown
         if (endPage - startPage + 1 < maxVisiblePages) {
             startPage = Math.max(1, endPage - maxVisiblePages + 1);
         }
         
-        // 第一页
+        // First page
         if (startPage > 1) {
             createPageButton(container, 1);
             if (startPage > 2) {
@@ -223,12 +223,12 @@ function generatePageNumbers(container) {
             }
         }
         
-        // 中间页码
+        // Middle page numbers
         for (let i = startPage; i <= endPage; i++) {
             createPageButton(container, i);
         }
         
-        // 最后一页
+        // Last page
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) {
                 createEllipsis(container);
@@ -238,7 +238,7 @@ function generatePageNumbers(container) {
     }
 }
 
-// 创建页码按钮
+// Create page number button
 function createPageButton(container, pageNum) {
     const pageBtn = document.createElement('button');
     pageBtn.className = `pagination-page ${pageNum === currentPage ? 'active' : ''}`;
@@ -247,7 +247,7 @@ function createPageButton(container, pageNum) {
     container.appendChild(pageBtn);
 }
 
-// 创建省略号
+// Create ellipsis
 function createEllipsis(container) {
     const ellipsis = document.createElement('span');
     ellipsis.className = 'pagination-page ellipsis';
@@ -255,7 +255,7 @@ function createEllipsis(container) {
     container.appendChild(ellipsis);
 }
 
-// 跳转到指定页面
+// Navigate to specified page
 async function goToPage(pageNum, { force = false } = {}) {
     console.log(`🔍 DEBUG: goToPage called with pageNum=${pageNum}, force=${force}`);
     console.log(`🔍 DEBUG: Current state - currentPage=${currentPage}, totalPages=${totalPages}, totalInsights=${totalInsights}`);
@@ -268,11 +268,11 @@ async function goToPage(pageNum, { force = false } = {}) {
     try {
         console.log(`🔍 DEBUG: Before setting - currentPage=${currentPage}, pageNum=${pageNum}`);
         currentPage = pageNum;
-        insightsPage = pageNum; // 更新全局变量
+        insightsPage = pageNum; // Update global variable
         
         console.log(`🔍 DEBUG: After setting - currentPage=${currentPage}, insightsPage=${insightsPage}`);
         
-        // 显示加载状态
+        // Show loading state
         showLoadingState();
         
         // If force is true, skip cache and fetch fresh data
@@ -281,9 +281,9 @@ async function goToPage(pageNum, { force = false } = {}) {
             console.log(`🔍 DEBUG: Force mode - cleared cache for page ${pageNum}`);
         }
         
-        // 检查缓存中是否已有该页面数据
+        // Check if page data is already cached
         if (!force && pageCache.has(pageNum)) {
-            console.log(`📋 从缓存加载第${pageNum}页数据`);
+            console.log(`📋 Loading page ${pageNum} data from cache`);
             const cachedData = pageCache.get(pageNum);
             console.log(`🔍 DEBUG: Cached data for page ${pageNum}:`, cachedData);
             // Defensive normalization for nested array issue
@@ -295,14 +295,14 @@ async function goToPage(pageNum, { force = false } = {}) {
             console.log(`🔍 DEBUG: Loaded from cache - currentInsights.length=${currentInsights.length}`);
             console.log(`🔍 DEBUG: Cached insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
             
-            // 更新已渲染的ID
+            // Update rendered IDs
             renderedInsightIds.clear();
             currentInsights.forEach(i => renderedInsightIds.add(i.id));
         } else {
-            // 缓存中没有，调用API加载
-            console.log(`🔄 从API加载第${pageNum}页数据...`);
+            // Not in cache, call API to load
+            console.log(`🔄 Loading page ${pageNum} data from API...`);
             
-            // 使用分页API加载目标页面 (over-fetch on page 1 to account for stacked insights)
+            // Use pagination API to load target page (over-fetch on page 1 to account for stacked insights)
             const effectiveLimit = effectiveFetchLimitForPage(pageNum);
             const uid = (auth?.user?.id || currentUser?.id || undefined);
             
@@ -390,7 +390,7 @@ async function goToPage(pageNum, { force = false } = {}) {
                     console.log(`🔍 DEBUG: Skipping de-duplication - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
                 }
                 
-                // 更新当前页面数据
+                // Update current page data
                 currentInsights = adjusted;
                 window.currentInsights = currentInsights;
                 insightsHasMore = hasMore;
@@ -398,11 +398,11 @@ async function goToPage(pageNum, { force = false } = {}) {
                 console.log(`🔍 DEBUG: Final currentInsights for page ${pageNum}:`, currentInsights.length, 'insights');
                 console.log(`🔍 DEBUG: Final insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
                 
-                // 更新已渲染的ID（基于 adjusted）
+                // Update rendered IDs（基于 adjusted）
                 renderedInsightIds.clear();
                 adjusted.forEach(i => renderedInsightIds.add(i.id));
                 
-                // 缓存该页面数据（保存 adjusted，而不是原始）
+                // Cache this page data (save adjusted, not original)
                 pageCache.set(pageNum, {
                     insights: adjusted,        // ❗ was [...adjusted]
                     hasMore,
@@ -410,19 +410,19 @@ async function goToPage(pageNum, { force = false } = {}) {
                 });
                 loadedPages.add(pageNum);
                 
-                console.log(`📄 第${pageNum}页加载完成并缓存: ${adjusted.length}个insights (原始: ${targetPageInsights.length})`);
+                console.log(`📄 Page ${pageNum} loaded and cached: ${adjusted.length} insights (original: ${targetPageInsights.length})`);
             } else {
                 throw new Error(`Failed to load page ${pageNum}`);
             }
         }
         
-        // 重新渲染insights（只显示当前页面的数据）
+        // Re-render insights (only show current page data)
         renderInsights();
         
-        // 更新UI
+        // Update UI
         updatePaginationUI();
         
-        // 滚动到顶部
+        // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
         console.log(`🔍 DEBUG: After goToPage - currentPage=${currentPage}, totalPages=${totalPages}`);
@@ -434,7 +434,7 @@ async function goToPage(pageNum, { force = false } = {}) {
     }
 }
 
-// 更新分页信息
+// Update pagination info
 function updatePaginationInfo(data) {
     const pagination = data.pagination || {};
     totalPages = pagination.total_pages || 1;
@@ -444,7 +444,7 @@ function updatePaginationInfo(data) {
     console.log(`🔍 DEBUG: updatePaginationInfo - totalPages=${totalPages}, totalInsights=${totalInsights}, currentPage=${currentPage} (not updated from API)`);
 }
 
-// 显示加载状态
+// Show loading state
 function showLoadingState() {
     const container = document.getElementById('contentCards');
     if (!container) return;
@@ -463,20 +463,20 @@ function showLoadingState() {
     }
 }
 
-// 隐藏加载状态
+// Hide loading state
 function hideLoadingState() {
     const overlay = document.getElementById('loadingSkeleton');
     if (overlay) overlay.remove();
 }
 
-// 清除页面缓存
+// Clear page cache
 function clearPageCache() {
     pageCache.clear();
     loadedPages.clear();
-    console.log('🗑️ 页面缓存已清除');
+    console.log('🗑️ Page cache cleared');
 }
 
-// 获取缓存状态信息
+// Get cache status info
 function getCacheStatus() {
     return {
         cachedPages: Array.from(loadedPages),
@@ -485,17 +485,17 @@ function getCacheStatus() {
     };
 }
 
-// 修改loadUserInsights函数以支持翻页
+// Modify loadUserInsights function to support pagination
 async function loadUserInsightsWithPagination() {
     try {
         insightsLoading = true;
         showLoadingState();
         
-        // 清除之前的缓存
+        // Clear previous cache
         clearPageCache();
         
-        // 第一步：快速加载第一页
-        console.log('🚀 开始请求第一页数据...');
+        // Step 1: Quickly load first page
+        console.log('🚀 Starting first page data request...');
         const startTime = Date.now();
         const effectiveLimit = effectiveFetchLimitForPage(1);
         const uid = (auth?.user?.id || currentUser?.id || undefined);
@@ -528,17 +528,17 @@ async function loadUserInsightsWithPagination() {
         try {
             firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
             const endTime = Date.now();
-            console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
+            console.log(`⏱️ First page API request time: ${endTime - startTime}ms`);
             console.log('📡 First page API response:', firstPageResponse);
         } catch (apiError) {
-            console.warn('⚠️ API请求失败，尝试从本地备份加载:', apiError.message);
-            // 如果API请求失败（可能是认证问题），尝试从本地备份加载
+            console.warn('⚠️ API request failed, trying to load from local backup:', apiError.message);
+            // If API request fails (possibly authentication issue), try loading from local backup
             const backupInsights = localStorage.getItem('quest_insights_backup');
             if (backupInsights) {
                 try {
                     const backup = JSON.parse(backupInsights);
                     if (backup.data && backup.data.length > 0) {
-                        console.log('📦 从本地备份加载 insights:', backup.data.length, '个');
+                        console.log('📦 Loading insights from local backup:', backup.data.length, 'items');
                         firstPageResponse = {
                             success: true,
                             data: {
@@ -552,10 +552,10 @@ async function loadUserInsightsWithPagination() {
                             }
                         };
                     } else {
-                        throw new Error('本地备份为空');
+                        throw new Error('Local backup is empty');
                     }
                 } catch (backupError) {
-                    console.error('❌ 解析本地备份失败:', backupError);
+                    console.error('❌ Failed to parse local backup:', backupError);
                     throw apiError; // 重新抛出原始API错误
                 }
             } else {
@@ -591,7 +591,7 @@ async function loadUserInsightsWithPagination() {
                 }
             }
             
-            // 先设置第一页数据
+            // First set first page data
             currentInsights = firstPageInsights;
             window.currentInsights = currentInsights;
             insightsPage = 1;
@@ -600,7 +600,7 @@ async function loadUserInsightsWithPagination() {
             firstPageInsights.forEach(i => renderedInsightIds.add(i.id));
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
-            // 缓存第一页数据 (store only what we actually display)
+            // Cache first page data (store only what we actually display)
             const displayedInsights = firstPageInsights.slice(0, effectiveLimitForPage(1));
             pageCache.set(1, {
                 insights: displayedInsights,  // ✅ Store only what we display
@@ -609,10 +609,10 @@ async function loadUserInsightsWithPagination() {
             });
             loadedPages.add(1);
             
-            // 从API响应中获取分页信息
+            // Get pagination info from API response
             updatePaginationInfo(firstPageResponse.data);
             
-            // 标准化标签结构
+            // Normalize tag structure
             currentInsights.forEach(insight => {
                 if (insight.tags && insight.tags.length > 0) {
                     insight.tags = insight.tags.map(tag => ({
@@ -623,26 +623,26 @@ async function loadUserInsightsWithPagination() {
                 }
             });
             
-            // 立即渲染第一页（不等待标签加载）
+            // Immediately render first page (don't wait for tag loading)
             renderInsights();
             updatePaginationUI();
             
-            // 异步加载标签，不阻塞渲染
+            // Asynchronously load tags, don't block rendering
             setTimeout(async () => {
                 const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
                 if (insightsWithoutTags.length > 0) {
                     try {
                         await loadTagsForInsights(insightsWithoutTags);
-                        // 标签加载完成后重新渲染
+                        // Re-render after tag loading is complete
                         renderInsights();
                     } catch (error) {
-                        console.warn('⚠️ 标签加载失败:', error);
+                        console.warn('⚠️ Tag loading failed:', error);
                     }
                 }
             }, 10);
             
-            console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
-            console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
+            console.log(`✅ First page loaded: ${firstPageInsights.length} insights, total pages: ${totalPages}`);
+            console.log(`📋 Cache status: cached pages ${Array.from(loadedPages).join(', ')}`);
             
             // If API returned 0 insights, try loading from backup
             if (firstPageInsights.length === 0) {
@@ -650,11 +650,11 @@ async function loadUserInsightsWithPagination() {
                 loadFromBackup();
             }
         } else {
-            // 尝试从localStorage加载备份
+            // Try to load backup from localStorage
             loadFromBackup();
         }
     } catch (error) {
-        console.error('❌ 加载用户insights失败:', error);
+        console.error('❌ Failed to load user insights:', error);
         loadFromBackup();
     } finally {
         insightsLoading = false;
@@ -666,7 +666,7 @@ async function loadUserInsightsWithPagination() {
 
 // loadRemainingInsightsInBackground function removed - using pagination only
 
-// 从备份加载数据
+// Load data from backup
 function loadFromBackup() {
     console.log('🔄 Loading from backup...');
     const backupInsights = localStorage.getItem('quest_insights_backup');
@@ -703,7 +703,7 @@ function loadFromBackup() {
         console.log('⚠️ No backup insights found in localStorage');
     }
     
-    // 设置默认分页信息 (insights only)
+    // Set default pagination info (insights only)
     totalPages = Math.max(1, Math.ceil(currentInsights.length / insightsPerPage));
     totalInsights = currentInsights.length;
     currentPage = 1;
@@ -750,9 +750,9 @@ function checkDataRecoveryStatus() {
     }
 }
 
-// 在页面加载时立即开始API预热
+// Start API warming immediately on page load
 (async function warmupAPI() {
-    console.log('🔥 开始预热API服务器...');
+    console.log('🔥 Starting API server warming...');
     checkDataRecoveryStatus(); // Check data recovery status
     
     const warmupStart = Date.now();
@@ -762,49 +762,49 @@ function checkDataRecoveryStatus() {
             mode: 'cors'
         });
         const warmupEnd = Date.now();
-        console.log(`🔥 API服务器预热完成: ${warmupEnd - warmupStart}ms`);
+        console.log(`🔥 API server warming completed: ${warmupEnd - warmupStart}ms`);
     } catch (error) {
-        console.log('⚠️ API服务器预热失败:', error.message);
+        console.log('⚠️ API server warming failed:', error.message);
     }
 })();
 
-// 页面初始化
+// Page initialization
 async function initPage() {
     try {
-        console.log('🚀 开始初始化 My Space 页面...');
-        console.log('🔍 当前页面路径:', window.location.pathname);
-        console.log('🔍 DOM 加载状态:', document.readyState);
-        console.log('🔍 页面标题:', document.title);
+        console.log('🚀 Starting My Space page initialization...');
+        console.log('🔍 Current page path:', window.location.pathname);
+        console.log('🔍 DOM loading state:', document.readyState);
+        console.log('🔍 Page title:', document.title);
         
-        // 恢复会话状态
+        // Restore session state
         const restored = auth.restoreSession();
-        console.log('🔍 会话恢复结果:', restored);
+        console.log('🔍 Session restore result:', restored);
         
-        // 检查认证状态
+        // Check authentication status
         const isAuthenticated = auth.checkAuth();
-        console.log('🔍 认证状态:', isAuthenticated);
+        console.log('🔍 Authentication status:', isAuthenticated);
         
         if (!isAuthenticated) {
-            console.log('⚠️ 用户未认证，显示错误信息并加载本地备份');
+            console.log('⚠️ User not authenticated, showing error message and loading local backup');
             showErrorMessage('Please sign in. Showing last local backup.');
             
-            // 即使未认证，也绑定基础UI事件（如用户资料编辑）
+            // Even if not authenticated, bind basic UI events (like user profile editing)
             bindProfileEditEvents();
             
-            // 不要return，允许加载本地备份数据
+            // Don't return, allow loading local backup data
         } else {
-            console.log('✅ 用户已认证，继续加载数据');
+            console.log('✅ User authenticated, continuing to load data');
         }
         
-        // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
+        // Check if token is expired (relaxed: allow continuing to load basic UI even if not expired)
         const tokenOk = await auth.checkAndHandleTokenExpiration();
         if (!tokenOk) {
-            // Token校验失败，继续以降级模式加载My Space UI
+            // Token validation failed, continue to load My Space UI in degraded mode
         }
         
-        // API服务器已在页面加载时预热
+        // API server has been warmed up on page load
         
-        // 优先加载核心数据，包括stacks
+        // Prioritize loading core data, including stacks
         const [profileResult, insightsResult, tagsResult, stacksResult] = await Promise.allSettled([
             loadUserProfile(),
             loadUserInsightsWithPagination(),
@@ -812,14 +812,14 @@ async function initPage() {
             loadUserStacks()
         ]);
         
-        // 如果stacks加载失败，尝试从localStorage直接恢复
+        // If stacks loading fails, try to restore directly from localStorage
         if (stacksResult.status === 'rejected') {
-            console.error('❌ 加载stacks失败:', stacksResult.reason);
+            console.error('❌ Failed to load stacks:', stacksResult.reason);
             const savedStacks = localStorage.getItem('quest_stacks');
             if (savedStacks) {
                 try {
                     const entries = JSON.parse(savedStacks);
-                    console.log('🔄 从localStorage直接恢复stacks:', entries.length, 'entries');
+                    console.log('🔄 Restoring stacks directly from localStorage:', entries.length, 'entries');
                     entries.forEach(([id, data]) => {
                         const stringId = String(id);
                         data.id = stringId;
@@ -827,32 +827,32 @@ async function initPage() {
                     });
                     if (stacks.size > 0) {
                         hasLoadedStacksOnce = true;
-                        console.log('✅ 成功从localStorage恢复', stacks.size, '个stacks');
+                        console.log('✅ Successfully restored', stacks.size, 'stacks from localStorage');
                     }
                 } catch (e) {
-                    console.error('❌ 解析localStorage stacks失败:', e);
+                    console.error('❌ Failed to parse localStorage stacks:', e);
                 }
             }
         }
         
-        // 检查每个加载结果并记录错误
+        // Check each loading result and log errors
         if (profileResult.status === 'rejected') {
-            console.error('❌ 用户资料加载失败:', profileResult.reason);
+            console.error('❌ Failed to load user profile:', profileResult.reason);
         }
         if (insightsResult.status === 'rejected') {
-            console.error('❌ 用户insights加载失败:', insightsResult.reason);
+            console.error('❌ Failed to load user insights:', insightsResult.reason);
         }
         if (tagsResult.status === 'rejected') {
-            console.error('❌ 用户标签加载失败:', tagsResult.reason);
+            console.error('❌ Failed to load user tags:', tagsResult.reason);
         }
         
-        // 初始化过滤器按钮
+        // Initialize filter buttons
         initFilterButtons();
         
-        // 绑定事件
+        // Bind events
         bindEvents();
         
-        // 绑定编辑模式按钮事件
+        // Bind edit mode button events
         bindEditModeEvents();
         
         // Set up event delegation for card interactions (performance optimization)
@@ -885,7 +885,7 @@ async function initPage() {
             updateEditModeState();
         }
         
-        // 强制显示内容区域，确保页面可见
+        // Force show content area to ensure page is visible
         const mainContent = document.querySelector('.main-content');
         if (mainContent) {
             mainContent.style.display = 'block';
@@ -893,18 +893,18 @@ async function initPage() {
             mainContent.style.visibility = 'visible';
         }
         
-        // 确保内容卡片容器可见
+        // Ensure content cards container is visible
         if (contentCards) {
             contentCards.style.opacity = '1';
             contentCards.style.visibility = 'visible';
         }
         
-        console.log('✅ 页面内容区域已强制显示');
+        console.log('✅ Page content area forced to show');
         
-        // 如果没有任何内容，确保显示空状态
+        // If no content, ensure empty state is shown
         setTimeout(() => {
             if (contentCards && contentCards.children.length === 0) {
-                console.log('⚠️ 没有检测到内容，强制显示空状态');
+                console.log('⚠️ No content detected, forcing empty state display');
                 const emptyState = document.createElement('div');
                 emptyState.className = 'empty-state';
                 emptyState.innerHTML = `
@@ -919,12 +919,12 @@ async function initPage() {
             }
         }, 100);
         
-        // 分页模式：不需要无限滚动
+        // Pagination mode: no infinite scroll needed
     } catch (error) {
-        console.error('❌ 页面初始化失败:', error);
+        console.error('❌ Page initialization failed:', error);
         
-        // 如果是认证错误，重定向到登录页面
-        if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
+        // If authentication error, redirect to login page
+        if (error.message.includes('Authentication expired') || error.message.includes('Please login again')) {
             window.location.href = PATHS.LOGIN;
             return;
         }
@@ -933,10 +933,10 @@ async function initPage() {
     }
 }
 
-// 加载用户stacks
+// Load user stacks
 async function loadUserStacks() {
     try {
-        // 允许在未认证时也从 localStorage 加载，避免数据丢失
+        // Allow loading from localStorage even when not authenticated to avoid data loss
         const unauthenticated = !auth.checkAuth();
         if (unauthenticated) {
             const saved = localStorage.getItem('quest_stacks');
@@ -955,7 +955,7 @@ async function loadUserStacks() {
                     if (stacks.size > 0) hasLoadedStacksOnce = true;
                     console.log('✅ Loaded', stacks.size, 'stacks from localStorage');
                 } catch (e) {
-                    console.error('❌ 解析本地 stacks 失败:', e);
+                    console.error('❌ Failed to parse local stacks:', e);
                 }
             }
             
@@ -963,7 +963,7 @@ async function loadUserStacks() {
             hasLoadedStacksOnce = true;
             console.log('✅ Stacks loading process completed (unauthenticated). Found', stacks.size, 'stacks');
             
-            // 在未认证时不要继续调用后端
+            // Don't continue calling backend when not authenticated
             return;
         }
         
@@ -1086,7 +1086,7 @@ async function loadUserStacks() {
                     }
                 }
                 
-                // 更新stackIdCounter
+                // Update stackIdCounter
                 if (stacks.size > 0) {
                     const maxTimestamp = Math.max(...Array.from(stacks.keys()).map(id => {
                         const timestamp = id.split('_')[1];
@@ -1095,14 +1095,14 @@ async function loadUserStacks() {
                     stackIdCounter = maxTimestamp + 1;
                 }
             
-            // 验证one-to-one约束 (现在由数据库保证)
+            // Validate one-to-one constraint (now guaranteed by database)
             const allInsightIds = new Set();
             let hasDuplicates = false;
             
             stacks.forEach(stack => {
                 stack.cards.forEach(card => {
                     if (allInsightIds.has(card.id)) {
-                    console.warn('⚠️ 发现重复的insight ID:', card.id, '违反one-to-one约束');
+                    console.warn('⚠️ Found duplicate insight ID:', card.id, 'violating one-to-one constraint');
                         hasDuplicates = true;
                     }
                     allInsightIds.add(card.id);
@@ -1110,38 +1110,38 @@ async function loadUserStacks() {
             });
             
             if (hasDuplicates) {
-                console.error('❌ 数据违反one-to-one约束，请检查后端数据');
+                console.error('❌ Data violates one-to-one constraint, please check backend data');
             }
             
                         if (stacks.size > 0) hasLoadedStacksOnce = true;
         } catch (error) {
-            console.error('❌ 加载用户stacks失败:', error);
-            // 如果stacks端点不存在，继续使用本地存储
+            console.error('❌ Failed to load user stacks:', error);
+            // If stacks endpoint does not exist, continue using local storage
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                console.log('⚠️ Stacks API端点尚未实现，使用本地存储模式');
+                console.log('⚠️ Stacks API endpoint not implemented yet, using local storage mode');
             }
             
-            // 如果认证失败，尝试从localStorage恢复stacks数据
-            if (error.message.includes('401') || error.message.includes('403') || error.message.includes('认证')) {
-                console.log('🔍 认证失败，尝试从localStorage恢复stacks数据...');
+            // If authentication fails, try to restore stacks data from localStorage
+            if (error.message.includes('401') || error.message.includes('403') || error.message.includes('Authentication')) {
+                console.log('🔍 Authentication failed, trying to restore stacks data from localStorage...');
                 const savedStacks = localStorage.getItem('quest_stacks');
                 if (savedStacks) {
                     try {
                         const entries = JSON.parse(savedStacks);
-                        console.log('📦 从localStorage恢复stacks:', entries.length, 'entries');
+                        console.log('📦 Restoring stacks from localStorage:', entries.length, 'entries');
                         entries.forEach(([id, data]) => {
                             const stringId = String(id);
                             data.id = stringId;
                             stacks.set(stringId, data);
                         });
                         if (stacks.size > 0) hasLoadedStacksOnce = true;
-                        console.log('✅ 成功从localStorage恢复', stacks.size, '个stacks');
+                        console.log('✅ Successfully restored', stacks.size, 'stacks from localStorage');
                     } catch (e) {
-                        console.error('❌ 解析localStorage stacks失败:', e);
+                        console.error('❌ Failed to parse localStorage stacks:', e);
                     }
                 }
             }
-            // 不抛出错误，允许页面继续加载
+            // Do not throw error, allow page to continue loading
         }
         
         // Mark stacks as loaded regardless of whether any were found
@@ -1173,22 +1173,22 @@ function setupAuthListener() {
     });
 }
 
-// 加载用户资料
+// Load user profile
 async function loadUserProfile() {
     try {
-        // 检查认证状态，如果未认证则使用本地数据
+        // Check authentication status，如果未认证则使用本地数据
         if (!auth.checkAuth()) {
-            console.log('⚠️ 用户未认证，使用本地用户数据');
+            console.log('⚠️ User not authenticated, using local user data');
             const localUser = auth.getCurrentUser();
             if (localUser) {
                 currentUser = localUser;
                 updateUserProfileUI();
                 return;
             }
-            throw new Error('用户未认证且无本地数据');
+            throw new Error('User not authenticated and no local data');
         }
         
-        // 总是尝试从 API 获取最新的用户资料
+        // Always try to get latest user profile from API
         try {
             const response = await api.getUserProfile();
             
@@ -1200,7 +1200,7 @@ async function loadUserProfile() {
                 updateUserProfileUI();
                 return;
             } else if (response && (response.id || response.email)) {
-                // 如果API直接返回用户数据而不是包装在success/data中
+                // If API directly returns user data instead of wrapped in success/data
                 currentUser = response;
                 // 更新auth管理器中的用户数据
                 auth.user = currentUser;
@@ -1208,13 +1208,13 @@ async function loadUserProfile() {
                 updateUserProfileUI();
                 return;
             } else {
-                console.warn('⚠️ 后端用户资料格式异常，尝试使用本地存储');
-                throw new Error('API 返回格式错误');
+                console.warn('⚠️ Backend user profile format abnormal, trying to use local storage');
+                throw new Error('API return format error');
             }
         } catch (profileError) {
-            console.warn('⚠️ Profile API 调用失败，使用本地存储作为回退:', profileError);
+            console.warn('⚠️ Profile API call failed, using local storage as fallback:', profileError);
             
-            // 回退到本地存储
+            // Fallback to local storage
             const localUser = auth.getCurrentUser();
             if (localUser) {
                 currentUser = localUser;
@@ -1222,7 +1222,7 @@ async function loadUserProfile() {
                 return;
             }
             
-            // 最后的回退：使用默认用户信息
+            // Final fallback: use default user info
             currentUser = {
                 id: 'user_' + Date.now(),
                 email: 'user@example.com',
@@ -1231,8 +1231,8 @@ async function loadUserProfile() {
             updateUserProfileUI();
         }
     } catch (error) {
-        console.error('❌ 获取用户资料失败:', error);
-        // 使用默认用户信息
+        console.error('❌ Failed to get user profile:', error);
+        // Use default user info
         currentUser = {
             id: 'user_' + Date.now(),
             email: 'user@example.com',
@@ -1242,7 +1242,7 @@ async function loadUserProfile() {
     }
 }
 
-// 更新用户资料UI
+// Update user profile UI
 function updateUserProfileUI() {
     if (!currentUser) return;
     
@@ -1265,21 +1265,21 @@ function updateUserProfileUI() {
         usernameSkeleton.style.display = 'none';
     }
     
-    // 更新头像
+    // Update avatar
     if (userAvatar) {
         if (currentUser.avatar_url) {
             userAvatar.src = currentUser.avatar_url;
             userAvatar.style.display = 'block';
         } else {
-            // 如果没有头像URL，使用默认头像或隐藏
+            // If no avatar URL, use default avatar or hide
             userAvatar.style.display = 'block';
-            // 可以设置一个默认头像或者保持当前状态
+            // Can set a default avatar or keep current state
         }
     }
     
-    // 更新用户名
+    // Update username
     if (actualUsername) {
-        // 尝试多种可能的显示名称字段
+        // Try multiple possible display name fields
         const displayName = currentUser.nickname || 
                            currentUser.username || 
                            currentUser.name || 
@@ -1291,14 +1291,14 @@ function updateUserProfileUI() {
         actualUsername.style.display = 'inline';
     }
     
-    // 更新header头像
+    // Update header avatar
     if (headerAvatar) {
         if (currentUser.avatar_url) {
             headerAvatar.src = currentUser.avatar_url;
         }
     }
     
-    // 更新header欢迎消息
+    // Update header welcome message
     const welcomeMessage = document.querySelector('.WelcomeToYourPersonalSpacePlaceholder');
     if (welcomeMessage) {
         const displayName = currentUser.nickname || 
@@ -1311,10 +1311,10 @@ function updateUserProfileUI() {
     }
 }
 
-// 加载用户见解
+// Load user insights
 async function loadUserInsights() {
     try {
-        // 使用分页API方法获取insights
+        // Use pagination API method to get insights
         insightsLoading = true;
         const effectiveLimit = effectiveFetchLimitForPage(1);
         const uid = (auth?.user?.id || currentUser?.id || undefined);
@@ -1362,7 +1362,7 @@ async function loadUserInsights() {
                 await loadTagsForInsights(insightsWithoutTags);
             }
             
-            renderInsightsInitial();      // 只渲染当前页面的数据
+            renderInsightsInitial();      // Only render current page data
         } else {
             // Try loading from localStorage backup
             const backupInsights = localStorage.getItem('quest_insights_backup');
@@ -1392,7 +1392,7 @@ async function loadUserInsights() {
             renderInsights();
         }
     } catch (error) {
-        console.error('❌ 加载用户insights失败:', error);
+        console.error('❌ Failed to load user insights:', error);
         
         // Try loading from localStorage backup before showing error
         const backupInsights = localStorage.getItem('quest_insights_backup');
@@ -1404,7 +1404,7 @@ async function loadUserInsights() {
                 const backup = JSON.parse(backupInsights);
                 // Check if backup is recent (within 24 hours)
                 const isRecent = backup.timestamp && (Date.now() - backup.timestamp < 24 * 60 * 60 * 1000);
-                // 认证/网络错误时允许使用"过期"备份，避免空数据
+                // Allow using "expired" backup when authentication/network error to avoid empty data
                 if ((isRecent || isAuthErr || isNetErr) && Array.isArray(backup.data)) {
                     currentInsights = backup.data;
                     window.currentInsights = currentInsights;
@@ -1425,12 +1425,12 @@ async function loadUserInsights() {
             window.currentInsights = currentInsights;
         }
         
-        // 检查是否是后端服务问题
+        // Check if it is a backend service issue
         if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
             showErrorMessage('Backend service temporarily unavailable due to expired token, please relogin.');
         } else if (error.message.includes('401') || error.message.includes('403')) {
             showErrorMessage('Authentication failed. Please log in again.');
-            // 重定向到登录页面
+            // Redirect to login page
             setTimeout(() => {
                 window.location.href = PATHS.LOGIN;
             }, 2000);
@@ -1491,7 +1491,7 @@ function effectiveFetchLimitForPage(pageNum) {
     return targetInsightsTiles + stackedInsightsCount;
 }
 
-// 渲染见解列表
+// Render insights list
 function renderInsights() {
     console.log('🚨 renderInsights() called - viewMode:', viewMode, 'activeStackId:', activeStackId);
     console.log('🔍 DEBUG: renderInsights - currentPage:', currentPage, 'totalPages:', totalPages);
@@ -1607,7 +1607,7 @@ function renderInsights() {
         Math.min(filteredInsights.length, effectiveLimitForPage(currentPage));
     const stacksCount = currentPage === 1 && !hasActiveTagFilter ? stacks.size : 0;
     const totalCards = insightsCount + stacksCount;
-    console.log(`📊 渲染第${currentPage}页: ${insightsCount}个insights + ${stacksCount}个stacks = ${totalCards}个卡片总计`);
+    console.log(`📊 Rendering page ${currentPage}: ${insightsCount} insights + ${stacksCount} stacks = ${totalCards} total cards`);
     console.log(`🔍 DEBUG: Final rendering stats - currentPage=${currentPage}, insightsCount=${insightsCount}, stacksCount=${stacksCount}, totalCards=${totalCards}`);
     
     // Update edit mode state after rendering cards
@@ -1748,7 +1748,30 @@ async function loadTagsForInsights(insights) {
     }
 }
 
-// 创建见解卡片
+// Array of random images for cards without images
+const randomImages = [
+    '/public/新建文件夹/微信图片_20250822114123_2436_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114124_2437_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114125_2438_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114126_2439_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114126_2440_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114127_2441_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114128_2442_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114129_2443_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114131_2444_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114132_2445_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114133_2446_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114134_2447_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114136_2448_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114137_2449_9.jpg'
+];
+
+// Function to get a random image
+function getRandomImage() {
+    return randomImages[Math.floor(Math.random() * randomImages.length)];
+}
+
+// Create insight card
 function createInsightCard(insight) {
     console.log('🔨 Creating insight card for:', insight.title, 'ID:', insight.id);
     
@@ -1769,32 +1792,39 @@ function createInsightCard(insight) {
     // Add drag and drop functionality
     setupCardDragAndDrop(card, insight);
     
-    // 卡片图片区域
-    if (insight.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'content-card-image-container';
-        
-        const image = document.createElement('img');
-        image.className = 'content-card-image';
-        image.src = insight.image_url;
-        image.alt = insight.title || 'Content image';
-        image.loading = 'lazy';
-        
-        // 图片加载错误处理
-        image.onerror = function() {
+    // Card image area - always show an image (either original or random)
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'content-card-image-container';
+    
+    const image = document.createElement('img');
+    image.className = 'content-card-image';
+    
+    // Use original image_url if available, otherwise use a random image
+    image.src = insight.image_url || getRandomImage();
+    image.alt = insight.title || 'Content image';
+    image.loading = 'lazy';
+    
+    // Image loading error handling
+    image.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (insight.image_url && !this.dataset.randomImageUsed) {
+            this.src = getRandomImage();
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
             this.style.display = 'none';
             this.parentElement.classList.add('no-image');
-        };
-        
-        imageContainer.appendChild(image);
-        card.appendChild(imageContainer);
-    }
+        }
+    };
     
-    // 卡片内容区域
+    imageContainer.appendChild(image);
+    card.appendChild(imageContainer);
+    
+    // Card content area
     const cardContent = document.createElement('div');
     cardContent.className = 'content-card-content';
     
-    // 卡片头部 - Top row with date and source info
+    // Card header - Top row with date and source info
     const cardHeader = document.createElement('div');
     cardHeader.className = 'content-card-header';
     
@@ -1859,14 +1889,14 @@ function createInsightCard(insight) {
     cardHeader.appendChild(topRow);
     cardHeader.appendChild(title);
     
-    // 卡片描述
+    // Card description
     const description = document.createElement('div');
     description.className = 'content-card-description';
     description.textContent = insight.description || `Content from ${new URL(insight.url).hostname}`;
     
-    // 标签功能已移除 - 只在底部显示主要标签
+    // Tag functionality removed - only show main tags at bottom
     
-    // 卡片底部
+    // Card footer
     const cardFooter = document.createElement('div');
     cardFooter.className = 'content-card-footer';
     
@@ -1898,13 +1928,13 @@ function createInsightCard(insight) {
     
     cardFooter.appendChild(tag);
     
-    // 组装卡片内容
+    // Assemble card content
     cardContent.appendChild(cardHeader);
     cardContent.appendChild(description);
-    // 标签区域只在有标签时才添加
+    // Tag area only added when there are tags
     cardContent.appendChild(cardFooter);
     
-    // 组装完整卡片
+    // Assemble complete card
     card.appendChild(cardContent);
     
     console.log('✅ Insight card created successfully:', {
@@ -1917,14 +1947,14 @@ function createInsightCard(insight) {
     return card;
 }
 
-// 为标签筛选器加载用户标签
+// Load user tags for tag filter
 async function loadUserTagsForFilter(dropdownOptions) {
     try {
         const response = await getCachedUserTags();
         const tags = response.success ? response.data : [];
         
         if (tags.length > 0) {
-            // 为每个标签创建选项
+            // Create options for each tag
             tags.forEach(tag => {
                 const tagOption = document.createElement('div');
                 tagOption.className = 'filter-option';
@@ -1939,11 +1969,11 @@ async function loadUserTagsForFilter(dropdownOptions) {
             });
         }
     } catch (error) {
-        console.error('❌ 加载用户标签失败:', error);
+        console.error('❌ Failed to load user tags:', error);
     }
 }
 
-// 初始化筛选按钮
+// Initialize filter buttons
 async function initFilterButtons() {
     if (!filterButtons) {
         console.error('❌ Filter buttons container not found');
@@ -1953,16 +1983,16 @@ async function initFilterButtons() {
     try {
         console.log('🔧 Initializing filter buttons...');
         
-        // 获取用户标签
+        // Get user tags
         const response = await getCachedUserTags();
         const userTags = response.success ? response.data : [];
         
         console.log('📋 User tags loaded:', userTags);
         
-        // 清空现有按钮
+        // Clear existing buttons
         filterButtons.innerHTML = '';
         
-        // 创建两个主要筛选按钮
+        // Create two main filter buttons
         const mainFilterButtons = [
             {
                 key: 'latest',
@@ -1997,7 +2027,7 @@ async function initFilterButtons() {
         // Mark filters as loaded
         filterButtons.classList.add('filters-loaded');
         
-        // 创建筛选按钮
+        // Create filter button
         console.log('🎯 Creating filter buttons:', mainFilterButtons);
         
         mainFilterButtons.forEach(filterConfig => {
@@ -2016,13 +2046,13 @@ async function initFilterButtons() {
                 </svg>
             `;
             
-            // 根据按钮类型创建不同的内容
+            // Create different content based on button type
             if (filterConfig.type === 'dropdown') {
-                // 所有按钮都创建下拉菜单
+                // All buttons create dropdown menus
                 const dropdownOptions = document.createElement('div');
                 dropdownOptions.className = 'filter-dropdown-options';
                 
-                // 如果是标签按钮，创建PARA系统选项
+                // If it is a tag button, create PARA system options
                 if (filterConfig.key === 'tags') {
                     console.log('🏷️ Creating PARA tag options:', filterConfig.options);
                     
@@ -2049,19 +2079,19 @@ async function initFilterButtons() {
                     `).join('');
                 }
                 
-                // 绑定点击事件
+                // Bind click event
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
                     buttonContainer.classList.toggle('open');
                     
-                    // 更新箭头方向
+                    // Update arrow direction
                     const arrow = button.querySelector('.filter-arrow');
                     if (arrow) {
                         arrow.style.transform = buttonContainer.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
                     }
                 });
                 
-                // 绑定选项点击事件
+                // Bind option click event
                 dropdownOptions.addEventListener('click', (e) => {
                     console.log('🖱️ Filter option clicked:', e.target);
                     
@@ -2074,7 +2104,7 @@ async function initFilterButtons() {
                         console.log('🎯 Setting filter:', { filterType, filterKey, optionLabel });
                         setFilter(filterType, filterKey, optionLabel);
                         
-                        // 关闭所有下拉框
+                        // Close all dropdowns
                         document.querySelectorAll('.filter-button-container').forEach(container => {
                             container.classList.remove('open');
                             const arrow = container.querySelector('.filter-arrow');
@@ -2083,12 +2113,12 @@ async function initFilterButtons() {
                     }
                 });
                 
-                // 阻止下拉选项点击事件冒泡
+                // Prevent dropdown option click event bubbling
                 dropdownOptions.addEventListener('click', (e) => {
                     e.stopPropagation();
                 });
                 
-                // 添加PARA工具提示功能
+                // Add PARA tooltip functionality
                 if (filterConfig.key === 'tags') {
                     console.log('💡 Setting up PARA tooltips');
                     setupPARATooltips(dropdownOptions);
@@ -2097,7 +2127,7 @@ async function initFilterButtons() {
                 buttonContainer.appendChild(button);
                 buttonContainer.appendChild(dropdownOptions);
             } else {
-                // 其他按钮：创建下拉菜单
+                // Other buttons: create dropdown menu
                 const dropdownOptions = document.createElement('div');
                 dropdownOptions.className = 'filter-dropdown-options';
                 dropdownOptions.innerHTML = filterConfig.options.map(option => `
@@ -2106,19 +2136,19 @@ async function initFilterButtons() {
                     </div>
                 `).join('');
                 
-                // 绑定点击事件
+                // Bind click event
                 button.addEventListener('click', (e) => {
                     e.stopPropagation();
                     buttonContainer.classList.toggle('open');
                     
-                    // 更新箭头方向
+                    // Update arrow direction
                     const arrow = button.querySelector('.filter-arrow');
                     if (arrow) {
                         arrow.style.transform = buttonContainer.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
                     }
                 });
                 
-                // 绑定选项点击事件
+                // Bind option click event
                 dropdownOptions.addEventListener('click', (e) => {
                     const option = e.target.closest('.filter-option');
                     if (option) {
@@ -2127,7 +2157,7 @@ async function initFilterButtons() {
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
                         setFilter(filterType, filterKey, optionLabel);
                         
-                        // 关闭所有下拉框
+                        // Close all dropdowns
                         document.querySelectorAll('.filter-button-container').forEach(container => {
                             container.classList.remove('open');
                             const arrow = container.querySelector('.filter-arrow');
@@ -2136,7 +2166,7 @@ async function initFilterButtons() {
                     }
                 });
                 
-                // 阻止下拉选项点击事件冒泡
+                // Prevent dropdown option click event bubbling
                 dropdownOptions.addEventListener('click', (e) => {
                     e.stopPropagation();
                 });
@@ -2150,12 +2180,12 @@ async function initFilterButtons() {
         console.log('✅ Filter buttons created successfully');
         console.log('🎯 Total filter button containers:', filterButtons.children.length);
         
-        // Edit Tags按钮已移到标签选择器旁边，不再需要在这里添加
+        // Edit Tags button has been moved next to tag selector, no longer need to add here
         
     } catch (error) {
-        console.error('❌ 初始化筛选按钮失败:', error);
+        console.error('❌ Failed to initialize filter buttons:', error);
         
-        // 显示基础筛选选项
+        // Show basic filter options
         const filterOptions = [
             { key: 'all', label: 'All' },
             { key: 'latest', label: 'Latest' },
@@ -2238,11 +2268,11 @@ async function fetchAllInsightsForFiltering() {
     }
 }
 
-// 设置筛选条件
+// Set filter conditions
 async function setFilter(filterType, filterValue, optionLabel = null) {
     console.log('🔧 setFilter called:', { filterType, filterValue, optionLabel });
     
-    // 更新对应的筛选条件
+    // Update corresponding filter conditions
     currentFilters[filterType] = filterValue;
     console.log('📊 Current filters updated:', currentFilters);
     
@@ -2267,27 +2297,27 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
         }
     }
     
-    // 更新按钮显示文本
+    // Update button display text
     updateFilterButtonDisplay(filterType, filterValue, optionLabel);
     
-    // 更新按钮状态
+    // Update button state
     updateFilterButtonStates();
     
-    // 显示筛选状态
+    // Show filter status
     showFilterStatus();
     
-    // 重新渲染
+    // Re-render
     console.log('🔄 Re-rendering insights with new filter...');
     resetInsightsPaginationAndRerender();
 }
 
-// 更新筛选按钮显示文本
+// Update filter button display text
 function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
     const buttonContainer = filterButtons.querySelector(`[data-filter="${filterType}"]`).closest('.filter-button-container');
     const button = buttonContainer.querySelector('.filter-label');
     
     if (filterType === 'tags' && filterValue && filterValue.startsWith('tag_')) {
-        // 标签筛选：显示选中的标签名称
+        // Tag filter: show selected tag names
         if (optionLabel) {
             button.textContent = optionLabel;
         }
@@ -2303,7 +2333,7 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
     } else if (filterType === 'tags' && filterValue === 'all') {
         button.textContent = 'Tags';
     } else if (filterType === 'latest') {
-        // 排序方式：显示排序方式
+        // Sort method: show sort method
         if (filterValue === 'latest') {
             button.textContent = 'Latest';
         } else if (filterValue === 'oldest') {
@@ -2314,7 +2344,7 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
     }
 }
 
-// 更新筛选按钮状态
+// Update filter button state
 function updateFilterButtonStates() {
     const buttons = filterButtons.querySelectorAll('.FilterButton');
     buttons.forEach(btn => {
@@ -2323,27 +2353,27 @@ function updateFilterButtonStates() {
     });
 }
 
-// 显示筛选状态
+// Show filter status
 function showFilterStatus() {
     const statusParts = [];
     
-    // 排序状态
+    // Sort status
     if (currentFilters.latest === 'latest') {
-        statusParts.push('最新优先');
+        statusParts.push('Latest first');
     } else if (currentFilters.latest === 'oldest') {
-        statusParts.push('最旧优先');
+        statusParts.push('Oldest first');
     } else if (currentFilters.latest === 'alphabetical') {
-        statusParts.push('字母排序');
+        statusParts.push('Alphabetical');
     }
     
-    // 标签筛选状态
+    // Tag filter status
     if (currentFilters.tags && currentFilters.tags !== 'all') {
         if (currentFilters.tags.startsWith('tag_')) {
             const tagButton = document.querySelector(`[data-filter="tags"]`);
             if (tagButton) {
                 const tagOption = tagButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.tags}"]`);
                 if (tagOption) {
-                    statusParts.push(`标签: ${tagOption.textContent.trim()}`);
+                    statusParts.push(`Tag: ${tagOption.textContent.trim()}`);
                 }
             }
         } else if (['project', 'area', 'resource', 'archive'].includes(currentFilters.tags)) {
@@ -2354,21 +2384,21 @@ function showFilterStatus() {
                 'resource': 'Resource',
                 'archive': 'Archive'
             };
-            statusParts.push(`标签: ${paraCategoryNames[currentFilters.tags]}`);
+            statusParts.push(`Tag: ${paraCategoryNames[currentFilters.tags]}`);
         }
     } else if (currentFilters.tags === 'all') {
-        statusParts.push('所有标签');
+        statusParts.push('All tags');
     }
     
 
     
-    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : '显示所有内容';
+    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : 'Show all content';
     
-    // 可以在这里添加UI显示筛选状态
-    // 比如在页面顶部显示一个小提示
+    // Can add UI to show filter status here
+    // Like showing a small tip at the top of the page
 }
 
-// 获取当前筛选的文章
+// Get currently filtered articles
 function getFilteredInsights() {
     console.log('🔍 getFilteredInsights called with filters:', currentFilters);
     console.log('📊 Total insights:', currentInsights.length);
@@ -2452,22 +2482,22 @@ function getFilteredInsights() {
         console.log('📋 Keeping all insights for filtering (including those in stacks):', filteredInsights.length);
     }
     
-    // 1. 排序逻辑（始终应用）
+    // 1. Sorting logic (always applied)
     if (currentFilters.latest === 'latest') {
-        // 按最新时间排序
+        // Sort by latest time
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     } else if (currentFilters.latest === 'oldest') {
-        // 按最旧时间排序
+        // Sort by oldest time
         filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     } else if (currentFilters.latest === 'alphabetical') {
-        // 按标题首字母A-Z排序
+        // Sort by title first letter A-Z
         filteredInsights.sort((a, b) => {
             const titleA = (a.title || a.url || '').toLowerCase();
             const titleB = (b.title || b.url || '').toLowerCase();
             return titleA.localeCompare(titleB);
         });
     } else {
-        // 默认按最新时间排序
+        // Default sort by latest time
         filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
     
@@ -2500,7 +2530,7 @@ function getFilteredInsights() {
         console.log('📋 Insights after search filtering:', filteredInsights.length);
     }
     
-    // 3. 标签筛选
+    // 3. Tag filtering
     if (currentFilters.tags && currentFilters.tags !== 'all') {
         console.log('🏷️ Applying tag filter:', currentFilters.tags);
         
@@ -2574,7 +2604,7 @@ function getFilteredInsights() {
 
 
 
-// 分享见解
+// Share insight
 async function shareInsight(insight) {
     try {
         const shareData = {
@@ -2586,11 +2616,11 @@ async function shareInsight(insight) {
             await navigator.share(shareData);
             alert('Content shared successfully!');
         } else {
-            // 复制链接到剪贴板
+            // Copy link to clipboard
             navigator.clipboard.writeText(insight.url).then(() => {
                 alert('Link copied to clipboard!');
             }).catch(() => {
-                // 降级方案
+                // Fallback solution
                 const textArea = document.createElement('textarea');
                 textArea.value = insight.url;
                 document.body.appendChild(textArea);
@@ -2606,7 +2636,7 @@ async function shareInsight(insight) {
     }
 }
 
-// 删除见解
+// Delete insight
 async function deleteInsight(id) {
     if (!confirm('Are you sure you want to delete this content?')) {
         return;
@@ -2620,7 +2650,7 @@ async function deleteInsight(id) {
             window.apiCache.clearPattern('/api/v1/insights');
         }
         
-        clearPageCache(); // 清除缓存，因为数据已变化
+        clearPageCache(); // Clear cache because data has changed
         
         // Handle refresh based on current view mode
         if (viewMode === 'stack' && activeStackId) {
@@ -2637,12 +2667,12 @@ async function deleteInsight(id) {
         
         alert('Content deleted successfully!');
     } catch (error) {
-        console.error('删除内容失败:', error);
+        console.error('Failed to delete content:', error);
         alert(error.message || 'Failed to delete content, please try again');
     }
 }
 
-// 滚动状态管理工具
+// Scroll state management tool
 const scrollManager = {
     disable() {
         // 保存当前滚动位置
@@ -2695,7 +2725,7 @@ function showAddContentModal() {
             addContentForm.reset();
         }
     } else {
-        console.error('❌ 弹窗元素未找到');
+        console.error('❌ Modal element not found');
     }
 }
 
@@ -2777,7 +2807,7 @@ function bindEvents() {
                     return;
                 }
                 
-                // 显示加载状态
+                // Show loading state
                 const submitBtn = document.getElementById('addContentBtn');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Adding...';
@@ -2866,7 +2896,7 @@ function bindEvents() {
                             window.apiCache.clearPattern('/api/v1/insights');
                         }
                         
-                        clearPageCache(); // 清除缓存，因为数据已变化
+                        clearPageCache(); // Clear cache because data has changed
                         
                         // Check if we're in stack view mode
                         if (viewMode === 'stack' && activeStackId) {
@@ -2890,13 +2920,13 @@ function bindEvents() {
                         // Also save to localStorage backup
                         saveInsightsToLocalStorage({ force: true });
                     } catch (error) {
-                        console.error('❌ 重新加载内容失败:', error);
+                        console.error('❌ Failed to reload content:', error);
                         // 不要显示错误，因为内容已经添加成功了
                     }
                 }, 2000);
                 
             } catch (error) {
-                console.error('❌ 添加内容失败:', error);
+                console.error('❌ Failed to add content:', error);
                 let errorMessage = 'Failed to add content. Please try again.';
                 
                 if (error.message) {
@@ -2906,12 +2936,12 @@ function bindEvents() {
                         errorMessage = 'Invalid URL or content format.';
                     } else if (error.message.includes('422')) {
                         errorMessage = 'Data validation failed. Please check your input and try again.';
-                        console.error('🔍 422错误详情 - 错误信息:', error.message);
-                        console.error('🔍 422错误详情 - 完整错误对象:', error);
-                        console.error('🔍 422错误详情 - URL:', url);
-                        console.error('🔍 422错误详情 - 标签数量:', tag_ids ? tag_ids.length : 0);
-                        console.error('🔍 422错误详情 - 标签ID数组:', insightData.tag_ids);
-                        console.error('🔍 422错误详情 - 完整insightData:', insightData);
+                        console.error('🔍 422 error details - error message:', error.message);
+                        console.error('🔍 422 error details - complete error object:', error);
+                        console.error('🔍 422 error details - URL:', url);
+                        console.error('🔍 422 error details - tag count:', tag_ids ? tag_ids.length : 0);
+                        console.error('🔍 422 error details - tag ID array:', insightData.tag_ids);
+                        console.error('🔍 422 error details - complete insightData:', insightData);
                     } else if (error.message.includes('500') || error.message.includes('server error')) {
                         errorMessage = 'Server error. Please try again later.';
                     } else {
@@ -3171,9 +3201,9 @@ function normalizePaginatedInsightsResponse(response) {
 // 加载用户标签
 async function loadUserTags() {
     try {
-        // 检查认证状态
+        // Check authentication status
         if (!auth.checkAuth()) {
-            console.log('⚠️ 用户未认证，使用空标签列表');
+            console.log('⚠️ User not authenticated, using empty tag list');
             renderTagSelector([]);
             updateFilterButtons([]);
             return;
@@ -3191,15 +3221,15 @@ async function loadUserTags() {
             // 更新过滤器按钮
             updateFilterButtons(tags);
         } else {
-            console.warn('⚠️ API返回格式不正确:', response);
+            console.warn('⚠️ API return format incorrect:', response);
             renderTagSelector([]);
         }
     } catch (error) {
-        console.error('❌ 加载用户标签失败:', error);
+        console.error('❌ Failed to load user tags:', error);
         
         // 检查是否是认证问题
         if (error.message.includes('401') || error.message.includes('403') || error.message.includes('认证')) {
-            console.log('⚠️ 认证失败，使用空标签列表');
+            console.log('⚠️ Authentication failed, using empty tag list');
             renderTagSelector([]);
             updateFilterButtons([]);
             // 不要显示错误信息或重定向，让用户继续使用页面
@@ -3207,7 +3237,7 @@ async function loadUserTags() {
             showErrorMessage('Backend service temporarily unavailable due to expired token, please relogin.');
             renderTagSelector([]);
         } else {
-            console.log('⚠️ 其他错误，使用空标签列表');
+            console.log('⚠️ Other error, using empty tag list');
             renderTagSelector([]);
         }
     }
@@ -3217,7 +3247,7 @@ async function loadUserTags() {
 function renderTagSelector(tags) {
     const tagSelectorOptions = document.getElementById('tagSelectorOptions');
     if (!tagSelectorOptions) {
-        console.error('❌ 标签选择器选项容器未找到');
+        console.error('❌ Tag selector options container not found');
         return;
     }
     
@@ -3243,7 +3273,7 @@ function renderTagSelector(tags) {
             </div>
         `;
         
-        // 绑定点击事件
+                // Bind click event
         tagOption.addEventListener('click', (e) => {
             // 防止点击radio时触发两次
             if (e.target.type === 'radio') {
@@ -3331,7 +3361,7 @@ function bindTagSelectorEvents() {
     const tagSelectorDropdown = document.getElementById('tagSelectorDropdown');
     
     if (!tagSelectorTrigger || !tagSelectorDropdown) {
-        console.error('❌ 标签选择器元素未找到');
+        console.error('❌ Tag selector element not found');
         return;
     }
     
@@ -3342,7 +3372,7 @@ function bindTagSelectorEvents() {
         
         const isOpen = tagSelectorDropdown.classList.contains('open');
         
-        // 更新箭头方向
+                    // Update arrow direction
         const arrow = tagSelectorTrigger.querySelector('.tag-selector-arrow');
         if (arrow) {
             arrow.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
@@ -3421,10 +3451,10 @@ function showCreateTagModal() {
         if (tagNameInput) {
             tagNameInput.focus();
         } else {
-            console.error('❌ 找不到标签名称输入框');
+            console.error('❌ Tag name input field not found');
         }
     } else {
-        console.error('❌ 找不到创建标签模态框');
+        console.error('❌ Create tag modal not found');
     }
 }
 
@@ -3585,7 +3615,7 @@ async function createNewTag() {
     const tagNameInput = document.getElementById('newTagName');
     
     if (!tagNameInput) {
-        console.error('❌ 找不到标签名称输入框');
+            console.error('❌ Tag name input field not found');
         showErrorMessage('Tag name input not found');
         return;
     }
@@ -4434,7 +4464,7 @@ async function deleteUserTag(userTagId) {
             throw new Error(response.message || 'Failed to delete tag');
         }
     } catch (error) {
-        console.error('❌ 删除标签失败:', error);
+        console.error('❌ Failed to delete tag:', error);
         showErrorMessage(`Failed to delete tag: ${error.message}`);
     }
 }
@@ -5397,10 +5427,21 @@ function closeProfileEditModal() {
     // 隐藏模态框
     profileEditModal.classList.remove('show');
     
-    // 延迟设置display为none，以保证动画效果
-    setTimeout(() => {
+    // 使用动画事件监听器确保动画完成后再隐藏
+    const handleTransitionEnd = () => {
         profileEditModal.style.display = 'none';
-    }, 300);
+        profileEditModal.removeEventListener('transitionend', handleTransitionEnd);
+    };
+    
+    profileEditModal.addEventListener('transitionend', handleTransitionEnd);
+    
+    // 备用超时（防止事件监听器失败）
+    setTimeout(() => {
+        if (profileEditModal.style.display !== 'none') {
+            profileEditModal.style.display = 'none';
+            profileEditModal.removeEventListener('transitionend', handleTransitionEnd);
+        }
+    }, 400); // 稍微长于CSS过渡时间
     
     // 使用滚动管理器恢复滚动
     scrollManager.enable();
@@ -5408,6 +5449,18 @@ function closeProfileEditModal() {
     // 重置表单
     if (profileEditForm) {
         profileEditForm.reset();
+    }
+    
+    // 重置头像预览
+    if (avatarPreviewImg) {
+        avatarPreviewImg.src = '';
+        avatarPreviewImg.style.display = 'none';
+    }
+    
+    // 重置头像上传
+    const profileAvatarUpload = document.getElementById('profileAvatarUpload');
+    if (profileAvatarUpload) {
+        profileAvatarUpload.value = '';
     }
 }
 
@@ -5482,7 +5535,7 @@ async function handleProfileUpdate(event) {
     }
 
     
-    // 显示加载状态
+    // Show loading state
     if (saveBtn && saveBtnText) {
         saveBtn.disabled = true;
         saveBtnText.textContent = 'Saving...';
@@ -5981,7 +6034,7 @@ function cancelTitleEdit() {
 // 更新洞察标题
 async function updateInsightTitle(insightId, newTitle) {
     try {
-        // 检查认证状态
+        // Check authentication status
         if (!auth.checkAuth()) {
             showErrorMessage('Please log in to update content');
             return;
@@ -6010,7 +6063,7 @@ async function updateInsightTitle(insightId, newTitle) {
                 titleElement.textContent = newTitle;
             }
             
-            // 重新渲染页面以更新卡片标题
+            // Re-render页面以更新卡片标题
             renderInsights();
             
             showSuccessMessage('Title updated successfully!');
@@ -6264,7 +6317,7 @@ function setupCommentEditing() {
         const newComment = commentTextarea.value.trim();
         
         try {
-            // 检查认证状态
+            // Check authentication status
             if (!auth.checkAuth()) {
                 showErrorMessage('Please log in to save comments');
                 return;
@@ -6468,7 +6521,7 @@ function setupTitleEditing() {
         }
         
         try {
-            // 检查认证状态
+            // Check authentication status
             if (!auth.checkAuth()) {
                 showErrorMessage('Please log in to update content');
                 return;
@@ -6506,7 +6559,7 @@ function setupTitleEditing() {
                 // 更新页面缓存
                 updatePageCacheWithInsight(currentInsight.id, { title: newTitle });
                 
-                // 重新渲染页面以更新卡片标题
+                // Re-render页面以更新卡片标题
                 renderInsights();
                 
                 showSuccessMessage('Title updated successfully!');
@@ -7414,25 +7467,32 @@ function createStackCard(stackData) {
     stackIndicator.innerHTML = `<span class="stack-count">${stackData.cards.length}</span>`;
     card.appendChild(stackIndicator);
     
-    // Use first card's image as preview
+    // Use first card's image as preview, or random image if no image
     const firstCard = stackData.cards[0];
-    if (firstCard && firstCard.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'content-card-image-container';
-        
-        const img = document.createElement('img');
-        img.src = firstCard.image_url;
-        img.alt = firstCard.title || 'Stack Preview';
-        img.className = 'content-card-image';
-        img.loading = 'lazy';
-        
-        imageContainer.appendChild(img);
-        card.appendChild(imageContainer);
-    } else {
-        const placeholderContainer = document.createElement('div');
-        placeholderContainer.className = 'content-card-image-container no-image';
-        card.appendChild(placeholderContainer);
-    }
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'content-card-image-container';
+    
+    const img = document.createElement('img');
+    img.src = (firstCard && firstCard.image_url) ? firstCard.image_url : getRandomImage();
+    img.alt = firstCard ? (firstCard.title || 'Stack Preview') : 'Stack Preview';
+    img.className = 'content-card-image';
+    img.loading = 'lazy';
+    
+    // Image loading error handling
+    img.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (firstCard && firstCard.image_url && !this.dataset.randomImageUsed) {
+            this.src = getRandomImage();
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
+            this.style.display = 'none';
+            this.parentElement.classList.add('no-image');
+        }
+    };
+    
+    imageContainer.appendChild(img);
+    card.appendChild(imageContainer);
     
     // Stack content
     const content = document.createElement('div');
@@ -8173,20 +8233,31 @@ function createStackExpandedCard(insight, stackId) {
     card.dataset.insightId = insight.id;
     card.dataset.stackId = stackId;
     
-    // Card image
-    if (insight.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'stack-card-image-container';
-        
-        const img = document.createElement('img');
-        img.src = insight.image_url;
-        img.alt = insight.title || 'Content Image';
-        img.className = 'stack-card-image';
-        img.loading = 'lazy';
-        
-        imageContainer.appendChild(img);
-        card.appendChild(imageContainer);
-    }
+    // Card image - always show an image (either original or random)
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'stack-card-image-container';
+    
+    const img = document.createElement('img');
+    img.src = insight.image_url || getRandomImage();
+    img.alt = insight.title || 'Content Image';
+    img.className = 'stack-card-image';
+    img.loading = 'lazy';
+    
+    // Image loading error handling
+    img.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (insight.image_url && !this.dataset.randomImageUsed) {
+            this.src = getRandomImage();
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
+            this.style.display = 'none';
+            this.parentElement.classList.add('no-image');
+        }
+    };
+    
+    imageContainer.appendChild(img);
+    card.appendChild(imageContainer);
     
     // Card content
     const content = document.createElement('div');
@@ -8827,32 +8898,37 @@ function createStackHorizontalCard(insight, stackId) {
     };
     card.appendChild(editDeleteBtn);
     
-    // 卡片图片区域 (same as normal card)
-    if (insight.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'content-card-image-container';
-        
-        const image = document.createElement('img');
-        image.className = 'content-card-image';
-        image.src = insight.image_url;
-        image.alt = insight.title || 'Content image';
-        image.loading = 'lazy';
-        
-        // 图片加载错误处理
-        image.onerror = function() {
+    // Card image area (same as normal card) - always show an image (either original or random)
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'content-card-image-container';
+    
+    const image = document.createElement('img');
+    image.className = 'content-card-image';
+    image.src = insight.image_url || getRandomImage();
+    image.alt = insight.title || 'Content image';
+    image.loading = 'lazy';
+    
+    // Image loading error handling
+    image.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (insight.image_url && !this.dataset.randomImageUsed) {
+            this.src = getRandomImage();
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
             this.style.display = 'none';
             this.parentElement.classList.add('no-image');
-        };
-        
-        imageContainer.appendChild(image);
-        card.appendChild(imageContainer);
-    }
+        }
+    };
     
-    // 卡片内容区域 (same as normal card)
+    imageContainer.appendChild(image);
+    card.appendChild(imageContainer);
+    
+    // Card content area (same as normal card)
     const cardContent = document.createElement('div');
     cardContent.className = 'content-card-content';
     
-    // 卡片头部 - Top row with date and source info (same as normal card)
+    // Card header - Top row with date and source info (same as normal card)
     const cardHeader = document.createElement('div');
     cardHeader.className = 'content-card-header';
     
@@ -8917,12 +8993,12 @@ function createStackHorizontalCard(insight, stackId) {
     cardHeader.appendChild(topRow);
     cardHeader.appendChild(title);
     
-    // 卡片描述 (same as normal card)
+    // Card description (same as normal card)
     const description = document.createElement('div');
     description.className = 'content-card-description';
     description.textContent = insight.description || (insight.url ? `Content from ${new URL(insight.url).hostname}` : 'No description available');
     
-    // 卡片底部 (same as normal card)
+    // Card footer (same as normal card)
     const cardFooter = document.createElement('div');
     cardFooter.className = 'content-card-footer';
     
@@ -8954,12 +9030,12 @@ function createStackHorizontalCard(insight, stackId) {
     
     cardFooter.appendChild(tag);
     
-    // 组装卡片内容 (same as normal card)
+    // Assemble card content (same as normal card)
     cardContent.appendChild(cardHeader);
     cardContent.appendChild(description);
     cardContent.appendChild(cardFooter);
     
-    // 组装完整卡片 (same as normal card)
+    // Assemble complete card (same as normal card)
     card.appendChild(cardContent);
     
     // Setup drag functionality for horizontal cards
@@ -9099,7 +9175,7 @@ async function saveInsightTags(insight, modal) {
                 window.apiCache.clearPattern('/api/v1/insights');
             }
             
-            clearPageCache(); // 清除缓存，因为数据已变化
+            clearPageCache(); // Clear cache because data has changed
             // Reload insights from backend to ensure we have the latest data
             await loadUserInsightsWithPagination();
             
