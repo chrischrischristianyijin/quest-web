@@ -540,23 +540,10 @@ function updatePaginationInfo(data) {
     console.log(`🔍 DEBUG: updatePaginationInfo - totalPages=${totalPages}, totalInsights=${totalInsights}, currentPage=${currentPage} (not updated from API)`);
 }
 
-// Show loading state
+// Show loading state (disabled - no overlay to avoid blocking content)
 function showLoadingState() {
-    const container = document.getElementById('contentCards');
-    if (!container) return;
-    // don't clear existing content; add an overlay instead
-    let overlay = document.getElementById('loadingSkeleton');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'loadingSkeleton';
-        overlay.className = 'loading-overlay';
-        overlay.innerHTML = `
-            <div class="skeleton-grid">
-                <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
-                <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
-            </div>`;
-        container.appendChild(overlay);
-    }
+    // 不再显示加载覆盖层，避免挡住页面内容
+    console.log('📡 Loading state requested (overlay disabled)');
 }
 
 // Hide loading state
@@ -736,8 +723,12 @@ async function loadUserInsightsWithPagination() {
                 if (insightsWithoutTags.length > 0) {
                     try {
                         await loadTagsForInsights(insightsWithoutTags);
-                        // Re-render after tag loading is complete
-                        renderInsights();
+                        // Only re-render if tags were actually loaded
+                        const hasNewTags = insightsWithoutTags.some(insight => insight.tags && insight.tags.length > 0);
+                        if (hasNewTags) {
+                            console.log('🏷️ Tags loaded, re-rendering...');
+                            renderInsights();
+                        }
                     } catch (error) {
                         console.warn('⚠️ Tag loading failed:', error);
                     }
@@ -1611,17 +1602,53 @@ function effectiveFetchLimitForPage(pageNum) {
     return targetInsightsTiles + stackedInsightsCount;
 }
 
+// 防抖渲染机制
+let renderTimeout = null;
+let lastRenderData = null;
+
 // 渲染见解列表
 function renderInsights() {
     console.log('🚨 renderInsights() called - viewMode:', viewMode, 'activeStackId:', activeStackId);
     console.log('🔍 DEBUG: renderInsights - currentPage:', currentPage, 'totalPages:', totalPages);
-    console.trace('renderInsights call stack');
     
     // Guard clause: don't render home view when in stack view mode
     if (viewMode === 'stack') {
         console.log('⚠️ renderInsights() called but we are in stack view mode, ignoring');
         return;
     }
+    
+    // 防抖：如果短时间内多次调用，只执行最后一次
+    if (renderTimeout) {
+        clearTimeout(renderTimeout);
+    }
+    
+    renderTimeout = setTimeout(() => {
+        performRenderInsights();
+    }, 50); // 50ms防抖
+}
+
+function performRenderInsights() {
+    // 检查是否真的需要重新渲染
+    const currentData = {
+        page: currentPage,
+        totalPages: totalPages,
+        insightsCount: currentInsights.length,
+        viewMode: viewMode,
+        activeStackId: activeStackId
+    };
+    
+    if (lastRenderData && 
+        lastRenderData.page === currentData.page &&
+        lastRenderData.totalPages === currentData.totalPages &&
+        lastRenderData.insightsCount === currentData.insightsCount &&
+        lastRenderData.viewMode === currentData.viewMode &&
+        lastRenderData.activeStackId === currentData.activeStackId) {
+        console.log('🔄 Skipping render - data unchanged');
+        return;
+    }
+    
+    lastRenderData = currentData;
+    console.log('🎨 Performing actual render...');
     
     if (!contentCards) {
         console.error('❌ contentCards element not found!');
@@ -1743,6 +1770,15 @@ function createInsightCardEl(insight) {
 function renderInsightsInitial() {
     // Use the main renderInsights function to avoid duplication
     renderInsights();
+}
+
+// 强制立即渲染（用于需要立即更新的情况）
+function forceRenderInsights() {
+    if (renderTimeout) {
+        clearTimeout(renderTimeout);
+    }
+    lastRenderData = null; // 清除缓存，强制重新渲染
+    performRenderInsights();
 }
 
 // appendInsightsBatch function removed - using pagination only
@@ -2937,10 +2973,8 @@ function bindEvents() {
                     return;
                 }
                 
-                // 显示加载状态
+                // 禁用按钮防止重复提交
                 const submitBtn = document.getElementById('addContentBtn');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<svg class="loading-spinner" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416"><animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/></circle></svg> Adding...';
                 submitBtn.disabled = true;
                 
                 // 获取选中的标签
@@ -3084,7 +3118,6 @@ function bindEvents() {
                 // 恢复按钮状态
                 const submitBtn = document.getElementById('addContentBtn');
                 if (submitBtn) {
-                    submitBtn.innerHTML = submitBtn.innerHTML.includes('Adding...') ? 'Add Content' : submitBtn.innerHTML;
                     submitBtn.disabled = false;
                 }
             }
@@ -4062,39 +4095,19 @@ function showStackLoadingState() {
     // signal busy for a11y
     container.setAttribute('aria-busy', 'true');
 
-    // Prefer a dedicated overlay to avoid removing the static skeleton block in HTML
-    let overlay = document.getElementById('loadingOverlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'loadingOverlay';
-        overlay.className = 'loading-overlay';
-        overlay.innerHTML = skeletonMarkup(6);
-        container.appendChild(overlay);
-    } else {
-        overlay.classList.remove('fade-out');
-        overlay.classList.add('fade-in');
-    }
+    // 不再显示加载覆盖层，避免挡住页面内容
+    console.log('📡 Stack loading state requested (overlay disabled)');
     __SKELETON_STARTED_AT__ = performance.now();
 }
 
 // Hide loading state for stack view
 function hideStackLoadingState() {
     const container = document.getElementById('contentCards');
-    const overlay = document.getElementById('loadingOverlay');
     if (!container) return;
-
-    // ensure skeleton shows for at least 300ms to prevent flash/flicker
-    const MIN_MS = 300;
-    const elapsed = performance.now() - (__SKELETON_STARTED_AT__ || 0);
-    const delay = Math.max(0, MIN_MS - elapsed);
-
-    window.setTimeout(() => {
-        if (overlay) {
-            overlay.classList.add('fade-out');
-            overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
-        }
-        container.removeAttribute('aria-busy');
-    }, delay);
+    
+    // 移除aria-busy属性
+    container.removeAttribute('aria-busy');
+    console.log('📡 Stack loading state hidden');
 }
 
 // Update stack context bar with stack data
@@ -5885,7 +5898,9 @@ let currentDetailInsight = null;
 
 // 打开内容详情模态框
 function openContentDetailModal(insight) {
-    currentDetailInsight = insight;
+    // 确保使用最新的insight数据
+    const latestInsight = currentInsights.find(i => i.id === insight.id) || insight;
+    currentDetailInsight = latestInsight;
     const modal = document.getElementById('contentDetailModal');
     
     if (!modal) {
@@ -5893,7 +5908,7 @@ function openContentDetailModal(insight) {
     }
     
     // 填充模态框内容
-        populateModalContent(insight);
+    populateModalContent(latestInsight);
     
     // 显示模态框
     modal.style.display = 'flex';
@@ -5909,6 +5924,9 @@ function openContentDetailModal(insight) {
 function closeContentDetailModal() {
     const modal = document.getElementById('contentDetailModal');
     if (!modal) return;
+    
+    // 停止所有AI摘要刷新
+    stopAllAISummaryRefresh();
     
     modal.classList.remove('show');
     
@@ -6000,6 +6018,8 @@ function populateModalContent(insight) {
             summaryText.textContent = summary;
         } else {
             summaryText.textContent = 'AI summary is being generated...';
+            // 启动智能自动刷新机制
+            startSmartAISummaryRefresh(insight.id);
         }
     }
     
@@ -6737,11 +6757,107 @@ function bindContentDetailModalEvents() {
     });
 }
 
+// AI摘要智能刷新机制
+let aiSummaryRefreshTimeouts = new Map(); // 存储每个insight的刷新定时器
+
+function startSmartAISummaryRefresh(insightId) {
+    // 清除之前的定时器（如果存在）
+    if (aiSummaryRefreshTimeouts.has(insightId)) {
+        clearTimeout(aiSummaryRefreshTimeouts.get(insightId));
+    }
+    
+    // 设置新的定时器
+    const timeoutId = setTimeout(async () => {
+        try {
+            console.log(`🔄 Auto-refreshing AI summary for insight ${insightId}`);
+            
+            // 获取最新的insight数据
+            const response = await api.getInsight(insightId);
+            if (response?.success && response.data) {
+                const insight = response.data;
+                let summary = '';
+                
+                // 检查是否有摘要内容
+                if (insight.insight_contents && insight.insight_contents.length > 0) {
+                    summary = insight.insight_contents[0].summary;
+                }
+                
+                // 如果摘要已经生成，更新UI并停止刷新
+                if (summary && summary.trim()) {
+                    const summaryText = document.getElementById('summaryText');
+                    const modal = document.getElementById('contentDetailModal');
+                    
+                    // 只有在模态框打开且是当前insight时才更新UI
+                    if (summaryText && modal && modal.classList.contains('show') && currentDetailInsight && currentDetailInsight.id === insightId) {
+                        summaryText.textContent = summary;
+                        // 同时更新currentDetailInsight的数据
+                        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
+                            currentDetailInsight.insight_contents[0].summary = summary;
+                        }
+                        console.log(`✅ AI summary updated for insight ${insightId}`);
+                    }
+                    
+                    // 更新全局insights数据
+                    const insightIndex = currentInsights.findIndex(i => i.id === insightId);
+                    if (insightIndex !== -1 && currentInsights[insightIndex].insight_contents && currentInsights[insightIndex].insight_contents.length > 0) {
+                        currentInsights[insightIndex].insight_contents[0].summary = summary;
+                        // 同时更新window.currentInsights
+                        window.currentInsights = currentInsights;
+                        console.log(`📝 Updated global insights data for insight ${insightId}`);
+                    }
+                    
+                    // 清除定时器，停止刷新
+                    aiSummaryRefreshTimeouts.delete(insightId);
+                    return;
+                }
+                
+                // 如果摘要还没生成，继续等待
+                console.log(`⏳ AI summary still generating for insight ${insightId}, will retry...`);
+                
+                // 设置下次刷新（逐渐增加间隔）
+                const currentTimeout = aiSummaryRefreshTimeouts.get(insightId);
+                if (currentTimeout) {
+                    const nextInterval = Math.min(10000, 2000 * Math.pow(1.5, aiSummaryRefreshTimeouts.size)); // 最多10秒
+                    const nextTimeoutId = setTimeout(() => {
+                        startSmartAISummaryRefresh(insightId);
+                    }, nextInterval);
+                    aiSummaryRefreshTimeouts.set(insightId, nextTimeoutId);
+                }
+            }
+        } catch (error) {
+            console.warn(`⚠️ Failed to refresh AI summary for insight ${insightId}:`, error);
+            // 出错时停止刷新
+            aiSummaryRefreshTimeouts.delete(insightId);
+        }
+    }, 3000); // 3秒后开始第一次检查
+    
+    aiSummaryRefreshTimeouts.set(insightId, timeoutId);
+}
+
+function stopAISummaryRefresh(insightId) {
+    if (aiSummaryRefreshTimeouts.has(insightId)) {
+        clearTimeout(aiSummaryRefreshTimeouts.get(insightId));
+        aiSummaryRefreshTimeouts.delete(insightId);
+        console.log(`🛑 Stopped AI summary refresh for insight ${insightId}`);
+    }
+}
+
+function stopAllAISummaryRefresh() {
+    aiSummaryRefreshTimeouts.forEach((timeoutId, insightId) => {
+        clearTimeout(timeoutId);
+        console.log(`🛑 Stopped AI summary refresh for insight ${insightId}`);
+    });
+    aiSummaryRefreshTimeouts.clear();
+}
+
 // 暴露全局函数
 window.openProfileEditModal = openProfileEditModal;
 window.closeProfileEditModal = closeProfileEditModal;
+window.closeContentDetailModal = closeContentDetailModal;
 window.handleProfileUpdate = handleProfileUpdate;
 window.replaceAllTagsWithDefaults = replaceAllTagsWithDefaults;
+window.stopAISummaryRefresh = stopAISummaryRefresh;
+window.stopAllAISummaryRefresh = stopAllAISummaryRefresh;
 
 // Edit Mode Functionality
 function bindEditModeEvents() {
