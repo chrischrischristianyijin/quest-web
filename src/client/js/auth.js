@@ -583,6 +583,35 @@ class AuthManager {
         }
     }
 
+    // 尝试获取refresh_token（如果当前没有的话）
+    async tryGetRefreshToken() {
+        try {
+            console.log('🔄 尝试获取refresh_token...');
+            
+            // 检查是否已经有refresh_token
+            const currentRefreshToken = this.getCurrentRefreshToken();
+            if (currentRefreshToken) {
+                console.log('✅ 已有refresh_token，无需获取');
+                return { success: true, refresh_token: currentRefreshToken };
+            }
+            
+            // 如果没有refresh_token，尝试通过重新登录获取
+            // 这里需要用户重新输入密码，所以返回提示
+            console.log('⚠️ 没有refresh_token，需要重新登录获取');
+            return {
+                success: false,
+                error: 'No refresh_token available. Please login again to get refresh_token.',
+                requiresReauth: true
+            };
+        } catch (error) {
+            console.error('❌ 获取refresh_token失败:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
     // 移除邮箱检查方法，改由注册接口内部校验
 
     // 忘记密码
