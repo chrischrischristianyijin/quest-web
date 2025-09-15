@@ -122,11 +122,11 @@ class AuthManager {
                 this.notifyListeners();
                 return { success: true, user: this.user };
             } else {
-                throw new Error(result?.message || '登录失败');
+                throw new Error(result?.message || 'Login failed');
             }
         } catch (error) {
             console.error('❌ 登录失败:', error);
-            return { success: false, message: error.message || '登录失败，请重试' };
+            return { success: false, message: error.message || 'Login failed, please try again' };
         }
     }
 
@@ -392,7 +392,7 @@ class AuthManager {
             
             // 检查是否有有效的会话
             if (!this.isAuthenticated || !this.user) {
-                throw new Error('没有有效的会话可以刷新');
+                throw new Error('No valid session to refresh');
             }
             
             // 尝试通过重新验证用户资料来"刷新"token

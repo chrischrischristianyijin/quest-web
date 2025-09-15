@@ -3,12 +3,13 @@
    Drop this file AFTER my-space.css
    --------------------------------------------------------------- */
 :root{
-  --quest-purple:#8b5cf6;
+  --quest-purple:#322563;
   --quest-blue:#4f46e5;
   --skeleton-base:#e5e7eb;
   --skeleton-plate:#eef2f7;
   --skeleton-overlay:rgba(250,250,255,.72);
 }
+
 
 /* Reduce layout shift by reserving space while loading */
 .ContentCards{ position:relative; }
