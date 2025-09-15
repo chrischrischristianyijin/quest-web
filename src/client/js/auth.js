@@ -68,8 +68,8 @@ class AuthManager {
                 this.user = resolvedUser;
                 this.isAuthenticated = true;
                 
-                // 保存用户会话（包含refresh_token）
-                this.saveSession(this.user, result.token, result.refresh_token);
+                // 保存用户会话（包含refresh_token和过期时间）
+                this.saveSession(this.user, result.token, result.refresh_token, result.expires_at, result.expires_in);
                 
                 this.notifyListeners();
                 return { success: true, user: this.user };
@@ -138,8 +138,8 @@ class AuthManager {
                 
                 this.isAuthenticated = true;
                 
-                // 保存用户会话（包含refresh_token）
-                this.saveSession(this.user, result.token, result.refresh_token);
+                // 保存用户会话（包含refresh_token和过期时间）
+                this.saveSession(this.user, result.token, result.refresh_token, result.expires_at, result.expires_in);
                 
                 this.notifyListeners();
                 return { success: true, user: this.user };
@@ -174,7 +174,7 @@ class AuthManager {
     }
 
     // 保存用户会话
-    saveSession(user, token, refreshToken = null) {
+    saveSession(user, token, refreshToken = null, expiresAt = null, expiresIn = null) {
         if (token) {
             // 只在一个地方存储token：quest_user_session
             api.setAuthToken(token);
@@ -184,6 +184,8 @@ class AuthManager {
             user,
             token: token,
             refresh_token: refreshToken,
+            expires_at: expiresAt,
+            expires_in: expiresIn,
             timestamp: Date.now()
         };
         
@@ -193,6 +195,8 @@ class AuthManager {
             user: user.email || user.username, 
             hasToken: !!token,
             hasRefreshToken: !!refreshToken,
+            expiresAt: expiresAt,
+            expiresIn: expiresIn,
             sessionToken: !!localStorage.getItem('quest_user_session')
         });
     }
@@ -430,6 +434,21 @@ class AuthManager {
         
         try {
             const parsed = JSON.parse(session);
+            
+            // 优先使用 expires_at（如果后端提供了）
+            if (parsed.expires_at) {
+                const now = Math.floor(Date.now() / 1000); // 转换为秒
+                const isExpired = now >= parsed.expires_at;
+                console.log('🔍 Token过期检查 (expires_at):', {
+                    now: now,
+                    expiresAt: parsed.expires_at,
+                    isExpired: isExpired,
+                    remainingSeconds: parsed.expires_at - now
+                });
+                return isExpired;
+            }
+            
+            // 回退到基于 timestamp 的检查
             if (!parsed.timestamp) return true;
             
             const now = Date.now();
@@ -464,8 +483,14 @@ class AuthManager {
                     const tokenData = refreshResult.data;
                     console.log('✅ Token刷新成功，更新会话数据');
                     
-                    // 更新会话数据
-                    this.saveSession(this.user, tokenData.access_token, tokenData.refresh_token);
+                    // 更新会话数据（包含新的过期时间）
+                    this.saveSession(
+                        this.user, 
+                        tokenData.access_token, 
+                        tokenData.refresh_token,
+                        tokenData.expires_at,
+                        tokenData.expires_in
+                    );
                     
                     // 更新API的token
                     api.setAuthToken(tokenData.access_token);
@@ -610,6 +635,41 @@ class AuthManager {
                 error: error.message
             };
         }
+    }
+
+    // 获取Token剩余时间（秒）
+    getTokenTimeRemaining() {
+        const session = localStorage.getItem('quest_user_session');
+        if (!session) return 0;
+        
+        try {
+            const parsed = JSON.parse(session);
+            
+            // 优先使用 expires_at
+            if (parsed.expires_at) {
+                const now = Math.floor(Date.now() / 1000);
+                return Math.max(0, parsed.expires_at - now);
+            }
+            
+            // 回退到基于 timestamp 的计算
+            if (parsed.timestamp) {
+                const now = Date.now();
+                const sessionAge = now - parsed.timestamp;
+                const expirationTime = 7 * 24 * 60 * 60 * 1000; // 7天
+                return Math.max(0, Math.floor((expirationTime - sessionAge) / 1000));
+            }
+            
+            return 0;
+        } catch (error) {
+            console.error('获取Token剩余时间失败:', error);
+            return 0;
+        }
+    }
+
+    // 检查Token是否即将过期（1小时内）
+    isTokenExpiringSoon() {
+        const timeRemaining = this.getTokenTimeRemaining();
+        return timeRemaining > 0 && timeRemaining < 3600; // 1小时内过期
     }
 
     // 移除邮箱检查方法，改由注册接口内部校验

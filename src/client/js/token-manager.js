@@ -54,7 +54,8 @@ class TokenManager {
             // 检查是否有refresh_token
             const refreshToken = auth.getCurrentRefreshToken();
             if (!refreshToken) {
-                console.log('❌ 没有refresh_token，无法刷新');
+                console.log('❌ 没有refresh_token，无法自动刷新');
+                console.log('💡 建议：重新登录以获取refresh_token，或等待token过期后手动登录');
                 return false;
             }
             

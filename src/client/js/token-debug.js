@@ -297,6 +297,18 @@ class TokenDebugger {
                     const minutes = tokenData.minutes_remaining || 0;
                     report.recommendations.push(`✅ Token有效，剩余时间：${hours}小时${minutes}分钟`);
                 }
+            } else if (backendTest.success && backendTest.data?.body?.success) {
+                // 如果debugAPI不可用，使用backend测试的数据
+                const tokenData = backendTest.data.body.data;
+                if (tokenData.is_expired) {
+                    report.recommendations.push('⏰ Token已过期，需要刷新或重新登录');
+                } else if (tokenData.hours_remaining < 1) {
+                    report.recommendations.push('⚠️ Token即将过期（1小时内），建议刷新');
+                } else {
+                    const hours = tokenData.hours_remaining || 0;
+                    const minutes = tokenData.minutes_remaining || 0;
+                    report.recommendations.push(`✅ Token有效，剩余时间：${hours}小时${minutes}分钟`);
+                }
             }
         }
 
@@ -359,6 +371,117 @@ window.getRefreshToken = async () => {
     }
 };
 
+// 检查当前会话中的refresh_token
+window.checkCurrentRefreshToken = () => {
+    try {
+        const sessionData = localStorage.getItem('quest_user_session');
+        if (!sessionData) {
+            console.log('❌ 没有找到会话数据');
+            return { hasSession: false };
+        }
+        
+        const parsed = JSON.parse(sessionData);
+        console.log('📦 当前会话数据:', parsed);
+        console.log('🔑 Refresh Token 状态:', {
+            hasRefreshToken: !!parsed.refresh_token,
+            refreshTokenValue: parsed.refresh_token ? `${parsed.refresh_token.substring(0, 20)}...` : null
+        });
+        
+        return {
+            hasSession: true,
+            hasRefreshToken: !!parsed.refresh_token,
+            refreshToken: parsed.refresh_token
+        };
+    } catch (error) {
+        console.error('❌ 检查Refresh Token失败:', error);
+        return { error: error.message };
+    }
+};
+
+// 检查后端是否支持refresh_token
+window.checkBackendRefreshSupport = async () => {
+    try {
+        console.log('🔍 检查后端refresh_token支持...');
+        
+        // 尝试调用refresh API（使用一个假的refresh_token）
+        const apiBaseUrl = 'https://quest-api-edz1.onrender.com';
+        const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'refresh_token=test_token'
+        });
+
+        const result = await response.json();
+        
+        console.log('📡 后端Refresh API响应:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: result
+        });
+        
+        if (response.status === 404) {
+            return {
+                supported: false,
+                reason: 'API endpoint not found',
+                message: '后端可能不支持refresh_token功能'
+            };
+        } else if (response.status === 400 || response.status === 401) {
+            return {
+                supported: true,
+                reason: 'API exists but invalid token',
+                message: '后端支持refresh_token，但需要有效的token'
+            };
+        } else {
+            return {
+                supported: true,
+                reason: 'API responded',
+                message: '后端支持refresh_token功能'
+            };
+        }
+    } catch (error) {
+        console.error('❌ 检查后端支持失败:', error);
+        return {
+            supported: false,
+            reason: 'Network error',
+            message: '无法连接到后端API',
+            error: error.message
+        };
+    }
+};
+
+// 获取Token剩余时间
+window.getTokenTimeRemaining = async () => {
+    try {
+        const { auth } = await import('./auth.js');
+        const timeRemaining = auth.getTokenTimeRemaining();
+        const hours = Math.floor(timeRemaining / 3600);
+        const minutes = Math.floor((timeRemaining % 3600) / 60);
+        const seconds = timeRemaining % 60;
+        
+        console.log('⏰ Token剩余时间:', {
+            totalSeconds: timeRemaining,
+            formatted: `${hours}小时${minutes}分钟${seconds}秒`,
+            isExpiringSoon: auth.isTokenExpiringSoon(),
+            isExpired: auth.isTokenExpired()
+        });
+        
+        return {
+            totalSeconds: timeRemaining,
+            hours: hours,
+            minutes: minutes,
+            seconds: seconds,
+            formatted: `${hours}小时${minutes}分钟${seconds}秒`,
+            isExpiringSoon: auth.isTokenExpiringSoon(),
+            isExpired: auth.isTokenExpired()
+        };
+    } catch (error) {
+        console.error('❌ 获取Token剩余时间失败:', error);
+        return { error: error.message };
+    }
+};
+
 // 导出调试器实例供模块使用
 export const tokenDebugger = window.tokenDebugger;
 
@@ -368,4 +491,7 @@ console.log('  - debugToken() - 快速诊断');
 console.log('  - tokenReport() - 完整报告');
 console.log('  - testRefreshToken() - 测试refresh_token功能');
 console.log('  - getRefreshToken() - 检查refresh_token状态');
+console.log('  - checkCurrentRefreshToken() - 检查当前会话中的refresh_token');
+console.log('  - checkBackendRefreshSupport() - 检查后端是否支持refresh_token');
+console.log('  - getTokenTimeRemaining() - 获取Token剩余时间');
 console.log('  - window.tokenDebugger - 访问调试器实例');
