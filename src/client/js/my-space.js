@@ -1846,6 +1846,39 @@ async function loadTagsForInsights(insights) {
     }
 }
 
+// Array of random images for cards without images
+const randomImages = [
+    '/public/新建文件夹/微信图片_20250822114123_2436_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114124_2437_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114125_2438_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114126_2439_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114126_2440_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114127_2441_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114128_2442_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114129_2443_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114131_2444_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114132_2445_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114133_2446_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114134_2447_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114136_2448_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114137_2449_9.jpg'
+];
+
+// Function to get a deterministic random image based on insight ID
+function getDeterministicRandomImage(insightId) {
+    // Simple hash function to convert string ID to number
+    let hash = 0;
+    for (let i = 0; i < insightId.length; i++) {
+        const char = insightId.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    // Use absolute value and modulo to get index
+    const index = Math.abs(hash) % randomImages.length;
+    return randomImages[index];
+}
+
 // 创建见解卡片
 function createInsightCard(insight) {
     console.log('🔨 Creating insight card for:', insight.title, 'ID:', insight.id);
@@ -1867,26 +1900,33 @@ function createInsightCard(insight) {
     // Add drag and drop functionality
     setupCardDragAndDrop(card, insight);
     
-    // 卡片图片区域
-    if (insight.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'content-card-image-container';
-        
-        const image = document.createElement('img');
-        image.className = 'content-card-image';
-        image.src = insight.image_url;
-        image.alt = insight.title || 'Content image';
-        image.loading = 'lazy';
-        
-        // 图片加载错误处理
-        image.onerror = function() {
+    // 卡片图片区域 - always show an image (either original or deterministic random)
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'content-card-image-container';
+    
+    const image = document.createElement('img');
+    image.className = 'content-card-image';
+    
+    // Use original image_url if available, otherwise use deterministic random image
+    image.src = insight.image_url || getDeterministicRandomImage(insight.id);
+    image.alt = insight.title || 'Content image';
+    image.loading = 'lazy';
+    
+    // 图片加载错误处理
+    image.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (insight.image_url && !this.dataset.randomImageUsed) {
+            this.src = getDeterministicRandomImage(insight.id);
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
             this.style.display = 'none';
             this.parentElement.classList.add('no-image');
-        };
-        
-        imageContainer.appendChild(image);
-        card.appendChild(imageContainer);
-    }
+        }
+    };
+    
+    imageContainer.appendChild(image);
+    card.appendChild(imageContainer);
     
     // 卡片内容区域
     const cardContent = document.createElement('div');
@@ -7508,25 +7548,32 @@ function createStackCard(stackData) {
     stackIndicator.innerHTML = `<span class="stack-count">${stackData.cards.length}</span>`;
     card.appendChild(stackIndicator);
     
-    // Use first card's image as preview
+    // Use first card's image as preview, or deterministic random image if no image
     const firstCard = stackData.cards[0];
-    if (firstCard && firstCard.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'content-card-image-container';
-        
-        const img = document.createElement('img');
-        img.src = firstCard.image_url;
-        img.alt = firstCard.title || 'Stack Preview';
-        img.className = 'content-card-image';
-        img.loading = 'lazy';
-        
-        imageContainer.appendChild(img);
-        card.appendChild(imageContainer);
-    } else {
-        const placeholderContainer = document.createElement('div');
-        placeholderContainer.className = 'content-card-image-container no-image';
-        card.appendChild(placeholderContainer);
-    }
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'content-card-image-container';
+    
+    const img = document.createElement('img');
+    img.src = (firstCard && firstCard.image_url) ? firstCard.image_url : getDeterministicRandomImage(stackData.id);
+    img.alt = firstCard ? (firstCard.title || 'Stack Preview') : 'Stack Preview';
+    img.className = 'content-card-image';
+    img.loading = 'lazy';
+    
+    // Image loading error handling
+    img.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (firstCard && firstCard.image_url && !this.dataset.randomImageUsed) {
+            this.src = getDeterministicRandomImage(stackData.id);
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
+            this.style.display = 'none';
+            this.parentElement.classList.add('no-image');
+        }
+    };
+    
+    imageContainer.appendChild(img);
+    card.appendChild(imageContainer);
     
     // Stack content
     const content = document.createElement('div');
@@ -8287,20 +8334,31 @@ function createStackExpandedCard(insight, stackId) {
     card.dataset.insightId = insight.id;
     card.dataset.stackId = stackId;
     
-    // Card image
-    if (insight.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'stack-card-image-container';
-        
-        const img = document.createElement('img');
-        img.src = insight.image_url;
-        img.alt = insight.title || 'Content Image';
-        img.className = 'stack-card-image';
-        img.loading = 'lazy';
-        
-        imageContainer.appendChild(img);
-        card.appendChild(imageContainer);
-    }
+    // Card image - always show an image (either original or deterministic random)
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'stack-card-image-container';
+    
+    const img = document.createElement('img');
+    img.src = insight.image_url || getDeterministicRandomImage(insight.id);
+    img.alt = insight.title || 'Content Image';
+    img.className = 'stack-card-image';
+    img.loading = 'lazy';
+    
+    // Image loading error handling
+    img.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (insight.image_url && !this.dataset.randomImageUsed) {
+            this.src = getDeterministicRandomImage(insight.id);
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
+            this.style.display = 'none';
+            this.parentElement.classList.add('no-image');
+        }
+    };
+    
+    imageContainer.appendChild(img);
+    card.appendChild(imageContainer);
     
     // Card content
     const content = document.createElement('div');
@@ -8941,26 +8999,31 @@ function createStackHorizontalCard(insight, stackId) {
     };
     card.appendChild(editDeleteBtn);
     
-    // 卡片图片区域 (same as normal card)
-    if (insight.image_url) {
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'content-card-image-container';
-        
-        const image = document.createElement('img');
-        image.className = 'content-card-image';
-        image.src = insight.image_url;
-        image.alt = insight.title || 'Content image';
-        image.loading = 'lazy';
-        
-        // 图片加载错误处理
-        image.onerror = function() {
+    // 卡片图片区域 (same as normal card) - always show an image (either original or deterministic random)
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'content-card-image-container';
+    
+    const image = document.createElement('img');
+    image.className = 'content-card-image';
+    image.src = insight.image_url || getDeterministicRandomImage(insight.id);
+    image.alt = insight.title || 'Content image';
+    image.loading = 'lazy';
+    
+    // 图片加载错误处理
+    image.onerror = function() {
+        // If the original image fails to load and we haven't tried a random image yet, try a random one
+        if (insight.image_url && !this.dataset.randomImageUsed) {
+            this.src = getDeterministicRandomImage(insight.id);
+            this.dataset.randomImageUsed = 'true';
+        } else {
+            // If random image also fails, hide the image
             this.style.display = 'none';
             this.parentElement.classList.add('no-image');
-        };
-        
-        imageContainer.appendChild(image);
-        card.appendChild(imageContainer);
-    }
+        }
+    };
+    
+    imageContainer.appendChild(image);
+    card.appendChild(imageContainer);
     
     // 卡片内容区域 (same as normal card)
     const cardContent = document.createElement('div');
