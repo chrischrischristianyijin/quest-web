@@ -170,6 +170,11 @@ class ApiService {
                     || dataLevel2.token 
                     || null;
 
+                const refreshToken = result.refresh_token 
+                    || dataLevel1.refresh_token 
+                    || dataLevel2.refresh_token 
+                    || null;
+
                 if (token) {
                     this.setAuthToken(token);
                 }
@@ -178,7 +183,8 @@ class ApiService {
                 return {
                     success: true,
                     user: user || null,
-                    token: token || null
+                    token: token || null,
+                    refresh_token: refreshToken
                 };
             } else {
                 // 改进错误处理
@@ -226,6 +232,11 @@ class ApiService {
                     || dataLevel2.token 
                     || null;
 
+                const refreshToken = result.refresh_token 
+                    || dataLevel1.refresh_token 
+                    || dataLevel2.refresh_token 
+                    || null;
+
                 const user = result.user 
                     || dataLevel1.user 
                     || dataLevel2.user 
@@ -241,7 +252,8 @@ class ApiService {
                 return {
                     success: true,
                     user,
-                    token
+                    token,
+                    refresh_token: refreshToken
                 };
             } else {
                 throw new Error(result.detail || 'Login failed');

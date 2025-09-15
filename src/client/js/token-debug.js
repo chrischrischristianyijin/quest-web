@@ -293,7 +293,9 @@ class TokenDebugger {
                 } else if (tokenData.hours_remaining < 1) {
                     report.recommendations.push('⚠️ Token即将过期（1小时内），建议刷新');
                 } else {
-                    report.recommendations.push(`✅ Token有效，剩余时间：${tokenData.hours_remaining}小时${tokenData.minutes_remaining}分钟`);
+                    const hours = tokenData.hours_remaining || 0;
+                    const minutes = tokenData.minutes_remaining || 0;
+                    report.recommendations.push(`✅ Token有效，剩余时间：${hours}小时${minutes}分钟`);
                 }
             }
         }
@@ -344,6 +346,19 @@ window.debugToken = () => window.tokenDebugger.quickDiagnosis();
 window.tokenReport = () => window.tokenDebugger.generateDebugReport();
 window.testRefreshToken = () => window.tokenDebugger.testRefreshToken();
 
+// 添加获取refresh_token的便捷方法
+window.getRefreshToken = async () => {
+    try {
+        const { auth } = await import('./auth.js');
+        const result = await auth.tryGetRefreshToken();
+        console.log('🔄 Refresh Token 状态:', result);
+        return result;
+    } catch (error) {
+        console.error('❌ 获取Refresh Token失败:', error);
+        return { success: false, error: error.message };
+    }
+};
+
 // 导出调试器实例供模块使用
 export const tokenDebugger = window.tokenDebugger;
 
@@ -352,4 +367,5 @@ console.log('💡 使用方法:');
 console.log('  - debugToken() - 快速诊断');
 console.log('  - tokenReport() - 完整报告');
 console.log('  - testRefreshToken() - 测试refresh_token功能');
+console.log('  - getRefreshToken() - 检查refresh_token状态');
 console.log('  - window.tokenDebugger - 访问调试器实例');
