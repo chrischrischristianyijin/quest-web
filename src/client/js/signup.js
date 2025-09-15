@@ -53,6 +53,18 @@ function validateForm() {
         return false;
     }
     
+    if (nickname.length < 2) {
+        showMessage('Nickname must be at least 2 characters long');
+        nicknameInput.focus();
+        return false;
+    }
+    
+    if (nickname.length > 20) {
+        showMessage('Nickname must be no more than 20 characters long');
+        nicknameInput.focus();
+        return false;
+    }
+    
     if (!password) {
         showMessage('Please enter your password');
         passwordInput.focus();
@@ -65,9 +77,24 @@ function validateForm() {
         return false;
     }
     
+    // Check if password contains both letters and numbers
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasLetter || !hasNumber) {
+        showMessage('Password must contain both letters and numbers');
+        passwordInput.focus();
+        return false;
+    }
+    
     if (password !== confirmPassword) {
         showMessage('The two passwords do not match');
         confirmPasswordInput.focus();
+        return false;
+    }
+    
+    if (!agreeTermsCheckbox.checked) {
+        showMessage('Please agree to the Terms of Service and Privacy Policy');
+        agreeTermsCheckbox.focus();
         return false;
     }
     
@@ -113,16 +140,17 @@ async function handleSignup(email, nickname, password) {
             console.log('❌ Signup failed from auth layer:', result);
             let errorMessage = result.message || 'Signup failed, please try again';
             
-            // Check for specific error messages
-            if (errorMessage.includes('该邮箱已被注册') || 
-                errorMessage.includes('already registered') ||
-                errorMessage.includes('duplicate key') ||
-                errorMessage.includes('unique constraint') ||
-                errorMessage.includes('注册失败') ||
-                errorMessage.includes('email already registered') ||
-                errorMessage.includes('registration failed')) {
-                errorMessage = 'Account creation was unsuccessful. An account has already been registered with this email address. Please try logging in or use a different email.';
-            }
+        // Check for specific error messages
+        if (errorMessage.includes('该邮箱已被注册') || 
+            errorMessage.includes('already registered') ||
+            errorMessage.includes('duplicate key') ||
+            errorMessage.includes('unique constraint') ||
+            errorMessage.includes('注册失败') ||
+            errorMessage.includes('email already registered') ||
+            errorMessage.includes('registration failed') ||
+            errorMessage.includes('23505')) {
+            errorMessage = 'Account creation was unsuccessful. An account has already been registered with this email address. Please try logging in or use a different email.';
+        }
             
             console.log('🚨 Displaying auth layer error message:', errorMessage);
             showMessage(errorMessage, 'error');
@@ -152,14 +180,19 @@ async function handleSignup(email, nickname, password) {
             error.message.includes('unique constraint') ||
             error.message.includes('注册失败') ||
             error.message.includes('email already registered') ||
-            error.message.includes('registration failed')) {
+            error.message.includes('registration failed') ||
+            error.message.includes('23505')) {
             errorMessage = 'Account creation was unsuccessful. An account has already been registered with this email address. Please try logging in or use a different email.';
         } else if (error.message.includes('400') || error.message.includes('bad request')) {
-            errorMessage = 'Input data is incorrect, please check and try again';
+            errorMessage = 'Invalid input data. Please check your information and try again.';
         } else if (error.message.includes('500') || error.message.includes('server error')) {
-            errorMessage = 'Server error, please try again later';
+            errorMessage = 'Server error occurred. Please try again later.';
         } else if (error.message.includes('422') || error.message.includes('validation')) {
-            errorMessage = 'Please check your input and try again';
+            errorMessage = 'Please check your input information and try again.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (error.message.includes('timeout')) {
+            errorMessage = 'Request timeout. Please try again.';
         }
         
         console.log('🚨 Displaying error message:', errorMessage);
