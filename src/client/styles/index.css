@@ -88,8 +88,8 @@
   
   /* Full Screen Video Section */
   .fullscreen-video-section {
-    height: 60vh;
-    max-height: 600px;
+    height: 75vh;
+    max-height: 800px;
     position: relative;
     overflow: hidden;
     opacity: 0;
@@ -108,8 +108,8 @@
   }
   
   .video-container {
-    width: 90%;
-    max-width: 1000px;
+    width: 95%;
+    max-width: 1400px;
     height: 100%;
     position: relative;
     border-radius: 20px;
