@@ -581,6 +581,86 @@ class ApiService {
         
         return await this.request(`${API_CONFIG.WAITLIST.LIST}?${params.toString()}`);
     }
+
+    // ===== JWT Token 管理方法 =====
+    
+    // 刷新访问令牌
+    async refreshAccessToken(refreshToken) {
+        try {
+            console.log('🔄 开始刷新访问令牌...');
+            
+            const response = await fetch(`${this.baseUrl}${API_CONFIG.AUTH.REFRESH}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `refresh_token=${encodeURIComponent(refreshToken)}`
+            });
+
+            const result = await response.json();
+            console.log('📡 Token刷新API响应:', result);
+
+            if (response.ok && result.success) {
+                console.log('✅ Token刷新成功');
+                return {
+                    success: true,
+                    data: result.data
+                };
+            } else {
+                console.error('❌ Token刷新失败:', result);
+                throw new Error(result.detail || 'Token refresh failed');
+            }
+        } catch (error) {
+            console.error('❌ Token刷新请求失败:', error);
+            throw error;
+        }
+    }
+
+    // 检查Token状态
+    async checkTokenStatus() {
+        try {
+            console.log('🔍 检查Token状态...');
+            
+            const response = await this.request(API_CONFIG.AUTH.TOKEN_STATUS);
+            
+            if (response && response.success) {
+                console.log('✅ Token状态检查成功:', response.data);
+                return {
+                    success: true,
+                    data: response.data
+                };
+            } else {
+                throw new Error('Token status check failed');
+            }
+        } catch (error) {
+            console.error('❌ Token状态检查失败:', error);
+            throw error;
+        }
+    }
+
+    // 调试Token验证
+    async debugToken() {
+        try {
+            console.log('🔧 开始Token调试...');
+            
+            const response = await this.request(API_CONFIG.AUTH.DEBUG_TOKEN, {
+                method: 'POST'
+            });
+            
+            if (response && response.success) {
+                console.log('✅ Token调试成功:', response.data);
+                return {
+                    success: true,
+                    data: response.data
+                };
+            } else {
+                throw new Error('Token debug failed');
+            }
+        } catch (error) {
+            console.error('❌ Token调试失败:', error);
+            throw error;
+        }
+    }
 }
 
 // 创建API实例

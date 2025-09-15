@@ -51,6 +51,13 @@ class TokenManager {
         try {
             console.log('🔄 开始智能Token刷新...');
             
+            // 检查是否有refresh_token
+            const refreshToken = auth.getCurrentRefreshToken();
+            if (!refreshToken) {
+                console.log('❌ 没有refresh_token，无法刷新');
+                return false;
+            }
+            
             // 检查Token是否真的过期
             if (!auth.isTokenExpired()) {
                 console.log('✅ Token仍然有效，更新时间戳');
@@ -58,7 +65,7 @@ class TokenManager {
                 return true;
             }
 
-            // 尝试刷新Token
+            // 尝试使用refresh_token刷新Token
             const refreshed = await auth.refreshToken();
             if (refreshed) {
                 console.log('✅ Token刷新成功');
@@ -249,14 +256,31 @@ class TokenManager {
         }, 10000);
     }
 
+    // 检查refresh_token是否可用
+    hasRefreshToken() {
+        const refreshToken = auth.getCurrentRefreshToken();
+        return !!refreshToken;
+    }
+
     // 启动Token监控
     startMonitoring() {
         // 每10分钟检查一次Token状态
         setInterval(() => {
             if (auth.checkAuth()) {
                 if (auth.isTokenExpired()) {
-                    console.log('⏰ Token已过期，自动退出登录');
-                    this.autoLogout('Token已过期');
+                    // 如果有refresh_token，尝试刷新；否则退出登录
+                    if (this.hasRefreshToken()) {
+                        console.log('⏰ Token已过期，尝试刷新...');
+                        this.smartRefresh().then(refreshed => {
+                            if (!refreshed) {
+                                console.log('❌ Token刷新失败，自动退出登录');
+                                this.autoLogout('Token刷新失败');
+                            }
+                        });
+                    } else {
+                        console.log('⏰ Token已过期且无refresh_token，自动退出登录');
+                        this.autoLogout('Token已过期');
+                    }
                 } else if (this.isTokenNearExpiry()) {
                     console.log('⚠️ Token即将过期，显示警告');
                     this.showExpiryWarning();

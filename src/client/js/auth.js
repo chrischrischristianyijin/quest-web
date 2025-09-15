@@ -68,8 +68,8 @@ class AuthManager {
                 this.user = resolvedUser;
                 this.isAuthenticated = true;
                 
-                // 保存用户会话
-                this.saveSession(this.user, result.token);
+                // 保存用户会话（包含refresh_token）
+                this.saveSession(this.user, result.token, result.refresh_token);
                 
                 this.notifyListeners();
                 return { success: true, user: this.user };
@@ -138,8 +138,8 @@ class AuthManager {
                 
                 this.isAuthenticated = true;
                 
-                // 保存用户会话
-                this.saveSession(this.user, result.token);
+                // 保存用户会话（包含refresh_token）
+                this.saveSession(this.user, result.token, result.refresh_token);
                 
                 this.notifyListeners();
                 return { success: true, user: this.user };
@@ -174,21 +174,25 @@ class AuthManager {
     }
 
     // 保存用户会话
-    saveSession(user, token) {
+    saveSession(user, token, refreshToken = null) {
         if (token) {
             // 只在一个地方存储token：quest_user_session
             api.setAuthToken(token);
         }
         
-        localStorage.setItem('quest_user_session', JSON.stringify({
+        const sessionData = {
             user,
             token: token,
+            refresh_token: refreshToken,
             timestamp: Date.now()
-        }));
+        };
+        
+        localStorage.setItem('quest_user_session', JSON.stringify(sessionData));
         
         console.log('💾 会话已保存:', { 
             user: user.email || user.username, 
             hasToken: !!token,
+            hasRefreshToken: !!refreshToken,
             sessionToken: !!localStorage.getItem('quest_user_session')
         });
     }
@@ -323,7 +327,7 @@ class AuthManager {
         }
     }
 
-    // 验证token是否有效
+    // 验证token是否有效（使用新的token状态API）
     async validateToken() {
         try {
             if (!this.isAuthenticated || !this.user) {
@@ -331,21 +335,39 @@ class AuthManager {
                 return false;
             }
             
-            // 尝试获取用户资料来验证token
-            const profileResult = await api.getUserProfile();
-            if (profileResult && profileResult.success) {
-                console.log('✅ Token验证成功');
-                return true;
-            } else {
-                console.log('❌ Token验证失败');
-                // 触发认证过期事件
-                window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
-                    detail: { 
-                        status: 401, 
-                        reason: 'Token validation failed' 
-                    } 
-                }));
-                return false;
+            // 使用新的token状态检查API
+            try {
+                const statusResult = await api.checkTokenStatus();
+                if (statusResult && statusResult.success && statusResult.data) {
+                    const tokenData = statusResult.data;
+                    console.log('✅ Token状态检查成功:', {
+                        isExpired: tokenData.is_expired,
+                        hoursRemaining: tokenData.hours_remaining,
+                        minutesRemaining: tokenData.minutes_remaining
+                    });
+                    
+                    if (tokenData.is_expired) {
+                        console.log('❌ Token已过期');
+                        return false;
+                    } else {
+                        console.log('✅ Token有效');
+                        return true;
+                    }
+                } else {
+                    console.log('❌ Token状态检查失败');
+                    return false;
+                }
+            } catch (statusError) {
+                console.log('⚠️ Token状态API不可用，回退到用户资料验证');
+                // 回退到原来的验证方式
+                const profileResult = await api.getUserProfile();
+                if (profileResult && profileResult.success) {
+                    console.log('✅ Token验证成功（回退方式）');
+                    return true;
+                } else {
+                    console.log('❌ Token验证失败（回退方式）');
+                    return false;
+                }
             }
         } catch (error) {
             console.error('❌ Token验证出错:', error);
@@ -380,6 +402,21 @@ class AuthManager {
         }
     }
     
+    // 获取当前refresh_token
+    getCurrentRefreshToken() {
+        try {
+            const sessionData = localStorage.getItem('quest_user_session');
+            if (sessionData) {
+                const session = JSON.parse(sessionData);
+                return session.refresh_token || null;
+            }
+            return null;
+        } catch (error) {
+            console.error('获取refresh_token失败:', error);
+            return null;
+        }
+    }
+    
     // 检查token是否存在
     hasValidToken() {
         const token = this.getCurrentToken();
@@ -407,34 +444,43 @@ class AuthManager {
         }
     }
 
-    // 刷新token（如果需要的话）
+    // 刷新token（使用refresh_token）
     async refreshToken() {
         try {
-            console.log('🔄 尝试刷新token...');
+            console.log('🔄 开始真正的Token刷新...');
             
-            // 检查是否有有效的会话
-            if (!this.isAuthenticated || !this.user) {
-                throw new Error('No valid session to refresh');
-            }
-            
-            // 尝试通过重新验证用户资料来"刷新"token
-            // 如果API调用成功，说明token仍然有效
-            try {
-                const profileResult = await api.getUserProfile();
-                if (profileResult) {
-                    console.log('✅ Token仍然有效，无需刷新');
-                    // 更新会话时间戳
-                    this.updateSessionTimestamp();
-                    return true;
-                }
-            } catch (error) {
-                console.log('❌ Token验证失败，需要重新登录');
+            // 获取refresh_token
+            const refreshToken = this.getCurrentRefreshToken();
+            if (!refreshToken) {
+                console.log('❌ 没有refresh_token，无法刷新');
                 return false;
             }
             
-            return false;
+            // 调用API刷新token
+            try {
+                const refreshResult = await api.refreshAccessToken(refreshToken);
+                
+                if (refreshResult && refreshResult.success && refreshResult.data) {
+                    const tokenData = refreshResult.data;
+                    console.log('✅ Token刷新成功，更新会话数据');
+                    
+                    // 更新会话数据
+                    this.saveSession(this.user, tokenData.access_token, tokenData.refresh_token);
+                    
+                    // 更新API的token
+                    api.setAuthToken(tokenData.access_token);
+                    
+                    return true;
+                } else {
+                    console.log('❌ Token刷新失败，API返回无效结果');
+                    return false;
+                }
+            } catch (error) {
+                console.log('❌ Token刷新API调用失败:', error.message);
+                return false;
+            }
         } catch (error) {
-            console.error('刷新token失败:', error);
+            console.error('刷新token过程出错:', error);
             return false;
         }
     }
@@ -481,14 +527,14 @@ class AuthManager {
                 this.user = profileResult.data;
                 console.log('✅ 用户资料刷新成功:', this.user);
                 // 更新本地存储
-                this.saveSession(this.user, this.getCurrentToken());
+                this.saveSession(this.user, this.getCurrentToken(), this.getCurrentRefreshToken());
                 this.notifyListeners();
                 return true;
             } else if (profileResult && (profileResult.id || profileResult.email)) {
                 this.user = profileResult;
                 console.log('✅ 用户资料刷新成功 (直接格式):', this.user);
                 // 更新本地存储
-                this.saveSession(this.user, this.getCurrentToken());
+                this.saveSession(this.user, this.getCurrentToken(), this.getCurrentRefreshToken());
                 this.notifyListeners();
                 return true;
             } else {
@@ -498,6 +544,42 @@ class AuthManager {
         } catch (error) {
             console.error('❌ 刷新用户资料失败:', error);
             return false;
+        }
+    }
+
+    // 获取详细的Token状态信息
+    async getTokenStatusInfo() {
+        try {
+            console.log('🔍 获取详细Token状态信息...');
+            
+            const statusResult = await api.checkTokenStatus();
+            if (statusResult && statusResult.success && statusResult.data) {
+                const tokenData = statusResult.data;
+                console.log('✅ Token状态信息获取成功:', tokenData);
+                
+                return {
+                    success: true,
+                    data: {
+                        ...tokenData,
+                        frontendToken: this.getCurrentToken(),
+                        hasRefreshToken: !!this.getCurrentRefreshToken(),
+                        isAuthenticated: this.isAuthenticated,
+                        user: this.user
+                    }
+                };
+            } else {
+                console.log('❌ Token状态信息获取失败');
+                return {
+                    success: false,
+                    error: 'Failed to get token status'
+                };
+            }
+        } catch (error) {
+            console.error('❌ 获取Token状态信息失败:', error);
+            return {
+                success: false,
+                error: error.message
+            };
         }
     }
 
