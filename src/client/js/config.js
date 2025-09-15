@@ -27,7 +27,10 @@ export const API_CONFIG = {
         LOGIN: '/api/v1/auth/login',
         LOGOUT: '/api/v1/auth/signout',
         PROFILE: '/api/v1/auth/profile',
-        FORGOT_PASSWORD: '/api/v1/auth/forgot-password'
+        FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
+        REFRESH: '/api/v1/auth/refresh',
+        TOKEN_STATUS: '/api/v1/auth/token-status',
+        DEBUG_TOKEN: '/api/v1/auth/debug-token'
     },
     
     // 用户管理接口

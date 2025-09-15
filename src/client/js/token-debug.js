@@ -107,6 +107,57 @@ class TokenDebugger {
         }
     }
 
+    // 测试refresh_token功能
+    async testRefreshToken() {
+        const tokenInfo = this.getFrontendTokenStatus();
+        
+        if (!tokenInfo.sessionData || !tokenInfo.sessionData.refresh_token) {
+            return {
+                success: false,
+                error: 'No refresh_token available for testing'
+            };
+        }
+
+        try {
+            console.log('🔄 开始测试refresh_token功能...');
+            
+            const apiBaseUrl = 'https://quest-api-edz1.onrender.com';
+            const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `refresh_token=${encodeURIComponent(tokenInfo.sessionData.refresh_token)}`
+            });
+
+            const responseData = {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries()),
+                body: null
+            };
+
+            try {
+                responseData.body = await response.json();
+            } catch (e) {
+                responseData.body = await response.text();
+            }
+
+            return {
+                success: response.ok,
+                data: responseData
+            };
+
+        } catch (error) {
+            console.error('❌ Refresh token测试失败:', error);
+            
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
     // 测试token调试API
     async testTokenDebugAPI() {
         const tokenInfo = this.getFrontendTokenStatus();
@@ -206,6 +257,7 @@ class TokenDebugger {
         const backendTest = await this.testBackendValidation();
         const debugAPITest = await this.testTokenDebugAPI();
         const transmissionTest = await this.checkTokenTransmission();
+        const refreshTokenTest = await this.testRefreshToken();
         
         const report = {
             timestamp: new Date().toISOString(),
@@ -213,6 +265,7 @@ class TokenDebugger {
             backend: backendTest,
             debugAPI: debugAPITest,
             transmission: transmissionTest,
+            refreshToken: refreshTokenTest,
             recommendations: []
         };
 
@@ -243,6 +296,15 @@ class TokenDebugger {
                     report.recommendations.push(`✅ Token有效，剩余时间：${tokenData.hours_remaining}小时${tokenData.minutes_remaining}分钟`);
                 }
             }
+        }
+
+        // 检查refresh_token状态
+        if (refreshTokenTest.success) {
+            report.recommendations.push('✅ Refresh token功能正常');
+        } else if (refreshTokenTest.error === 'No refresh_token available for testing') {
+            report.recommendations.push('⚠️ 没有refresh_token，无法自动刷新token');
+        } else {
+            report.recommendations.push('❌ Refresh token功能异常，可能需要重新登录');
         }
 
         console.log('📊 Token调试报告:', report);
@@ -280,6 +342,7 @@ window.tokenDebugger = new TokenDebugger();
 // 添加便捷方法到控制台
 window.debugToken = () => window.tokenDebugger.quickDiagnosis();
 window.tokenReport = () => window.tokenDebugger.generateDebugReport();
+window.testRefreshToken = () => window.tokenDebugger.testRefreshToken();
 
 // 导出调试器实例供模块使用
 export const tokenDebugger = window.tokenDebugger;
@@ -288,4 +351,5 @@ console.log('🔧 Token调试工具已加载');
 console.log('💡 使用方法:');
 console.log('  - debugToken() - 快速诊断');
 console.log('  - tokenReport() - 完整报告');
+console.log('  - testRefreshToken() - 测试refresh_token功能');
 console.log('  - window.tokenDebugger - 访问调试器实例');
