@@ -52,7 +52,7 @@ class TokenDebugger {
         return tokenInfo;
     }
 
-    // 测试后端token验证
+    // 测试后端token验证 - 简化版本，避免模块依赖
     async testBackendValidation() {
         const tokenInfo = this.getFrontendTokenStatus();
         
@@ -66,15 +66,9 @@ class TokenDebugger {
         try {
             console.log('🧪 开始测试后端token验证...');
             
-            // 使用API服务进行测试 - 延迟导入避免初始化问题
-            const apiModule = await import('./api.js');
-            const api = apiModule.api;
-            
-            // 确保API服务有token
-            api.setAuthToken(tokenInfo.tokenValue);
-            
-            // 测试获取用户资料
-            const response = await fetch(`${api.baseUrl}/api/v1/user/profile`, {
+            // 直接使用fetch，避免模块依赖
+            const apiBaseUrl = 'https://quest-api-edz1.onrender.com';
+            const response = await fetch(`${apiBaseUrl}/api/v1/user/profile`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${tokenInfo.tokenValue}`,
@@ -106,15 +100,6 @@ class TokenDebugger {
             this.debugInfo.errorDetails = error;
             console.error('❌ 后端验证测试失败:', error);
             
-            // 如果是模块初始化问题，提供更友好的错误信息
-            if (error.message.includes('before initialization')) {
-                return {
-                    success: false,
-                    error: '模块初始化问题，请刷新页面后重试',
-                    details: error.message
-                };
-            }
-            
             return {
                 success: false,
                 error: error.message
@@ -122,7 +107,7 @@ class TokenDebugger {
         }
     }
 
-    // 检查token传输
+    // 检查token传输 - 简化版本，避免模块依赖
     async checkTokenTransmission() {
         const tokenInfo = this.getFrontendTokenStatus();
         
@@ -134,12 +119,10 @@ class TokenDebugger {
         }
 
         try {
-            // 模拟一个简单的API请求 - 延迟导入避免初始化问题
-            const apiModule = await import('./api.js');
-            const api = apiModule.api;
-            
+            // 直接构建请求，避免模块依赖
+            const apiBaseUrl = 'https://quest-api-edz1.onrender.com';
             const testRequest = {
-                url: `${api.baseUrl}/api/v1/user/profile`,
+                url: `${apiBaseUrl}/api/v1/user/profile`,
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${tokenInfo.tokenValue}`,
@@ -156,15 +139,6 @@ class TokenDebugger {
 
         } catch (error) {
             console.error('❌ Token传输检查失败:', error);
-            
-            // 如果是模块初始化问题，提供更友好的错误信息
-            if (error.message.includes('before initialization')) {
-                return {
-                    success: false,
-                    error: '模块初始化问题，请刷新页面后重试',
-                    details: error.message
-                };
-            }
             
             return {
                 success: false,
