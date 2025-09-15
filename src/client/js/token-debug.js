@@ -52,7 +52,7 @@ class TokenDebugger {
         return tokenInfo;
     }
 
-    // 测试后端token验证 - 简化版本，避免模块依赖
+    // 测试后端token验证 - 使用新的token状态API
     async testBackendValidation() {
         const tokenInfo = this.getFrontendTokenStatus();
         
@@ -66,9 +66,9 @@ class TokenDebugger {
         try {
             console.log('🧪 开始测试后端token验证...');
             
-            // 直接使用fetch，避免模块依赖
+            // 使用新的token状态API
             const apiBaseUrl = 'https://quest-api-edz1.onrender.com';
-            const response = await fetch(`${apiBaseUrl}/api/v1/user/profile`, {
+            const response = await fetch(`${apiBaseUrl}/api/v1/auth/token-status`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${tokenInfo.tokenValue}`,
@@ -99,6 +99,57 @@ class TokenDebugger {
         } catch (error) {
             this.debugInfo.errorDetails = error;
             console.error('❌ 后端验证测试失败:', error);
+            
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    // 测试token调试API
+    async testTokenDebugAPI() {
+        const tokenInfo = this.getFrontendTokenStatus();
+        
+        if (!tokenInfo.tokenValue) {
+            return {
+                success: false,
+                error: 'No token available for testing'
+            };
+        }
+
+        try {
+            console.log('🔍 开始测试token调试API...');
+            
+            const apiBaseUrl = 'https://quest-api-edz1.onrender.com';
+            const response = await fetch(`${apiBaseUrl}/api/v1/auth/debug-token`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${tokenInfo.tokenValue}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const responseData = {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries()),
+                body: null
+            };
+
+            try {
+                responseData.body = await response.json();
+            } catch (e) {
+                responseData.body = await response.text();
+            }
+
+            return {
+                success: response.ok,
+                data: responseData
+            };
+
+        } catch (error) {
+            console.error('❌ Token调试API测试失败:', error);
             
             return {
                 success: false,
@@ -153,12 +204,14 @@ class TokenDebugger {
         
         const frontendStatus = this.getFrontendTokenStatus();
         const backendTest = await this.testBackendValidation();
+        const debugAPITest = await this.testTokenDebugAPI();
         const transmissionTest = await this.checkTokenTransmission();
         
         const report = {
             timestamp: new Date().toISOString(),
             frontend: frontendStatus,
             backend: backendTest,
+            debugAPI: debugAPITest,
             transmission: transmissionTest,
             recommendations: []
         };
@@ -178,6 +231,18 @@ class TokenDebugger {
             }
         } else if (backendTest.success === true) {
             report.recommendations.push('✅ Token验证正常，问题可能在其他地方');
+            
+            // 如果token状态API可用，提供更详细的建议
+            if (debugAPITest.success && debugAPITest.data?.body?.success) {
+                const tokenData = debugAPITest.data.body.data;
+                if (tokenData.is_expired) {
+                    report.recommendations.push('⏰ Token已过期，需要刷新或重新登录');
+                } else if (tokenData.hours_remaining < 1) {
+                    report.recommendations.push('⚠️ Token即将过期（1小时内），建议刷新');
+                } else {
+                    report.recommendations.push(`✅ Token有效，剩余时间：${tokenData.hours_remaining}小时${tokenData.minutes_remaining}分钟`);
+                }
+            }
         }
 
         console.log('📊 Token调试报告:', report);
