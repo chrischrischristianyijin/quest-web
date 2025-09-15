@@ -1,5 +1,6 @@
 // 导入现有的认证系统
 import { auth } from './auth.js';
+import { tokenManager } from './token-manager.js';
 
 // 🔐 Global auth-expired handler for chat page
 window.addEventListener('quest-auth-expired', async (e) => {
@@ -41,7 +42,7 @@ window.addEventListener('quest-auth-expired', async (e) => {
   }
 });
 
-// 🔐 聊天页面定期检查token有效性 (每5分钟检查一次)
+// 🔐 聊天页面定期检查token有效性 (每30分钟检查一次，减少频率)
 let chatTokenValidationInterval = null;
 
 function startChatTokenValidation() {
@@ -53,13 +54,8 @@ function startChatTokenValidation() {
     try {
       // 检查token是否过期
       if (auth.isTokenExpired()) {
-        console.log('⏰ Chat: Token已过期，触发认证过期事件');
-        window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
-          detail: { 
-            status: 401, 
-            reason: 'Token expired during periodic check' 
-          } 
-        }));
+        console.log('⏰ Chat: Token已过期，自动退出登录');
+        await tokenManager.autoLogout('Token已过期');
         return;
       }
       
@@ -67,14 +63,17 @@ function startChatTokenValidation() {
       if (auth.checkAuth()) {
         const isValid = await auth.validateToken();
         if (!isValid) {
-          console.log('❌ Chat: Token验证失败，触发认证过期事件');
-          // validateToken内部已经会触发quest-auth-expired事件
+          console.log('❌ Chat: Token验证失败，自动退出登录');
+          await tokenManager.autoLogout('Token验证失败');
+        } else {
+          // Token有效时，更新会话时间戳
+          auth.updateSessionTimestamp();
         }
       }
     } catch (error) {
       console.error('❌ Chat: Token验证检查出错:', error);
     }
-  }, 5 * 60 * 1000); // 5分钟检查一次
+  }, 30 * 60 * 1000); // 30分钟检查一次，减少频率
 }
 
 function stopChatTokenValidation() {
