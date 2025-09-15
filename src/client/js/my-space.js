@@ -7548,11 +7548,11 @@ function createStackCard(stackData) {
     };
     card.appendChild(editDeleteBtn);
     
-    // Stack visual indicator
-    const stackIndicator = document.createElement('div');
-    stackIndicator.className = 'stack-indicator';
-    stackIndicator.innerHTML = `<span class="stack-count">${stackData.cards.length}</span>`;
-    card.appendChild(stackIndicator);
+    // Stack visual indicator - removed count display
+    // const stackIndicator = document.createElement('div');
+    // stackIndicator.className = 'stack-indicator';
+    // stackIndicator.innerHTML = `<span class="stack-count">${stackData.cards.length}</span>`;
+    // card.appendChild(stackIndicator);
     
     // Use first card's image as preview, or deterministic random image if no image
     const firstCard = stackData.cards[0];
