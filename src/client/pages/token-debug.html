@@ -96,6 +96,12 @@
         </div>
 
         <div class="debug-section">
+            <h3>🔍 Token调试API</h3>
+            <div id="debugAPIStatus" class="status info">点击"测试调试API"开始测试</div>
+            <button onclick="testTokenDebugAPI()">测试调试API</button>
+        </div>
+
+        <div class="debug-section">
             <h3>📡 Token传输检查</h3>
             <div id="transmissionStatus" class="status info">点击"检查传输"开始检查</div>
             <button onclick="checkTransmission()">检查传输</button>
@@ -224,6 +230,28 @@
             
             statusDiv.className = `status ${statusClass}`;
             statusDiv.innerHTML = `<strong>${statusText}</strong>`;
+        };
+
+        window.testTokenDebugAPI = async () => {
+            const statusDiv = document.getElementById('debugAPIStatus');
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = '🔄 正在测试Token调试API...';
+            
+            const result = await tokenDebugger.testTokenDebugAPI();
+            
+            let statusClass = 'success';
+            let statusText = '✅ Token调试API测试成功';
+            
+            if (!result.success) {
+                statusClass = 'error';
+                statusText = '❌ Token调试API测试失败';
+            }
+            
+            statusDiv.className = `status ${statusClass}`;
+            statusDiv.innerHTML = `
+                <strong>${statusText}</strong><br>
+                <div class="code-block">${JSON.stringify(result, null, 2)}</div>
+            `;
         };
 
         window.generateFullReport = async () => {
