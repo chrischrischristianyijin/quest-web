@@ -148,4 +148,21 @@ function updateNavigation(isLoggedIn, user = null) {
     wireHeroCta(isLoggedIn);
     initHeroParallax();
     initCarousel();
+
+    // Ensure the hero demo video keeps playing regardless of scroll/visibility
+    const demoVideo = document.getElementById('heroDemoVideo');
+    if (demoVideo) {
+      const ensurePlay = () => {
+        if (demoVideo.paused) {
+          demoVideo.play().catch(() => {});
+        }
+      };
+      // Try to start ASAP
+      ensurePlay();
+      // Resume on visibility changes
+      document.addEventListener('visibilitychange', ensurePlay);
+      // Resume when scrolled back or layout changes
+      window.addEventListener('scroll', ensurePlay, { passive: true });
+      window.addEventListener('focus', ensurePlay);
+    }
   });
