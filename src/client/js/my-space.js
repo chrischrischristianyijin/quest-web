@@ -173,9 +173,31 @@ function stopTokenValidation() {
 
 // Start token validation when page loads
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startTokenValidation);
+  document.addEventListener('DOMContentLoaded', () => {
+    // 确保token在页面加载时被正确恢复
+    ensureTokenRestored();
+    startTokenValidation();
+  });
 } else {
+  ensureTokenRestored();
   startTokenValidation();
+}
+
+// 确保token被正确恢复
+function ensureTokenRestored() {
+  try {
+    const session = localStorage.getItem('quest_user_session');
+    if (session) {
+      const parsed = JSON.parse(session);
+      if (parsed.token && !api.authToken) {
+        console.log('🔧 页面加载时恢复token...');
+        api.setAuthToken(parsed.token);
+        console.log('✅ Token恢复完成');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Token恢复失败:', error);
+  }
 }
 
 // Stop validation when page unloads
