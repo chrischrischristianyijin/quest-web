@@ -5914,25 +5914,31 @@ function populateModalContent(insight) {
         titleElement.textContent = insight.title || new URL(insight.url).hostname;
     }
     
-    // 图片处理
+    // 图片处理 - 使用与卡片相同的逻辑
     const modalImage = document.getElementById('modalImage');
     const modalMedia = document.getElementById('modalMedia');
     
     if (modalImage && modalMedia) {
-        if (insight.image_url) {
-            modalImage.src = insight.image_url;
-            modalImage.alt = insight.title || 'Content image';
-            modalImage.style.display = 'block';
-            modalMedia.classList.remove('no-image');
-            
-            modalImage.onerror = function() {
-                modalImage.style.display = 'none';
+        // 使用原始图片URL，如果没有则使用确定性随机图片
+        const imageUrl = insight.image_url || getDeterministicRandomImage(insight.id);
+        
+        modalImage.src = imageUrl;
+        modalImage.alt = insight.title || 'Content image';
+        modalImage.style.display = 'block';
+        modalMedia.classList.remove('no-image');
+        
+        // 图片加载错误处理
+        modalImage.onerror = function() {
+            // 如果原始图片加载失败且我们还没有尝试随机图片，则尝试随机图片
+            if (insight.image_url && !this.dataset.randomImageUsed) {
+                this.src = getDeterministicRandomImage(insight.id);
+                this.dataset.randomImageUsed = 'true';
+            } else {
+                // 如果随机图片也失败，隐藏图片
+                this.style.display = 'none';
                 modalMedia.classList.add('no-image');
-            };
-        } else {
-            modalImage.style.display = 'none';
-            modalMedia.classList.add('no-image');
-        }
+            }
+        };
     }
     
     // 用户评论 - 从insight_contents表中获取thought字段
