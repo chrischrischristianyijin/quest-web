@@ -376,8 +376,9 @@ class AuthManager {
             const now = Date.now();
             const sessionAge = now - parsed.timestamp;
             
-            // 24小时过期
-            return sessionAge >= 24 * 60 * 60 * 1000;
+            // 延长到7天过期，减少频繁重新登录
+            const expirationTime = 7 * 24 * 60 * 60 * 1000; // 7天
+            return sessionAge >= expirationTime;
         } catch (error) {
             console.error('检查token过期失败:', error);
             return true;
@@ -394,13 +395,40 @@ class AuthManager {
                 throw new Error('没有有效的会话可以刷新');
             }
             
-            // 这里可以调用后端刷新token的API
-            // 目前后端没有提供刷新token的接口，所以直接返回false
-            console.log('⚠️ 后端暂不支持token刷新');
+            // 尝试通过重新验证用户资料来"刷新"token
+            // 如果API调用成功，说明token仍然有效
+            try {
+                const profileResult = await api.getUserProfile();
+                if (profileResult) {
+                    console.log('✅ Token仍然有效，无需刷新');
+                    // 更新会话时间戳
+                    this.updateSessionTimestamp();
+                    return true;
+                }
+            } catch (error) {
+                console.log('❌ Token验证失败，需要重新登录');
+                return false;
+            }
+            
             return false;
         } catch (error) {
             console.error('刷新token失败:', error);
             return false;
+        }
+    }
+    
+    // 更新会话时间戳
+    updateSessionTimestamp() {
+        try {
+            const session = localStorage.getItem('quest_user_session');
+            if (session) {
+                const parsed = JSON.parse(session);
+                parsed.timestamp = Date.now();
+                localStorage.setItem('quest_user_session', JSON.stringify(parsed));
+                console.log('🕒 会话时间戳已更新');
+            }
+        } catch (error) {
+            console.error('更新会话时间戳失败:', error);
         }
     }
 
