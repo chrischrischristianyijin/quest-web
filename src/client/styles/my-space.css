@@ -2,13 +2,13 @@
 @import url('./common.css');
 
 /* Base text color reset to prevent purple cascade */
-html, body, .MySpace { 
-    color: var(--text-primary); 
+html, body, .MySpace {
+    color: var(--text-primary);
 }
 
 /* Links inherit base color unless explicitly styled as buttons/tags */
-.MySpace a { 
-    color: inherit; 
+.MySpace a {
+    color: inherit;
 }
 
 /* 3) Make key text neutral again */
@@ -20,7 +20,7 @@ html, body, .MySpace {
 .UsernamePlaceholder,
 .content-card-source-name,
 .stack-name-inline {
-  color: var(--text-primary) !important;
+    color: var(--text-primary) !important;
 }
 
 /* 4) Secondary text back to secondary tone */
@@ -28,22 +28,21 @@ html, body, .MySpace {
 .tag-pill,
 .btn-primary:not(.empty-stack-actions .btn-primary),
 .filter-option-info {
-  color: var(--text-secondary) !important;
+    color: var(--text-secondary) !important;
 }
 
-/* 5) Keep purple only where it’s an accent (buttons/badges) */
+/* 5) Keep purple only where it's an accent (buttons/badges) */
 .pagination-page.active,
 .stack-badge {
-  color: #fff !important;
+    color: #fff !important;
 }
-
 
 body {
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
 }
 
-/* 主容器 */
+/* ===== MAIN CONTAINER ===== */
 .MySpace {
     width: 100%;
     min-height: 100vh;
@@ -56,18 +55,18 @@ body {
     flex-direction: column;
 }
 
-/* 头部区域 */
+/* ===== HEADER SECTION ===== */
 .header-section {
-    background: white;
-    color: var(--text-primary);
+    background: linear-gradient(135deg, rgba(75, 38, 79, 0.9) 0%, rgba(142, 79, 157, 0.85) 50%, rgba(75, 38, 79, 0.9) 100%);
+    color: #ffffff;
     padding: var(--spacing-lg) var(--spacing-xl);
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
     align-items: center;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     z-index: 1000;
-    border-bottom: 1px solid var(--border-light);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-section::before {
@@ -77,51 +76,56 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-    opacity: 0.3;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.1) 100%);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
 }
+
 
 .header-section .left {
     position: relative;
-    z-index: 10000;
+    z-index: 1;
     justify-self: start;
 }
 
 .header-section .right {
     position: relative;
-    z-index: 10000;
+    z-index: 1;
     justify-self: end;
 }
 
-/* Header Actions Container */
+/* ===== HEADER ACTIONS CONTAINER ===== */
 .header-actions {
     display: flex;
     align-items: center;
     gap: 16px;
 }
 
-/* Demo Chat Button */
+/* ===== DEMO CHAT BUTTON ===== */
 .demo-chat-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: var(--quest-purple);
-    color: white !important;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff !important;
     text-decoration: none;
-    padding: 10px 16px;
-    border-radius: 20px;
-    font-size: 0.9rem;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 0.95rem;
     font-weight: 500;
-    transition: all 0.3s ease;
-    border: 1px solid var(--quest-purple);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
+    position: relative;
+    z-index: 1;
 }
 
 .demo-chat-btn:hover {
-    background: var(--quest-dark-purple);
-    border-color: var(--quest-dark-purple);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(101, 85, 143, 0.3);
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .demo-chat-btn svg {
@@ -142,27 +146,48 @@ body {
 }
 
 .Quest img {
-    height: 40px;
+    height: 32px;
     width: auto;
-    filter: none;
+    max-width: 200px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3)) brightness(1.1);
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.Quest img:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4)) brightness(1.2);
+    cursor: pointer;
+}
+
+.Quest img:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
 }
 
 .WelcomeToYourPersonalSpacePlaceholder {
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-size: 1.75rem;
+    font-weight: 700;
     opacity: 1;
     text-align: center;
     justify-self: center;
     grid-column: 2;
-    letter-spacing: 0.5px;
-    color: var(--quest-purple);
+    letter-spacing: -0.02em;
+    color: #ffffff;
+    position: relative;
+    z-index: 1;
+    text-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(255, 255, 255, 0.3);
 }
 
-/* Header User Menu Styles */
+/* ===== HEADER USER MENU STYLES ===== */
 .header-user-menu {
     position: relative;
     display: inline-block;
-    z-index: 10001;
+    z-index: 1;
 }
 
 .header-avatar-container {
@@ -170,16 +195,21 @@ body {
     height: 50px;
     border-radius: 50%;
     overflow: hidden;
-    border: 3px solid var(--quest-purple);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     cursor: pointer;
-    transition: var(--transition-normal);
-    box-shadow: 0 4px 12px rgba(101, 85, 143, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 1;
 }
 
 .header-avatar-container:hover {
-    border-color: var(--quest-dark-purple);
+    border-color: rgba(255, 255, 255, 0.5);
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(101, 85, 143, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .header-avatar {
@@ -269,7 +299,7 @@ body {
     color: currentColor;
 }
 
-/* 主内容区域 */
+/* ===== MAIN CONTENT AREA ===== */
 .main-content {
     padding: var(--spacing-xl);
     background: var(--bg-primary);
@@ -280,113 +310,14 @@ body {
     margin: 0;
 }
 
-/* 用户资料区域 */
-.profile-section {
-    text-align: center;
-    margin-bottom: var(--spacing-lg);
-    padding: var(--spacing-md);
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.1) 100%);
-    border-radius: var(--radius-lg);
-    border: 2px solid var(--quest-purple);
-    position: relative;
-    overflow: visible;
-    box-shadow: var(--shadow-light);
-    max-width: 300px;
-    margin-left: auto;
-    margin-right: auto;
-}
 
-.profile-section::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 20px;
-    width: 12px;
-    height: 12px;
-    background: #1a0f1c;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.profile-section::after {
-    content: '';
-    position: absolute;
-    top: -8px;
-    right: 20px;
-    width: 12px;
-    height: 12px;
-    background: #1a0f1c;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.profile-container {
-    position: relative;
-    z-index: 2;
-}
-
-.profile-avatar {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto var(--spacing-sm);
-    border-radius: 50%;
-    overflow: hidden;
-    border: 4px solid white;
-    box-shadow: var(--shadow-medium);
-    cursor: pointer;
-    transition: var(--transition-normal);
-    position: relative;
-}
-
-.profile-avatar:hover {
-    transform: scale(1.05);
-    box-shadow: var(--shadow-heavy);
-}
-
-.profile-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    border-radius: 50%;
-}
-
-.UsernamePlaceholder {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--quest-purple);
-    margin-bottom: var(--spacing-sm);
-    cursor: pointer;
-    transition: var(--transition-normal);
-}
-
-.profile-section .UsernamePlaceholder {
-    color: var(--quest-purple) !important;
-}
-
-.UsernamePlaceholder:hover {
-    color: var(--quest-dark-purple);
-    transform: scale(1.02);
-}
-
-.profile-section .UsernamePlaceholder:hover {
-    color: var(--quest-dark-purple) !important;
-    transform: scale(1.02);
-}
-
-/* 控制区域 */
+/* ===== CONTROLS SECTION ===== */
 .controls-section {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-xl);
     padding: var(--spacing-lg);
-    background: var(--bg-primary);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-light);
-    border: 1px solid var(--border-light);
     position: relative;
     z-index: 1000;
 }
@@ -605,7 +536,7 @@ body {
     border: 2px solid #d1d5db;
     transition: var(--transition-normal);
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -616,6 +547,7 @@ body {
     height: 200px;
     overflow: hidden;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 12px 12px 0 0;
 }
 
 .content-card-image {
@@ -623,6 +555,7 @@ body {
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s ease;
+    border-radius: 12px 12px 0 0;
 }
 
 .content-card:hover .content-card-image {
@@ -4530,7 +4463,7 @@ body.modal-open { overflow: hidden; }
 /* Make content cards relative positioned for delete button positioning */
 .content-card {
     position: relative;
-    overflow: visible;
+    overflow: hidden;
 }
 
 /* ===== STACK FUNCTIONALITY STYLES ===== */
@@ -5859,34 +5792,31 @@ body.modal-open { overflow: hidden; }
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    padding: 30px 20px;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    margin: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    gap: 12px;
+    padding: 15px;
+    margin: 15px auto 5px auto;
+    max-width: 600px;
 }
 
 .pagination-info {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 8px;
     text-align: center;
 }
 
 .pagination-text {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    opacity: 0.7;
 }
 
 .pagination-count {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    opacity: 0.8;
+    opacity: 0.6;
 }
 
 .pagination-controls {
@@ -5986,8 +5916,8 @@ body.modal-open { overflow: hidden; }
 /* 响应式设计 */
 @media (max-width: 768px) {
     .pagination-container {
-        margin: 10px;
-        padding: 20px 15px;
+        margin: 10px auto 5px auto;
+        padding: 12px 15px;
     }
     
     .pagination-controls {
@@ -6070,6 +6000,123 @@ body.modal-open { overflow: hidden; }
 .stack-view-toggle, .stack-sort{
   border:1px solid var(--border-light);
   padding:8px 10px; border-radius:10px; background:#fff;
+}
+
+/* ===== FOOTER STYLES ===== */
+.footer {
+    background: #f8fafc;
+    border-top: 1px solid #e5e7eb;
+    padding: 3rem 0 1.5rem;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 2rem;
+}
+
+.footer-brand h3 {
+    color: #0f172a;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.footer-logo-img {
+    height: 32px;
+    width: auto;
+}
+
+.footer-description {
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.footer-links-section h4,
+.footer-contact-section h4 {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.footer-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.footer-links a {
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.contact-item {
+    color: #64748b;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.contact-item a {
+    color: #64748b;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.contact-item a:hover {
+    color: #0f172a;
+}
+
+.footer-bottom {
+    border-top: 1px solid #e5e7eb;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+}
+
+.footer-bottom-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.copyright {
+    color: #64748b;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+/* Footer responsive design */
+@media (max-width: 768px) {
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
 }
 
 /* Crisp alignment of toolbar controls */
