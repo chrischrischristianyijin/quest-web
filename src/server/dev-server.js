@@ -23,6 +23,8 @@ app.get('/signup', (_req, res) => res.sendFile(page('signup')));
 app.get('/my-space', (_req, res) => res.sendFile(page('my-space')));
 app.get('/demo-chat', (_req, res) => res.sendFile(page('demo-chat')));
 app.get('/email-preferences', (_req, res) => res.sendFile(page('email-preferences')));
+app.get('/privacy', (_req, res) => res.sendFile(page('privacy')));
+app.get('/terms', (_req, res) => res.sendFile(page('terms')));
 
 // Stack view routes - serve my-space.html for SPA routing
 app.get('/stacks/:id', (_req, res) => res.sendFile(page('my-space')));
