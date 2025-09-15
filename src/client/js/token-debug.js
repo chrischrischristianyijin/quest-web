@@ -66,9 +66,9 @@ class TokenDebugger {
         try {
             console.log('🧪 开始测试后端token验证...');
             
-            // 使用API服务进行测试
-            const { api } = await import('./api.js');
-            const { auth } = await import('./auth.js');
+            // 使用API服务进行测试 - 延迟导入避免初始化问题
+            const apiModule = await import('./api.js');
+            const api = apiModule.api;
             
             // 确保API服务有token
             api.setAuthToken(tokenInfo.tokenValue);
@@ -104,6 +104,17 @@ class TokenDebugger {
 
         } catch (error) {
             this.debugInfo.errorDetails = error;
+            console.error('❌ 后端验证测试失败:', error);
+            
+            // 如果是模块初始化问题，提供更友好的错误信息
+            if (error.message.includes('before initialization')) {
+                return {
+                    success: false,
+                    error: '模块初始化问题，请刷新页面后重试',
+                    details: error.message
+                };
+            }
+            
             return {
                 success: false,
                 error: error.message
@@ -123,8 +134,9 @@ class TokenDebugger {
         }
 
         try {
-            // 模拟一个简单的API请求
-            const { api } = await import('./api.js');
+            // 模拟一个简单的API请求 - 延迟导入避免初始化问题
+            const apiModule = await import('./api.js');
+            const api = apiModule.api;
             
             const testRequest = {
                 url: `${api.baseUrl}/api/v1/user/profile`,
@@ -143,6 +155,17 @@ class TokenDebugger {
             };
 
         } catch (error) {
+            console.error('❌ Token传输检查失败:', error);
+            
+            // 如果是模块初始化问题，提供更友好的错误信息
+            if (error.message.includes('before initialization')) {
+                return {
+                    success: false,
+                    error: '模块初始化问题，请刷新页面后重试',
+                    details: error.message
+                };
+            }
+            
             return {
                 success: false,
                 error: error.message
