@@ -118,7 +118,9 @@ async function handleSignup(email, nickname, password) {
                 errorMessage.includes('already registered') ||
                 errorMessage.includes('duplicate key') ||
                 errorMessage.includes('unique constraint') ||
-                errorMessage.includes('注册失败')) {
+                errorMessage.includes('注册失败') ||
+                errorMessage.includes('email already registered') ||
+                errorMessage.includes('registration failed')) {
                 errorMessage = 'Account creation was unsuccessful. An account has already been registered with this email address. Please try logging in or use a different email.';
             }
             
@@ -148,7 +150,9 @@ async function handleSignup(email, nickname, password) {
             error.message.includes('already registered') ||
             error.message.includes('duplicate key') ||
             error.message.includes('unique constraint') ||
-            error.message.includes('注册失败')) {
+            error.message.includes('注册失败') ||
+            error.message.includes('email already registered') ||
+            error.message.includes('registration failed')) {
             errorMessage = 'Account creation was unsuccessful. An account has already been registered with this email address. Please try logging in or use a different email.';
         } else if (error.message.includes('400') || error.message.includes('bad request')) {
             errorMessage = 'Input data is incorrect, please check and try again';

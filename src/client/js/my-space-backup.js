@@ -666,12 +666,12 @@ async function initPage() {
         console.error('❌ 页面初始化失败:', error);
         
         // 如果是认证错误，重定向到登录页面
-        if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
+        if (error.message.includes('认证已过期') || error.message.includes('请重新登录') || error.message.includes('authentication expired') || error.message.includes('please login again')) {
             window.location.href = PATHS.LOGIN;
             return;
         }
         
-        showErrorMessage('页面初始化失败，请刷新重试');
+        showErrorMessage('Page initialization failed, please refresh and try again');
     }
 }
 
@@ -815,7 +815,7 @@ async function loadUserProfile() {
     try {
         // 再次检查认证状态
         if (!auth.checkAuth()) {
-            throw new Error('用户未认证');
+            throw new Error('User not authenticated');
         }
         
         // 总是尝试从 API 获取最新的用户资料
@@ -1856,11 +1856,11 @@ function showFilterStatus() {
     
     // 排序状态
     if (currentFilters.latest === 'latest') {
-        statusParts.push('最新优先');
+        statusParts.push('Latest First');
     } else if (currentFilters.latest === 'oldest') {
-        statusParts.push('最旧优先');
+        statusParts.push('Oldest First');
     } else if (currentFilters.latest === 'alphabetical') {
-        statusParts.push('字母排序');
+        statusParts.push('Alphabetical');
     }
     
     // 标签筛选状态
@@ -1884,12 +1884,12 @@ function showFilterStatus() {
             statusParts.push(`标签: ${paraCategoryNames[currentFilters.tags]}`);
         }
     } else if (currentFilters.tags === 'all') {
-        statusParts.push('所有标签');
+        statusParts.push('All Tags');
     }
     
 
     
-    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : '显示所有内容';
+    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : 'Show All Content';
     
     // 可以在这里添加UI显示筛选状态
     // 比如在页面顶部显示一个小提示
@@ -2059,7 +2059,7 @@ async function shareInsight(insight) {
 
 // 删除见解
 async function deleteInsight(id) {
-    if (!confirm('确定要删除这个内容吗？')) {
+    if (!confirm('Are you sure you want to delete this content?')) {
         return;
     }
     
@@ -2080,7 +2080,7 @@ async function deleteInsight(id) {
         alert('Content deleted successfully!');
     } catch (error) {
         console.error('删除内容失败:', error);
-        alert(error.message || '删除内容失败，请重试');
+        alert(error.message || 'Failed to delete content, please try again');
     }
 }
 
