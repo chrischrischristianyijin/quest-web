@@ -74,7 +74,7 @@ class TokenDebugger {
             api.setAuthToken(tokenInfo.tokenValue);
             
             // 测试获取用户资料
-            const response = await fetch(`${api.baseUrl}/user/profile`, {
+            const response = await fetch(`${api.baseUrl}/api/v1/user/profile`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${tokenInfo.tokenValue}`,
@@ -127,7 +127,7 @@ class TokenDebugger {
             const { api } = await import('./api.js');
             
             const testRequest = {
-                url: `${api.baseUrl}/user/profile`,
+                url: `${api.baseUrl}/api/v1/user/profile`,
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${tokenInfo.tokenValue}`,
