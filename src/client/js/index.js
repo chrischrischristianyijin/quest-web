@@ -80,7 +80,12 @@ function updateNavigation(isLoggedIn, user = null) {
     let currentSlide = 0;
     let intervalId = null;
 
-    if (slides.length === 0) return;
+    if (slides.length === 0) {
+      console.log('No carousel slides found');
+      return;
+    }
+
+    console.log(`Carousel initialized with ${slides.length} slides`);
 
     function showSlide(index) {
       // Remove active class from all slides and indicators
@@ -88,8 +93,8 @@ function updateNavigation(isLoggedIn, user = null) {
       indicators.forEach(indicator => indicator.classList.remove('active'));
 
       // Add active class to current slide and indicator
-      slides[index].classList.add('active');
-      indicators[index].classList.add('active');
+      if (slides[index]) slides[index].classList.add('active');
+      if (indicators[index]) indicators[index].classList.add('active');
     }
 
     function nextSlide() {
@@ -98,14 +103,12 @@ function updateNavigation(isLoggedIn, user = null) {
     }
 
     function startCarousel() {
-      intervalId = setInterval(nextSlide, 2000); // Change slide every 2 seconds
-    }
-
-    function stopCarousel() {
+      // Clear any existing interval first
       if (intervalId) {
         clearInterval(intervalId);
-        intervalId = null;
       }
+      intervalId = setInterval(nextSlide, 2000); // Change slide every 2 seconds
+      console.log('Carousel started');
     }
 
     // Initialize first slide
@@ -114,22 +117,22 @@ function updateNavigation(isLoggedIn, user = null) {
     // Start automatic cycling
     startCarousel();
 
-    // Add click handlers to indicators
+    // Add click handlers to indicators (just for visual feedback, doesn't stop cycling)
     indicators.forEach((indicator, index) => {
       indicator.addEventListener('click', () => {
         currentSlide = index;
         showSlide(currentSlide);
-        stopCarousel();
-        startCarousel(); // Restart the timer
+        // Don't stop the carousel, just jump to the clicked slide
       });
     });
 
-    // Pause on hover, resume on mouse leave
-    const carouselContainer = document.querySelector('.carousel-container');
-    if (carouselContainer) {
-      carouselContainer.addEventListener('mouseenter', stopCarousel);
-      carouselContainer.addEventListener('mouseleave', startCarousel);
-    }
+    // Safety net - restart carousel every 10 seconds to ensure it keeps running
+    setInterval(() => {
+      if (!intervalId) {
+        console.log('Carousel restarted (safety net)');
+        startCarousel();
+      }
+    }, 10000);
   }
 
   // === 5) Boot ===
