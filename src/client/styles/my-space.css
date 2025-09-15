@@ -58,8 +58,8 @@ body {
 
 /* 头部区域 */
 .header-section {
-    background: var(--quest-gradient);
-    color: white;
+    background: white;
+    color: var(--text-primary);
     padding: var(--spacing-lg) var(--spacing-xl);
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
@@ -67,6 +67,7 @@ body {
     position: relative;
     overflow: visible;
     z-index: 1000;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .header-section::before {
@@ -104,35 +105,35 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
+    background: var(--quest-purple);
+    color: white !important;
     text-decoration: none;
     padding: 10px 16px;
     border-radius: 20px;
     font-size: 0.9rem;
     font-weight: 500;
     transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
+    border: 1px solid var(--quest-purple);
     white-space: nowrap;
 }
 
 .demo-chat-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: var(--quest-dark-purple);
+    border-color: var(--quest-dark-purple);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(101, 85, 143, 0.3);
 }
 
 .demo-chat-btn svg {
     flex-shrink: 0;
+    color: white !important;
 }
 
 .Quest {
     display: flex;
     align-items: center;
     text-decoration: none;
-    color: white;
+    color: var(--quest-purple);
     transition: var(--transition-normal);
 }
 
@@ -143,7 +144,7 @@ body {
 .Quest img {
     height: 40px;
     width: auto;
-    filter: brightness(0) invert(1);
+    filter: none;
 }
 
 .WelcomeToYourPersonalSpacePlaceholder {
@@ -154,6 +155,7 @@ body {
     justify-self: center;
     grid-column: 2;
     letter-spacing: 0.5px;
+    color: var(--quest-purple);
 }
 
 /* Header User Menu Styles */
@@ -168,17 +170,16 @@ body {
     height: 50px;
     border-radius: 50%;
     overflow: hidden;
-    border: 3px solid rgba(255, 255, 255, 0.3);
+    border: 3px solid var(--quest-purple);
     cursor: pointer;
     transition: var(--transition-normal);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(101, 85, 143, 0.2);
 }
 
 .header-avatar-container:hover {
-    border-color: rgba(255, 255, 255, 0.6);
+    border-color: var(--quest-dark-purple);
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 6px 20px rgba(101, 85, 143, 0.4);
 }
 
 .header-avatar {
@@ -282,23 +283,43 @@ body {
 /* 用户资料区域 */
 .profile-section {
     text-align: center;
-    margin-bottom: var(--spacing-xxl);
-    padding: var(--spacing-xl);
-    background: linear-gradient(135deg, rgba(248, 246, 250, 0.8) 0%, rgba(240, 235, 245, 0.9) 100%);
-    border-radius: var(--radius-xl);
-    border: 1px solid rgba(101, 85, 143, 0.1);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--quest-purple);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+    box-shadow: var(--shadow-light);
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .profile-section::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--quest-purple), var(--quest-blue), var(--quest-light-purple));
+    top: -8px;
+    left: 20px;
+    width: 12px;
+    height: 12px;
+    background: #1a0f1c;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.profile-section::after {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 20px;
+    width: 12px;
+    height: 12px;
+    background: #1a0f1c;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .profile-container {
@@ -307,9 +328,9 @@ body {
 }
 
 .profile-avatar {
-    width: 120px;
-    height: 120px;
-    margin: 0 auto var(--spacing-lg);
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--spacing-sm);
     border-radius: 50%;
     overflow: hidden;
     border: 4px solid white;
@@ -341,8 +362,17 @@ body {
     transition: var(--transition-normal);
 }
 
+.profile-section .UsernamePlaceholder {
+    color: var(--quest-purple) !important;
+}
+
 .UsernamePlaceholder:hover {
     color: var(--quest-dark-purple);
+    transform: scale(1.02);
+}
+
+.profile-section .UsernamePlaceholder:hover {
+    color: var(--quest-dark-purple) !important;
     transform: scale(1.02);
 }
 
@@ -382,8 +412,8 @@ body {
 
 .FilterButton {
     padding: 10px 20px;
-    border: 2px solid var(--quest-light-purple);
-    background: var(--bg-primary);
+    border: 2px solid var(--quest-purple);
+    background: white;
     color: var(--quest-purple);
     border-radius: 25px;
     cursor: pointer;
@@ -530,7 +560,7 @@ body {
 
 /* PARA category specific colors */
 .filter-option[data-filter="project"] .filter-option-label {
-    color: #8B5CF6;
+    color: #322563;
     font-weight: 500;
 }
 
@@ -568,11 +598,11 @@ body {
 }
 
 .content-card {
-    background: var(--bg-primary);
+    background: #f8f9fa;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-light);
     justify-self: stretch;    /* ensure cards take full width of their grid cell */
-    border: 1px solid var(--border-light);
+    border: 2px solid #d1d5db;
     transition: var(--transition-normal);
     position: relative;
     overflow: visible;
@@ -735,7 +765,7 @@ body {
 
 .tag-option:hover {
     background: rgba(101, 85, 143, 0.1);
-    color: #7c3aed;
+    color: #322563;
 }
 
 .tag-option.selected {
@@ -749,7 +779,7 @@ body {
 }
 
 .tag-option.selected:hover {
-    background: #7c3aed !important;
+    background: #322563 !important;
     color: white !important;
     transform: translateY(-1px);
 }
@@ -841,7 +871,7 @@ body {
     gap: 6px;
     padding: 6px 12px;
     border-radius: 16px;
-    background: linear-gradient(135deg, #8b5cf6, #a855f7);
+    background: linear-gradient(135deg, #322563, #322563);
     color: white;
     font-size: 0.75rem;
     font-weight: 500;
@@ -979,7 +1009,7 @@ body {
     border-radius: 16px;
     font-size: 12px;
     font-weight: 500;
-    background: linear-gradient(135deg, #8b5cf6, #a855f7);
+    background: linear-gradient(135deg, #322563, #322563);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
@@ -990,7 +1020,7 @@ body {
 .content-card-tag:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
-    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    background: linear-gradient(135deg, #322563, #322563);
     border-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -1176,7 +1206,7 @@ body .add-content-modal-content {
 .modal-title {
     font-size: 1.25rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #1e293b 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #1e293b 0%, #322563 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1277,13 +1307,13 @@ body .add-content-modal-content {
 }
 
 .modal-btn-primary {
-    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    background: linear-gradient(135deg, #322563 0%, #322563 100%);
     color: white;
     box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
 }
 
 .modal-btn-primary:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    background: linear-gradient(135deg, #322563 0%, #322563 100%);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
 }
@@ -1572,7 +1602,7 @@ body .add-content-modal-content {
 
 .create-tag-btn {
     padding: 12px 24px;
-    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    background: linear-gradient(135deg, #322563 0%, #322563 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -1585,7 +1615,7 @@ body .add-content-modal-content {
 }
 
 .create-tag-btn:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    background: linear-gradient(135deg, #322563 0%, #322563 100%);
     transform: translateY(-1px);
     box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
 }
@@ -1595,7 +1625,7 @@ body .add-content-modal-content {
 }
 
 .create-tag-btn:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    background: linear-gradient(135deg, #322563 0%, #322563 100%);
     transform: translateY(-1px);
     box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
 }
@@ -3049,7 +3079,7 @@ body .tag-selector-dropdown.open .tag-selector-options {
 
 .form-input:focus {
     outline: none;
-    border-color: #8b5cf6;
+    border-color: #322563;
     background: #ffffff;
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
 }
@@ -3088,7 +3118,7 @@ body .tag-selector-dropdown.open .tag-selector-options {
 }
 
 .avatar-preview-large:hover {
-    border-color: #8b5cf6;
+    border-color: #322563;
     transform: scale(1.05);
     box-shadow: 0 8px 25px -5px rgba(139, 92, 246, 0.25), 
                 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -3168,13 +3198,13 @@ body .tag-selector-dropdown.open .tag-selector-options {
 }
 
 .profile-edit-modal .modal-btn-primary {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #322563 0%, #322563 100%);
     color: white;
     box-shadow: 0 2px 4px -1px rgba(139, 92, 246, 0.25);
 }
 
 .profile-edit-modal .modal-btn-primary:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: linear-gradient(135deg, #322563 0%, #322563 100%);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px -2px rgba(139, 92, 246, 0.3);
 }
@@ -3188,8 +3218,8 @@ body .tag-selector-dropdown.open .tag-selector-options {
 
 .profile-edit-modal .modal-btn-secondary:hover {
     background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-    border-color: #8b5cf6;
-    color: #8b5cf6;
+    border-color: #322563;
+    color: #322563;
     transform: translateY(-1px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
@@ -3412,7 +3442,7 @@ body .tag-selector-dropdown.open .tag-selector-options {
 .details-scroll::-webkit-scrollbar { width: 8px; }
 .details-scroll::-webkit-scrollbar-thumb {
   border-radius: 8px;
-  background: linear-gradient(180deg, var(--quest-purple), #a855f7);
+  background: linear-gradient(180deg, var(--quest-purple), #322563);
   opacity: .85;
 }
 
@@ -3704,7 +3734,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .share-my-space-btn:hover {
-    background: #7c3aed;
+    background: #322563;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
@@ -3834,7 +3864,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .save-comment-btn:hover {
-    background: #7c3aed;
+    background: #322563;
 }
 
 .cancel-comment-btn {
@@ -4037,9 +4067,9 @@ body.modal-open { overflow: hidden; }
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    border: 2px solid var(--quest-light-purple);
-    background: var(--bg-primary);
-    color: var(--quest-purple);
+    border: 2px solid var(--quest-purple);
+    background: var(--quest-purple);
+    color: white;
     border-radius: 25px;
     cursor: pointer;
     font-size: 0.875rem;
@@ -4236,7 +4266,7 @@ body.modal-open { overflow: hidden; }
 
 .template-card:hover .template-card-text p {
     opacity: 1;
-    color: #6d28d9;
+    color: #322563;
 }
 
 .template-card-options {
@@ -6027,7 +6057,7 @@ body.modal-open { overflow: hidden; }
   background:#c7d2fe; transition:transform .2s, background .2s;
 }
 .stack-progress .dot.active{
-  background:#7c3aed; transform:scale(1.35);
+  background:#322563; transform:scale(1.35);
 }
 
 /* Compact view hides big imagery and tightens spacing */
@@ -6909,11 +6939,11 @@ body.modal-open { overflow: hidden; }
 .search-input {
     height: 34px;
     padding: 0 10px;
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     font-size: 14px;
     width: 220px;
-    background: var(--bg-primary);
+    background: white;
     color: var(--text-primary);
     transition: var(--transition-normal);
 }
@@ -6930,18 +6960,18 @@ body.modal-open { overflow: hidden; }
     justify-content: center;
     height: 34px;
     width: 34px;
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 2px solid var(--quest-purple);
     border-radius: 8px;
-    background: var(--btn-bg, #fff);
+    background: var(--quest-purple);
+    color: white;
     cursor: pointer;
     transition: var(--transition-normal);
-    color: var(--text-secondary);
 }
 
 .icon-btn:hover {
-    background: var(--hover-bg, #f7f7f7);
+    background: var(--quest-purple);
     border-color: var(--quest-purple);
-    color: var(--quest-purple);
+    color: white;
 }
 
 /* shrink on small screens */
@@ -7266,4 +7296,211 @@ body.modal-open { overflow: hidden; }
     font-size: 13px;
     text-align: center;
     padding: 20px;
+}
+
+/* ===========================
+   My Space — Index Theme Bridge
+   (non-breaking, CSS-only)
+   =========================== */
+
+/* --- Index brand tokens (titles + text scale) --- */
+:root{
+  /* Match new index page color system */
+  --brand-purple: #322563;          /* titles */
+  --brand-purple-on-dark: #C6BEE6;  /* titles on dark */
+  --text-900: #1A1830;
+  --text-700: #3E3B59;              /* primary body */
+  --text-600: #5C5976;              /* secondary body */
+}
+
+/* Gently align existing tokens (don't force purple everywhere) */
+:root{
+  --text-primary: var(--text-700);
+  --text-secondary: var(--text-600);
+}
+
+/* Headings & key titles (keep body neutral) */
+.MySpace h1, .MySpace h2, .MySpace h3, .MySpace h4, .MySpace h5, .MySpace h6,
+.MySpace .section-title,
+.MySpace .content-card-title,
+.MySpace .modal-title{
+  color: var(--brand-purple) !important; /* index title tone */
+}
+
+/* --- Global purple canvas borrowed from index --- */
+.site-bg{
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.30;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 248, 255, 0.9) 0%, transparent 70%),
+    radial-gradient(circle at 80% 70%, rgba(250, 245, 255, 0.8) 0%, transparent 75%),
+    radial-gradient(circle at 60% 20%, rgba(255, 252, 255, 0.7) 0%, transparent 65%),
+    radial-gradient(circle at 40% 80%, rgba(248, 242, 255, 0.9) 0%, transparent 70%),
+    radial-gradient(circle at 90% 40%, rgba(255, 250, 255, 0.6) 0%, transparent 60%),
+    radial-gradient(circle at 10% 90%, rgba(245, 238, 255, 0.8) 0%, transparent 65%),
+    radial-gradient(circle at 70% 10%, rgba(252, 248, 255, 0.7) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(255, 249, 255, 0.5) 0%, transparent 80%),
+    linear-gradient(135deg,
+      #fefcff 0%,
+      #fdfaff 12%,
+      #fcf8ff 24%,
+      #fbf6ff 36%,
+      #faf4ff 48%,
+      #f9f2ff 60%,
+      #f8f0ff 72%,
+      #f7eeff 84%,
+      #f6ecff 96%,
+      #f5eaff 100%
+    );
+  background-size: 1000% 1000%, 900% 900%, 1100% 1100%, 950% 950%, 1050% 1050%, 800% 800%, 900% 900%, 600% 600%, 500% 500%;
+}
+
+/* Keep your existing header gradient; canvas just sits behind */
+
+/* ===========================
+   Modal polish (no behavior change)
+   Targets: Add Content, Create Tag, Manage Tags, Edit Tags
+   =========================== */
+
+/* Backdrop unify */
+.add-content-modal,
+.create-tag-modal,
+.manage-tags-modal,
+.edit-tags-modal,       /* created dynamically in JS */
+.tag-edit-modal{        /* already present */
+  /* existing display toggles remain controlled by original CSS/JS */
+  backdrop-filter: blur(2px);
+}
+
+/* Content container: glass card */
+.add-content-modal .add-content-modal-content,
+.create-tag-modal .create-tag-modal-content,
+.manage-tags-modal .manage-tags-modal-content,
+.edit-tags-modal .edit-tags-modal-content,
+.tag-edit-modal .tag-edit-modal-content{
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(50, 37, 99, 0.12); /* subtle purple line */
+  border-radius: 16px;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.10),
+    0 28px 70px rgba(0,0,0,.12);
+  overflow: hidden;
+}
+
+/* Header: spacing + divider */
+.add-content-modal .modal-header,
+.create-tag-modal .modal-header,
+.manage-tags-modal .modal-header,
+.edit-tags-modal .modal-header,
+.tag-edit-modal .modal-header{
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(50, 37, 99, 0.10);
+}
+
+/* Title color matches index headings */
+.add-content-modal .modal-title,
+.create-tag-modal .modal-title,
+.manage-tags-modal .modal-title,
+.edit-tags-modal .modal-title,
+.tag-edit-modal .modal-title{
+  color: var(--brand-purple);
+  font-weight: 700;
+}
+
+/* Close button hover */
+.add-content-modal .modal-close,
+.create-tag-modal .modal-close,
+.manage-tags-modal .modal-close,
+.edit-tags-modal .modal-close,
+.tag-edit-modal .modal-close{
+  color: var(--text-600);
+  border-radius: 8px;
+  transition: background .2s ease, color .2s ease;
+}
+.add-content-modal .modal-close:hover,
+.create-tag-modal .modal-close:hover,
+.manage-tags-modal .modal-close:hover,
+.edit-tags-modal .modal-close:hover,
+.tag-edit-modal .modal-close:hover{
+  background: rgba(50, 37, 99, 0.06);
+  color: var(--text-900);
+}
+
+/* Body spacing */
+.add-content-modal .form-group,
+.create-tag-modal .form-group{
+  margin: 14px 0 0 0;
+}
+
+/* Inputs */
+.add-content-modal .form-input,
+.add-content-modal .form-textarea,
+.create-tag-modal .form-input{
+  border: 1px solid rgba(50, 37, 99, 0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.add-content-modal .form-input:focus,
+.add-content-modal .form-textarea:focus,
+.create-tag-modal .form-input:focus{
+  outline: none;
+    border-color: #322563; /* purple accent */
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+}
+
+/* Actions row */
+.add-content-modal .modal-actions,
+.create-tag-modal .modal-actions,
+.manage-tags-modal .modal-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 18px 24px 22px;
+  border-top: 1px solid rgba(50, 37, 99, 0.08);
+}
+
+/* Buttons */
+.modal-btn{
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.modal-btn-primary{
+  background: linear-gradient(90deg, #8B5CF6 0%, #6366F1 100%);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(99,102,241,.25);
+}
+.modal-btn-primary:hover{
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.modal-btn-secondary{
+  background: #fff;
+  color: var(--text-700);
+  border-color: rgba(50, 37, 99, 0.18);
+}
+.modal-btn-secondary:hover{
+  background: rgba(50, 37, 99, 0.06);
+}
+
+/* Tag selector within modals: subtle alignment with theme */
+.tag-selector-trigger{
+  border-color: rgba(139, 92, 246, 0.35);
+}
+.tag-selector-trigger:hover{
+    border-color: #322563;
+}
+
+/* Small improvement to existing "Manage Tags" two-pane layout on narrow screens */
+@media (max-width: 760px){
+  .tags-management{ grid-template-columns: 1fr; }
 }

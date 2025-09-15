@@ -182,7 +182,7 @@ class ApiService {
                 };
             } else {
                 // 改进错误处理
-                let errorMessage = result.detail || '注册失败';
+                let errorMessage = result.detail || 'Registration failed';
                 if (result.error && result.error.code === '23505') {
                     errorMessage = '该邮箱已被注册，请直接登录或使用其他邮箱';
                 }
@@ -244,7 +244,7 @@ class ApiService {
                     token
                 };
             } else {
-                throw new Error(result.detail || '登录失败');
+                throw new Error(result.detail || 'Login failed');
             }
         } catch (error) {
             console.error('❌ 登录失败:', error);
@@ -268,7 +268,7 @@ class ApiService {
                 localStorage.removeItem('authToken'); // 清理可能存在的旧存储
                 return response;
             } else {
-                throw new Error(response.detail || '登出失败');
+                throw new Error(response.detail || 'Logout failed');
             }
         } catch (error) {
             console.error('❌ 登出失败:', error);

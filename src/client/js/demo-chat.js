@@ -273,7 +273,7 @@ class SessionManager {
 
             const requestBody = {
                 user_id: userId,
-                title: title || '新对话'
+                title: title || 'New Chat'
             };
 
             console.log('🔍 创建会话API请求:');
@@ -699,7 +699,7 @@ class ChatUI {
         try {
             const user = getCurrentUserInfo();
             if (!user) {
-                this.sessionsList.innerHTML = '<div class="no-sessions">请先登录</div>';
+                this.sessionsList.innerHTML = '<div class="no-sessions">Please log in first</div>';
                 return;
             }
 
@@ -785,7 +785,7 @@ class ChatUI {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const sessionId = btn.dataset.sessionId;
-                if (confirm('确定要删除这个对话吗？')) {
+                if (confirm('Are you sure you want to delete this conversation?')) {
                     await this.deleteSession(sessionId);
                 }
             });
@@ -794,7 +794,7 @@ class ChatUI {
 
     async switchToSession(sessionId) {
         try {
-            this.sessionsList.innerHTML = '<div class="loading-sessions">加载中...</div>';
+            this.sessionsList.innerHTML = '<div class="loading-sessions">Loading...</div>';
             
             console.log('🔄 切换到会话:', sessionId);
             const context = await sessionManager.getSessionContext(sessionId);
@@ -901,7 +901,7 @@ class ChatUI {
         if (!memories || memories.length === 0) {
             // 没有记忆时隐藏记忆按钮
             this.memoryIndicator.style.display = 'none';
-            this.memoriesList.innerHTML = '<div class="empty-memories">暂无记忆</div>';
+            this.memoriesList.innerHTML = '<div class="empty-memories">No memories yet</div>';
             this.memoryCount.textContent = '0';
             return;
         }
