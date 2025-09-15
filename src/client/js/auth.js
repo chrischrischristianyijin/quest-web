@@ -20,18 +20,40 @@ class AuthManager {
                     // 检查会话是否过期（24小时）
                     const now = Date.now();
                     if (now - parsed.timestamp < 24 * 60 * 60 * 1000) {
+                        console.log('🔄 恢复会话状态...');
                         this.user = parsed.user;
                         this.isAuthenticated = true;
+                        
+                        // 恢复 token - 只从 quest_user_session 恢复
+                        if (parsed.token) {
+                            console.log('🔑 从会话恢复 token...');
+                            api.setAuthToken(parsed.token);
+                            console.log('✅ Token恢复成功，当前API token状态:', api.authToken ? '已设置' : '未设置');
+                        } else {
+                            console.log('⚠️ 会话中没有token，清除会话');
+                            this.clearSession();
+                            return false;
+                        }
+                        
                         this.notifyListeners();
+                        return true;
                     } else {
-                        // 会话过期，清除
+                        console.log('⏰ 会话已过期');
                         this.clearSession();
+                        return false;
                     }
+                } else {
+                    console.log('📦 没有找到会话数据');
+                    return false;
                 }
             } catch (error) {
-                console.error('解析用户会话失败:', error);
+                console.error('❌ 恢复会话状态失败:', error);
                 this.clearSession();
+                return false;
             }
+        } else {
+            console.log('📦 没有找到会话数据');
+            return false;
         }
     }
 
