@@ -130,6 +130,33 @@
         <!-- Main Content -->
         <div class="main-content">
             <div class="content-area">
+                <!-- Profile Section -->
+                <div class="profile-section">
+                    <div class="profile-container clickable-profile" id="profileContainer">
+                        <div class="profile-avatar" id="profileAvatar">
+                            <!-- Avatar skeleton loading state -->
+                            <div class="avatar-skeleton" id="avatarSkeleton"></div>
+                            <!-- Actual avatar (initially hidden) -->
+                            <img src="/public/3d_avatar_12.png" alt="User Avatar" id="userAvatar"
+                                style="display: none;">
+                            <div class="edit-overlay">
+                                <svg class="edit-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="UsernamePlaceholder" id="usernamePlaceholder">
+                            <!-- Username skeleton -->
+                            <div class="username-skeleton" id="usernameSkeleton"></div>
+                            <!-- Actual username (initially hidden) -->
+                            <span id="actualUsername" style="display: none;">Username</span>
+                            <span class="edit-hint">Click to edit</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Controls Section -->
                 <div class="controls-section">
                     <div class="left">

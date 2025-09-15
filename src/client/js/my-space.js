@@ -723,9 +723,9 @@ async function loadUserInsightsWithPagination() {
                 if (insightsWithoutTags.length > 0) {
                     try {
                         await loadTagsForInsights(insightsWithoutTags);
-                        // Only re-render if tags were actually loaded
+                        // Only re-render if tags were actually loaded and we're not in the middle of another render
                         const hasNewTags = insightsWithoutTags.some(insight => insight.tags && insight.tags.length > 0);
-                        if (hasNewTags) {
+                        if (hasNewTags && !renderTimeout) {
                             console.log('🏷️ Tags loaded, re-rendering...');
                             renderInsights();
                         }
@@ -733,7 +733,7 @@ async function loadUserInsightsWithPagination() {
                         console.warn('⚠️ Tag loading failed:', error);
                     }
                 }
-            }, 10);
+            }, 100); // 增加延迟，避免与初始渲染冲突
             
             console.log(`✅ First page loading complete: ${firstPageInsights.length} insights, total pages: ${totalPages}`);
             console.log(`📋 Cache status: cached pages ${Array.from(loadedPages).join(', ')}`);
@@ -1605,6 +1605,7 @@ function effectiveFetchLimitForPage(pageNum) {
 // 防抖渲染机制
 let renderTimeout = null;
 let lastRenderData = null;
+let isRendering = false; // 防止重复渲染的标志
 
 // 渲染见解列表
 function renderInsights() {
@@ -1624,10 +1625,16 @@ function renderInsights() {
     
     renderTimeout = setTimeout(() => {
         performRenderInsights();
-    }, 50); // 50ms防抖
+    }, 150); // 增加防抖时间到150ms
 }
 
 function performRenderInsights() {
+    // 防止重复渲染
+    if (isRendering) {
+        console.log('🔄 Already rendering, skipping...');
+        return;
+    }
+    
     // 检查是否真的需要重新渲染
     const currentData = {
         page: currentPage,
@@ -1647,11 +1654,13 @@ function performRenderInsights() {
         return;
     }
     
+    isRendering = true;
     lastRenderData = currentData;
     console.log('🎨 Performing actual render...');
     
     if (!contentCards) {
         console.error('❌ contentCards element not found!');
+        isRendering = false;
         return;
     }
     
@@ -1759,6 +1768,9 @@ function performRenderInsights() {
     
     // Update edit mode state after rendering cards
     updateEditModeState();
+    
+    // 重置渲染标志
+    isRendering = false;
 }
 
 // Create insight card element (using original structure)
@@ -3077,8 +3089,10 @@ function bindEvents() {
                                 renderStackView(activeStackId);
                             }
                         } else {
-                            // Normal home view reload
-                            await loadUserInsightsWithPagination();
+                            // Normal home view reload - only if not already loading
+                            if (!insightsLoading) {
+                                await loadUserInsightsWithPagination();
+                            }
                         }
                         
                         // Also save to localStorage backup
@@ -3087,7 +3101,7 @@ function bindEvents() {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
                     }
-                }, 2000);
+                }, 1500); // 减少延迟时间
                 
             } catch (error) {
                 console.error('❌ 添加内容失败:', error);
