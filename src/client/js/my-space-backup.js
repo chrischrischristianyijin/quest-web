@@ -41,6 +41,39 @@ const cancelAddBtn = getCachedElementById('cancelAddBtn');
 
 const filterButtons = getCachedElementById('filterButtons');
 
+// Array of random images for cards without images
+const randomImages = [
+    '/public/新建文件夹/微信图片_20250822114123_2436_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114124_2437_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114125_2438_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114126_2439_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114126_2440_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114127_2441_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114128_2442_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114129_2443_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114131_2444_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114132_2445_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114133_2446_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114134_2447_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114136_2448_9.jpg',
+    '/public/新建文件夹/微信图片_20250822114137_2449_9.jpg'
+];
+
+// Get deterministic random image based on insight ID
+function getDeterministicRandomImage(insightId) {
+    // Simple hash function to convert string ID to number
+    let hash = 0;
+    for (let i = 0; i < insightId.length; i++) {
+        const char = insightId.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    // Use absolute value and modulo to get index
+    const index = Math.abs(hash) % randomImages.length;
+    return randomImages[index];
+}
+
 // 页面状态
 let currentUser = null;
 let currentInsights = [];
@@ -3557,7 +3590,7 @@ let currentDetailInsight = null;
 
 // 打开内容详情模态框
 // Helper function to set modal image with fallback
-function setModalImage(url) {
+function setModalImage(url, insightId = null) {
   const media = document.getElementById('modalMedia');
   const img = document.getElementById('modalImage');
 
@@ -3565,7 +3598,10 @@ function setModalImage(url) {
   media.classList.remove('no-image');
   img.removeAttribute('src');
 
-  if (!url) {
+  // Use provided URL or fallback to random image if insightId is provided
+  const imageUrl = url || (insightId ? getDeterministicRandomImage(insightId) : null);
+  
+  if (!imageUrl) {
     media.classList.add('no-image');
     return;
   }
@@ -3573,10 +3609,17 @@ function setModalImage(url) {
   // optimistic set; swap to fallback if it errors
   img.onload = () => media.classList.remove('no-image');
   img.onerror = () => {
-    img.removeAttribute('src');
-    media.classList.add('no-image');
+    // If original image fails and we haven't tried random image yet, try random image
+    if (url && insightId && !img.dataset.randomImageUsed) {
+      img.src = getDeterministicRandomImage(insightId);
+      img.dataset.randomImageUsed = 'true';
+    } else {
+      // If random image also fails, hide the image
+      img.removeAttribute('src');
+      media.classList.add('no-image');
+    }
   };
-  img.src = url;
+  img.src = imageUrl;
 }
 
 function openContentDetailModal(insight) {
@@ -3591,7 +3634,7 @@ function openContentDetailModal(insight) {
     populateModalContent(insight);
     
     // Set the modal image
-    setModalImage(insight.image_url || insight.thumbnail || insight.ogImage || '');
+    setModalImage(insight.image_url || insight.thumbnail || insight.ogImage || '', insight.id);
     
     // 显示模态框
     modal.style.display = 'flex';
@@ -3626,22 +3669,28 @@ function populateModalContent(insight) {
         titleElement.textContent = insight.title || new URL(insight.url).hostname;
     }
     
-    // 图片占位符
+    // 图片占位符 - 使用与卡片相同的逻辑
     const imageContainer = document.getElementById('modalImagePlaceholder');
     if (imageContainer) {
         imageContainer.innerHTML = '';
         
-        if (insight.image_url) {
-            const img = document.createElement('img');
-            img.src = insight.image_url;
-            img.alt = insight.title || 'Content image';
-            img.onerror = function() {
+        // 使用原始图片URL，如果没有则使用确定性随机图片
+        const imageUrl = insight.image_url || getDeterministicRandomImage(insight.id);
+        
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = insight.title || 'Content image';
+        img.onerror = function() {
+            // 如果原始图片加载失败且我们还没有尝试随机图片，则尝试随机图片
+            if (insight.image_url && !this.dataset.randomImageUsed) {
+                this.src = getDeterministicRandomImage(insight.id);
+                this.dataset.randomImageUsed = 'true';
+            } else {
+                // 如果随机图片也失败，显示无图片消息
                 imageContainer.innerHTML = '<span>No image available</span>';
-            };
-            imageContainer.appendChild(img);
-        } else {
-            imageContainer.innerHTML = '<span>No image available</span>';
-        }
+            }
+        };
+        imageContainer.appendChild(img);
     }
     
     // 用户评论
