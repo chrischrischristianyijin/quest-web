@@ -155,36 +155,41 @@ class ApiService {
             const result = await response.json();
 
             if (result.success) {
-                // 兼容多种返回格式：
-                // A) { success, data: { user, access_token } }
-                // B) { success, user, access_token }
-                // C) { success, data: { success, message, data: { user, access_token } } }
-                const dataLevel1 = result.data || {};
-                const dataLevel2 = dataLevel1.data || {};
-                const user = result.user || dataLevel1.user || dataLevel2.user || null;
-                const token = result.access_token 
-                    || dataLevel1.access_token 
-                    || dataLevel2.access_token 
-                    || result.token 
-                    || dataLevel1.token 
-                    || dataLevel2.token 
-                    || null;
-
-                const refreshToken = result.refresh_token 
-                    || dataLevel1.refresh_token 
-                    || dataLevel2.refresh_token 
-                    || null;
+                // 根据 API 指南解析注册响应格式
+                const data = result.data || {};
+                
+                const token = data.access_token || result.access_token || null;
+                const refreshToken = data.refresh_token || result.refresh_token || null;
+                const expiresAt = data.expires_at || result.expires_at || null;
+                const expiresIn = data.expires_in || result.expires_in || null;
+                
+                // 构建用户对象
+                const user = {
+                    id: data.user_id || result.user_id || null,
+                    email: data.email || result.email || userData.email,
+                    nickname: data.nickname || result.nickname || userData.nickname,
+                    username: data.username || result.username || null
+                };
 
                 if (token) {
                     this.setAuthToken(token);
                 }
 
-                // 即使后端未返回 user，也返回成功，交给上层兜底
+                console.log('📡 注册成功，解析的Token信息:', {
+                    hasAccessToken: !!token,
+                    hasRefreshToken: !!refreshToken,
+                    expiresAt: expiresAt,
+                    expiresIn: expiresIn,
+                    user: user
+                });
+
                 return {
                     success: true,
                     user: user || null,
                     token: token || null,
-                    refresh_token: refreshToken
+                    refresh_token: refreshToken,
+                    expires_at: expiresAt,
+                    expires_in: expiresIn
                 };
             } else {
                 // 改进错误处理
@@ -216,44 +221,42 @@ class ApiService {
             console.log('📡 登录API响应:', result);
 
             if (result.success) {
-                // 兼容多种返回格式：
-                // A) { success, data: { user_id, email, access_token } }
-                // B) { success, data: { user, access_token } }
-                // C) { success, user, access_token }
-                // D) { success, data: { success, message, data: { user, access_token } } }
-                const dataLevel1 = result.data || {};
-                const dataLevel2 = dataLevel1.data || {};
-
-                const token = result.access_token 
-                    || dataLevel1.access_token 
-                    || dataLevel2.access_token 
-                    || result.token 
-                    || dataLevel1.token 
-                    || dataLevel2.token 
-                    || null;
-
-                const refreshToken = result.refresh_token 
-                    || dataLevel1.refresh_token 
-                    || dataLevel2.refresh_token 
-                    || null;
-
-                const user = result.user 
-                    || dataLevel1.user 
-                    || dataLevel2.user 
-                    || {
-                        id: dataLevel1.user_id || dataLevel2.user_id || null,
-                        email: dataLevel1.email || dataLevel2.email || credentials.email
-                    };
+                // 根据 API 指南解析响应格式
+                // 标准格式: { success: true, data: { access_token, refresh_token, user_id, email, expires_at, expires_in } }
+                const data = result.data || {};
+                
+                const token = data.access_token || result.access_token || null;
+                const refreshToken = data.refresh_token || result.refresh_token || null;
+                const expiresAt = data.expires_at || result.expires_at || null;
+                const expiresIn = data.expires_in || result.expires_in || null;
+                
+                // 构建用户对象
+                const user = {
+                    id: data.user_id || result.user_id || null,
+                    email: data.email || result.email || credentials.email,
+                    nickname: data.nickname || result.nickname || null,
+                    username: data.username || result.username || null
+                };
 
                 if (token) {
                     this.setAuthToken(token);
                 }
 
+                console.log('📡 登录成功，解析的Token信息:', {
+                    hasAccessToken: !!token,
+                    hasRefreshToken: !!refreshToken,
+                    expiresAt: expiresAt,
+                    expiresIn: expiresIn,
+                    user: user
+                });
+
                 return {
                     success: true,
                     user,
                     token,
-                    refresh_token: refreshToken
+                    refresh_token: refreshToken,
+                    expires_at: expiresAt,
+                    expires_in: expiresIn
                 };
             } else {
                 throw new Error(result.detail || 'Login failed');
