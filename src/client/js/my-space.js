@@ -52,9 +52,9 @@ let cachedUserTags = null;
 let userTagsCacheTime = 0;
 const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
-    latest: 'latest',  // 时间排序
-    tags: null,        // 标签筛选
-    search: ''         // 搜索筛选
+    latest: 'latest',  // Time sorting
+    tags: null,        // Tag filtering
+    search: ''         // Search filtering
 };
 let isEditMode = false; // Edit mode state
 
@@ -94,7 +94,7 @@ window.addEventListener('beforeunload', saveOnUnload);
 window.addEventListener('quest-auth-expired', async (e) => {
   console.warn('🔒 Auth expired; logging out...', e?.detail);
   try {
-    // 设置标志阻止insights恢复
+    // Set flag to prevent insights recovery
     window.__QUEST_AUTH_EXPIRED__ = true;
     
     // stop autosave if running
@@ -104,31 +104,31 @@ window.addEventListener('quest-auth-expired', async (e) => {
     }
     window.removeEventListener('beforeunload', saveOnUnload);
     
-    // 清除本地insights备份，防止恢复
+    // Clear local insights backup to prevent recovery
     localStorage.removeItem('quest_insights_backup');
     console.log('🗑️ Cleared insights backup due to auth expiration');
     
     // clear local session via auth manager
     await auth.logout();
     
-    // 显示认证过期弹窗
+    // Show authentication expired modal
     const { handleAuthExpired } = await import('./auth-modal.js');
     handleAuthExpired();
   } catch (error) {
     console.error('❌ Error handling auth expiration:', error);
-    // 即使出错也要显示弹窗
+    // Show modal even if there's an error
     try {
       const { handleAuthExpired } = await import('./auth-modal.js');
       handleAuthExpired();
     } catch (modalError) {
       console.error('❌ Error showing auth modal:', modalError);
-      // 最后回退到直接跳转
+      // Final fallback to direct navigation
       navigateTo(PATHS.LOGIN);
     }
   }
 });
 
-// 🔐 定期检查token有效性 (每5分钟检查一次)
+// 🔐 Regular token validity check (every 5 minutes)
 let tokenValidationInterval = null;
 
 function startTokenValidation() {
@@ -138,9 +138,9 @@ function startTokenValidation() {
   
   tokenValidationInterval = setInterval(async () => {
     try {
-      // 检查token是否过期
+      // Check if token is expired
       if (auth.isTokenExpired()) {
-        console.log('⏰ Token已过期，触发认证过期事件');
+        console.log('⏰ Token expired, triggering auth expired event');
         window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
           detail: { 
             status: 401, 
@@ -150,18 +150,18 @@ function startTokenValidation() {
         return;
       }
       
-      // 如果用户已认证，验证token有效性
+      // If user is authenticated, validate token validity
       if (auth.checkAuth()) {
         const isValid = await auth.validateToken();
         if (!isValid) {
-          console.log('❌ Token验证失败，触发认证过期事件');
-          // validateToken内部已经会触发quest-auth-expired事件
+          console.log('❌ Token validation failed, triggering auth expired event');
+          // validateToken internally will trigger quest-auth-expired event
         }
       }
     } catch (error) {
-      console.error('❌ Token验证检查出错:', error);
+      console.error('❌ Token validation check error:', error);
     }
-  }, 5 * 60 * 1000); // 5分钟检查一次
+  }, 5 * 60 * 1000); // Check every 5 minutes
 }
 
 function stopTokenValidation() {
@@ -171,27 +171,27 @@ function stopTokenValidation() {
   }
 }
 
-// 页面加载时启动token验证
+// Start token validation when page loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', startTokenValidation);
 } else {
   startTokenValidation();
 }
 
-// 页面卸载时停止验证
+// Stop validation when page unloads
 window.addEventListener('beforeunload', stopTokenValidation);
 
-// 翻页功能相关变量
+// Pagination related variables
 let currentPage = 1;
 let totalPages = 1;
 let totalInsights = 0;
-let insightsPerPage = 9; // 每页显示9个insights
+let insightsPerPage = 9; // Show 9 insights per page
 
-// 页面缓存机制
-let pageCache = new Map(); // 缓存每个页面的数据
-let loadedPages = new Set(); // 记录已加载的页面
+// Page caching mechanism
+let pageCache = new Map(); // Cache data for each page
+let loadedPages = new Set(); // Record loaded pages
 
-// 初始化翻页功能
+// Initialize pagination functionality
 function initPagination() {
     const prevBtn = document.getElementById('prevPageBtn');
     const nextBtn = document.getElementById('nextPageBtn');
@@ -217,7 +217,7 @@ function getTotalInsightsCount() {
     return totalInsights + insightsInStacks;
 }
 
-// 更新翻页UI
+// Update pagination UI
 function updatePaginationUI() {
     console.log(`🔍 DEBUG: updatePaginationUI called - currentPage=${currentPage}, totalPages=${totalPages}`);
     
@@ -254,7 +254,7 @@ function updatePaginationUI() {
             : `${standaloneInsights} insights`;
     }
     
-    // 更新按钮状态
+    // Update button states
     if (prevBtn) {
         prevBtn.disabled = currentPage <= 1;
     }
@@ -263,33 +263,33 @@ function updatePaginationUI() {
         nextBtn.disabled = currentPage >= totalPages;
     }
     
-    // 生成页码按钮
+    // Generate page number buttons
     if (paginationPages) {
         paginationPages.innerHTML = '';
         generatePageNumbers(paginationPages);
     }
 }
 
-// 生成页码按钮
+// Generate page number buttons
 function generatePageNumbers(container) {
-    const maxVisiblePages = 5; // 最多显示5个页码按钮
+    const maxVisiblePages = 5; // Show at most 5 page number buttons
     
     if (totalPages <= maxVisiblePages) {
-        // 如果总页数不多，显示所有页码
+        // If total pages are few, show all page numbers
         for (let i = 1; i <= totalPages; i++) {
             createPageButton(container, i);
         }
     } else {
-        // 如果总页数很多，显示智能分页
+        // If total pages are many, show smart pagination
         let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
         let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
         
-        // 调整起始页，确保显示maxVisiblePages个按钮
+        // Adjust start page to ensure maxVisiblePages buttons are shown
         if (endPage - startPage + 1 < maxVisiblePages) {
             startPage = Math.max(1, endPage - maxVisiblePages + 1);
         }
         
-        // 第一页
+        // First page
         if (startPage > 1) {
             createPageButton(container, 1);
             if (startPage > 2) {
@@ -297,12 +297,12 @@ function generatePageNumbers(container) {
             }
         }
         
-        // 中间页码
+        // Middle page numbers
         for (let i = startPage; i <= endPage; i++) {
             createPageButton(container, i);
         }
         
-        // 最后一页
+        // Last page
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) {
                 createEllipsis(container);
@@ -312,7 +312,7 @@ function generatePageNumbers(container) {
     }
 }
 
-// 创建页码按钮
+// Create page number button
 function createPageButton(container, pageNum) {
     const pageBtn = document.createElement('button');
     pageBtn.className = `pagination-page ${pageNum === currentPage ? 'active' : ''}`;
@@ -321,7 +321,7 @@ function createPageButton(container, pageNum) {
     container.appendChild(pageBtn);
 }
 
-// 创建省略号
+// Create ellipsis
 function createEllipsis(container) {
     const ellipsis = document.createElement('span');
     ellipsis.className = 'pagination-page ellipsis';
@@ -329,7 +329,7 @@ function createEllipsis(container) {
     container.appendChild(ellipsis);
 }
 
-// 跳转到指定页面
+// Navigate to specified page
 async function goToPage(pageNum, { force = false } = {}) {
     console.log(`🔍 DEBUG: goToPage called with pageNum=${pageNum}, force=${force}`);
     console.log(`🔍 DEBUG: Current state - currentPage=${currentPage}, totalPages=${totalPages}, totalInsights=${totalInsights}`);
@@ -342,11 +342,11 @@ async function goToPage(pageNum, { force = false } = {}) {
     try {
         console.log(`🔍 DEBUG: Before setting - currentPage=${currentPage}, pageNum=${pageNum}`);
         currentPage = pageNum;
-        insightsPage = pageNum; // 更新全局变量
+        insightsPage = pageNum; // Update global variable
         
         console.log(`🔍 DEBUG: After setting - currentPage=${currentPage}, insightsPage=${insightsPage}`);
         
-        // 显示加载状态
+        // Show loading state
         showLoadingState();
         
         // If force is true, skip cache and fetch fresh data
@@ -355,9 +355,9 @@ async function goToPage(pageNum, { force = false } = {}) {
             console.log(`🔍 DEBUG: Force mode - cleared cache for page ${pageNum}`);
         }
         
-        // 检查缓存中是否已有该页面数据
+        // Check if page data is already cached
         if (!force && pageCache.has(pageNum)) {
-            console.log(`📋 从缓存加载第${pageNum}页数据`);
+            console.log(`📋 Loading page ${pageNum} data from cache`);
             const cachedData = pageCache.get(pageNum);
             console.log(`🔍 DEBUG: Cached data for page ${pageNum}:`, cachedData);
             // Defensive normalization for nested array issue
@@ -369,14 +369,14 @@ async function goToPage(pageNum, { force = false } = {}) {
             console.log(`🔍 DEBUG: Loaded from cache - currentInsights.length=${currentInsights.length}`);
             console.log(`🔍 DEBUG: Cached insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
             
-            // 更新已渲染的ID
+            // Update rendered IDs
             renderedInsightIds.clear();
             currentInsights.forEach(i => renderedInsightIds.add(i.id));
         } else {
-            // 缓存中没有，调用API加载
-            console.log(`🔄 从API加载第${pageNum}页数据...`);
+            // Not in cache, load from API
+            console.log(`🔄 Loading page ${pageNum} data from API...`);
             
-            // 使用分页API加载目标页面 (over-fetch on page 1 to account for stacked insights)
+            // Use pagination API to load target page (over-fetch on page 1 to account for stacked insights)
             const effectiveLimit = effectiveFetchLimitForPage(pageNum);
             const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
             
@@ -464,7 +464,7 @@ async function goToPage(pageNum, { force = false } = {}) {
                     console.log(`🔍 DEBUG: Skipping de-duplication - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
                 }
                 
-                // 更新当前页面数据
+                // Update current page data
                 currentInsights = adjusted;
                 window.currentInsights = currentInsights;
                 insightsHasMore = hasMore;
@@ -472,11 +472,11 @@ async function goToPage(pageNum, { force = false } = {}) {
                 console.log(`🔍 DEBUG: Final currentInsights for page ${pageNum}:`, currentInsights.length, 'insights');
                 console.log(`🔍 DEBUG: Final insights:`, currentInsights.map(i => ({ id: i.id, title: i.title })));
                 
-                // 更新已渲染的ID（基于 adjusted）
+                // Update rendered IDs (based on adjusted)
                 renderedInsightIds.clear();
                 adjusted.forEach(i => renderedInsightIds.add(i.id));
                 
-                // 缓存该页面数据（保存 adjusted，而不是原始）
+                // Cache page data (save adjusted, not original)
                 pageCache.set(pageNum, {
                     insights: adjusted,        // ❗ was [...adjusted]
                     hasMore,
@@ -484,19 +484,19 @@ async function goToPage(pageNum, { force = false } = {}) {
                 });
                 loadedPages.add(pageNum);
                 
-                console.log(`📄 第${pageNum}页加载完成并缓存: ${adjusted.length}个insights (原始: ${targetPageInsights.length})`);
+                console.log(`📄 Page ${pageNum} loaded and cached: ${adjusted.length} insights (original: ${targetPageInsights.length})`);
             } else {
                 throw new Error(`Failed to load page ${pageNum}`);
             }
         }
         
-        // 重新渲染insights（只显示当前页面的数据）
+        // Re-render insights (only show current page data)
         renderInsights();
         
-        // 更新UI
+        // Update UI
         updatePaginationUI();
         
-        // 滚动到顶部
+        // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
         console.log(`🔍 DEBUG: After goToPage - currentPage=${currentPage}, totalPages=${totalPages}`);
@@ -508,7 +508,7 @@ async function goToPage(pageNum, { force = false } = {}) {
     }
 }
 
-// 更新分页信息
+// Update pagination info
 function updatePaginationInfo(data) {
     const pagination = data.pagination || {};
     totalPages = pagination.total_pages || 1;
@@ -518,7 +518,7 @@ function updatePaginationInfo(data) {
     console.log(`🔍 DEBUG: updatePaginationInfo - totalPages=${totalPages}, totalInsights=${totalInsights}, currentPage=${currentPage} (not updated from API)`);
 }
 
-// 显示加载状态
+// Show loading state
 function showLoadingState() {
     const container = document.getElementById('contentCards');
     if (!container) return;
@@ -537,20 +537,20 @@ function showLoadingState() {
     }
 }
 
-// 隐藏加载状态
+// Hide loading state
 function hideLoadingState() {
     const overlay = document.getElementById('loadingSkeleton');
     if (overlay) overlay.remove();
 }
 
-// 清除页面缓存
+// Clear page cache
 function clearPageCache() {
     pageCache.clear();
     loadedPages.clear();
-    console.log('🗑️ 页面缓存已清除');
+    console.log('🗑️ Page cache cleared');
 }
 
-// 获取缓存状态信息
+// Get cache status info
 function getCacheStatus() {
     return {
         cachedPages: Array.from(loadedPages),
@@ -559,17 +559,17 @@ function getCacheStatus() {
     };
 }
 
-// 修改loadUserInsights函数以支持翻页
+// Modify loadUserInsights function to support pagination
 async function loadUserInsightsWithPagination() {
     try {
         insightsLoading = true;
         showLoadingState();
         
-        // 清除之前的缓存
+        // Clear previous cache
         clearPageCache();
         
-        // 第一步：快速加载第一页
-        console.log('🚀 开始请求第一页数据...');
+        // Step 1: Quickly load first page
+        console.log('🚀 Starting first page data request...');
         const startTime = Date.now();
         const effectiveLimit = effectiveFetchLimitForPage(1);
         const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
@@ -602,24 +602,24 @@ async function loadUserInsightsWithPagination() {
         try {
             firstPageResponse = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
             const endTime = Date.now();
-            console.log(`⏱️ 第一页API请求耗时: ${endTime - startTime}ms`);
+            console.log(`⏱️ First page API request took: ${endTime - startTime}ms`);
             console.log('📡 First page API response:', firstPageResponse);
         } catch (apiError) {
-            console.warn('⚠️ API请求失败，尝试从本地备份加载:', apiError.message);
+            console.warn('⚠️ API request failed, trying to load from local backup:', apiError.message);
             
-            // 检查是否因认证过期导致，如果是则不恢复本地数据
+            // Check if it's due to auth expiration, if so don't restore local data
             if (window.__QUEST_AUTH_EXPIRED__) {
                 console.log('🚫 Auth expired, skipping backup restore');
                 throw apiError;
             }
             
-            // 如果API请求失败（可能是认证问题），尝试从本地备份加载
+            // If API request failed (possibly auth issue), try loading from local backup
             const backupInsights = localStorage.getItem('quest_insights_backup');
             if (backupInsights) {
                 try {
                     const backup = JSON.parse(backupInsights);
                     if (backup.data && backup.data.length > 0) {
-                        console.log('📦 从本地备份加载 insights:', backup.data.length, '个');
+                        console.log('📦 Loading insights from local backup:', backup.data.length, 'items');
                         firstPageResponse = {
                             success: true,
                             data: {
@@ -633,14 +633,14 @@ async function loadUserInsightsWithPagination() {
                             }
                         };
                     } else {
-                        throw new Error('本地备份为空');
+                        throw new Error('Local backup is empty');
                     }
                 } catch (backupError) {
-                    console.error('❌ 解析本地备份失败:', backupError);
-                    throw apiError; // 重新抛出原始API错误
+                    console.error('❌ Failed to parse local backup:', backupError);
+                    throw apiError; // Re-throw original API error
                 }
             } else {
-                throw apiError; // 重新抛出原始API错误
+                throw apiError; // Re-throw original API error
             }
         }
         
@@ -672,7 +672,7 @@ async function loadUserInsightsWithPagination() {
                 }
             }
             
-            // 先设置第一页数据
+            // Set first page data first
             currentInsights = firstPageInsights;
             window.currentInsights = currentInsights;
             insightsPage = 1;
@@ -681,7 +681,7 @@ async function loadUserInsightsWithPagination() {
             firstPageInsights.forEach(i => renderedInsightIds.add(i.id));
             if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
             
-            // 缓存第一页数据 (store only what we actually display)
+            // Cache first page data (store only what we actually display)
             const displayedInsights = firstPageInsights.slice(0, effectiveLimitForPage(1));
             pageCache.set(1, {
                 insights: displayedInsights,  // ✅ Store only what we display
@@ -690,10 +690,10 @@ async function loadUserInsightsWithPagination() {
             });
             loadedPages.add(1);
             
-            // 从API响应中获取分页信息
+            // Get pagination info from API response
             updatePaginationInfo(firstPageResponse.data);
             
-            // 标准化标签结构
+            // Normalize tag structure
             currentInsights.forEach(insight => {
                 if (insight.tags && insight.tags.length > 0) {
                     insight.tags = insight.tags.map(tag => ({
@@ -704,26 +704,26 @@ async function loadUserInsightsWithPagination() {
                 }
             });
             
-            // 立即渲染第一页（不等待标签加载）
+            // Immediately render first page (don't wait for tag loading)
             renderInsights();
             updatePaginationUI();
             
-            // 异步加载标签，不阻塞渲染
+            // Asynchronously load tags, don't block rendering
             setTimeout(async () => {
                 const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
                 if (insightsWithoutTags.length > 0) {
                     try {
                         await loadTagsForInsights(insightsWithoutTags);
-                        // 标签加载完成后重新渲染
+                        // Re-render after tag loading is complete
                         renderInsights();
                     } catch (error) {
-                        console.warn('⚠️ 标签加载失败:', error);
+                        console.warn('⚠️ Tag loading failed:', error);
                     }
                 }
             }, 10);
             
-            console.log(`✅ 第一页加载完成: ${firstPageInsights.length}个insights, 总页数: ${totalPages}`);
-            console.log(`📋 缓存状态: 已缓存页面 ${Array.from(loadedPages).join(', ')}`);
+            console.log(`✅ First page loading complete: ${firstPageInsights.length} insights, total pages: ${totalPages}`);
+            console.log(`📋 Cache status: cached pages ${Array.from(loadedPages).join(', ')}`);
             
             // If API returned 0 insights, try loading from backup
             if (firstPageInsights.length === 0) {
@@ -731,7 +731,7 @@ async function loadUserInsightsWithPagination() {
                 loadFromBackup();
             }
         } else {
-            // 尝试从localStorage加载备份
+            // Try loading backup from localStorage
             loadFromBackup();
         }
     } catch (error) {
@@ -747,11 +747,11 @@ async function loadUserInsightsWithPagination() {
 
 // loadRemainingInsightsInBackground function removed - using pagination only
 
-// 从备份加载数据
+// Load data from backup
 function loadFromBackup() {
     console.log('🔄 Loading from backup...');
     
-    // 检查是否因认证过期导致，如果是则不恢复本地数据
+    // Check if it's due to auth expiration, if so don't restore local data
     if (window.__QUEST_AUTH_EXPIRED__) {
         console.log('🚫 Auth expired, skipping backup restore');
         currentInsights = [];
@@ -1014,7 +1014,7 @@ async function initPage() {
         console.error('❌ 页面初始化失败:', error);
         
         // 如果是认证错误，重定向到登录页面
-        if (error.message.includes('认证已过期') || error.message.includes('请重新登录')) {
+        if (error.message.includes('认证已过期') || error.message.includes('请重新登录') || error.message.includes('authentication expired') || error.message.includes('please login again')) {
             window.location.href = PATHS.LOGIN;
             return;
         }
@@ -1275,7 +1275,7 @@ async function loadUserProfile() {
                 updateUserProfileUI();
                 return;
             }
-            throw new Error('用户未认证且无本地数据');
+            throw new Error('User not authenticated and no local data');
         }
         
         // 总是尝试从 API 获取最新的用户资料
@@ -2467,11 +2467,11 @@ function showFilterStatus() {
     
     // 排序状态
     if (currentFilters.latest === 'latest') {
-        statusParts.push('最新优先');
+        statusParts.push('Latest First');
     } else if (currentFilters.latest === 'oldest') {
-        statusParts.push('最旧优先');
+        statusParts.push('Oldest First');
     } else if (currentFilters.latest === 'alphabetical') {
-        statusParts.push('字母排序');
+        statusParts.push('Alphabetical');
     }
     
     // 标签筛选状态
@@ -2495,12 +2495,12 @@ function showFilterStatus() {
             statusParts.push(`标签: ${paraCategoryNames[currentFilters.tags]}`);
         }
     } else if (currentFilters.tags === 'all') {
-        statusParts.push('所有标签');
+        statusParts.push('All Tags');
     }
     
 
     
-    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : '显示所有内容';
+    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : 'Show All Content';
     
     // 可以在这里添加UI显示筛选状态
     // 比如在页面顶部显示一个小提示
