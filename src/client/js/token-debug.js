@@ -219,6 +219,9 @@ window.tokenDebugger = new TokenDebugger();
 window.debugToken = () => window.tokenDebugger.quickDiagnosis();
 window.tokenReport = () => window.tokenDebugger.generateDebugReport();
 
+// 导出调试器实例供模块使用
+export const tokenDebugger = window.tokenDebugger;
+
 console.log('🔧 Token调试工具已加载');
 console.log('💡 使用方法:');
 console.log('  - debugToken() - 快速诊断');

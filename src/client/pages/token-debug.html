@@ -130,6 +130,7 @@
     <script type="module">
         import { tokenDebugger } from '/js/token-debug.js';
 
+        // 将函数绑定到全局作用域
         window.checkFrontendStatus = async () => {
             const status = tokenDebugger.getFrontendTokenStatus();
             const statusDiv = document.getElementById('frontendStatus');
@@ -241,7 +242,7 @@
 
         // 页面加载时自动检查前端状态
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(checkFrontendStatus, 1000);
+            setTimeout(() => window.checkFrontendStatus(), 1000);
         });
     </script>
 </body>
