@@ -73,7 +73,66 @@ function updateNavigation(isLoggedIn, user = null) {
     }
   }
 
-  // === 4) Boot ===
+  // === 4) Carousel functionality ===
+  function initCarousel() {
+    const slides = document.querySelectorAll('.carousel-slide');
+    const indicators = document.querySelectorAll('.indicator');
+    let currentSlide = 0;
+    let intervalId = null;
+
+    if (slides.length === 0) return;
+
+    function showSlide(index) {
+      // Remove active class from all slides and indicators
+      slides.forEach(slide => slide.classList.remove('active'));
+      indicators.forEach(indicator => indicator.classList.remove('active'));
+
+      // Add active class to current slide and indicator
+      slides[index].classList.add('active');
+      indicators[index].classList.add('active');
+    }
+
+    function nextSlide() {
+      currentSlide = (currentSlide + 1) % slides.length;
+      showSlide(currentSlide);
+    }
+
+    function startCarousel() {
+      intervalId = setInterval(nextSlide, 2000); // Change slide every 2 seconds
+    }
+
+    function stopCarousel() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    // Initialize first slide
+    showSlide(0);
+
+    // Start automatic cycling
+    startCarousel();
+
+    // Add click handlers to indicators
+    indicators.forEach((indicator, index) => {
+      indicator.addEventListener('click', () => {
+        currentSlide = index;
+        showSlide(currentSlide);
+        stopCarousel();
+        startCarousel(); // Restart the timer
+      });
+    });
+
+    // Pause on hover, resume on mouse leave
+    const carouselContainer = document.querySelector('.carousel-container');
+    if (carouselContainer) {
+      carouselContainer.addEventListener('mouseenter', stopCarousel);
+      carouselContainer.addEventListener('mouseleave', startCarousel);
+    }
+  }
+
+  // === 5) Boot ===
   document.addEventListener('DOMContentLoaded', async () => {
     // Your existing auth check (reuse your auth/api if present)
     let isLoggedIn = false, user = null;
@@ -85,4 +144,5 @@ function updateNavigation(isLoggedIn, user = null) {
     updateNavigation(isLoggedIn, user);
     wireHeroCta(isLoggedIn);
     initHeroParallax();
+    initCarousel();
   });
