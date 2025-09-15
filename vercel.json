@@ -2,6 +2,28 @@
   "version": 2,
   "buildCommand": "echo 'No build step required for static site'",
   "outputDirectory": "src/client",
+  "rewrites": [
+    {
+      "source": "/login",
+      "destination": "/pages/login.html"
+    },
+    {
+      "source": "/signup", 
+      "destination": "/pages/signup.html"
+    },
+    {
+      "source": "/my-space",
+      "destination": "/pages/my-space.html"
+    },
+    {
+      "source": "/demo-chat",
+      "destination": "/pages/demo-chat.html"
+    },
+    {
+      "source": "/email-preferences",
+      "destination": "/pages/email-preferences.html"
+    }
+  ],
   "headers": [
     {
       "source": "/styles/(.*)",
@@ -11,50 +33,6 @@
           "value": "public, max-age=0, must-revalidate"
         }
       ]
-    }
-  ],
-  "builds": [
-    {
-      "src": "src/client/**/*",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/styles/(.*)",
-      "dest": "/styles/$1"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "/js/$1"
-    },
-    {
-      "src": "/public/(.*)",
-      "dest": "/public/$1"
-    },
-    {
-      "src": "/login",
-      "dest": "/pages/login.html"
-    },
-    {
-      "src": "/signup",
-      "dest": "/pages/signup.html"
-    },
-    {
-      "src": "/my-space",
-      "dest": "/pages/my-space.html"
-    },
-    {
-      "src": "/demo-chat",
-      "dest": "/pages/demo-chat.html"
-    },
-    {
-      "src": "/email-preferences",
-      "dest": "/pages/email-preferences.html"
-    },
-    {
-      "src": "/",
-      "dest": "/pages/index.html"
     }
   ]
 }
