@@ -22,39 +22,39 @@
   "routes": [
     {
       "src": "/styles/(.*)",
-      "dest": "/src/client/styles/$1"
+      "dest": "/styles/$1"
     },
     {
       "src": "/js/(.*)",
-      "dest": "/src/client/js/$1"
+      "dest": "/js/$1"
     },
     {
       "src": "/public/(.*)",
-      "dest": "/src/client/public/$1"
+      "dest": "/public/$1"
     },
     {
       "src": "/login",
-      "dest": "/src/client/pages/login.html"
+      "dest": "/pages/login.html"
     },
     {
       "src": "/signup",
-      "dest": "/src/client/pages/signup.html"
+      "dest": "/pages/signup.html"
     },
     {
       "src": "/my-space",
-      "dest": "/src/client/pages/my-space.html"
+      "dest": "/pages/my-space.html"
     },
     {
       "src": "/demo-chat",
-      "dest": "/src/client/pages/demo-chat.html"
+      "dest": "/pages/demo-chat.html"
     },
     {
       "src": "/email-preferences",
-      "dest": "/src/client/pages/email-preferences.html"
+      "dest": "/pages/email-preferences.html"
     },
     {
       "src": "/",
-      "dest": "/src/client/pages/index.html"
+      "dest": "/pages/index.html"
     }
   ]
 }
