@@ -26,6 +26,10 @@
     {
       "source": "/email-preferences",
       "destination": "/pages/email-preferences.html"
+    },
+    {
+      "source": "/token-debug",
+      "destination": "/pages/token-debug.html"
     }
   ],
   "headers": [
