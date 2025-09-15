@@ -1,4 +1,5 @@
 import { API_CONFIG } from './config.js';
+import { tokenManager } from './token-manager.js';
 
 // API服务类
 class ApiService {
@@ -62,20 +63,17 @@ class ApiService {
 
         try {
             console.log(`📡 API请求: ${config.method} ${url}`);
-            const response = await fetch(url, config);
+            
+            // 使用Token管理器处理请求
+            const response = await tokenManager.handleApiRequest(async () => {
+                return await fetch(url, config);
+            });
             
             console.log(`📡 API响应: ${response.status} ${response.statusText}`);
             
-            // 处理认证错误
+            // 处理认证错误（如果Token管理器没有处理）
             if (response.status === 401 || response.status === 403) {
                 console.error('❌ 认证失败:', response.status, response.statusText);
-                // 清除无效的token
-                this.setAuthToken(null);
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('quest_user_session');
-                // 清理前端 GET 缓存并广播全局"认证过期"事件
-                if (window.apiCache) window.apiCache.clear();
-                window.dispatchEvent(new CustomEvent('quest-auth-expired', { detail: { status: response.status } }));
                 
                 // Try to get more specific error message from response
                 let errorMessage = '认证已过期，请重新登录';
@@ -86,6 +84,20 @@ class ApiService {
                     }
                 } catch (e) {
                     // If we can't parse the error response, use default message
+                }
+                
+                // 触发自动退出登录
+                try {
+                    const { tokenManager } = await import('./token-manager.js');
+                    await tokenManager.autoLogout(errorMessage);
+                } catch (importError) {
+                    console.error('导入Token管理器失败:', importError);
+                    // 回退到原来的处理方式
+                    this.setAuthToken(null);
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('quest_user_session');
+                    if (window.apiCache) window.apiCache.clear();
+                    window.dispatchEvent(new CustomEvent('quest-auth-expired', { detail: { status: response.status } }));
                 }
                 
                 throw new Error(errorMessage);
@@ -109,6 +121,16 @@ class ApiService {
             // Cache successful GET responses
             if ((options.method || 'GET') === 'GET' && window.apiCache) {
                 window.apiCache.set(url, data);
+            }
+            
+            // 如果请求成功且有认证token，更新会话时间戳
+            if (this.authToken && response.ok) {
+                try {
+                    const { auth } = await import('./auth.js');
+                    auth.updateSessionTimestamp();
+                } catch (error) {
+                    console.log('更新会话时间戳失败:', error);
+                }
             }
             
             return data;
