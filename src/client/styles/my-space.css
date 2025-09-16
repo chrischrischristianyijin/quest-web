@@ -268,10 +268,6 @@ body {
     color: currentColor;
 }
 
-/* Hide email preferences button */
-#headerEmailPreferences {
-    display: none;
-}
 
 /* ===== MAIN CONTENT AREA ===== */
 .main-content {

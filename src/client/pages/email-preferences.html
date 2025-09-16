@@ -5,30 +5,72 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Preferences - Quest</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../styles/common.css">
   <link rel="stylesheet" href="../styles/email-preferences.css">
 </head>
 
-<body>
+<body data-page="email-preferences">
+  <!-- Soft background gradient like My Space -->
+  <div class="site-bg" aria-hidden="true"></div>
+
   <div class="container">
-    <header class="header">
-      <div class="header-content">
-        <a href="/my-space" class="logo">
-          <img src="../public/logo.png" alt="Quest" class="logo-img">
+    <!-- My Space header (identical structure) -->
+    <div class="header-section">
+      <div class="left">
+        <a href="/" class="Quest">
+          <img src="/public/logo.png" alt="Quest">
         </a>
-        <nav class="nav">
-          <a href="/my-space" class="nav-link">My Space</a>
-          <a href="/" class="nav-link">Home</a>
-          <button id="logoutBtn" class="btn btn-outline">Logout</button>
-        </nav>
       </div>
-    </header>
+
+      <div class="WelcomeToYourPersonalSpacePlaceholder" data-translate="email_preferences">Email Preferences</div>
+
+      <div class="right">
+        <div class="header-actions">
+          <button id="languageToggle" class="language-toggle-btn">
+            <span class="language-flag">🇺🇸</span>
+            <span class="language-text" data-translate="language">EN</span>
+          </button>
+          
+          <a href="/demo-chat" class="demo-chat-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span data-translate="demo_chat">Demo Chat</span>
+          </a>
+
+          <div class="header-user-menu" id="headerUserMenu">
+            <div class="header-avatar-container" id="headerAvatarContainer">
+              <img src="/public/3d_avatar_12.png" alt="User Avatar" class="header-avatar" id="headerAvatar">
+            </div>
+            <div class="header-dropdown" id="headerDropdown">
+              <button class="header-dropdown-item" id="headerEditProfile">Edit Profile</button>
+              <button class="header-dropdown-item" id="headerEmailPreferences">Email Preferences</button>
+              <button class="header-dropdown-item" id="headerLogout">Log Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New hero area -->
+    <section class="page-hero">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/my-space" class="breadcrumb-link">My Space</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Email Preferences</span>
+      </nav>
+      <div class="hero-heading">
+        <h1>Email Preferences</h1>
+        <p>Manage your weekly digest and delivery settings</p>
+      </div>
+      <div class="hero-status">
+        <span id="digestStatusPill" class="status-pill">Digest · Off</span>
+      </div>
+    </section>
 
     <main class="main">
-      <div class="page-header">
-        <h1>Email Preferences</h1>
-        <p>Manage your email notifications and digest settings</p>
-      </div>
 
       <div class="email-preferences-container">
         <form id="emailPreferencesForm" class="email-preferences-form">
@@ -157,6 +199,7 @@
     </footer>
   </div>
 
+  <!-- FIX: close and correct the truncated script tag -->
   <script type="module" src="../js/email-preferences.js"></script>
   <script type="module" src="../js/auth.js"></script>
   <script type="module" src="../js/api.js"></script>
