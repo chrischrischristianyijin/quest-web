@@ -644,8 +644,8 @@
   
   .step-image {
     flex-shrink: 0;
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     border-radius: 12px;
     overflow: hidden;
     background: #f8fafc;
@@ -1002,8 +1002,8 @@
     }
     
     .step-image {
-      width: 100px;
-      height: 100px;
+      width: 120px;
+      height: 120px;
       margin: 0 auto;
     }
     
