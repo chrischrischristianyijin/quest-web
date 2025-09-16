@@ -48,6 +48,111 @@ class TranslationManager {
                 'terms': 'Terms',
                 'all_rights_reserved': 'All rights reserved.',
                 
+                // Index page
+                'hero_title': 'All Your Knowledge, One Private Space',
+                'hero_subtitle': '— Your Second Brain with Quest —',
+                'hero_description': 'Quest Private Space helps you capture fragmented notes, files, ideas, and turns them into modular, structured, and retrievable knowledge.',
+                'signup_cta': 'Sign up — It\'s Free!',
+                'extension_title': 'Save Anything, Anywhere — With One Click.',
+                'extension_description': 'Quest\'s browser extension makes remembering effortless. Whether it\'s a lecture video, research article, or random inspiration, capture it instantly into your private space. No more scattered notes — just a unified, searchable context layer built for you.',
+                'add_to_chrome': 'Add to Chrome',
+                'key_features': 'Key Features',
+                'features_subtitle': 'Your knowledge journey from capture to insights',
+                'log_in': 'Log In',
+                'sign_up': 'Sign Up',
+                
+                // Feature pipeline
+                'capture': 'Capture',
+                'one_click_save': 'One-Click Save',
+                'capture_description': 'Save anything instantly — web pages, notes, or media — into your vault with just one click. No friction, no clutter.',
+                'organize': 'Organize',
+                'para_structured': 'PARA Structured Space',
+                'organize_description': 'Your content is automatically organized into the PARA framework (Projects, Areas, Resources, Archives), giving you clarity from day one.',
+                'manage': 'Manage',
+                'build_your_space': 'Build Your Space',
+                'manage_description': 'Easily create custom stacks, delete items, or classify articles — full control to keep your second brain tidy and personal.',
+                'summarize': 'Summarize',
+                'ai_insights': 'AI-Powered Insights',
+                'summarize_description': 'Each stack comes with an AI-generated summary, helping you distill key takeaways without rereading everything.',
+                'reflect': 'Reflect',
+                'weekly_insights': 'Weekly Insights',
+                'reflect_description': 'Get a personalized email digest of your saved content plus curated content cards — keeping you in sync with your own knowledge growth.',
+                'retrieve': 'Retrieve',
+                'chat_discover': 'Chat & Discover',
+                'retrieve_description': 'Find anything fast and (optionally) chat with it — a natural bridge to your Knowledge Bot beta.',
+                
+                // Beta section
+                'beta_features': 'Beta Features',
+                'beta_description': 'Talk directly to your AI chatbot trained on your saved content. Retrieve notes, recall articles, and spark insights — all in conversation.',
+                'try_beta': 'Try the Beta',
+                
+                // Contact section
+                'talk_to_team': 'Talk to Our Team',
+                'contact_description': 'Have questions about Quest? We\'d love to hear from you.',
+                'send_email': '📧 Send Email',
+                
+                // Navigation (for dynamic content)
+                'home': 'HOME',
+                'extension': 'EXTENSION',
+                'features': 'FEATURES',
+                'beta': 'BETA',
+                'contact': 'CONTACT',
+                'go_to_my_space': 'Go to My Space',
+                
+                // Pagination
+                'previous': 'Previous',
+                'next': 'Next',
+                'page': 'Page',
+                'of': 'of',
+                'insights_total': 'insights total',
+                'cards': 'cards',
+                'insights': 'insights',
+                'stack': 'stack',
+                'stacks': 'stacks',
+                
+                // Login page
+                'welcome_back': 'Welcome Back!',
+                'login_subtitle': 'Log in to your Quest space',
+                'email_label': 'Email/Account Number',
+                'email_placeholder': 'Registered Email / Account Number',
+                'password_label': 'Password',
+                'password_placeholder': 'Password',
+                'forgot_password': 'Forgot Password?',
+                'no_account': 'Don\'t have an account?',
+                'reset_password': 'Reset Password',
+                'reset_email_placeholder': 'Enter your email address',
+                'send_reset_link': 'Send Reset Link',
+                
+                // Signup page
+                'create_account': 'Create Your Account',
+                'signup_subtitle': 'Join Quest and start your knowledge journey',
+                'email_address': 'Email Address',
+                'nickname': 'Nickname',
+                'nickname_placeholder': 'Choose a nickname (2-20 characters)',
+                'password_requirements': 'Password Requirements:',
+                'password_req_1': 'At least 8 characters long',
+                'password_req_2': 'Must contain both letters and numbers',
+                'password_req_3': 'Special characters are recommended for better security',
+                'confirm_password': 'Confirm Password',
+                'confirm_password_placeholder': 'Re-enter your password',
+                'agree_terms': 'I agree to the Terms of Service and Privacy Policy',
+                'terms_of_service': 'Terms of Service',
+                'privacy_policy': 'Privacy Policy',
+                'create_account_btn': 'Create Account',
+                'already_have_account': 'Already have an account?',
+                'login_now': 'Login Now',
+                
+                // Privacy and Terms pages
+                'last_updated': 'Last updated: December 2024',
+                'privacy_intro': '1. Introduction',
+                'privacy_intro_text': 'Welcome to Quest ("we," "our," or "us"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our web application and related services.',
+                'privacy_info_collect': '2. Information We Collect',
+                'privacy_personal_info': '2.1 Personal Information',
+                'privacy_personal_info_text': 'We may collect the following personal information:',
+                'terms_acceptance': '1. Acceptance of Terms',
+                'terms_acceptance_text': 'By accessing and using Quest ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.',
+                'back_to_previous': '← Back to Previous Page',
+                
                 // Email Preferences
                 'manage_weekly_digest': 'Manage your weekly digest and delivery settings',
                 'weekly_digest': 'Weekly Digest',
@@ -142,6 +247,111 @@ class TranslationManager {
                 'terms': '条款',
                 'all_rights_reserved': '版权所有。',
                 
+                // Index page
+                'hero_title': '所有知识，一个私人空间',
+                'hero_subtitle': '— 您的第二大脑，Quest —',
+                'hero_description': 'Quest 私人空间帮助您捕获零散的笔记、文件和想法，并将它们转化为模块化、结构化且可检索的知识。',
+                'signup_cta': '立即注册 — 免费！',
+                'extension_title': '一键保存任何内容，任何地方。',
+                'extension_description': 'Quest 浏览器扩展让记忆变得毫不费力。无论是讲座视频、研究文章还是随机灵感，都能立即捕获到您的私人空间。不再有零散的笔记——只有为您构建的统一、可搜索的上下文层。',
+                'add_to_chrome': '添加到 Chrome',
+                'key_features': '核心功能',
+                'features_subtitle': '从捕获到洞察的知识之旅',
+                'log_in': '登录',
+                'sign_up': '注册',
+                
+                // Feature pipeline
+                'capture': '捕获',
+                'one_click_save': '一键保存',
+                'capture_description': '一键保存任何内容——网页、笔记或媒体——到您的保险库。无摩擦，无混乱。',
+                'organize': '整理',
+                'para_structured': 'PARA结构化空间',
+                'organize_description': '您的内容会自动组织到PARA框架（项目、领域、资源、归档）中，从一开始就给您清晰的结构。',
+                'manage': '管理',
+                'build_your_space': '构建您的空间',
+                'manage_description': '轻松创建自定义堆栈、删除项目或分类文章——完全控制保持您的第二大脑整洁和个人化。',
+                'summarize': '总结',
+                'ai_insights': 'AI驱动的洞察',
+                'summarize_description': '每个堆栈都配有AI生成的摘要，帮助您提炼关键要点而无需重新阅读所有内容。',
+                'reflect': '反思',
+                'weekly_insights': '每周洞察',
+                'reflect_description': '获取您保存内容的个性化邮件摘要以及精选内容卡片——与您自己的知识增长保持同步。',
+                'retrieve': '检索',
+                'chat_discover': '聊天与发现',
+                'retrieve_description': '快速找到任何内容并可选择与其聊天——这是通往您知识机器人测试版的自然桥梁。',
+                
+                // Beta section
+                'beta_features': '测试版功能',
+                'beta_description': '直接与基于您保存内容训练的AI聊天机器人对话。检索笔记、回忆文章、激发洞察——全部通过对话完成。',
+                'try_beta': '尝试测试版',
+                
+                // Contact section
+                'talk_to_team': '与我们的团队交流',
+                'contact_description': '对Quest有疑问？我们很乐意听取您的意见。',
+                'send_email': '📧 发送邮件',
+                
+                // Navigation (for dynamic content)
+                'home': '首页',
+                'extension': '扩展',
+                'features': '功能',
+                'beta': '测试版',
+                'contact': '联系',
+                'go_to_my_space': '前往我的空间',
+                
+                // Pagination
+                'previous': '上一页',
+                'next': '下一页',
+                'page': '第',
+                'of': '页，共',
+                'insights_total': '个见解',
+                'cards': '张卡片',
+                'insights': '个见解',
+                'stack': '个堆栈',
+                'stacks': '个堆栈',
+                
+                // Login page
+                'welcome_back': '欢迎回来！',
+                'login_subtitle': '登录到您的 Quest 空间',
+                'email_label': '邮箱/账号',
+                'email_placeholder': '注册邮箱 / 账号',
+                'password_label': '密码',
+                'password_placeholder': '密码',
+                'forgot_password': '忘记密码？',
+                'no_account': '没有账号？',
+                'reset_password': '重置密码',
+                'reset_email_placeholder': '输入您的邮箱地址',
+                'send_reset_link': '发送重置链接',
+                
+                // Signup page
+                'create_account': '创建您的账号',
+                'signup_subtitle': '加入 Quest，开始您的知识之旅',
+                'email_address': '邮箱地址',
+                'nickname': '昵称',
+                'nickname_placeholder': '选择一个昵称（2-20个字符）',
+                'password_requirements': '密码要求：',
+                'password_req_1': '至少8个字符',
+                'password_req_2': '必须包含字母和数字',
+                'password_req_3': '建议使用特殊字符以提高安全性',
+                'confirm_password': '确认密码',
+                'confirm_password_placeholder': '重新输入您的密码',
+                'agree_terms': '我同意服务条款和隐私政策',
+                'terms_of_service': '服务条款',
+                'privacy_policy': '隐私政策',
+                'create_account_btn': '创建账号',
+                'already_have_account': '已有账号？',
+                'login_now': '立即登录',
+                
+                // Privacy and Terms pages
+                'last_updated': '最后更新：2024年12月',
+                'privacy_intro': '1. 介绍',
+                'privacy_intro_text': '欢迎使用 Quest（"我们"、"我们的"或"我们"）。本隐私政策解释了当您使用我们的网络应用程序和相关服务时，我们如何收集、使用、披露和保护您的信息。',
+                'privacy_info_collect': '2. 我们收集的信息',
+                'privacy_personal_info': '2.1 个人信息',
+                'privacy_personal_info_text': '我们可能收集以下个人信息：',
+                'terms_acceptance': '1. 条款接受',
+                'terms_acceptance_text': '通过访问和使用 Quest（"服务"），您接受并同意受本协议条款和规定的约束。如果您不同意遵守上述条款，请不要使用此服务。',
+                'back_to_previous': '← 返回上一页',
+                
                 // Email Preferences
                 'manage_weekly_digest': '管理您的每周摘要和发送设置',
                 'weekly_digest': '每周摘要',
@@ -209,8 +419,9 @@ class TranslationManager {
     setupEventListeners() {
         // Translation toggle button
         const toggleBtn = document.getElementById('translationToggle');
-        if (toggleBtn) {
+        if (toggleBtn && !toggleBtn.hasAttribute('data-listener-attached')) {
             toggleBtn.addEventListener('click', () => this.toggleLanguage());
+            toggleBtn.setAttribute('data-listener-attached', 'true');
         }
     }
 
@@ -262,6 +473,9 @@ class TranslationManager {
         // Update body class for CSS adjustments
         document.body.className = document.body.className.replace(/language-\w+/g, '');
         document.body.classList.add(`language-${this.currentLanguage}`);
+        
+        // Update dynamic content that uses translation system
+        this.updateDynamicContent();
     }
 
     updateLanguageButton() {
@@ -283,6 +497,14 @@ class TranslationManager {
     // Helper method to get translation for JavaScript-generated content
     t(key) {
         return this.translations[this.currentLanguage][key] || key;
+    }
+    
+    // Update dynamic content that uses translation system
+    updateDynamicContent() {
+        // Update pagination info if it exists
+        if (typeof updatePaginationUI === 'function') {
+            updatePaginationUI();
+        }
     }
 }
 
