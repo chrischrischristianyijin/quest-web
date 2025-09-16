@@ -20,7 +20,8 @@
                     <img src="/public/logo.png" alt="Quest">
                 </a>
             </div>
-            <div class="WelcomeToYourPersonalSpacePlaceholder">Welcome, Placeholder!</div>
+            <div class="WelcomeToYourPersonalSpacePlaceholder" data-translate="welcome_user"
+                data-username="Placeholder">Welcome, Placeholder!</div>
             <div class="right">
                 <div class="header-actions">
                     <a href="/demo-chat" class="demo-chat-btn">
@@ -28,8 +29,12 @@
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
-                        <span>Demo Chat</span>
+                        <span data-translate="demo_chat">Demo Chat</span>
                     </a>
+                    <button class="translation-btn" id="translationToggle">
+                        <span class="translation-flag">🌐</span>
+                        <span class="translation-text" data-translate="language">EN</span>
+                    </button>
                     <div class="header-user-menu" id="headerUserMenu">
                         <div class="header-avatar-container" id="headerAvatarContainer">
                             <img src="/public/3d_avatar_12.png" alt="User Avatar" class="header-avatar"
@@ -42,7 +47,7 @@
                                         stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round" />
                                 </svg>
-                                Edit Profile
+                                <span data-translate="edit_profile">Edit Profile</span>
                             </button>
                             <button class="header-dropdown-item" id="headerEmailPreferences">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -53,7 +58,7 @@
                                     <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
-                                Email Preferences
+                                <span data-translate="email_preferences">Email Preferences</span>
                             </button>
                             <button class="header-dropdown-item" id="headerLogout">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -61,7 +66,7 @@
                                         stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round" />
                                 </svg>
-                                Log Out
+                                <span data-translate="log_out">Log Out</span>
                             </button>
                         </div>
                     </div>
@@ -174,7 +179,8 @@
                         <!-- Search (left of Edit) -->
                         <div class="search-group">
                             <input id="searchInput" class="search-input" type="search" placeholder="Search insights…"
-                                aria-label="Search insights by title/metadata" />
+                                aria-label="Search insights by title/metadata"
+                                data-translate-placeholder="search_insights" />
                             <button id="searchBtn" class="icon-btn" aria-label="Run search">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                     <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
@@ -189,7 +195,7 @@
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            <span class="edit-btn-text">Edit</span>
+                            <span class="edit-btn-text" data-translate="edit">Edit</span>
                         </button>
                     </div>
                 </div>
@@ -495,6 +501,7 @@
     <script src="/js/logger.js"></script>
     <script src="/js/cache.js"></script>
     <script type="module" src="/js/token-debug.js"></script>
+    <script type="module" src="/js/translation.js"></script>
     <script type="module" src="/js/my-space.js"></script>
 
     <!-- Footer -->
@@ -504,17 +511,21 @@
                 <div class="footer-logo"><img src="/public/logo.png" class="footer-logo-img" alt="Quest" />
                     <h3>Quest</h3>
                 </div>
-                <p class="footer-description">Your personal knowledge hub for discovering and organizing what matters.
+                <p class="footer-description" data-translate="footer_description">Your personal knowledge hub for
+                    discovering and organizing what matters.
                 </p>
             </div>
             <div class="footer-links-section">
-                <h4>Quick Links</h4>
+                <h4 data-translate="quick_links">Quick Links</h4>
                 <div class="footer-links">
-                    <a href="/">Home</a><a href="/demo-chat">Demo Chat</a><a href="/email-preferences">Email Preferences</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
+                    <a href="/" data-translate="home">Home</a><a href="/demo-chat" data-translate="demo_chat">Demo
+                        Chat</a><a href="/email-preferences" data-translate="email_preferences">Email
+                        Preferences</a><a href="/privacy" data-translate="privacy">Privacy</a><a href="/terms"
+                        data-translate="terms">Terms</a>
                 </div>
             </div>
             <div class="footer-contact-section">
-                <h4>Get in Touch</h4>
+                <h4 data-translate="get_in_touch">Get in Touch</h4>
                 <div class="contact-info">
                     <div class="contact-item">📧 <a href="mailto:contact@myquestspace.com">contact@myquestspace.com</a>
                     </div>
@@ -523,7 +534,8 @@
         </div>
         <div class="footer-bottom">
             <div class="footer-bottom-content">
-                <p class="copyright">© 2025 Quest. All rights reserved.</p>
+                <p class="copyright">© 2025 Quest. <span data-translate="all_rights_reserved">All rights
+                        reserved.</span></p>
             </div>
         </div>
     </footer>
