@@ -5,62 +5,106 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Preferences - Quest</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../styles/common.css">
   <link rel="stylesheet" href="../styles/email-preferences.css">
 </head>
 
-<body>
+<body data-page="email-preferences">
+  <!-- Soft background gradient like My Space -->
+  <div class="site-bg" aria-hidden="true"></div>
+
   <div class="container">
-    <header class="header">
-      <div class="header-content">
-        <a href="/my-space" class="logo">
-          <img src="../public/logo.png" alt="Quest" class="logo-img">
+    <!-- My Space header (identical structure) -->
+    <div class="header-section">
+      <div class="left">
+        <a href="/" class="Quest">
+          <img src="/public/logo.png" alt="Quest">
         </a>
-        <nav class="nav">
-          <a href="/my-space" class="nav-link">My Space</a>
-          <a href="/" class="nav-link">Home</a>
-          <button id="logoutBtn" class="btn btn-outline">Logout</button>
-        </nav>
       </div>
-    </header>
+
+      <div class="WelcomeToYourPersonalSpacePlaceholder" data-translate="email_preferences">Email Preferences</div>
+
+      <div class="right">
+        <div class="header-actions">
+          <a href="/demo-chat" class="demo-chat-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span data-translate="demo_chat">Demo Chat</span>
+          </a>
+          <button class="translation-btn" id="translationToggle">
+            <span class="translation-flag">🌐</span>
+            <span class="translation-text" data-translate="language">EN</span>
+          </button>
+
+          <div class="header-user-menu" id="headerUserMenu">
+            <div class="header-avatar-container" id="headerAvatarContainer">
+              <img src="/public/3d_avatar_12.png" alt="User Avatar" class="header-avatar" id="headerAvatar">
+            </div>
+            <div class="header-dropdown" id="headerDropdown">
+              <button class="header-dropdown-item" id="headerEditProfile" data-translate="edit_profile">Edit
+                Profile</button>
+              <button class="header-dropdown-item" id="headerEmailPreferences" data-translate="email_preferences">Email
+                Preferences</button>
+              <button class="header-dropdown-item" id="headerLogout" data-translate="log_out">Log Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New hero area -->
+    <section class="page-hero">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/my-space" class="breadcrumb-link" data-translate="my_space">My Space</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current" data-translate="email_preferences">Email Preferences</span>
+      </nav>
+      <div class="hero-heading">
+        <h1 data-translate="email_preferences">Email Preferences</h1>
+        <p data-translate="manage_weekly_digest">Manage your weekly digest and delivery settings</p>
+      </div>
+      <div class="hero-status">
+        <span id="digestStatusPill" class="status-pill">Digest · Off</span>
+      </div>
+    </section>
 
     <main class="main">
-      <div class="page-header">
-        <h1>Email Preferences</h1>
-        <p>Manage your email notifications and digest settings</p>
-      </div>
 
       <div class="email-preferences-container">
         <form id="emailPreferencesForm" class="email-preferences-form">
           <div class="form-section">
-            <h2>Weekly Digest</h2>
+            <h2 data-translate="weekly_digest">Weekly Digest</h2>
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" id="weeklyDigestEnabled" class="checkbox">
                 <span class="checkmark"></span>
-                Enable weekly digest emails
+                <span data-translate="enable_weekly_digest">Enable weekly digest emails</span>
               </label>
-              <p class="form-help">Receive a weekly summary of your insights and activity</p>
+              <p class="form-help" data-translate="receive_weekly_summary">Receive a weekly summary of your insights and
+                activity</p>
             </div>
           </div>
 
           <div class="form-section email-preference-field">
-            <h2>Delivery Schedule</h2>
+            <h2 data-translate="delivery_schedule">Delivery Schedule</h2>
             <div class="form-row">
               <div class="form-group">
-                <label for="preferredDay" class="form-label">Preferred Day</label>
+                <label for="preferredDay" class="form-label" data-translate="preferred_day">Preferred Day</label>
                 <select id="preferredDay" class="form-select" disabled>
-                  <option value="0">Sunday</option>
-                  <option value="1">Monday</option>
-                  <option value="2">Tuesday</option>
-                  <option value="3">Wednesday</option>
-                  <option value="4">Thursday</option>
-                  <option value="5">Friday</option>
-                  <option value="6">Saturday</option>
+                  <option value="0" data-translate="sunday">Sunday</option>
+                  <option value="1" data-translate="monday">Monday</option>
+                  <option value="2" data-translate="tuesday">Tuesday</option>
+                  <option value="3" data-translate="wednesday">Wednesday</option>
+                  <option value="4" data-translate="thursday">Thursday</option>
+                  <option value="5" data-translate="friday">Friday</option>
+                  <option value="6" data-translate="saturday">Saturday</option>
                 </select>
               </div>
               <div class="form-group">
-                <label for="preferredHour" class="form-label">Preferred Hour</label>
+                <label for="preferredHour" class="form-label" data-translate="preferred_hour">Preferred Hour</label>
                 <select id="preferredHour" class="form-select" disabled>
                   <option value="6">6:00 AM</option>
                   <option value="7">7:00 AM</option>
@@ -85,68 +129,78 @@
           </div>
 
           <div class="form-section email-preference-field">
-            <h2>Timezone</h2>
+            <h2 data-translate="timezone">Timezone</h2>
             <div class="form-group">
-              <label for="timezone" class="form-label">Your Timezone</label>
+              <label for="timezone" class="form-label" data-translate="your_timezone">Your Timezone</label>
               <select id="timezone" class="form-select" disabled>
-                <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
-                <option value="America/Denver">Mountain Time (Denver)</option>
-                <option value="America/Chicago">Central Time (Chicago)</option>
-                <option value="America/New_York">Eastern Time (New York)</option>
-                <option value="Europe/London">London (GMT)</option>
-                <option value="Europe/Paris">Paris (CET)</option>
-                <option value="Asia/Tokyo">Tokyo (JST)</option>
-                <option value="Asia/Shanghai">Shanghai (CST)</option>
-                <option value="Australia/Sydney">Sydney (AEST)</option>
-                <option value="UTC">UTC</option>
+                <option value="America/Los_Angeles" data-translate="pacific_time">Pacific Time (Los Angeles)</option>
+                <option value="America/Denver" data-translate="mountain_time">Mountain Time (Denver)</option>
+                <option value="America/Chicago" data-translate="central_time">Central Time (Chicago)</option>
+                <option value="America/New_York" data-translate="eastern_time">Eastern Time (New York)</option>
+                <option value="Europe/London" data-translate="london_gmt">London (GMT)</option>
+                <option value="Europe/Paris" data-translate="paris_cet">Paris (CET)</option>
+                <option value="Asia/Tokyo" data-translate="tokyo_jst">Tokyo (JST)</option>
+                <option value="Asia/Shanghai" data-translate="shanghai_cst">Shanghai (CST)</option>
+                <option value="Australia/Sydney" data-translate="sydney_aest">Sydney (AEST)</option>
+                <option value="UTC" data-translate="utc">UTC</option>
               </select>
-              <p class="form-help">We'll send your digest at your preferred time in this timezone</p>
+              <p class="form-help" data-translate="timezone_help">We'll send your digest at your preferred time in this
+                timezone</p>
             </div>
           </div>
 
           <div class="form-section email-preference-field">
-            <h2>No Activity Policy</h2>
+            <h2 data-translate="no_activity_policy">No Activity Policy</h2>
             <div class="form-group">
-              <label for="noActivityPolicy" class="form-label">When you have no activity this week</label>
+              <label for="noActivityPolicy" class="form-label" data-translate="no_activity_label">When you have no
+                activity this week</label>
               <select id="noActivityPolicy" class="form-select" disabled>
-                <option value="skip">Skip sending (don't send email)</option>
-                <option value="brief">Send brief email with suggestions</option>
-                <option value="suggestions">Send email with "what you missed" content</option>
+                <option value="skip" data-translate="skip_sending">Skip sending (don't send email)</option>
+                <option value="brief" data-translate="brief_email">Send brief email with suggestions</option>
+                <option value="suggestions" data-translate="missed_content">Send email with "what you missed" content
+                </option>
               </select>
-              <p class="form-help">Choose how to handle weeks when you haven't added any insights</p>
+              <p class="form-help" data-translate="no_activity_help">Choose how to handle weeks when you haven't added
+                any insights</p>
             </div>
           </div>
 
           <div class="form-actions">
-            <button type="submit" id="saveEmailPreferences" class="btn btn-primary">
+            <button type="submit" id="saveEmailPreferences" class="btn btn-primary" data-translate="save_preferences">
               Save Preferences
             </button>
-            <button type="button" id="previewDigestBtn" class="btn btn-secondary" disabled>
+            <button type="button" id="previewDigestBtn" class="btn btn-secondary" disabled
+              data-translate="preview_digest">
               Preview Digest
             </button>
-            <button type="button" id="sendTestEmail" class="btn btn-outline">
+            <button type="button" id="sendTestEmail" class="btn btn-outline" data-translate="send_test_email">
               Send Test Email
             </button>
           </div>
         </form>
 
         <div class="email-info">
-          <h3>About Your Digest</h3>
+          <h3 data-translate="about_digest">About Your Digest</h3>
           <ul>
-            <li>📝 <strong>Weekly Summary:</strong> Get a curated overview of your insights from the past week</li>
-            <li>🎯 <strong>Personalized Content:</strong> Highlights are chosen based on your engagement and recency
+            <li data-translate="weekly_summary">📝 <strong>Weekly Summary:</strong> Get a curated overview of your
+              insights from the past week</li>
+            <li data-translate="personalized_content">🎯 <strong>Personalized Content:</strong> Highlights are chosen
+              based on your engagement and recency</li>
+            <li data-translate="stack_updates">📚 <strong>Stack Updates:</strong> See what's new in your knowledge
+              stacks</li>
+            <li data-translate="smart_suggestions">💡 <strong>Smart Suggestions:</strong> Get recommendations to improve
+              your knowledge management</li>
+            <li data-translate="privacy_first">🔒 <strong>Privacy First:</strong> Your data stays private and secure
             </li>
-            <li>📚 <strong>Stack Updates:</strong> See what's new in your knowledge stacks</li>
-            <li>💡 <strong>Smart Suggestions:</strong> Get recommendations to improve your knowledge management</li>
-            <li>🔒 <strong>Privacy First:</strong> Your data stays private and secure</li>
           </ul>
 
-          <h3>Unsubscribe</h3>
-          <p>You can unsubscribe at any time by:</p>
+          <h3 data-translate="unsubscribe">Unsubscribe</h3>
+          <p data-translate="unsubscribe_help">You can unsubscribe at any time by:</p>
           <ul>
-            <li>Using the unsubscribe link in any digest email</li>
-            <li>Disabling the weekly digest option above</li>
-            <li>Contacting support at <a href="mailto:support@quest.example.com">support@quest.example.com</a></li>
+            <li data-translate="unsubscribe_link">Using the unsubscribe link in any digest email</li>
+            <li data-translate="disable_option">Disabling the weekly digest option above</li>
+            <li data-translate="contact_support">Contacting support at <a
+                href="mailto:support@quest.example.com">support@quest.example.com</a></li>
           </ul>
         </div>
       </div>
@@ -157,6 +211,8 @@
     </footer>
   </div>
 
+  <!-- FIX: close and correct the truncated script tag -->
+  <script type="module" src="../js/translation.js"></script>
   <script type="module" src="../js/email-preferences.js"></script>
   <script type="module" src="../js/auth.js"></script>
   <script type="module" src="../js/api.js"></script>

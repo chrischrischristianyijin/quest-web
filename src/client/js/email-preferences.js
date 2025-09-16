@@ -157,6 +157,10 @@ class EmailPreferencesManager {
         if (previewBtn) {
             previewBtn.disabled = !isEnabled || this.isLoading;
         }
+
+        // Update status pill
+        const pill = document.getElementById('digestStatusPill');
+        if (pill) pill.textContent = `Digest · ${isEnabled ? 'On' : 'Off'}`;
     }
 
     showDigestPreview(preview) {

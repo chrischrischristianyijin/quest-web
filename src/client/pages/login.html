@@ -19,39 +19,48 @@
             <div class="login-background-blur"></div>
             <div class="login-container">
                 <div class="login-header">
-                    <h1 class="login-title">Welcome Back!</h1>
-                    <p class="login-subtitle">Log in to your Quest space</p>
+                    <div class="login-header-top">
+                        <h1 class="login-title" data-translate="welcome_back">Welcome Back!</h1>
+                        <button class="translation-btn" id="translationToggle">
+                            <span class="translation-flag">🌐</span>
+                            <span class="translation-text" data-translate="language">EN</span>
+                        </button>
+                    </div>
+                    <p class="login-subtitle" data-translate="login_subtitle">Log in to your Quest space</p>
                 </div>
 
                 <div class="message" id="message"></div>
 
                 <form class="login-form" id="loginForm">
                     <div class="form-group">
-                        <label class="form-label" for="email">Email/Account Number</label>
+                        <label class="form-label" for="email" data-translate="email_label">Email/Account Number</label>
                         <input type="email" id="email" class="form-input"
-                            placeholder="Registered Email / Account Number" required>
+                            placeholder="Registered Email / Account Number"
+                            data-translate-placeholder="email_placeholder" required>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="password">Password</label>
-                        <input type="password" id="password" class="form-input" placeholder="Password" required>
+                        <label class="form-label" for="password" data-translate="password_label">Password</label>
+                        <input type="password" id="password" class="form-input" placeholder="Password"
+                            data-translate-placeholder="password_placeholder" required>
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" data-translate="log_in">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                 <path d="M13 5L20 12L13 19M4 12H20" stroke="white" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                             Log in
                         </button>
-                        <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot Password?</a>
+                        <a href="#" class="forgot-password" id="forgotPasswordLink"
+                            data-translate="forgot_password">Forgot Password?</a>
                     </div>
                 </form>
 
                 <div class="signup-section">
-                    <p class="signup-text">Don't have an account?</p>
-                    <a href="/signup" class="btn btn-secondary">Sign Up</a>
+                    <p class="signup-text" data-translate="no_account">Don't have an account?</p>
+                    <a href="/signup" class="btn btn-secondary" data-translate="sign_up">Sign Up</a>
                 </div>
             </div>
         </section>
@@ -68,19 +77,21 @@
     <div class="forgot-password-modal" id="forgotPasswordModal">
         <div class="forgot-password-content">
             <div class="modal-header">
-                <h2 class="modal-title">Reset Password</h2>
+                <h2 class="modal-title" data-translate="reset_password">Reset Password</h2>
                 <button class="modal-close" id="closeModal">&times;</button>
             </div>
             <form class="forgot-password-form" id="forgotPasswordForm">
-                <input type="email" id="resetEmail" class="form-input" placeholder="Enter your email address" required>
+                <input type="email" id="resetEmail" class="form-input" placeholder="Enter your email address"
+                    data-translate-placeholder="reset_email_placeholder" required>
                 <div class="modal-message" id="modalMessage"></div>
-                <button type="submit" class="btn btn-primary" id="resetPasswordButton">
+                <button type="submit" class="btn btn-primary" id="resetPasswordButton" data-translate="send_reset_link">
                     Send Reset Link
                 </button>
             </form>
         </div>
     </div>
 
+    <script type="module" src="/js/translation.js"></script>
     <script type="module" src="/js/login.js"></script>
 
     <!-- Vercel Analytics - Disabled to prevent 404 errors -->
