@@ -1410,7 +1410,17 @@ function updateUserProfileUI() {
                            currentUser.display_name ||
                            currentUser.email || 
                            'User';
-        welcomeMessage.textContent = `Welcome, ${displayName}!`;
+        
+        // Update the data-username attribute for translation system
+        welcomeMessage.setAttribute('data-username', displayName);
+        
+        // Apply translation if translation manager is available
+        if (window.translationManager) {
+            window.translationManager.applyTranslations();
+        } else {
+            // Fallback to direct text update
+            welcomeMessage.textContent = `Welcome, ${displayName}!`;
+        }
     }
 }
 
@@ -2175,23 +2185,25 @@ async function initFilterButtons() {
             {
                 key: 'latest',
                 label: 'Last Added',
+                translateKey: 'last_added',
                 type: 'dropdown',
                 options: [
-                    { key: 'latest', label: 'Latest' },
-                    { key: 'oldest', label: 'Oldest' },
-                    { key: 'alphabetical', label: 'Alphabetical' }
+                    { key: 'latest', label: 'Latest', translateKey: 'latest' },
+                    { key: 'oldest', label: 'Oldest', translateKey: 'oldest' },
+                    { key: 'alphabetical', label: 'Alphabetical', translateKey: 'alphabetical' }
                 ]
             },
             {
                 key: 'tags',
                 label: 'Tags',
+                translateKey: 'tags',
                 type: 'dropdown',
                 options: [
-                    { key: 'all', label: 'All Tags' },
-                    { key: 'project', label: 'Project', category: 'P' },
-                    { key: 'area', label: 'Area', category: 'A' },
-                    { key: 'resource', label: 'Resource', category: 'R' },
-                    { key: 'archive', label: 'Archive', category: 'Archive' }
+                    { key: 'all', label: 'All Tags', translateKey: 'all_tags' },
+                    { key: 'project', label: 'Project', category: 'P', translateKey: 'project' },
+                    { key: 'area', label: 'Area', category: 'A', translateKey: 'area' },
+                    { key: 'resource', label: 'Resource', category: 'R', translateKey: 'resource' },
+                    { key: 'archive', label: 'Archive', category: 'Archive', translateKey: 'archive' }
                 ]
             }
         ];
@@ -2218,7 +2230,7 @@ async function initFilterButtons() {
             button.className = 'FilterButton main-filter-btn';
             button.dataset.filter = filterConfig.key;
             button.innerHTML = `
-                <span class="filter-label">${filterConfig.label}</span>
+                <span class="filter-label" data-translate="${filterConfig.translateKey}">${filterConfig.label}</span>
                 <svg class="filter-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -2237,12 +2249,12 @@ async function initFilterButtons() {
                     dropdownOptions.innerHTML = filterConfig.options.map(option => {
                         if (option.key === 'all') {
                             return `<div class="filter-option" data-filter="${option.key}">
-                                <span class="filter-option-label">${option.label}</span>
+                                <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                             </div>`;
                         } else {
                             // PARA categories with info icon
                             return `<div class="filter-option" data-filter="${option.key}">
-                                <span class="filter-option-label">${option.label}</span>
+                                <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                                 <span class="filter-option-info" data-category="${option.category}" title="Click for more info">ⓘ</span>
                             </div>`;
                         }
@@ -2252,7 +2264,7 @@ async function initFilterButtons() {
                 } else {
                     dropdownOptions.innerHTML = filterConfig.options.map(option => `
                         <div class="filter-option" data-filter="${option.key}">
-                            <span class="filter-option-label">${option.label}</span>
+                            <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                         </div>
                     `).join('');
                 }
@@ -2357,6 +2369,11 @@ async function initFilterButtons() {
         
         console.log('✅ Filter buttons created successfully');
         console.log('🎯 Total filter button containers:', filterButtons.children.length);
+        
+        // Re-apply translations to the newly created filter buttons
+        if (window.translationManager) {
+            window.translationManager.applyTranslations();
+        }
         
         // Edit Tags按钮已移到标签选择器旁边，不再需要在这里添加
         

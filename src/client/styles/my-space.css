@@ -7614,3 +7614,37 @@ body.modal-open { overflow: hidden; }
 @media (max-width: 760px){
   .tags-management{ grid-template-columns: 1fr; }
 }
+
+/* Translation button styling */
+.translation-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 16px;
+    background: var(--bg-secondary);
+    color: var(--quest-purple);
+    text-decoration: none;
+    border: 1px solid var(--quest-light-purple);
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.translation-btn:hover {
+    background: rgba(139, 92, 246, 0.08);
+    border-color: var(--quest-purple);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(101, 85, 143, 0.15);
+}
+
+.translation-flag {
+    font-size: 1rem;
+}
+
+.translation-text {
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+}
