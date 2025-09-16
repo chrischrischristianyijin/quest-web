@@ -11,22 +11,32 @@ function updateNavigation(isLoggedIn, user = null) {
     if (!navLinks || !authButtons) return;
     
     const linksHtml = `
-            <a href="#home" class="nav-link">HOME</a>
-            <a href="#extension" class="nav-link">EXTENSION</a>
-      <a href="#features" class="nav-link">FEATURES</a>
-      <a href="#beta" class="nav-link">BETA</a>
-      <a href="#contact" class="nav-link">CONTACT</a>
+            <a href="#home" class="nav-link" data-translate="home">HOME</a>
+            <a href="#extension" class="nav-link" data-translate="extension">EXTENSION</a>
+            <a href="#features" class="nav-link" data-translate="features">FEATURES</a>
+            <a href="#beta" class="nav-link" data-translate="beta">BETA</a>
+            <a href="#contact" class="nav-link" data-translate="contact">CONTACT</a>
     `;
   
     if (isLoggedIn && user) {
-      navLinks.innerHTML = linksHtml + `<a href="/my-space" class="nav-link">MY SPACE</a>`;
-      authButtons.innerHTML = `<button class="auth-btn auth-btn-secondary" id="logoutBtn">Logout</button>`;
+      navLinks.innerHTML = linksHtml + `<a href="/my-space" class="nav-link" data-translate="my_space">MY SPACE</a>`;
+      authButtons.innerHTML = `
+        <button class="translation-btn" id="translationToggle">
+          <span class="translation-flag">🌐</span>
+          <span class="translation-text" data-translate="language">EN</span>
+        </button>
+        <button class="auth-btn auth-btn-secondary" id="logoutBtn" data-translate="log_out">Logout</button>
+      `;
       document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
     } else {
       navLinks.innerHTML = linksHtml;
       authButtons.innerHTML = `
-        <a href="/login" class="auth-btn auth-btn-secondary">Log In</a>
-        <a href="/signup" class="auth-btn auth-btn-primary">Sign Up</a>
+        <button class="translation-btn" id="translationToggle">
+          <span class="translation-flag">🌐</span>
+          <span class="translation-text" data-translate="language">EN</span>
+        </button>
+        <a href="/login" class="auth-btn auth-btn-secondary" data-translate="log_in">Log In</a>
+        <a href="/signup" class="auth-btn auth-btn-primary" data-translate="sign_up">Sign Up</a>
       `;
     }
   }
@@ -36,7 +46,14 @@ function updateNavigation(isLoggedIn, user = null) {
     const cta = document.getElementById('signupCta');
     if (!cta) return;
     cta.href = isLoggedIn ? '/my-space' : '/signup';
-    cta.textContent = isLoggedIn ? 'Go to My Space' : 'Sign up — It’s Free!';
+    
+    // Use translation manager if available
+    if (window.translationManager) {
+      const key = isLoggedIn ? 'go_to_my_space' : 'signup_cta';
+      cta.textContent = window.translationManager.t(key);
+    } else {
+      cta.textContent = isLoggedIn ? 'Go to My Space' : 'Sign up — It\'s Free!';
+    }
   }
   
   // === 3) “Canvas drag” parallax (color-stable) ===
@@ -148,6 +165,15 @@ function updateNavigation(isLoggedIn, user = null) {
     wireHeroCta(isLoggedIn);
     initHeroParallax();
     initCarousel();
+    
+    // Re-apply translations and setup event listeners after navigation is set up
+    if (window.translationManager) {
+      // Small delay to ensure DOM is fully updated
+      setTimeout(() => {
+        window.translationManager.setupEventListeners(); // Re-setup event listeners for dynamically created buttons
+        window.translationManager.applyTranslations();
+      }, 100);
+    }
 
     // Ensure the hero demo video keeps playing regardless of scroll/visibility
     const demoVideo = document.getElementById('heroDemoVideo');

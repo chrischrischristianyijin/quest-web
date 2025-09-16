@@ -222,13 +222,13 @@
                                 <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            Previous
+                            <span data-translate="previous">Previous</span>
                         </button>
                         <div class="pagination-pages" id="paginationPages">
                             <!-- Page numbers will be dynamically generated -->
                         </div>
                         <button class="pagination-btn pagination-btn-next" id="nextPageBtn" disabled>
-                            Next
+                            <span data-translate="next">Next</span>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
@@ -236,9 +236,11 @@
                         </button>
                     </div>
                     <div class="pagination-info">
-                        <span class="pagination-text">Page <span id="currentPage">1</span> of <span
+                        <span class="pagination-text"><span data-translate="page">Page</span> <span
+                                id="currentPage">1</span> <span data-translate="of">of</span> <span
                                 id="totalPages">1</span></span>
-                        <span class="pagination-count"><span id="totalInsights">0</span> insights total</span>
+                        <span class="pagination-count"><span id="totalInsights">0</span> <span
+                                data-translate="insights_total">insights total</span></span>
                     </div>
                 </div>
             </div>
