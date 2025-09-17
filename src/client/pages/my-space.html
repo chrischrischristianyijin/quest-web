@@ -91,7 +91,7 @@
                 <!-- Center: Breadcrumb + Meta -->
                 <div class="stack-center">
                     <nav class="breadcrumb" aria-label="Breadcrumb">
-                        <span class="breadcrumb-item">My Space</span>
+                        <span class="breadcrumb-item" data-translate="my_space">My Space</span>
                         <span class="breadcrumb-separator">›</span>
                         <span class="breadcrumb-item stack-name-container">
                             <span class="stack-name" id="stackBreadcrumbName">Stack Name</span>
@@ -251,34 +251,39 @@
     <div class="add-content-modal" id="addContentModal">
         <div class="add-content-modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Add New Content</h2>
+                <h2 class="modal-title" data-translate="add_new_content">Add New Content</h2>
                 <button class="modal-close" id="closeAddModal">&times;</button>
             </div>
             <form id="addContentForm">
                 <div class="form-group">
-                    <label class="form-label" for="contentUrl">Content URL</label>
+                    <label class="form-label" for="contentUrl" data-translate="content_url">Content URL</label>
                     <input type="url" id="contentUrl" class="form-input" required placeholder="https://...">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="customTitle">Custom Title (Optional)</label>
+                    <label class="form-label" for="customTitle" data-translate="custom_title_optional">Custom Title
+                        (Optional)</label>
                     <input type="text" id="customTitle" class="form-input"
-                        placeholder="Enter custom title or leave empty to use webpage title">
+                        placeholder="Enter custom title or leave empty to use webpage title"
+                        data-translate-placeholder="enter_custom_title_placeholder">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="customThought">Your Thoughts (Optional)</label>
+                    <label class="form-label" for="customThought" data-translate="your_thoughts_optional">Your Thoughts
+                        (Optional)</label>
                     <textarea id="customThought" class="form-textarea" rows="3"
-                        placeholder="Share your thoughts, insights, or notes about this content"></textarea>
+                        placeholder="Share your thoughts, insights, or notes about this content"
+                        data-translate-placeholder="share_thoughts_placeholder"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="tagSelector">Tag (Optional)</label>
+                    <label class="form-label" for="tagSelector" data-translate="tag_optional">Tag (Optional)</label>
                     <div class="tag-selector-container">
                         <div class="tag-selector-header">
                             <div class="tag-selector-dropdown" id="tagSelectorDropdown">
                                 <div class="tag-selector-trigger" id="tagSelectorTrigger">
-                                    <span class="tag-selector-text">Select a tag...</span>
+                                    <span class="tag-selector-text" data-translate="select_tag_placeholder">Select a
+                                        tag...</span>
                                     <svg class="tag-selector-arrow" width="16" height="16" viewBox="0 0 24 24"
                                         fill="none">
                                         <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"
@@ -296,9 +301,10 @@
                     </div>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="modal-btn modal-btn-secondary" id="cancelAddBtn">Cancel</button>
+                    <button type="button" class="modal-btn modal-btn-secondary" id="cancelAddBtn"
+                        data-translate="cancel">Cancel</button>
                     <button type="submit" class="modal-btn modal-btn-primary" id="addContentBtn">
-                        <span id="addContentBtnText">Add Content</span>
+                        <span id="addContentBtnText" data-translate="add_content">Add Content</span>
                     </button>
                 </div>
             </form>

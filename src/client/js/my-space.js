@@ -1706,12 +1706,16 @@ async function performRenderInsights() {
     if (!hasInsights && !hasStacks) {
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-state';
+        const noContentText = window.translationManager ? window.translationManager.t('no_content_collected') : 'No content collected yet';
+        const startAddingText = window.translationManager ? window.translationManager.t('start_adding_content') : 'Start adding your favorite media content to your collection';
+        const addContentText = window.translationManager ? window.translationManager.t('add_content') : 'Add Content';
+        
         emptyState.innerHTML = `
             <div class="empty-state-icon">📚</div>
-            <h3>No content collected yet</h3>
-            <p>Start adding your favorite media content to your collection</p>
+            <h3>${noContentText}</h3>
+            <p>${startAddingText}</p>
             <button class="btn btn-primary add-content-btn" onclick="showAddContentModal()">
-                Add Content
+                ${addContentText}
             </button>
         `;
         contentCards.appendChild(emptyState);
@@ -2519,26 +2523,45 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
         // 标签筛选：显示选中的标签名称
         if (optionLabel) {
             button.textContent = optionLabel;
+            // Remove translation attribute for custom tag names
+            button.removeAttribute('data-translate');
         }
     } else if (filterType === 'tags' && ['project', 'area', 'resource', 'archive'].includes(filterValue)) {
-        // PARA categories
-        const paraCategoryNames = {
-            'project': 'Project',
-            'area': 'Area',
-            'resource': 'Resource', 
-            'archive': 'Archive'
-        };
-        button.textContent = paraCategoryNames[filterValue];
+        // PARA categories - use translation system
+        button.setAttribute('data-translate', filterValue);
+        if (window.translationManager) {
+            button.textContent = window.translationManager.t(filterValue);
+        } else {
+            // Fallback to English
+            const paraCategoryNames = {
+                'project': 'Project',
+                'area': 'Area',
+                'resource': 'Resource', 
+                'archive': 'Archive'
+            };
+            button.textContent = paraCategoryNames[filterValue];
+        }
     } else if (filterType === 'tags' && filterValue === 'all') {
-        button.textContent = 'Tags';
+        button.setAttribute('data-translate', 'tags');
+        if (window.translationManager) {
+            button.textContent = window.translationManager.t('tags');
+        } else {
+            button.textContent = 'Tags';
+        }
     } else if (filterType === 'latest') {
-        // 排序方式：显示排序方式
-        if (filterValue === 'latest') {
-            button.textContent = 'Latest';
-        } else if (filterValue === 'oldest') {
-            button.textContent = 'Oldest';
-        } else if (filterValue === 'alphabetical') {
-            button.textContent = 'Alphabetical';
+        // 排序方式：显示排序方式 - use translation system
+        button.setAttribute('data-translate', filterValue);
+        if (window.translationManager) {
+            button.textContent = window.translationManager.t(filterValue);
+        } else {
+            // Fallback to English
+            if (filterValue === 'latest') {
+                button.textContent = 'Latest';
+            } else if (filterValue === 'oldest') {
+                button.textContent = 'Oldest';
+            } else if (filterValue === 'alphabetical') {
+                button.textContent = 'Alphabetical';
+            }
         }
     }
 }
@@ -4165,12 +4188,15 @@ function updateStackContextBar(stack) {
     const stackDates = getCachedElementById('stackDates');
     
     if (stackBreadcrumbName) {
-        stackBreadcrumbName.textContent = stack.name || 'Untitled';
+        const displayName = getTranslatedStackName(stack.name || 'Untitled');
+        stackBreadcrumbName.textContent = displayName;
     }
     
     if (stackCount) {
         const n = Array.isArray(stack.cards) ? stack.cards.length : 0;
-        stackCount.textContent = `${n} insight${n === 1 ? '' : 's'}`;
+        const insightsText = (window.translationManager && window.translationManager.currentLanguage) ? 
+            window.translationManager.t('insights') : 'insights';
+        stackCount.textContent = `${n} ${insightsText}`;
     }
     
     if (stackDates) {
@@ -4186,7 +4212,9 @@ function updateStackContextBar(stack) {
                 day: 'numeric', 
                 year: 'numeric' 
             });
-            parts.push(`Created ${createdFormatted}`);
+            const createdText = (window.translationManager && window.translationManager.currentLanguage) ? 
+                window.translationManager.t('created') : 'Created';
+            parts.push(`${createdText} ${createdFormatted}`);
         }
         if (updated && !isNaN(updated)) {
             const updatedFormatted = updated.toLocaleDateString('en-US', { 
@@ -4194,7 +4222,9 @@ function updateStackContextBar(stack) {
                 day: 'numeric', 
                 year: 'numeric' 
             });
-            parts.push(`Modified ${updatedFormatted}`);
+            const modifiedText = (window.translationManager && window.translationManager.currentLanguage) ? 
+                window.translationManager.t('modified') : 'Modified';
+            parts.push(`${modifiedText} ${updatedFormatted}`);
         }
 
         stackDates.textContent = parts.join(' • ');
@@ -4270,23 +4300,28 @@ function renderEmptyStackState(stack) {
     
     const emptyState = document.createElement('div');
     emptyState.className = 'empty-stack-state';
+    const noInsightsText = window.translationManager ? window.translationManager.t('no_insights_yet') : 'No insights yet';
+    const stackEmptyText = window.translationManager ? window.translationManager.t('stack_is_empty') : 'This stack is empty. Add some insights to get started!';
+    const addInsightText = window.translationManager ? window.translationManager.t('add_insight') : 'Add Insight';
+    const backToMySpaceText = window.translationManager ? window.translationManager.t('back_to_my_space') : 'Back to My Space';
+    
     emptyState.innerHTML = `
         <div class="empty-stack-content">
             <div class="empty-stack-icon">📚</div>
-            <h3>No insights yet</h3>
-            <p>This stack is empty. Add some insights to get started!</p>
+            <h3>${noInsightsText}</h3>
+            <p>${stackEmptyText}</p>
             <div class="empty-stack-actions">
                 <button class="btn-primary" id="emptyStackAddInsightBtn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    Add Insight
+                    ${addInsightText}
                 </button>
                 <button class="btn-secondary" id="emptyStackBackToHomeBtn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    Back to My Space
+                    ${backToMySpaceText}
                 </button>
             </div>
         </div>
@@ -4425,8 +4460,10 @@ function enhanceStackActions() {
     
     if (isEmpty) {
         // Show Add button for empty stacks
+        const addText = (window.translationManager && window.translationManager.currentLanguage) ? 
+            window.translationManager.t('add') : 'Add';
         actions.innerHTML = `
-            <button class="stack-action-btn primary" id="stackAddBtn" aria-label="Add content">Add</button>
+            <button class="stack-action-btn primary" id="stackAddBtn" aria-label="Add content">${addText}</button>
         `;
     } else {
         // Show Edit button for stacks with content
@@ -7206,6 +7243,38 @@ function getSourceName(url) {
     }
 }
 
+// Helper function to translate stack names
+function getTranslatedStackName(name) {
+    if (!name) return '';
+    
+    // If it's a default stack name, translate it
+    if (name === 'New Stack') {
+        return (window.translationManager && window.translationManager.currentLanguage) ? 
+            window.translationManager.t('new_stack') : 'New Stack';
+    }
+    
+    // For custom names, return as-is
+    return name;
+}
+
+// Helper function to translate stack descriptions
+function getTranslatedStackDescription(description) {
+    if (!description) {
+        // Default fallback description
+        return (window.translationManager && window.translationManager.currentLanguage) ? 
+            window.translationManager.t('new_stack_description') : 'A new stack for organizing content';
+    }
+    
+    // If it's a default description, translate it
+    if (description === 'A new stack for organizing content') {
+        return (window.translationManager && window.translationManager.currentLanguage) ? 
+            window.translationManager.t('new_stack_description') : 'A new stack for organizing content';
+    }
+    
+    // For custom descriptions, return as-is
+    return description;
+}
+
 // Function to update edit mode state when content cards are re-rendered
 function updateEditModeState() {
     const editModeBtn = document.getElementById('editModeBtn');
@@ -7803,7 +7872,8 @@ function createStackCard(stackData) {
     
     const itemCountName = document.createElement('span');
     itemCountName.className = 'content-card-source-name';
-    itemCountName.textContent = `${stackData.cards.length} items`;
+    const itemsText = window.translationManager ? window.translationManager.t('items') : 'items';
+    itemCountName.textContent = `${stackData.cards.length} ${itemsText}`;
     
     itemCountInfo.appendChild(itemCountLogo);
     itemCountInfo.appendChild(itemCountName);
@@ -7814,7 +7884,9 @@ function createStackCard(stackData) {
     // Title below the top row
     const title = document.createElement('div');
     title.className = 'content-card-title';
-    title.textContent = stackData.name;
+    // Translate stack name if it's a default name
+    const displayName = getTranslatedStackName(stackData.name);
+    title.textContent = displayName;
     
     cardHeader.appendChild(topRow);
     cardHeader.appendChild(title);
@@ -7823,8 +7895,10 @@ function createStackCard(stackData) {
     const description = document.createElement('div');
     description.className = 'content-card-description stack-description';
     description.setAttribute('data-stack-id', stackData.id);
+    // Translate description if it's a default description
+    const displayDescription = getTranslatedStackDescription(stackData.description);
     description.innerHTML = `
-        <span class="description-text">${stackData.description || 'A collection of related content'}</span>
+        <span class="description-text">${displayDescription}</span>
         <button class="edit-description-btn" title="Edit description">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -8462,7 +8536,7 @@ function expandStack(stackData) {
         <div class="stack-expanded-header">
             <div class="stack-info-horizontal">
                 <div class="stack-name-container">
-                    <h3 class="stack-name-horizontal editable-name" data-stack-id="${stackData.id}">${stackData.name}</h3>
+                    <h3 class="stack-name-horizontal editable-name" data-stack-id="${stackData.id}">${getTranslatedStackName(stackData.name)}</h3>
                     <svg class="edit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -8869,7 +8943,8 @@ async function removeCardFromStack(insight, stackId) {
                 // Update stack info
                 const stackCountEl = document.querySelector('.stack-count');
                 if (stackCountEl) {
-                    stackCountEl.textContent = `${stackData.cards.length} items`;
+                    const itemsText = window.translationManager ? window.translationManager.t('items') : 'items';
+                    stackCountEl.textContent = `${stackData.cards.length} ${itemsText}`;
                 }
                 
                 showSuccessMessage('Card removed from stack.');
@@ -8939,7 +9014,8 @@ async function removeCardFromStack(insight, stackId) {
                     // Update stack info
                     const stackCountEl = document.querySelector('.stack-count');
                     if (stackCountEl) {
-                        stackCountEl.textContent = `${stackData.cards.length} items`;
+                        const itemsText = window.translationManager ? window.translationManager.t('items') : 'items';
+                        stackCountEl.textContent = `${stackData.cards.length} ${itemsText}`;
                     }
                     
                     showSuccessMessage('Card removed from stack. (Local storage)');
