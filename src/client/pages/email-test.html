@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Test - Quest</title>
+  <link rel="stylesheet" href="../styles/common.css">
+  <style>
+    .email-test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .test-section {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .test-section h2 {
+      color: #1f2937;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    .btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .status-message {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status-success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .status-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    .status-info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+
+    .config-display {
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      margin: 15px 0;
+    }
+
+    .template-id-input {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .template-id-input input {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="email-test-container">
+    <h1>Email Service Test</h1>
+    <p>Test your Brevo email integration and template configuration.</p>
+
+    <!-- Configuration Section -->
+    <div class="test-section">
+      <h2>Configuration</h2>
+      <div class="config-display">
+        <div><strong>API Key:</strong>
+          [HIDDEN - Moved to backend for security]</div>
+        <div><strong>API URL:</strong> https://api.brevo.com/v3</div>
+        <div><strong>Sender:</strong> Quest - Your Second Brain &lt;noreply@quest.example.com&gt;</div>
+        <div><strong>Template ID:</strong> <span id="templateIdDisplay">Not set (using template name)</span></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="templateIdInput">Brevo Template ID:</label>
+        <div class="template-id-input">
+          <input type="number" id="templateIdInput" class="form-input" placeholder="Enter your Brevo template ID">
+          <button id="setTemplateIdBtn" class="btn">Set Template ID</button>
+        </div>
+        <p style="margin-top: 8px; color: #6b7280; font-size: 14px;">
+          Optional: Get this from your Brevo dashboard. If not set, will use template name "My Quest Space Weekly
+          Knowledge Digest".
+        </p>
+      </div>
+    </div>
+
+    <!-- Connection Test Section -->
+    <div class="test-section">
+      <h2>Connection Test</h2>
+      <p>Test your connection to Brevo API.</p>
+      <button id="testConnectionBtn" class="btn btn-secondary">Test Brevo Connection</button>
+      <div id="connectionStatus"></div>
+    </div>
+
+    <!-- Email Test Section -->
+    <div class="test-section">
+      <h2>Send Test Email</h2>
+      <p>Send a test email with sample data to verify your template works.</p>
+
+      <div class="form-group">
+        <label class="form-label" for="testEmailInput">Test Email Address:</label>
+        <input type="email" id="testEmailInput" class="form-input" placeholder="your-email@example.com">
+      </div>
+
+      <button id="sendTestEmailBtn" class="btn">Send Test Email</button>
+      <div id="emailStatus"></div>
+    </div>
+
+    <!-- Template Preview Section -->
+    <div class="test-section">
+      <h2>Template Preview</h2>
+      <p>Preview the email template with sample data.</p>
+      <button id="previewTemplateBtn" class="btn btn-secondary">Preview Template</button>
+      <div id="templatePreview"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { emailService } from '../js/email-service.js';
+
+    class EmailTestManager {
+      constructor() {
+        this.init();
+      }
+
+      init() {
+        this.setupEventListeners();
+        this.updateTemplateIdDisplay();
+      }
+
+      setupEventListeners() {
+        // Set template ID
+        document.getElementById('setTemplateIdBtn').addEventListener('click', () => {
+          const templateId = document.getElementById('templateIdInput').value;
+          if (templateId) {
+            emailService.setTemplateId(parseInt(templateId));
+            this.updateTemplateIdDisplay();
+            this.showMessage('Template ID set successfully!', 'success', 'connectionStatus');
+          } else {
+            this.showMessage('Please enter a template ID', 'error', 'connectionStatus');
+          }
+        });
+
+        // Test connection
+        document.getElementById('testConnectionBtn').addEventListener('click', () => {
+          this.testConnection();
+        });
+
+        // Send test email
+        document.getElementById('sendTestEmailBtn').addEventListener('click', () => {
+          this.sendTestEmail();
+        });
+
+        // Preview template
+        document.getElementById('previewTemplateBtn').addEventListener('click', () => {
+          this.previewTemplate();
+        });
+      }
+
+      updateTemplateIdDisplay() {
+        const templateId = emailService.getTemplateId();
+        document.getElementById('templateIdDisplay').textContent = templateId || 'Not set';
+      }
+
+      async testConnection() {
+        const statusEl = document.getElementById('connectionStatus');
+        const btn = document.getElementById('testConnectionBtn');
+
+        btn.disabled = true;
+        btn.textContent = 'Testing...';
+
+        try {
+          const accountInfo = await emailService.getAccountInfo();
+          this.showMessage(`✅ Connection successful! Account: ${accountInfo.email}`, 'success', 'connectionStatus');
+        } catch (error) {
+          this.showMessage(`❌ Connection failed: ${error.message}`, 'error', 'connectionStatus');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Test Brevo Connection';
+        }
+      }
+
+      async sendTestEmail() {
+        const email = document.getElementById('testEmailInput').value;
+        const statusEl = document.getElementById('emailStatus');
+        const btn = document.getElementById('sendTestEmailBtn');
+
+        if (!email) {
+          this.showMessage('Please enter an email address', 'error', 'emailStatus');
+          return;
+        }
+
+        if (!emailService.isValidEmail(email)) {
+          this.showMessage('Please enter a valid email address', 'error', 'emailStatus');
+          return;
+        }
+
+        // Template ID is optional - will use template name if not set
+
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+          const result = await emailService.sendTestEmail(email);
+          if (result.success) {
+            this.showMessage(`✅ Test email sent successfully! Message ID: ${result.messageId}`, 'success', 'emailStatus');
+          } else {
+            this.showMessage(`❌ Failed to send email: ${result.error}`, 'error', 'emailStatus');
+          }
+        } catch (error) {
+          this.showMessage(`❌ Error: ${error.message}`, 'error', 'emailStatus');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Send Test Email';
+        }
+      }
+
+      previewTemplate() {
+        const previewEl = document.getElementById('templatePreview');
+
+        const sampleData = {
+          weekly_collection: "📚 **Productivity**: '10 Tips for Better Focus', 'Time Management Hacks'\n📝 **Learning**: 'JavaScript Best Practices', 'React Patterns'",
+          ai_summary: "This week you focused on productivity and learning. Your insights show a strong interest in improving focus and mastering new technologies. The AI analysis suggests you're building a solid foundation for personal growth.",
+          recommended_tag: "Productivity",
+          recommended_articles: "The Pomodoro Technique, Deep Work Strategies",
+          login_url: "https://quest.example.com/my-space",
+          unsubscribe_url: "https://quest.example.com/unsubscribe?token=test-token"
+        };
+
+        previewEl.innerHTML = `
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <h3>Sample Template Data:</h3>
+                        <pre style="background: white; padding: 15px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(sampleData, null, 2)}</pre>
+                        <p style="margin-top: 15px; color: #6b7280;">
+                            This is the data that will be sent to your Brevo template. 
+                            Make sure your template uses these parameter names.
+                        </p>
+                    </div>
+                `;
+      }
+
+      showMessage(message, type, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+      }
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      new EmailTestManager();
+    });
+  </script>
+</body>
+
+</html>
