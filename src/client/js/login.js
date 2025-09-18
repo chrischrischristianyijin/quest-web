@@ -1,5 +1,6 @@
 import { auth } from './auth.js';
 import { PATHS, navigateTo } from './paths.js';
+import { autoReloginManager } from './auto-relogin.js';
 
 // DOM elements
 const loginForm = document.getElementById('loginForm');
@@ -13,6 +14,7 @@ const resetEmailInput = document.getElementById('resetEmail');
 const modalMessage = document.getElementById('modalMessage');
 const resetPasswordButton = document.getElementById('resetPasswordButton');
 const messageDiv = document.getElementById('message');
+const rememberMeCheckbox = document.getElementById('rememberMe');
 
 // Show message
 function showMessage(message, type = 'error') {
@@ -76,6 +78,16 @@ async function handleLogin(email, password) {
         if (result && result.success) {
             showMessage('Login successful! Redirecting...', 'success');
             
+            // If user selected "Remember me", save credentials for auto relogin
+            if (rememberMeCheckbox && rememberMeCheckbox.checked) {
+                console.log('💾 Saving user credentials for auto relogin...');
+                autoReloginManager.saveCredentials(email, password);
+            } else {
+                // If user didn't select "Remember me", clear previously saved credentials
+                console.log('🗑️ Clearing saved user credentials...');
+                autoReloginManager.clearSavedCredentials();
+            }
+            
             // Delay redirect to show success message
             setTimeout(() => {
                 // Login successful, redirect to My Space page with full page reload
@@ -125,6 +137,10 @@ passwordInput.addEventListener('input', hideMessages);
 
 // Check authentication status on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize auto relogin functionality
+    console.log('🔄 Initializing auto relogin functionality...');
+    autoReloginManager.setEnabled(true);
+    
     // If user is already logged in, redirect directly
     if (auth.checkAuth()) {
         navigateTo(PATHS.MY_SPACE, { fromAuth: true });

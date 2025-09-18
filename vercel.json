@@ -32,6 +32,14 @@
       "destination": "/pages/token-debug.html"
     },
     {
+      "source": "/auth-diagnostic",
+      "destination": "/pages/auth-diagnostic.html"
+    },
+    {
+      "source": "/auto-relogin-test",
+      "destination": "/pages/auto-relogin-test.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/pages/privacy.html"
     },

@@ -1,5 +1,6 @@
 import { API_CONFIG } from './config.js';
 import { tokenManager } from './token-manager.js';
+import { autoReloginManager } from './auto-relogin.js';
 
 // API服务类
 class ApiService {
@@ -86,19 +87,23 @@ class ApiService {
                     // If we can't parse the error response, use default message
                 }
                 
-                // 触发自动退出登录
-                try {
-                    const { tokenManager } = await import('./token-manager.js');
-                    await tokenManager.autoLogout(errorMessage);
-                } catch (importError) {
-                    console.error('导入Token管理器失败:', importError);
-                    // 回退到原来的处理方式
-                    this.setAuthToken(null);
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('quest_user_session');
-                    if (window.apiCache) window.apiCache.clear();
-                    window.dispatchEvent(new CustomEvent('quest-auth-expired', { detail: { status: response.status } }));
-                }
+                // 触发认证过期事件，让自动重新登录管理器处理
+                window.dispatchEvent(new CustomEvent('quest-auth-expired', { 
+                    detail: { 
+                        status: response.status,
+                        reason: errorMessage,
+                        error: errorMessage
+                    } 
+                }));
+                
+                // 同时触发API错误事件
+                window.dispatchEvent(new CustomEvent('quest-api-error', { 
+                    detail: { 
+                        status: response.status,
+                        reason: errorMessage,
+                        error: errorMessage
+                    } 
+                }));
                 
                 throw new Error(errorMessage);
             }
