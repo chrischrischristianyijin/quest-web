@@ -55,7 +55,7 @@ let userTagsCacheTime = 0;
 const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
     latest: 'latest',  // Time sorting
-    tags: null,        // Tag filtering
+    tags: 'all',       // Tag filtering - default to 'all'
     search: ''         // Search filtering
 };
 let isEditMode = false; // Edit mode state
@@ -410,11 +410,7 @@ async function goToPage(pageNum, { force = false } = {}) {
             let apiLimit = effectiveLimit;
             
             if (pageNum > 1) {
-                // Calculate how many insights were actually shown on page 1
-                const stacksCount = stacks.size;
-                const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-                
-                // For page 2, we want to get insights starting from after page 1's insights
+                // For page 2+, we want to get insights starting from after page 1's insights
                 // But since the API doesn't know about stacks, we need to get all insights and slice them
                 apiPage = 1; // Always get page 1 from API
                 apiLimit = 100; // Get a large number to get all insights
@@ -435,13 +431,21 @@ async function goToPage(pageNum, { force = false } = {}) {
                 
                 // For page 2+, slice the insights to get the correct subset
                 if (pageNum > 1) {
-                    const stacksCount = stacks.size;
-                    const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-                    const startIndex = page1SlotsForInsights;
+                    const s = stacks.size;
+                    const page1SlotsForInsights = Math.max(0, insightsPerPage - s);
+                    
+                    // Calculate the correct slice for this page
+                    // Page 1 shows: 0 to page1SlotsForInsights
+                    // Page 2 shows: page1SlotsForInsights to page1SlotsForInsights + insightsPerPage
+                    // Page 3 shows: page1SlotsForInsights + insightsPerPage to page1SlotsForInsights + 2*insightsPerPage
+                    const startIndex = page1SlotsForInsights + (pageNum - 2) * insightsPerPage;
                     const endIndex = startIndex + insightsPerPage;
                     
+                    console.log(`🔍 DEBUG: Page ${pageNum} slicing - page1Slots=${page1SlotsForInsights}, startIndex=${startIndex}, endIndex=${endIndex}`);
+                    console.log(`🔍 DEBUG: Total standalone insights before slicing: ${targetPageInsights.length}`);
+                    
                     targetPageInsights = targetPageInsights.slice(startIndex, endIndex);
-                    console.log(`🔍 DEBUG: Page ${pageNum} slicing - startIndex=${startIndex}, endIndex=${endIndex}, sliced insights=${targetPageInsights.length}`);
+                    console.log(`🔍 DEBUG: After slicing - insights=${targetPageInsights.length}`);
                     console.log(`🔍 DEBUG: Sliced insights:`, targetPageInsights.map(i => ({ id: i.id, title: i.title })));
                 }
                 
@@ -452,39 +456,24 @@ async function goToPage(pageNum, { force = false } = {}) {
                 // Fix pagination calculation for stacks
                 // The API doesn't know about stacks, so we need to recalculate totalPages
                 // based on how many insights can actually fit on each page
-                const stacksCount = stacks.size;
-                const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-                const remainingInsights = Math.max(0, totalInsights - page1SlotsForInsights);
+                // Compute total pages correctly (stacks only occupy page 1)
+                const s = stacks.size;
+                let insightsInStacks = 0;
+                stacks.forEach(st => { insightsInStacks += (st.cards?.length || 0); });
+                const standaloneTotal = Math.max(0, totalInsights - insightsInStacks);
                 
-                // Recalculate totalPages based on actual page capacity
-                totalPages = remainingInsights > 0 ? 2 : 1;
-                console.log(`🔍 DEBUG: Recalculated pagination - stacksCount=${stacksCount}, page1SlotsForInsights=${page1SlotsForInsights}, remainingInsights=${remainingInsights}, totalPages=${totalPages}`);
+                const page1SlotsForInsights = Math.max(0, insightsPerPage - s);
+                const remaining = Math.max(0, standaloneTotal - page1SlotsForInsights);
                 
-                // De-dupe page 2+ against what page 1 actually rendered
+                totalPages = 1 + (remaining > 0 ? Math.ceil(remaining / insightsPerPage) : 0);
+                console.log(`🔍 DEBUG: Recalculated pagination - stacksCount=${s}, page1SlotsForInsights=${page1SlotsForInsights}, remaining=${remaining}, totalPages=${totalPages}`);
+                
+                // No de-duplication needed for pagination with stacks
+                // Page 1 shows: 1 standalone insight + 8 stacks
+                // Page 2+ shows: remaining standalone insights (no stacks)
+                // These are different insights, so no de-duplication is needed
                 let adjusted = targetPageInsights;
-                
-                // Only de-dupe when not filtering by tag (stacks hidden under filters)
-                const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-                console.log(`🔍 DEBUG: De-duplication check - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
-                
-                if (!hasActiveTagFilter && pageNum > 1) {
-                    const prevVisible = getVisibleIdsForPage(pageNum - 1);
-                    console.log(`🔍 DEBUG: Previous page visible IDs:`, Array.from(prevVisible));
-                    
-                    if (prevVisible.size > 0) {
-                        // De-duplicate against what was actually visible on the previous page
-                        const beforeCount = adjusted.length;
-                        adjusted = adjusted.filter(i => !prevVisible.has(i.id));
-                        console.log(`🔄 Page ${pageNum} de-duplicated: ${beforeCount} -> ${adjusted.length} insights`);
-                        console.log(`🔍 DEBUG: After de-duplication:`, adjusted.map(i => ({ id: i.id, title: i.title })));
-                    } else {
-                        // If previous page isn't cached, don't do any de-duplication
-                        // This prevents incorrectly removing insights from page 2
-                        console.log(`⚠️ Page ${pageNum}: Previous page not cached, skipping de-duplication`);
-                    }
-                } else {
-                    console.log(`🔍 DEBUG: Skipping de-duplication - hasActiveTagFilter=${hasActiveTagFilter}, pageNum=${pageNum}`);
-                }
+                console.log(`🔍 DEBUG: No de-duplication needed - page ${pageNum} shows different insights than page 1`);
                 
                 // Update current page data
                 currentInsights = adjusted;
@@ -513,7 +502,7 @@ async function goToPage(pageNum, { force = false } = {}) {
         }
         
         // Re-render insights (only show current page data)
-        renderInsights();
+        await renderInsights();
         
         // Update UI
         updatePaginationUI();
@@ -556,6 +545,11 @@ function hideLoadingState() {
 function clearPageCache() {
     pageCache.clear();
     loadedPages.clear();
+    // Also clear the global API cache
+    if (window.apiCache) {
+        window.apiCache.clear();
+        console.log('🗑️ Global API cache cleared');
+    }
     console.log('🗑️ Page cache cleared');
 }
 
@@ -713,8 +707,8 @@ async function loadUserInsightsWithPagination() {
                 }
             });
             
-            // Immediately render first page (don't wait for tag loading)
-            renderInsights();
+            // Don't render immediately - wait for stacks to be loaded
+            // renderInsights() will be called after stacks are loaded
             updatePaginationUI();
             
             // Asynchronously load tags, don't block rendering
@@ -727,7 +721,7 @@ async function loadUserInsightsWithPagination() {
                         const hasNewTags = insightsWithoutTags.some(insight => insight.tags && insight.tags.length > 0);
                         if (hasNewTags && !renderTimeout) {
                             console.log('🏷️ Tags loaded, re-rendering...');
-                            renderInsights();
+                            await renderInsights();
                         }
                     } catch (error) {
                         console.warn('⚠️ Tag loading failed:', error);
@@ -761,7 +755,7 @@ async function loadUserInsightsWithPagination() {
 // loadRemainingInsightsInBackground function removed - using pagination only
 
 // Load data from backup
-function loadFromBackup() {
+async function loadFromBackup() {
     console.log('🔄 Loading from backup...');
     
     // Check if it's due to auth expiration, if so don't restore local data
@@ -818,7 +812,7 @@ function loadFromBackup() {
         restoredFromBackup 
     });
     
-    renderInsights();
+    await renderInsights();
     updatePaginationUI();
     
     // Notify user if data was restored from backup (disabled)
@@ -967,6 +961,10 @@ async function initPage() {
         // Initialize search functionality
         initSearch();
         
+        // Trigger initial render now that all data is loaded
+        console.log('🎨 Triggering initial render after all data loaded...');
+        await renderInsights();
+        
         // Initialize pagination
         initPagination();
         
@@ -977,7 +975,7 @@ async function initPage() {
             renderStackView(stackId);
         } else {
             // Final render after all data is loaded
-            renderInsights();
+            await renderInsights();
         }
         
         // Ensure edit mode is always off when entering My Space page
@@ -1254,6 +1252,10 @@ async function loadUserStacks() {
         // After stacks are known, refill page 1 with correct over-fetch
         if (stacks.size > 0) {
             await goToPage(1, { force: true });
+        } else {
+            // Even if no stacks, trigger a re-render to update the UI
+            console.log('🔄 No stacks found, triggering re-render...');
+            await renderInsights();
         }
 }
 
@@ -1410,7 +1412,17 @@ function updateUserProfileUI() {
                            currentUser.display_name ||
                            currentUser.email || 
                            'User';
-        welcomeMessage.textContent = `Welcome, ${displayName}!`;
+        
+        // Update the data-username attribute for translation system
+        welcomeMessage.setAttribute('data-username', displayName);
+        
+        // Apply translation if translation manager is available
+        if (window.translationManager) {
+            window.translationManager.applyTranslations();
+        } else {
+            // Fallback to direct text update
+            welcomeMessage.textContent = `Welcome, ${displayName}!`;
+        }
     }
 }
 
@@ -1492,7 +1504,7 @@ async function loadUserInsights() {
                 currentInsights = [];
                 window.currentInsights = currentInsights;
             }
-            renderInsights();
+            await renderInsights();
         }
     } catch (error) {
         console.error('❌ 加载用户insights失败:', error);
@@ -1520,7 +1532,7 @@ async function loadUserInsights() {
                     currentInsights = backup.data;
                     window.currentInsights = currentInsights;
                     if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
-                    renderInsights();
+                    await renderInsights();
                     return; // Don't show error if we successfully loaded from backup
                 } else {
                     currentInsights = [];
@@ -1590,16 +1602,14 @@ function effectiveFetchLimitForPage(pageNum) {
     if (hasActiveTagFilter) return insightsPerPage;  // no stacks when filtering
     if (pageNum !== 1) return insightsPerPage;       // stacks shown only on page 1
 
-    const stacksCount = stacks.size;
-    // how many insights live inside stacks
-    let stackedInsightsCount = 0;
-    stacks.forEach(s => { stackedInsightsCount += (s.cards?.length || 0); });
-
-    // we need to SHOW (insightsPerPage - stacksCount) non-stacked insights,
-    // but API results may include stacked ones (we remove them with !x.stack_id),
-    // so over-fetch by stackedInsightsCount.
-    const targetInsightsTiles = Math.max(0, insightsPerPage - stacksCount);
-    return targetInsightsTiles + stackedInsightsCount;
+    // For page 1, we need to fetch enough insights to account for:
+    // 1. Insights that will be shown as standalone cards
+    // 2. Insights that are in stacks (which we filter out)
+    // 3. Buffer for potential pagination issues
+    
+    // Fetch a large number to ensure we get all insights
+    // The filtering logic will handle removing stacked insights
+    return 100; // Fetch up to 100 insights to ensure we get everything
 }
 
 // 防抖渲染机制
@@ -1608,7 +1618,7 @@ let lastRenderData = null;
 let isRendering = false; // 防止重复渲染的标志
 
 // 渲染见解列表
-function renderInsights() {
+async function renderInsights() {
     console.log('🚨 renderInsights() called - viewMode:', viewMode, 'activeStackId:', activeStackId);
     console.log('🔍 DEBUG: renderInsights - currentPage:', currentPage, 'totalPages:', totalPages);
     
@@ -1623,12 +1633,12 @@ function renderInsights() {
         clearTimeout(renderTimeout);
     }
     
-    renderTimeout = setTimeout(() => {
-        performRenderInsights();
+    renderTimeout = setTimeout(async () => {
+        await performRenderInsights();
     }, 150); // 增加防抖时间到150ms
 }
 
-function performRenderInsights() {
+async function performRenderInsights() {
     // 防止重复渲染
     if (isRendering) {
         console.log('🔄 Already rendering, skipping...');
@@ -1641,7 +1651,9 @@ function performRenderInsights() {
         totalPages: totalPages,
         insightsCount: currentInsights.length,
         viewMode: viewMode,
-        activeStackId: activeStackId
+        activeStackId: activeStackId,
+        // Include filter state in deduplication check
+        currentFilters: JSON.stringify(currentFilters)
     };
     
     if (lastRenderData && 
@@ -1649,7 +1661,8 @@ function performRenderInsights() {
         lastRenderData.totalPages === currentData.totalPages &&
         lastRenderData.insightsCount === currentData.insightsCount &&
         lastRenderData.viewMode === currentData.viewMode &&
-        lastRenderData.activeStackId === currentData.activeStackId) {
+        lastRenderData.activeStackId === currentData.activeStackId &&
+        lastRenderData.currentFilters === currentData.currentFilters) {
         console.log('🔄 Skipping render - data unchanged');
         return;
     }
@@ -1678,7 +1691,7 @@ function performRenderInsights() {
     existingCards.forEach(card => card.remove());
     
     // Get filtered insights for rendering
-    const filteredInsights = getFilteredInsights();
+    const filteredInsights = await getFilteredInsights();
     console.log('🎯 Rendering with filtered insights:', filteredInsights.length);
     console.log('🔍 DEBUG: currentInsights.length:', currentInsights.length);
     console.log('🔍 DEBUG: currentInsights:', currentInsights.map(i => ({ id: i.id, title: i.title })));
@@ -1779,9 +1792,9 @@ function createInsightCardEl(insight) {
     return createInsightCard(insight);
 }
 
-function renderInsightsInitial() {
+async function renderInsightsInitial() {
     // Use the main renderInsights function to avoid duplication
-    renderInsights();
+    await renderInsights();
 }
 
 // 强制立即渲染（用于需要立即更新的情况）
@@ -1805,14 +1818,14 @@ function forceRenderInsights() {
 
 // loadMoreInsights function removed - using pagination only
 
-function resetInsightsPaginationAndRerender() {
+async function resetInsightsPaginationAndRerender() {
     console.log('🔄 resetInsightsPaginationAndRerender called');
     
     // Clear page cache when filtering to avoid stale data
     clearPageCache();
     
     // Get filtered insights
-    const filteredInsights = getFilteredInsights();
+    const filteredInsights = await getFilteredInsights();
     console.log('📊 Filtered insights for rendering:', filteredInsights.length);
     
     // Update pagination with filtered insights count (insights only)
@@ -1825,14 +1838,18 @@ function resetInsightsPaginationAndRerender() {
         
         // For "All" filter, calculate pagination the same way as normal pagination
         // Page 1 shows (insightsPerPage - stacksCount) insights + stacks
-        // Remaining insights go to page 2
-        const stacksCount = stacks.size;
-        const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
-        const remainingInsights = Math.max(0, totalInsights - page1SlotsForInsights);
+        // Remaining insights go to page 2+
+        // Compute total pages correctly (stacks only occupy page 1)
+        const s = stacks.size;
+        let insightsInStacks = 0;
+        stacks.forEach(st => { insightsInStacks += (st.cards?.length || 0); });
+        const standaloneTotal = Math.max(0, totalInsights - insightsInStacks);
         
-        // Calculate total pages based on actual page capacity
-        totalPages = remainingInsights > 0 ? 2 : 1;
-        console.log(`🔍 DEBUG: All filter pagination - page1Slots=${page1SlotsForInsights}, remaining=${remainingInsights}, totalPages=${totalPages}`);
+        const page1SlotsForInsights = Math.max(0, insightsPerPage - s);
+        const remaining = Math.max(0, standaloneTotal - page1SlotsForInsights);
+        
+        totalPages = 1 + (remaining > 0 ? Math.ceil(remaining / insightsPerPage) : 0);
+        console.log(`🔍 DEBUG: All filter pagination - page1Slots=${page1SlotsForInsights}, remaining=${remaining}, totalPages=${totalPages}`);
     } else {
         totalInsights = filteredInsights.length;
         console.log(`🔍 DEBUG: Using filtered insights for pagination: ${totalInsights}`);
@@ -2175,23 +2192,25 @@ async function initFilterButtons() {
             {
                 key: 'latest',
                 label: 'Last Added',
+                translateKey: 'last_added',
                 type: 'dropdown',
                 options: [
-                    { key: 'latest', label: 'Latest' },
-                    { key: 'oldest', label: 'Oldest' },
-                    { key: 'alphabetical', label: 'Alphabetical' }
+                    { key: 'latest', label: 'Latest', translateKey: 'latest' },
+                    { key: 'oldest', label: 'Oldest', translateKey: 'oldest' },
+                    { key: 'alphabetical', label: 'Alphabetical', translateKey: 'alphabetical' }
                 ]
             },
             {
                 key: 'tags',
                 label: 'Tags',
+                translateKey: 'tags',
                 type: 'dropdown',
                 options: [
-                    { key: 'all', label: 'All Tags' },
-                    { key: 'project', label: 'Project', category: 'P' },
-                    { key: 'area', label: 'Area', category: 'A' },
-                    { key: 'resource', label: 'Resource', category: 'R' },
-                    { key: 'archive', label: 'Archive', category: 'Archive' }
+                    { key: 'all', label: 'All Tags', translateKey: 'all_tags' },
+                    { key: 'project', label: 'Project', category: 'P', translateKey: 'project' },
+                    { key: 'area', label: 'Area', category: 'A', translateKey: 'area' },
+                    { key: 'resource', label: 'Resource', category: 'R', translateKey: 'resource' },
+                    { key: 'archive', label: 'Archive', category: 'Archive', translateKey: 'archive' }
                 ]
             }
         ];
@@ -2218,7 +2237,7 @@ async function initFilterButtons() {
             button.className = 'FilterButton main-filter-btn';
             button.dataset.filter = filterConfig.key;
             button.innerHTML = `
-                <span class="filter-label">${filterConfig.label}</span>
+                <span class="filter-label" data-translate="${filterConfig.translateKey}">${filterConfig.label}</span>
                 <svg class="filter-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -2237,12 +2256,12 @@ async function initFilterButtons() {
                     dropdownOptions.innerHTML = filterConfig.options.map(option => {
                         if (option.key === 'all') {
                             return `<div class="filter-option" data-filter="${option.key}">
-                                <span class="filter-option-label">${option.label}</span>
+                                <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                             </div>`;
                         } else {
                             // PARA categories with info icon
                             return `<div class="filter-option" data-filter="${option.key}">
-                                <span class="filter-option-label">${option.label}</span>
+                                <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                                 <span class="filter-option-info" data-category="${option.category}" title="Click for more info">ⓘ</span>
                             </div>`;
                         }
@@ -2252,7 +2271,7 @@ async function initFilterButtons() {
                 } else {
                     dropdownOptions.innerHTML = filterConfig.options.map(option => `
                         <div class="filter-option" data-filter="${option.key}">
-                            <span class="filter-option-label">${option.label}</span>
+                            <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                         </div>
                     `).join('');
                 }
@@ -2358,6 +2377,11 @@ async function initFilterButtons() {
         console.log('✅ Filter buttons created successfully');
         console.log('🎯 Total filter button containers:', filterButtons.children.length);
         
+        // Re-apply translations to the newly created filter buttons
+        if (window.translationManager) {
+            window.translationManager.applyTranslations();
+        }
+        
         // Edit Tags按钮已移到标签选择器旁边，不再需要在这里添加
         
     } catch (error) {
@@ -2459,19 +2483,16 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
         if (filterValue !== 'all') {
             // Clear any existing global insights to ensure fresh data
             window.allInsightsForFiltering = null;
-            // Fetch all insights for the new filter
+            // Fetch all insights for the new filter and wait for completion
+            console.log('🔄 Fetching all insights for tag filter...');
             await fetchAllInsightsForFiltering();
+            console.log('✅ All insights fetched for tag filter');
         } else {
-            // Clear the global insights when showing all
+            // For "all" filter, we need to fetch all insights to properly filter out stacked ones
+            console.log('🔄 Switching to "All" filter - fetching all insights to filter out stacked ones');
             window.allInsightsForFiltering = null;
-            // Ensure we have all insights available for proper pagination
-            // If we don't have enough insights loaded, fetch them
-            if (currentInsights.length < totalInsights) {
-                console.log('🔄 Switching back to "All" filter - need to fetch all insights for pagination');
-                await fetchAllInsightsForFiltering();
-            } else {
-                console.log('🔄 Switching back to "All" filter - all insights already available');
-            }
+            await fetchAllInsightsForFiltering();
+            console.log('✅ All insights fetched for "All" filter');
         }
     }
     
@@ -2484,9 +2505,9 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
     // 显示筛选状态
     showFilterStatus();
     
-    // 重新渲染
+    // 重新渲染 - now that all insights are loaded
     console.log('🔄 Re-rendering insights with new filter...');
-    resetInsightsPaginationAndRerender();
+    await resetInsightsPaginationAndRerender();
 }
 
 // 更新筛选按钮显示文本
@@ -2577,7 +2598,7 @@ function showFilterStatus() {
 }
 
 // 获取当前筛选的文章
-function getFilteredInsights() {
+async function getFilteredInsights() {
     console.log('🔍 getFilteredInsights called with filters:', currentFilters);
     console.log('📊 Total insights:', currentInsights.length);
     
@@ -2619,6 +2640,13 @@ function getFilteredInsights() {
             console.log('🔍 Using fallback insights for filtering:', insightsToFilter.length);
             console.log('📊 Current insights:', currentInsights.length);
             console.log('📊 Insights from stacks:', insightsFromStacks.length);
+            
+            // Ensure tags are normalized for fallback insights
+            const insightsWithoutTags = insightsToFilter.filter(insight => !insight.tags || insight.tags.length === 0);
+            if (insightsWithoutTags.length > 0) {
+                console.log('🔄 Loading tags for fallback insights without them...');
+                await loadTagsForInsights(insightsWithoutTags);
+            }
         }
     } else {
         // No active filter - use all available insights for proper pagination
@@ -2626,21 +2654,11 @@ function getFilteredInsights() {
             insightsToFilter = window.allInsightsForFiltering;
             console.log('🔍 Using all insights for "All" filter:', insightsToFilter.length);
         } else {
-            // Fallback: combine current insights with insights from stacks
-            console.log('⚠️ allInsightsForFiltering not available for "All" filter, creating fallback...');
-            const insightsFromStacks = [];
-            stacks.forEach(stackData => {
-                stackData.cards.forEach(card => {
-                    // Check if this insight is already in currentInsights
-                    const exists = currentInsights.some(insight => insight.id === card.id);
-                    if (!exists) {
-                        insightsFromStacks.push(card);
-                    }
-                });
-            });
-            
-            insightsToFilter = [...currentInsights, ...insightsFromStacks];
-            console.log('🔍 Using fallback insights for "All" filter:', insightsToFilter.length);
+            // Fallback: use only currentInsights (don't include stack insights)
+            // This ensures home view only shows insights that are not in any stack
+            console.log('⚠️ allInsightsForFiltering not available for "All" filter, using currentInsights only...');
+            insightsToFilter = [...currentInsights];
+            console.log('🔍 Using currentInsights only for "All" filter:', insightsToFilter.length);
         }
     }
     
@@ -2753,7 +2771,17 @@ function getFilteredInsights() {
                         }
                         
                         console.log('🔍 Checking tag:', tagName, 'against category:', paraCategory);
-                        const matches = tagName === paraCategory;
+                        
+                        // Map category keys to actual tag names
+                        const categoryToTagName = {
+                            'project': 'project',
+                            'area': 'area', 
+                            'resource': 'resource',
+                            'archive': 'archive'
+                        };
+                        
+                        const expectedTagName = categoryToTagName[paraCategory];
+                        const matches = tagName === expectedTagName;
                         console.log('🔍 Tag match result:', matches);
                         return matches;
                     });
@@ -3862,7 +3890,7 @@ async function applySearch(query) {
         window.allInsightsForFiltering = null;
     }
 
-    renderInsights();         // re-renders lists with new filter
+    await renderInsights();         // re-renders lists with new filter
     updatePaginationUI?.();   // update pagination counts
 }
 
@@ -3934,10 +3962,16 @@ function navigateToStack(stackId) {
 // Navigate back to home view
 function navigateToHome() {
     navigateTo(PATHS.MY_SPACE);
-    // The renderHomeView() will be called by the popstate event listener
-    // or we can call it directly for immediate UI update
     viewMode = 'home';
     activeStackId = null;
+    
+    // 🔑 Reset filters that might have been set in stack view
+    currentFilters.tags = 'all';
+    // Use the helper so inputs stay in sync and global pool is cleared
+    applySearch(''); // this also sets window.allInsightsForFiltering = null
+    
+    // Call renderHomeView directly to ensure immediate response
+    // The popstate event listener might not fire immediately
     renderHomeView();
 }
 
@@ -4300,6 +4334,13 @@ function renderEmptyStackState(stack) {
 function renderHomeView() {
     console.log('🏠 Rendering home view');
     
+    // Prevent duplicate calls within a short time
+    if (window._lastHomeRender && Date.now() - window._lastHomeRender < 100) {
+        console.log('🔄 Skipping duplicate renderHomeView call');
+        return;
+    }
+    window._lastHomeRender = Date.now();
+    
     // Ensure we're in home view mode
     viewMode = 'home';
     activeStackId = null;
@@ -4335,8 +4376,12 @@ function renderHomeView() {
         existingEmptyStackStates.forEach(state => state.remove());
     }
     
-    // Render normal insights
-    renderInsights();
+    // Clear cache and reload home page data to ensure we have the correct insights
+    // This clears any stack insights that might be in currentInsights
+    console.log('🔄 Reloading home page data after stack exit...');
+    clearPageCache(); // Clear all cached data
+    currentInsights = []; // Reset currentInsights array
+    goToPage(1, { force: true });
 }
 
 // Hide pagination controls
@@ -6217,7 +6262,7 @@ async function updateInsightTitle(insightId, newTitle) {
             }
             
             // 重新渲染页面以更新卡片标题
-            renderInsights();
+            await renderInsights();
             
             showSuccessMessage('Title updated successfully!');
         } else {
@@ -6713,7 +6758,7 @@ function setupTitleEditing() {
                 updatePageCacheWithInsight(currentInsight.id, { title: newTitle });
                 
                 // 重新渲染页面以更新卡片标题
-                renderInsights();
+                await renderInsights();
                 
                 showSuccessMessage('Title updated successfully!');
             } else {
@@ -7079,7 +7124,7 @@ async function createEmptyStack() {
             saveStacksToLocalStorage();
             
             // Re-render the insights
-            renderInsights();
+            await renderInsights();
             
             // Show success message
             showNotification('Empty stack created successfully!', 'success');
@@ -7103,7 +7148,7 @@ async function createEmptyStack() {
             // Save to localStorage immediately
             saveStacksToLocalStorage();
             
-            renderInsights();
+            await renderInsights();
             
             showNotification('Stack created locally (API endpoint not available)', 'warning');
         }
@@ -7128,7 +7173,7 @@ async function createEmptyStack() {
         // Save to localStorage immediately
         saveStacksToLocalStorage();
         
-        renderInsights();
+        await renderInsights();
         
         showNotification('Stack created locally (API unavailable)', 'warning');
     }
@@ -7469,7 +7514,7 @@ async function joinStack(card, targetStack) {
             // Only re-render if we're not in stack view mode
             if (viewMode !== 'stack') {
                 // Force a complete re-render to ensure the card is properly removed
-                renderInsights();
+                await renderInsights();
             }
             
             // Update stack actions if we're in stack view
@@ -8221,7 +8266,7 @@ async function removeItemFromStack(stackId, insightId) {
                         } else {
                             // We're in home view - render normally
                             console.log('🏠 In home view, rendering normally');
-                            renderInsights();
+                            await renderInsights();
                         }
                     } else {
                         console.warn('⚠️ Insight not found in stack');
@@ -8277,7 +8322,7 @@ async function removeItemFromStack(stackId, insightId) {
                         }
                         
                         // Re-render content
-                        renderInsights();
+                        await renderInsights();
                     } else {
                         console.warn('⚠️ Insight not found in stack');
                         showErrorMessage('Item not found in stack.');
@@ -8349,7 +8394,7 @@ async function deleteStack(stackId) {
                     updatePaginationCounts();
                     
                     // Re-render content
-                    renderInsights();
+                    await renderInsights();
                 } else {
                     throw new Error('Failed to remove stack_id from insights');
                 }
@@ -8380,7 +8425,7 @@ async function deleteStack(stackId) {
                 updatePaginationCounts();
                 
                 // Re-render content
-                renderInsights();
+                await renderInsights();
             } else {
                 showErrorMessage('Failed to delete stack. Please try again.');
             }
@@ -8735,7 +8780,7 @@ async function moveCardToStack(insight, newStackId) {
             updatePaginationCounts();
             
             // Re-render content
-            renderInsights();
+            await renderInsights();
         } else {
             throw new Error(response.message || 'Failed to move card');
         }
@@ -8773,7 +8818,7 @@ async function moveCardToStack(insight, newStackId) {
                 updatePaginationCounts();
                 
                 // Re-render content
-                renderInsights();
+                await renderInsights();
             } else {
                 showErrorMessage('Failed to move card. Please try again.');
             }
@@ -8856,7 +8901,7 @@ async function removeCardFromStack(insight, stackId) {
                 }
             } else {
                 // We're in home view - render normally
-                renderInsights();
+                await renderInsights();
             }
         } else {
             throw new Error(response.message || 'Failed to remove card from stack');
@@ -8913,7 +8958,7 @@ async function removeCardFromStack(insight, stackId) {
                 updatePaginationCounts();
                 
                 // Re-render main view
-                renderInsights();
+                await renderInsights();
             } else {
                 showErrorMessage('Failed to remove card from stack. Please try again.');
             }
@@ -8932,7 +8977,7 @@ function closeStackExpansion() {
 }
 
 // Close inline stack expansion
-function closeStackExpansionInline(stackId) {
+async function closeStackExpansionInline(stackId) {
     const stackData = stacks.get(stackId);
     if (stackData) {
         stackData.isExpanded = false;
@@ -8952,18 +8997,18 @@ function closeStackExpansionInline(stackId) {
     if (editModeMainBtn) editModeMainBtn.style.display = 'flex';
     
     // Re-render main view
-    renderInsights();
+    await renderInsights();
 }
 
 // Collapse stack back to normal card
-function collapseStack(stackId) {
+async function collapseStack(stackId) {
     const stackData = stacks.get(stackId);
     if (!stackData) return;
     
     stackData.isExpanded = false;
     
     // Re-render to show collapsed stack
-    renderInsights();
+    await renderInsights();
 }
 
 // Edit stack name
@@ -9000,7 +9045,7 @@ async function editStackName(stackId) {
                 }
         
                 // Re-render main view to update stack card
-                renderInsights();
+                await renderInsights();
         
                 showSuccessMessage('Stack name updated successfully!');
             } else {
@@ -9031,7 +9076,7 @@ async function editStackName(stackId) {
                 }
         
                 // Re-render main view to update stack card
-                renderInsights();
+                await renderInsights();
         
                 showSuccessMessage('Stack name updated successfully! (Local storage)');
             } else {
@@ -9440,7 +9485,7 @@ async function saveInsightTags(insight, modal) {
             saveInsightsToLocalStorage({ force: true });
             
             // Force re-render to show updated tags
-            renderInsights();
+            await renderInsights();
             
             closeTagEditModal(modal);
             showSuccessMessage('Tag updated successfully!');
@@ -9628,7 +9673,7 @@ function testFilterFunctionality() {
 window.testFilterFunctionality = testFilterFunctionality;
 
 // Test function to manually test filtering with current data
-function testFiltering() {
+async function testFiltering() {
     console.log('🧪 Testing filtering with current data...');
     
     // Test with 'area' filter
@@ -9640,7 +9685,7 @@ function testFiltering() {
     currentFilters.tags = 'area';
     
     // Get filtered insights
-    const filtered = getFilteredInsights();
+    const filtered = await getFilteredInsights();
     console.log('📊 Filtered insights for area:', filtered.length);
     
     // Restore original filters
@@ -9653,12 +9698,12 @@ function testFiltering() {
 window.testFiltering = testFiltering;
 
 // Function to clear all filters and show all insights
-function clearAllFilters() {
+async function clearAllFilters() {
     console.log('🧹 Clearing all filters...');
     
     currentFilters = {
         latest: 'latest',
-        tags: 'all'  // Set to 'all' instead of null for consistency
+        tags: 'all'  // Set to 'all' for consistency
     };
     
     // Clear the global insights for filtering
@@ -9675,7 +9720,7 @@ function clearAllFilters() {
     showFilterStatus();
     
     // Re-render with all insights
-    resetInsightsPaginationAndRerender();
+    await resetInsightsPaginationAndRerender();
     
     console.log('✅ All filters cleared');
 }

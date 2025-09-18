@@ -1523,4 +1523,36 @@
 
   /* 6) Optional: make hero title match instantly */
   .hero-copy .hero-title { color: var(--brand-purple) !important; }
+
+  /* === Translation Button Styles === */
+  .translation-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(75, 38, 79, 0.05);
+    border: 1px solid rgba(75, 38, 79, 0.2);
+    border-radius: 8px;
+    color: var(--brand-purple);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .translation-btn:hover {
+    background: rgba(75, 38, 79, 0.08);
+    border-color: var(--quest-purple);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+
+  .translation-flag {
+    font-size: 1rem;
+  }
+
+  .translation-text {
+    font-size: 0.875rem;
+  }
   

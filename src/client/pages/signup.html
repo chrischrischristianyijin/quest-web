@@ -19,8 +19,15 @@
             <div class="signup-background-blur"></div>
             <div class="signup-container">
                 <div class="signup-header">
-                    <h1 class="signup-title">Create Your Account</h1>
-                    <p class="signup-subtitle">Join Quest and start your knowledge journey</p>
+                    <div class="signup-header-top">
+                        <h1 class="signup-title" data-translate="create_account">Create Your Account</h1>
+                        <button class="translation-btn" id="translationToggle">
+                            <span class="translation-flag">🌐</span>
+                            <span class="translation-text" data-translate="language">EN</span>
+                        </button>
+                    </div>
+                    <p class="signup-subtitle" data-translate="signup_subtitle">Join Quest and start your knowledge
+                        journey</p>
                 </div>
 
                 <div class="error-message" id="errorMessage"></div>
@@ -28,45 +35,51 @@
 
                 <form class="signup-form" id="signupForm">
                     <div class="form-group">
-                        <label class="form-label" for="email">Email Address</label>
+                        <label class="form-label" for="email" data-translate="email_address">Email Address</label>
                         <input type="email" id="email" class="form-input" placeholder="Enter your email address"
-                            required>
+                            data-translate-placeholder="email_placeholder" required>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="nickname">Nickname</label>
-                        <input type="text" id="nickname" class="form-input" placeholder="Choose a nickname (2-20 characters)" required>
+                        <label class="form-label" for="nickname" data-translate="nickname">Nickname</label>
+                        <input type="text" id="nickname" class="form-input"
+                            placeholder="Choose a nickname (2-20 characters)"
+                            data-translate-placeholder="nickname_placeholder" required>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="password">Password</label>
+                        <label class="form-label" for="password" data-translate="password">Password</label>
                         <input type="password" id="password" class="form-input" placeholder="Create a secure password"
-                            required>
+                            data-translate-placeholder="password_placeholder" required>
                         <div class="password-requirements">
-                            <h4>Password Requirements:</h4>
+                            <h4 data-translate="password_requirements">Password Requirements:</h4>
                             <ul>
-                                <li>At least 8 characters long</li>
-                                <li>Must contain both letters and numbers</li>
-                                <li>Special characters are recommended for better security</li>
+                                <li data-translate="password_req_1">At least 8 characters long</li>
+                                <li data-translate="password_req_2">Must contain both letters and numbers</li>
+                                <li data-translate="password_req_3">Special characters are recommended for better
+                                    security</li>
                             </ul>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="confirmPassword">Confirm Password</label>
+                        <label class="form-label" for="confirmPassword" data-translate="confirm_password">Confirm
+                            Password</label>
                         <input type="password" id="confirmPassword" class="form-input"
-                            placeholder="Re-enter your password" required>
+                            placeholder="Re-enter your password"
+                            data-translate-placeholder="confirm_password_placeholder" required>
                     </div>
 
                     <div class="terms-checkbox">
                         <input type="checkbox" id="agreeTerms" required>
-                        <div class="terms-text">
-                            I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy"
-                                target="_blank">Privacy Policy</a>
+                        <div class="terms-text" data-translate="agree_terms">
+                            I agree to the <a href="/terms" target="_blank" data-translate="terms_of_service">Terms of
+                                Service</a> and <a href="/privacy" target="_blank"
+                                data-translate="privacy_policy">Privacy Policy</a>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <button type="submit" class="btn btn-primary" id="submitBtn" data-translate="create_account_btn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" />
@@ -76,8 +89,8 @@
                 </form>
 
                 <div class="login-section">
-                    <p class="login-text">Already have an account?</p>
-                    <a href="/login" class="btn btn-secondary">Login Now</a>
+                    <p class="login-text" data-translate="already_have_account">Already have an account?</p>
+                    <a href="/login" class="btn btn-secondary" data-translate="login_now">Login Now</a>
                 </div>
             </div>
         </section>
@@ -90,6 +103,7 @@
         </a>
     </div>
 
+    <script type="module" src="/js/translation.js"></script>
     <script type="module" src="/js/signup.js"></script>
 
     <!-- Vercel Analytics - Disabled to prevent 404 errors -->
