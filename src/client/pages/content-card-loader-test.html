@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Card Loader Test - Quest</title>
+    <link rel="stylesheet" href="/styles/common.css">
+    <link rel="stylesheet" href="/styles/my-space.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .content-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .test-urls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .test-urls input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Content Card Loader Test</h1>
+            <p>Test loading placeholder functionality for content cards</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test Loading Cards</h3>
+            <div class="test-urls">
+                <input type="url" id="testUrl" placeholder="Enter URL to test" value="https://example.com">
+                <input type="text" id="customTitle" placeholder="Custom title (optional)">
+            </div>
+            <button onclick="testLoadingCard()">Create Loading Card</button>
+            <button onclick="testMultipleCards()">Create Multiple Cards</button>
+            <button onclick="clearAllCards()">Clear All Cards</button>
+            <div id="testStatus" class="status info">Ready to test...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Simulate Content Loading</h3>
+            <button onclick="simulateSuccess()">Simulate Successful Load</button>
+            <button onclick="simulateError()">Simulate Loading Error</button>
+            <button onclick="simulateSlowLoad()">Simulate Slow Load (3s)</button>
+            <div id="simulationStatus" class="status info">No simulation running...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Current Status</h3>
+            <div id="currentStatus" class="status info">Click "Check Status" to get current information</div>
+            <button onclick="checkStatus()">Check Status</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Content Cards Display</h3>
+            <div id="contentCards" class="content-cards">
+                <!-- Loading cards and actual cards will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { ContentCardLoader } from '/js/content-card-loader.js';
+
+        const loader = new ContentCardLoader();
+        let currentLoadingCardId = null;
+        let testCounter = 0;
+
+        // Test creating a loading card
+        window.testLoadingCard = () => {
+            const url = document.getElementById('testUrl').value || 'https://example.com';
+            const customTitle = document.getElementById('customTitle').value;
+            
+            testCounter++;
+            const testUrl = `${url}?test=${testCounter}`;
+            
+            currentLoadingCardId = loader.createLoadingCard(testUrl, 'prepend');
+            
+            const statusDiv = document.getElementById('testStatus');
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = `✅ Created loading card: ${currentLoadingCardId}`;
+            
+            console.log('🔄 Created loading card:', currentLoadingCardId);
+        };
+
+        // Test creating multiple loading cards
+        window.testMultipleCards = () => {
+            const urls = [
+                'https://github.com',
+                'https://stackoverflow.com',
+                'https://medium.com',
+                'https://dev.to'
+            ];
+            
+            urls.forEach((url, index) => {
+                setTimeout(() => {
+                    const cardId = loader.createLoadingCard(url, 'append');
+                    console.log(`🔄 Created loading card ${index + 1}:`, cardId);
+                }, index * 500); // Stagger creation
+            });
+            
+            const statusDiv = document.getElementById('testStatus');
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = `🔄 Creating ${urls.length} loading cards...`;
+        };
+
+        // Clear all cards
+        window.clearAllCards = () => {
+            const contentCards = document.getElementById('contentCards');
+            contentCards.innerHTML = '';
+            loader.clearAllLoadingCards();
+            
+            const statusDiv = document.getElementById('testStatus');
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = '🧹 Cleared all cards';
+        };
+
+        // Simulate successful content loading
+        window.simulateSuccess = () => {
+            if (!currentLoadingCardId) {
+                alert('Please create a loading card first');
+                return;
+            }
+            
+            const mockInsightData = {
+                id: `insight-${Date.now()}`,
+                title: document.getElementById('customTitle').value || 'Example Article Title',
+                description: 'This is a sample description for the loaded content. It demonstrates how the loading placeholder transitions to actual content.',
+                url: document.getElementById('testUrl').value || 'https://example.com',
+                image_url: 'https://picsum.photos/400/200?random=' + Date.now(),
+                tags: [{ name: 'Test', id: 'test-tag' }]
+            };
+            
+            loader.updateLoadingCard(currentLoadingCardId, mockInsightData);
+            
+            const statusDiv = document.getElementById('simulationStatus');
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = '✅ Simulated successful content loading';
+            
+            currentLoadingCardId = null;
+        };
+
+        // Simulate loading error
+        window.simulateError = () => {
+            if (!currentLoadingCardId) {
+                alert('Please create a loading card first');
+                return;
+            }
+            
+            loader.removeLoadingCard(currentLoadingCardId, true);
+            
+            const statusDiv = document.getElementById('simulationStatus');
+            statusDiv.className = 'status error';
+            statusDiv.innerHTML = '❌ Simulated loading error';
+            
+            currentLoadingCardId = null;
+        };
+
+        // Simulate slow loading
+        window.simulateSlowLoad = () => {
+            if (!currentLoadingCardId) {
+                alert('Please create a loading card first');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('simulationStatus');
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = '⏳ Simulating slow load (3 seconds)...';
+            
+            setTimeout(() => {
+                const mockInsightData = {
+                    id: `slow-insight-${Date.now()}`,
+                    title: 'Slow Loading Article',
+                    description: 'This content took 3 seconds to load, demonstrating the loading placeholder functionality.',
+                    url: document.getElementById('testUrl').value || 'https://example.com',
+                    image_url: 'https://picsum.photos/400/200?random=' + Date.now(),
+                    tags: [{ name: 'Slow', id: 'slow-tag' }]
+                };
+                
+                loader.updateLoadingCard(currentLoadingCardId, mockInsightData);
+                
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = '✅ Slow load completed successfully';
+                
+                currentLoadingCardId = null;
+            }, 3000);
+        };
+
+        // Check current status
+        window.checkStatus = () => {
+            const loadingCards = loader.getLoadingCards();
+            const hasLoading = loader.hasLoadingCards();
+            
+            const statusDiv = document.getElementById('currentStatus');
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = `
+                <strong>📊 Current Status</strong><br>
+                Loading cards: ${loadingCards.length}<br>
+                Has loading cards: ${hasLoading}<br>
+                Current card ID: ${currentLoadingCardId || 'None'}<br>
+                Loading card IDs: ${loadingCards.join(', ') || 'None'}
+            `;
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🔄 Content Card Loader Test initialized');
+            
+            // Set up the content cards container
+            const contentCards = document.getElementById('contentCards');
+            if (!contentCards) {
+                console.error('❌ Content cards container not found');
+            }
+            
+            // Auto-check status
+            setTimeout(() => {
+                checkStatus();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

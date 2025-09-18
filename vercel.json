@@ -40,6 +40,10 @@
       "destination": "/pages/auto-relogin-test.html"
     },
     {
+      "source": "/content-card-loader-test",
+      "destination": "/pages/content-card-loader-test.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/pages/privacy.html"
     },

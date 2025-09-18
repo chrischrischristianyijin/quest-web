@@ -3068,6 +3068,9 @@ function bindEvents() {
                 if (customTitle) insightData.title = customTitle;
                 if (customThought) insightData.thought = customThought;
                 
+                // 创建加载占位符卡片
+                const loadingCardId = window.contentCardLoader.createLoadingCard(url, 'prepend');
+                
                 // 使用正确的API端点创建insight
                 console.log('📝 Creating insight with data:', insightData);
                 console.log('🔍 DEBUG: Full insightData object:', JSON.stringify(insightData, null, 2));
@@ -3081,6 +3084,16 @@ function bindEvents() {
                 const result = await api.createInsight(insightData);
                 console.log('✅ Insight creation result:', result);
                 console.log('🔍 DEBUG: Result data:', JSON.stringify(result, null, 2));
+                
+                // 更新加载卡片为实际内容
+                if (result && result.success && result.data) {
+                    window.contentCardLoader.updateLoadingCard(loadingCardId, result.data);
+                    console.log('✅ Loading card updated with actual content');
+                } else {
+                    // 如果创建失败，移除加载卡片
+                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
+                    console.log('❌ Failed to create insight, removed loading card');
+                }
                 
                 // 清空表单并隐藏模态框
                 addContentForm.reset();
@@ -3156,6 +3169,11 @@ function bindEvents() {
                 }
                 
                 showErrorMessage(errorMessage);
+                
+                // 移除加载卡片（如果存在）
+                if (typeof loadingCardId !== 'undefined') {
+                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
+                }
             } finally {
                 // 恢复按钮状态
                 const submitBtn = document.getElementById('addContentBtn');
