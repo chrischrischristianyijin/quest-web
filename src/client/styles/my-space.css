@@ -101,7 +101,7 @@ body {
 
 /* ===== DEMO CHAT BUTTON ===== */
 .demo-chat-btn {
-    display: flex;
+    display: none; /* 暂时隐藏 demo chat 按钮 */
     align-items: center;
     gap: 8px;
     background: var(--quest-purple);
@@ -1347,6 +1347,7 @@ body .add-content-modal-content {
     }
 
     .demo-chat-btn {
+        display: none; /* 暂时隐藏 demo chat 按钮 */
         padding: 8px 12px;
         font-size: 0.8rem;
         border-radius: 16px;
@@ -1375,6 +1376,7 @@ body .add-content-modal-content {
     }
 
     .demo-chat-btn {
+        display: none; /* 暂时隐藏 demo chat 按钮 */
         padding: 6px 10px;
         font-size: 0.75rem;
         border-radius: 14px;
