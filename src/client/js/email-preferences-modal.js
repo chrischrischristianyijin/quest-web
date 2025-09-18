@@ -761,12 +761,19 @@ class EmailPreferencesModal {
             this.isLoading = true;
             this.showTestSendingState();
 
-            const response = await emailService.sendTestEmail(email);
+            // CRITICAL: Set the auth token in the API instance before making the request
+            api.setAuthToken(token);
+
+            // Use the backend API to send test email with real user data
+            const response = await api.request('/api/v1/email/test', {
+                method: 'POST',
+                body: JSON.stringify({ email: email })
+            });
 
             if (response.success) {
-                this.showSuccess('Test email sent successfully! Check your inbox.');
+                this.showSuccess('Test email sent successfully! Check your inbox for your real digest data.');
             } else {
-                this.showError(`Failed to send test email: ${response.error}`);
+                this.showError(`Failed to send test email: ${response.message || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error sending test email:', error);
@@ -947,9 +954,33 @@ class EmailPreferencesModal {
         }
     }
 
+    resetRightPanel() {
+        // Remove any existing messages
+        const existing = this.modal.querySelector('.email-message');
+        if (existing) {
+            existing.remove();
+        }
+
+        // Ensure the default "About Your Digest" section is visible and prominent
+        const emailInfo = this.modal.querySelector('.email-info');
+        if (emailInfo) {
+            emailInfo.style.display = 'block';
+            emailInfo.style.opacity = '1';
+        }
+
+        // Hide any preview content that might be showing
+        const previewContent = this.modal.querySelector('.digest-preview-content');
+        if (previewContent) {
+            previewContent.style.display = 'none';
+        }
+    }
+
     show() {
         this.modal.classList.add('show');
         document.body.style.overflow = 'hidden';
+        
+        // Clear any existing messages and reset to default content
+        this.resetRightPanel();
         
         // Load preferences safely without triggering logout
         // Add a small delay to ensure DOM elements are ready
