@@ -117,8 +117,12 @@ class EmailPreferencesManager {
 
             const response = await api.request('/api/v1/email/digest/preview');
             
-            if (response.success) {
-                this.showDigestPreview(response.preview);
+            if (response.ok && response.html) {
+                this.showDigestPreview({ 
+                    html_content: response.html, 
+                    text_content: '', 
+                    payload: response.params || {} 
+                });
             } else {
                 this.showError('Failed to generate digest preview');
             }

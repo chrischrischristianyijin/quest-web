@@ -2996,8 +2996,10 @@ function bindEvents() {
     // Header email preferences button
     if (headerEmailPreferences) {
         headerEmailPreferences.addEventListener('click', () => {
-            // Navigate to email preferences page
-            window.location.href = '/email-preferences';
+            // Open email preferences modal
+            import('./email-preferences-modal.js').then(module => {
+                module.emailPreferencesModal.show();
+            });
         });
     }
     

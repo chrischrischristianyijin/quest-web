@@ -353,6 +353,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Hide email preferences dropdown across all pages */
-#headerEmailPreferences {
+/* #headerEmailPreferences {
     display: none !important;
-}
+} */

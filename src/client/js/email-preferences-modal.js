@@ -722,15 +722,26 @@ class EmailPreferencesModal {
             this.isLoading = true;
             this.showPreviewLoadingState();
 
-            // CRITICAL: Set the auth token in the API instance before making the request
-            api.setAuthToken(token);
+            const url = `${API_CONFIG.API_BASE_URL}/api/v1/email/digest/preview`;
+            const commonHeaders = {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            };
 
-            const response = await api.request('/api/v1/email/digest/preview');
-            
-            if (response.success) {
-                this.showDigestPreview(response.preview);
+            // Try GET first (now expecting JSON)
+            let res = await fetch(url, { method: 'GET', headers: commonHeaders });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.ok && data.html) {
+                    this.showDigestPreview({ html_content: data.html, text_content: '', payload: data.params || {} });
+                } else {
+                    // Fallback to POST if GET returns unexpected format
+                    await this.fallbackToPost(url, token);
+                }
             } else {
-                this.showError('Failed to generate digest preview');
+                // GET failed, try POST fallback
+                await this.fallbackToPost(url, token);
             }
         } catch (error) {
             console.error('Error generating digest preview:', error);
@@ -739,6 +750,32 @@ class EmailPreferencesModal {
             this.isLoading = false;
             this.hidePreviewLoadingState();
         }
+    }
+
+    // New method: POST fallback logic
+    async fallbackToPost(url, token) {
+        const body = this.getFormData(); // Get current preferences to send to backend
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.success && data.preview) {
+                this.showDigestPreview(data.preview);
+                return;
+            }
+        }
+
+        // Read backend error message for better UX
+        const errorText = await res.text();
+        this.showError(`Failed to generate preview: ${res.status} ${errorText}`);
     }
 
     async sendTestEmail() {
@@ -767,7 +804,10 @@ class EmailPreferencesModal {
             // Use the backend API to send test email with real user data
             const response = await api.request('/api/v1/email/test', {
                 method: 'POST',
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ 
+                    email: email,
+                    template_id: 1  // Pass template ID to backend
+                })
             });
 
             if (response.success) {

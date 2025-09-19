@@ -82,11 +82,19 @@ class ApiService {
                     if (errorData.detail) {
                         errorMessage = errorData.detail;
                     }
+                    console.error('🔍 详细错误信息:', errorData);
                 } catch (e) {
-                    // If we can't parse the error response, use default message
+                    console.error('🔍 无法解析错误响应:', e);
                 }
                 
-                // 触发自动退出登录
+                // 触发自动退出登录 (re-enabled - backend auth is now fixed)
+                console.error('🔍 Authentication failed - details:', {
+                    url: url,
+                    status: response.status,
+                    hasToken: !!this.authToken,
+                    tokenPreview: this.authToken ? this.authToken.substring(0, 50) + '...' : 'None'
+                });
+                
                 try {
                     const { tokenManager } = await import('./token-manager.js');
                     await tokenManager.autoLogout(errorMessage);

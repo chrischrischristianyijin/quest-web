@@ -99,7 +99,7 @@ class TokenManager {
                     return await requestFn();
                 } else {
                     console.log('❌ Token刷新失败，自动退出登录');
-                    // 自动退出登录
+                    // 自动退出登录 (re-enabled - backend auth is now fixed)
                     await this.autoLogout('Token刷新失败');
                     throw error;
                 }
