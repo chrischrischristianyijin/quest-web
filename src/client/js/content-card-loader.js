@@ -16,30 +16,37 @@ class ContentCardLoader {
         loadingCard.dataset.url = url;
         
         loadingCard.innerHTML = `
-            <div class="loading-card-content">
-                <div class="loading-card-image-container">
-                    <div class="loading-skeleton loading-skeleton-image"></div>
-                </div>
-                <div class="loading-card-header">
-                    <div class="loading-card-top-row">
-                        <div class="loading-skeleton loading-skeleton-source"></div>
-                        <div class="loading-skeleton loading-skeleton-date"></div>
+            <button class="content-card-delete-btn" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="loading-card-image-container"></div>
+            <div class="content-card-content">
+                <div class="content-card-header">
+                    <div class="content-card-top-row">
+                        <div class="content-card-date"></div>
+                        <div class="content-card-source">
+                            <div class="content-card-source-logo"></div>
+                            <span class="content-card-source-name"></span>
+                        </div>
                     </div>
-                    <div class="loading-skeleton loading-skeleton-title"></div>
+                    <div class="content-card-title"></div>
                 </div>
-                <div class="loading-card-description">
-                    <div class="loading-skeleton loading-skeleton-description"></div>
-                    <div class="loading-skeleton loading-skeleton-description-short"></div>
+                <div class="content-card-description">
+                    <div class="loading-card-description-line"></div>
+                    <div class="loading-card-description-line"></div>
+                    <div class="loading-card-description-line"></div>
                 </div>
-                <div class="loading-card-footer">
-                    <div class="loading-skeleton loading-skeleton-tag"></div>
+                <div class="content-card-footer">
+                    <div class="content-card-tag-main"></div>
                 </div>
-                <div class="loading-card-overlay">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                    </div>
-                    <div class="loading-text">Loading content...</div>
+            </div>
+            <div class="loading-card-overlay">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
                 </div>
+                <div class="loading-text">Loading content...</div>
             </div>
         `;
         
@@ -74,6 +81,21 @@ class ContentCardLoader {
             loadingCard.style.transform = 'translateY(0)';
         }, 10);
         
+        // 添加悬停效果支持
+        loadingCard.addEventListener('mouseenter', () => {
+            if (!loadingCard.classList.contains('updating')) {
+                loadingCard.style.transform = 'translateY(-4px)';
+                loadingCard.style.boxShadow = 'var(--shadow-medium)';
+            }
+        });
+        
+        loadingCard.addEventListener('mouseleave', () => {
+            if (!loadingCard.classList.contains('updating')) {
+                loadingCard.style.transform = 'translateY(0)';
+                loadingCard.style.boxShadow = 'var(--shadow-light)';
+            }
+        });
+        
         console.log('🔄 Created loading card:', cardId, 'for URL:', url);
         return cardId;
     }
@@ -95,9 +117,10 @@ class ContentCardLoader {
         const actualCard = this.createActualCard(insightData);
         
         // 添加更新动画
-        loadingCard.style.transition = 'all 0.5s ease-in-out';
-        loadingCard.style.transform = 'scale(0.95)';
-        loadingCard.style.opacity = '0.7';
+        loadingCard.classList.add('updating');
+        loadingCard.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        loadingCard.style.transform = 'scale(0.98)';
+        loadingCard.style.opacity = '0.8';
         
         setTimeout(() => {
             // 替换加载卡片
@@ -105,19 +128,30 @@ class ContentCardLoader {
             
             // 添加新卡片的淡入动画
             actualCard.style.opacity = '0';
-            actualCard.style.transform = 'translateY(20px)';
+            actualCard.style.transform = 'translateY(10px) scale(0.98)';
             
             setTimeout(() => {
-                actualCard.style.transition = 'all 0.4s ease-out';
+                actualCard.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
                 actualCard.style.opacity = '1';
-                actualCard.style.transform = 'translateY(0)';
+                actualCard.style.transform = 'translateY(0) scale(1)';
+                
+                // 添加悬停效果
+                actualCard.addEventListener('mouseenter', () => {
+                    actualCard.style.transform = 'translateY(-4px) scale(1)';
+                    actualCard.style.boxShadow = 'var(--shadow-medium)';
+                });
+                
+                actualCard.addEventListener('mouseleave', () => {
+                    actualCard.style.transform = 'translateY(0) scale(1)';
+                    actualCard.style.boxShadow = 'var(--shadow-light)';
+                });
             }, 50);
             
             // 清理加载卡片记录
             this.loadingCards.delete(cardId);
             
             console.log('✅ Successfully replaced loading card with actual content');
-        }, 300);
+        }, 250);
         
         return true;
     }
@@ -167,23 +201,54 @@ class ContentCardLoader {
         if (showError) {
             // 显示错误状态
             loadingCard.innerHTML = `
-                <div class="loading-card-content error-state">
+                <button class="content-card-delete-btn" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <div class="loading-card-image-container"></div>
+                <div class="content-card-content">
+                    <div class="content-card-header">
+                        <div class="content-card-top-row">
+                            <div class="content-card-date"></div>
+                            <div class="content-card-source">
+                                <div class="content-card-source-logo"></div>
+                                <span class="content-card-source-name"></span>
+                            </div>
+                        </div>
+                        <div class="content-card-title"></div>
+                    </div>
+                    <div class="content-card-description">
+                        <div class="loading-card-description-line"></div>
+                        <div class="loading-card-description-line"></div>
+                        <div class="loading-card-description-line"></div>
+                    </div>
+                    <div class="content-card-footer">
+                        <div class="content-card-tag-main"></div>
+                    </div>
+                </div>
+                <div class="error-state">
                     <div class="error-icon">❌</div>
                     <div class="error-text">Failed to load content</div>
                     <div class="error-details">${loadingInfo.url}</div>
                 </div>
             `;
             
+            // 添加错误动画
+            loadingCard.style.transition = 'all 0.3s ease-out';
+            loadingCard.style.borderColor = '#dc3545';
+            loadingCard.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.2)';
+            
             // 3秒后移除
             setTimeout(() => {
                 if (loadingCard.parentNode) {
-                    loadingCard.style.transition = 'all 0.3s ease-out';
+                    loadingCard.style.transition = 'all 0.4s ease-out';
                     loadingCard.style.opacity = '0';
-                    loadingCard.style.transform = 'translateY(-20px)';
+                    loadingCard.style.transform = 'translateY(-20px) scale(0.95)';
                     
                     setTimeout(() => {
                         loadingCard.remove();
-                    }, 300);
+                    }, 400);
                 }
             }, 3000);
         } else {

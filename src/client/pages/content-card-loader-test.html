@@ -94,6 +94,9 @@
             </div>
             <button onclick="testLoadingCard()">Create Loading Card</button>
             <button onclick="testMultipleCards()">Create Multiple Cards</button>
+            <button onclick="testRealisticCard()">Create Realistic Card</button>
+            <button onclick="testNewsCard()">Test News Card (NBC)</button>
+            <button onclick="testBeautifulCards()">Create Beautiful Cards</button>
             <button onclick="clearAllCards()">Clear All Cards</button>
             <div id="testStatus" class="status info">Ready to test...</div>
         </div>
@@ -104,6 +107,12 @@
             <button onclick="simulateError()">Simulate Loading Error</button>
             <button onclick="simulateSlowLoad()">Simulate Slow Load (3s)</button>
             <div id="simulationStatus" class="status info">No simulation running...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>✏️ Edit Mode Test</h3>
+            <button onclick="toggleEditMode()">Toggle Edit Mode</button>
+            <div id="editModeStatus" class="status info">Edit mode: OFF</div>
         </div>
 
         <div class="test-section">
@@ -165,6 +174,60 @@
             statusDiv.innerHTML = `🔄 Creating ${urls.length} loading cards...`;
         };
 
+        // Test realistic card
+        window.testRealisticCard = () => {
+            const realisticUrls = [
+                'https://github.com/microsoft/vscode',
+                'https://stackoverflow.com/questions/tagged/javascript',
+                'https://medium.com/@developer/article',
+                'https://dev.to/developer/tutorial',
+                'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+            ];
+            
+            const randomUrl = realisticUrls[Math.floor(Math.random() * realisticUrls.length)];
+            currentLoadingCardId = loader.createLoadingCard(randomUrl, 'prepend');
+            
+            const statusDiv = document.getElementById('testStatus');
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = `✅ Created realistic loading card: ${currentLoadingCardId}`;
+            
+            console.log('🔄 Created realistic loading card:', currentLoadingCardId);
+        };
+
+        // Test news card (NBC News example)
+        window.testNewsCard = () => {
+            const newsUrl = 'https://www.nbcnews.com/politics/donald-trump/hollywood-rallies-behind-kimmel-while-trump-supporters-cheer-suspension-rcna123456';
+            currentLoadingCardId = loader.createLoadingCard(newsUrl, 'prepend');
+            
+            const statusDiv = document.getElementById('testStatus');
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = `✅ Created NBC News loading card: ${currentLoadingCardId}`;
+            
+            console.log('🔄 Created NBC News loading card:', currentLoadingCardId);
+        };
+
+        // Test beautiful cards with staggered creation
+        window.testBeautifulCards = () => {
+            const beautifulUrls = [
+                'https://www.nytimes.com/2024/01/15/technology/ai-chatgpt-openai.html',
+                'https://github.com/microsoft/vscode/releases/tag/1.85.0',
+                'https://medium.com/@techwriter/the-future-of-web-development-2024',
+                'https://dev.to/developer/building-modern-web-apps-with-react-18',
+                'https://stackoverflow.com/questions/tagged/javascript'
+            ];
+            
+            beautifulUrls.forEach((url, index) => {
+                setTimeout(() => {
+                    const cardId = loader.createLoadingCard(url, 'prepend');
+                    console.log(`🔄 Created beautiful loading card ${index + 1}:`, cardId);
+                }, index * 300); // Stagger creation by 300ms
+            });
+            
+            const statusDiv = document.getElementById('testStatus');
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = `✅ Creating ${beautifulUrls.length} beautiful loading cards with staggered animation...`;
+        };
+
         // Clear all cards
         window.clearAllCards = () => {
             const contentCards = document.getElementById('contentCards');
@@ -183,13 +246,32 @@
                 return;
             }
             
+            const realisticTitles = [
+                'Building Modern Web Applications with React',
+                'Understanding JavaScript Closures and Scope',
+                'The Future of Web Development: Trends and Predictions',
+                'Mastering CSS Grid Layout for Responsive Design',
+                'Node.js Best Practices for Production Applications'
+            ];
+            
+            const realisticDescriptions = [
+                'Learn how to build scalable and maintainable web applications using modern React patterns and best practices.',
+                'Deep dive into JavaScript closures, scope chains, and how they work under the hood in modern browsers.',
+                'Explore the latest trends in web development including WebAssembly, Progressive Web Apps, and more.',
+                'Create beautiful, responsive layouts using CSS Grid and understand when to use it over Flexbox.',
+                'Essential tips and tricks for deploying Node.js applications in production environments.'
+            ];
+            
+            const randomTitle = realisticTitles[Math.floor(Math.random() * realisticTitles.length)];
+            const randomDescription = realisticDescriptions[Math.floor(Math.random() * realisticDescriptions.length)];
+            
             const mockInsightData = {
                 id: `insight-${Date.now()}`,
-                title: document.getElementById('customTitle').value || 'Example Article Title',
-                description: 'This is a sample description for the loaded content. It demonstrates how the loading placeholder transitions to actual content.',
+                title: document.getElementById('customTitle').value || randomTitle,
+                description: randomDescription,
                 url: document.getElementById('testUrl').value || 'https://example.com',
-                image_url: 'https://picsum.photos/400/200?random=' + Date.now(),
-                tags: [{ name: 'Test', id: 'test-tag' }]
+                image_url: `https://picsum.photos/400/200?random=${Date.now()}`,
+                tags: [{ name: 'Development', id: 'dev-tag' }, { name: 'Tutorial', id: 'tutorial-tag' }]
             };
             
             loader.updateLoadingCard(currentLoadingCardId, mockInsightData);
@@ -247,10 +329,29 @@
             }, 3000);
         };
 
+        // Toggle edit mode
+        window.toggleEditMode = () => {
+            const body = document.body;
+            const isEditMode = body.classList.contains('edit-mode');
+            
+            if (isEditMode) {
+                body.classList.remove('edit-mode');
+                document.getElementById('editModeStatus').innerHTML = 'Edit mode: OFF';
+                document.getElementById('editModeStatus').className = 'status info';
+            } else {
+                body.classList.add('edit-mode');
+                document.getElementById('editModeStatus').innerHTML = 'Edit mode: ON';
+                document.getElementById('editModeStatus').className = 'status success';
+            }
+            
+            console.log('🔄 Edit mode toggled:', !isEditMode);
+        };
+
         // Check current status
         window.checkStatus = () => {
             const loadingCards = loader.getLoadingCards();
             const hasLoading = loader.hasLoadingCards();
+            const isEditMode = document.body.classList.contains('edit-mode');
             
             const statusDiv = document.getElementById('currentStatus');
             statusDiv.className = 'status info';
@@ -258,6 +359,7 @@
                 <strong>📊 Current Status</strong><br>
                 Loading cards: ${loadingCards.length}<br>
                 Has loading cards: ${hasLoading}<br>
+                Edit mode: ${isEditMode ? 'ON' : 'OFF'}<br>
                 Current card ID: ${currentLoadingCardId || 'None'}<br>
                 Loading card IDs: ${loadingCards.join(', ') || 'None'}
             `;
