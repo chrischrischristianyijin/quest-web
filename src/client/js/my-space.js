@@ -290,6 +290,18 @@ function updatePaginationUI() {
         paginationPages.innerHTML = '';
         generatePageNumbers(paginationPages);
     }
+    
+    // Show or hide pagination container based on total pages
+    const paginationContainer = getCachedElementById('paginationContainer');
+    if (paginationContainer) {
+        if (totalPages > 1) {
+            paginationContainer.style.display = 'flex';
+            console.log('✅ Pagination container shown');
+        } else {
+            paginationContainer.style.display = 'none';
+            console.log('ℹ️ Pagination container hidden (only 1 page)');
+        }
+    }
 }
 
 // Generate page number buttons
@@ -501,8 +513,8 @@ async function goToPage(pageNum, { force = false } = {}) {
             }
         }
         
-        // Re-render insights (only show current page data)
-        await renderInsights();
+        // Re-render insights (only show current page data) - bypass debouncing for immediate update
+        await performRenderInsights();
         
         // Update UI
         updatePaginationUI();
@@ -1686,9 +1698,12 @@ async function performRenderInsights() {
     // Mark content as loaded
     contentCards.classList.add('content-loaded');
     
-    // Clear existing content cards (but keep skeleton for next time)
+    // Clear existing content cards (but keep template card and skeleton)
     const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
     existingCards.forEach(card => card.remove());
+    
+    // Ensure template card exists and is first
+    addTemplateCard();
     
     // Get filtered insights for rendering
     const filteredInsights = await getFilteredInsights();
@@ -1781,6 +1796,9 @@ async function performRenderInsights() {
     
     // Update edit mode state after rendering cards
     updateEditModeState();
+    
+    // Update pagination UI after rendering
+    updatePaginationUI();
     
     // 重置渲染标志
     isRendering = false;
@@ -2880,7 +2898,7 @@ async function deleteInsight(id) {
             if (remainingCards.length === 0) {
                 showEmptyState(parentContainer);
             }
-        }, 300);
+        }, 400); // 增加时间让动画更流畅
     } else {
         console.error('❌ 找不到父容器');
     }
@@ -3033,6 +3051,8 @@ function showAddContentModal() {
         addContentModal.style.display = 'flex';
         addContentModal.style.alignItems = 'center';
         addContentModal.style.justifyContent = 'center';
+        addContentModal.style.visibility = 'visible';
+        addContentModal.style.opacity = '1';
         
         // 添加show类
         addContentModal.classList.add('show');
@@ -3047,6 +3067,8 @@ function showAddContentModal() {
         if (addContentForm) {
             addContentForm.reset();
         }
+        
+        console.log('✅ Add content modal shown');
     } else {
         console.error('❌ 弹窗元素未找到');
     }
@@ -3055,11 +3077,18 @@ function showAddContentModal() {
 // 隐藏添加内容模态框
 function hideAddContentModal() {
     if (addContentModal) {
+        // 强制隐藏弹窗
         addContentModal.classList.remove('show');
         addContentModal.style.display = 'none';
+        addContentModal.style.visibility = 'hidden';
+        addContentModal.style.opacity = '0';
         
         // 使用滚动管理器恢复滚动
         scrollManager.enable();
+        
+        console.log('✅ Add content modal hidden');
+    } else {
+        console.warn('⚠️ addContentModal element not found');
     }
 }
 
@@ -3212,12 +3241,14 @@ function bindEvents() {
                     console.log('❌ Failed to create insight, removed loading card');
                 }
                 
-                // 清空表单并隐藏模态框
+                // 立即隐藏模态框，避免被后续操作影响
+                hideAddContentModal();
+                
+                // 清空表单
                 addContentForm.reset();
                 // 手动清空自定义字段
                 document.getElementById('customTitle').value = '';
                 document.getElementById('customThought').value = '';
-                hideAddContentModal();
                 
                 // 显示成功消息
                 showSuccessMessage('Content added successfully!');
@@ -4379,9 +4410,13 @@ function renderStackInsights(stack) {
         return;
     }
     
-    // Clear existing content
+    // Clear existing content (but keep template card)
     console.log('🧹 Clearing existing content');
-    contentCards.innerHTML = '';
+    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
+    existingCards.forEach(card => card.remove());
+    
+    // Ensure template card exists and is first
+    addTemplateCard();
     
     if (!stack.cards || stack.cards.length === 0) {
         console.log('📭 No cards in stack, rendering empty state');
@@ -4418,6 +4453,9 @@ function renderStackInsights(stack) {
     // Re-setup event delegation for the newly rendered cards
     console.log('🔧 Re-setting up event delegation');
     setupCardEventDelegation();
+    
+    // Update pagination UI after rendering
+    updatePaginationUI();
     
     console.log(`✅ Rendered ${stack.cards.length} insights for stack ${stack.id}`);
 }
@@ -7124,7 +7162,7 @@ function toggleEditMode() {
     }
 }
 
-// Add template card for adding new content in edit mode
+// Add template card for adding new content - always visible and always first
 function addTemplateCard() {
     const contentCards = document.getElementById('contentCards');
     if (!contentCards) return;
@@ -7153,21 +7191,21 @@ function addTemplateCard() {
         </div>
     `;
     
-    // Insert at the beginning
+    // Always insert at the very beginning
     contentCards.insertBefore(templateCard, contentCards.firstChild);
     
     // Add click event to show creation options
     templateCard.addEventListener('click', () => {
         showCreationOptionsModal();
     });
+    
+    console.log('✅ Template card added at first position');
 }
 
-// Remove template card when exiting edit mode
+// Remove template card when exiting edit mode - but now we keep it always visible
 function removeTemplateCard() {
-    const templateCard = document.querySelector('.template-card');
-    if (templateCard) {
-        templateCard.remove();
-    }
+    // Template card is now always visible, so we don't remove it
+    console.log('ℹ️ Template card is now always visible, not removing');
 }
 
 // Show modal with options to create card or stack
@@ -7373,13 +7411,13 @@ function updateEditModeState() {
     const editModeBtn = document.getElementById('editModeBtn');
     const editBtnText = editModeBtn ? editModeBtn.querySelector('.edit-btn-text') : null;
     
+    // Ensure template card always exists and is first
+    const existingTemplateCard = document.querySelector('.template-card');
+    if (!existingTemplateCard) {
+        addTemplateCard();
+    }
+    
     if (isEditMode) {
-        // Add template card if it doesn't exist
-        const existingTemplateCard = document.querySelector('.template-card');
-        if (!existingTemplateCard) {
-            addTemplateCard();
-        }
-        
         // Add shake animation to all content cards (excluding template)
         const contentCards = document.querySelectorAll('.content-card:not(.template-card)');
         contentCards.forEach(card => {
@@ -7392,11 +7430,11 @@ function updateEditModeState() {
             editBtnText.textContent = 'Done';
         }
     } else {
-        // Remove template card when not in edit mode
-        const templateCard = document.querySelector('.template-card');
-        if (templateCard) {
-            templateCard.remove();
-        }
+        // Remove shake animation from all content cards
+        const contentCards = document.querySelectorAll('.content-card:not(.template-card)');
+        contentCards.forEach(card => {
+            card.classList.remove('shake');
+        });
         
         // Update button text and state
         if (editModeBtn && editBtnText) {

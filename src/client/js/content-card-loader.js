@@ -15,6 +15,11 @@ class ContentCardLoader {
         loadingCard.dataset.loadingId = cardId;
         loadingCard.dataset.url = url;
         
+        // 设置初始动画状态 - 更流畅的进入动画
+        loadingCard.style.opacity = '0';
+        loadingCard.style.transform = 'translateY(-20px) scale(0.95)';
+        loadingCard.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        
         loadingCard.innerHTML = `
             <button class="content-card-delete-btn" style="display: none;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -50,21 +55,18 @@ class ContentCardLoader {
             </div>
         `;
         
-        // 插入到指定位置
+        // 插入到指定位置 - 新内容在第一位（但不在模板卡片之前）
         const contentCards = document.getElementById('contentCards');
         if (contentCards) {
-            if (position === 'prepend') {
-                contentCards.insertBefore(loadingCard, contentCards.firstChild);
-            } else if (position === 'append') {
-                contentCards.appendChild(loadingCard);
+            // 查找模板卡片
+            const templateCard = contentCards.querySelector('.template-card');
+            
+            if (templateCard) {
+                // 如果有模板卡片，插入到模板卡片之后
+                contentCards.insertBefore(loadingCard, templateCard.nextSibling);
             } else {
-                // 插入到指定位置
-                const targetElement = document.querySelector(position);
-                if (targetElement) {
-                    contentCards.insertBefore(loadingCard, targetElement);
-                } else {
-                    contentCards.appendChild(loadingCard);
-                }
+                // 如果没有模板卡片，插入到第一位
+                contentCards.insertBefore(loadingCard, contentCards.firstChild);
             }
         }
         
@@ -75,10 +77,10 @@ class ContentCardLoader {
             startTime: Date.now()
         });
         
-        // 添加淡入动画
+        // 添加淡入动画 - 更流畅的进入效果
         setTimeout(() => {
             loadingCard.style.opacity = '1';
-            loadingCard.style.transform = 'translateY(0)';
+            loadingCard.style.transform = 'translateY(0) scale(1)';
         }, 10);
         
         // 添加悬停效果支持
@@ -116,28 +118,31 @@ class ContentCardLoader {
         // 创建实际的insight卡片
         const actualCard = this.createActualCard(insightData);
         
-        // 添加更新动画
+        // 添加更新动画 - 更流畅的转换效果
         loadingCard.classList.add('updating');
-        loadingCard.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-        loadingCard.style.transform = 'scale(0.98)';
-        loadingCard.style.opacity = '0.8';
+        loadingCard.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        loadingCard.style.transform = 'scale(0.96) rotateY(3deg)';
+        loadingCard.style.opacity = '0.7';
+        loadingCard.style.filter = 'blur(1px)';
         
         setTimeout(() => {
             // 替换加载卡片
             loadingCard.parentNode.replaceChild(actualCard, loadingCard);
             
-            // 添加新卡片的淡入动画
+            // 添加新卡片的淡入动画 - 更流畅的进入效果
             actualCard.style.opacity = '0';
-            actualCard.style.transform = 'translateY(10px) scale(0.98)';
+            actualCard.style.transform = 'translateY(15px) scale(0.92) rotateY(-3deg)';
+            actualCard.style.filter = 'blur(2px)';
             
             setTimeout(() => {
-                actualCard.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                actualCard.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
                 actualCard.style.opacity = '1';
-                actualCard.style.transform = 'translateY(0) scale(1)';
+                actualCard.style.transform = 'translateY(0) scale(1) rotateY(0deg)';
+                actualCard.style.filter = 'blur(0px)';
                 
-                // 添加悬停效果
+                // 添加悬停效果 - 更流畅的交互
                 actualCard.addEventListener('mouseenter', () => {
-                    actualCard.style.transform = 'translateY(-4px) scale(1)';
+                    actualCard.style.transform = 'translateY(-6px) scale(1.02)';
                     actualCard.style.boxShadow = 'var(--shadow-medium)';
                 });
                 
@@ -150,13 +155,13 @@ class ContentCardLoader {
                 if (typeof setupCardEventDelegation === 'function') {
                     setupCardEventDelegation();
                 }
-            }, 50);
+            }, 100); // 增加时间让动画更流畅
             
             // 清理加载卡片记录
             this.loadingCards.delete(cardId);
             
             console.log('✅ Successfully replaced loading card with actual content');
-        }, 250);
+        }, 300); // 增加转换时间让动画更流畅
         
         return true;
     }
