@@ -2142,6 +2142,10 @@ function createInsightCard(insight) {
     return card;
 }
 
+// 将createInsightCard函数暴露到全局作用域，供content-card-loader使用
+window.createInsightCard = createInsightCard;
+window.setupCardEventDelegation = setupCardEventDelegation;
+
 // 为标签筛选器加载用户标签
 async function loadUserTagsForFilter(dropdownOptions) {
     try {

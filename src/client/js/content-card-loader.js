@@ -145,6 +145,11 @@ class ContentCardLoader {
                     actualCard.style.transform = 'translateY(0) scale(1)';
                     actualCard.style.boxShadow = 'var(--shadow-light)';
                 });
+                
+                // 重新设置事件委托，确保新卡片的事件处理正常工作
+                if (typeof setupCardEventDelegation === 'function') {
+                    setupCardEventDelegation();
+                }
             }, 50);
             
             // 清理加载卡片记录
@@ -168,7 +173,15 @@ class ContentCardLoader {
         card.className = 'content-card';
         card.dataset.insightId = insightData.id;
         
-        card.innerHTML = `
+        // 添加删除按钮
+        const editDeleteBtn = document.createElement('button');
+        editDeleteBtn.className = 'content-card-delete-btn';
+        editDeleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12H19" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        editDeleteBtn.title = 'Delete';
+        editDeleteBtn.dataset.insightId = insightData.id;
+        card.appendChild(editDeleteBtn);
+        
+        card.innerHTML += `
             <div class="content-card-image-container">
                 <img class="content-card-image" src="${insightData.image_url || '/public/logo.png'}" alt="${insightData.title || 'Content image'}" loading="lazy">
             </div>
