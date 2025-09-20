@@ -2842,40 +2842,153 @@ async function shareInsight(insight) {
     }
 }
 
-// 删除见解
+// 删除见解 - 乐观更新版本
 async function deleteInsight(id) {
     if (!confirm('Are you sure you want to delete this content?')) {
         return;
     }
     
+    // 找到要删除的卡片元素
+    const cardElement = document.querySelector(`[data-insight-id="${id}"]`);
+    if (!cardElement) {
+        console.error('找不到要删除的卡片元素:', id);
+        return;
+    }
+    
+    // 乐观更新：立即从UI中移除元素并添加删除动画
+    const parentContainer = cardElement.closest('#contentCards, .content-grid, .stack-content, .insight-list');
+    if (parentContainer) {
+        // 添加删除动画类
+        cardElement.classList.add('deleting');
+        
+        // 禁用删除按钮防止重复点击
+        const deleteBtn = cardElement.querySelector('.content-card-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+        }
+        
+        // 延迟移除元素，让动画完成
+        setTimeout(() => {
+            cardElement.remove();
+            
+            // 如果没有更多卡片，显示空状态
+            const remainingCards = parentContainer.querySelectorAll('.content-card');
+            if (remainingCards.length === 0) {
+                showEmptyState(parentContainer);
+            }
+        }, 300);
+    } else {
+        console.error('❌ 找不到父容器');
+    }
+    
+    // 同时更新本地数据缓存
+    if (currentInsights && Array.isArray(currentInsights)) {
+        currentInsights = currentInsights.filter(insight => insight.id !== parseInt(id));
+    }
+    
+    // 更新分页计数
+    if (typeof updatePaginationCounts === 'function') {
+        updatePaginationCounts();
+    }
+    
+    // 异步调用API删除
     try {
         await api.deleteInsight(id);
         
-        // Clear cache for insights endpoint to ensure fresh data
+        // API删除成功，只清理相关缓存，不重新渲染
         if (window.apiCache) {
             window.apiCache.clearPattern('/api/v1/insights');
         }
         
-        clearPageCache(); // 清除缓存，因为数据已变化
-        
-        // Handle refresh based on current view mode
-        if (viewMode === 'stack' && activeStackId) {
-            // We're in stack view - refresh the stack view
-            console.log('🔄 Deleting insight in stack view, refreshing stack:', activeStackId);
-            await renderStackView(activeStackId);
-        } else {
-            // We're in home view - refresh normally
-            await loadUserInsightsWithPagination();
-        }
-        
-        // Also save to localStorage backup
+        // 保存到localStorage备份
         saveInsightsToLocalStorage({ force: true });
         
-        alert('Content deleted successfully!');
+        console.log('✅ 内容删除成功:', id);
+        
+        // 显示成功提示（可选，因为UI已经更新了）
+        // showSuccessMessage('内容已删除');
+        
     } catch (error) {
-        console.error('删除内容失败:', error);
-        alert(error.message || 'Failed to delete content, please try again');
+        console.error('❌ API删除失败:', error);
+        
+        // 检查是否是"Insight不存在"的错误
+        const isNotFoundError = error.message && error.message.includes('Insight不存在');
+        
+        if (isNotFoundError) {
+            // 如果后端说Insight不存在，说明已经删除了，我们保持前端的删除状态
+            console.log('✅ 后端确认Insight不存在，保持前端删除状态');
+        } else {
+            // 其他错误才进行回滚
+            console.log('❌ 其他错误，回滚UI状态');
+            
+            // 错误回滚：恢复UI状态
+            if (cardElement.parentNode === null) {
+                // 重新添加卡片到原位置
+                const insertBefore = findInsertPosition(parentContainer, cardElement);
+                if (insertBefore) {
+                    parentContainer.insertBefore(cardElement, insertBefore);
+                } else {
+                    parentContainer.appendChild(cardElement);
+                }
+                
+                // 移除删除动画类
+                cardElement.classList.remove('deleting');
+                
+                // 恢复删除按钮状态
+                const deleteBtn = cardElement.querySelector('.content-card-delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.disabled = false;
+                }
+                
+                // 移除空状态提示
+                const emptyState = parentContainer.querySelector('.empty-state');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+                
+                // 恢复本地数据
+                if (currentInsights && Array.isArray(currentInsights)) {
+                    // 重新加载数据以获取最新状态
+                    if (viewMode === 'stack' && activeStackId) {
+                        renderStackView(activeStackId);
+                    } else {
+                        loadUserInsightsWithPagination();
+                    }
+                }
+            }
+            
+            // 显示错误消息
+            alert(error.message || '删除失败，请重试');
+        }
     }
+}
+
+// 辅助函数：找到插入位置
+function findInsertPosition(container, element) {
+    const allCards = Array.from(container.querySelectorAll('.content-card'));
+    const elementId = parseInt(element.dataset.insightId);
+    
+    // 根据ID找到正确的插入位置
+    for (let i = 0; i < allCards.length; i++) {
+        const cardId = parseInt(allCards[i].dataset.insightId);
+        if (cardId > elementId) {
+            return allCards[i];
+        }
+    }
+    
+    return null; // 插入到末尾
+}
+
+// 辅助函数：显示空状态
+function showEmptyState(container) {
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    emptyState.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #666;">
+            <p>暂无内容</p>
+        </div>
+    `;
+    container.appendChild(emptyState);
 }
 
 // 滚动状态管理工具
@@ -3739,28 +3852,55 @@ async function editTagInManagement(userTagId, currentName, currentColor) {
     }
 }
 
-// Delete tag in management interface
+// Delete tag in management interface - 乐观更新版本
 async function deleteTagInManagement(userTagId) {
     if (!confirm('Are you sure you want to delete this tag? This action cannot be undone.')) {
         return;
+    }
+    
+    // 找到要删除的标签元素
+    const tagElement = document.querySelector(`[data-tag-id="${userTagId}"]`);
+    if (tagElement) {
+        // 乐观更新：立即添加删除动画
+        tagElement.style.transition = 'all 0.3s ease-out';
+        tagElement.style.transform = 'scale(0.8)';
+        tagElement.style.opacity = '0';
+        
+        // 延迟移除元素
+        setTimeout(() => {
+            tagElement.remove();
+        }, 300);
     }
     
     try {
         const response = await api.deleteUserTag(userTagId);
         
         if (response.success) {
-            // Reload tags
+            // API删除成功，重新加载标签数据
             await loadUserTags();
-            
-            // Reinitialize filter buttons
             await initFilterButtons();
             
-            showSuccessMessage('Tag deleted successfully!');
+            console.log('✅ 标签删除成功:', userTagId);
         } else {
             throw new Error(response.message || 'Failed to delete tag');
         }
     } catch (error) {
-        console.error('❌ Failed to delete tag:', error);
+        console.error('❌ API删除标签失败，回滚UI状态:', error);
+        
+        // 错误回滚：恢复标签元素
+        if (tagElement && tagElement.parentNode === null) {
+            // 重新添加标签到原位置
+            const tagsList = document.getElementById('tagsList');
+            if (tagsList) {
+                tagsList.appendChild(tagElement);
+                
+                // 重置样式
+                tagElement.style.transition = '';
+                tagElement.style.transform = '';
+                tagElement.style.opacity = '';
+            }
+        }
+        
         showErrorMessage(`Failed to delete tag: ${error.message}`);
     }
 }
@@ -8358,75 +8498,110 @@ async function removeItemFromStack(stackId, insightId) {
 
 // Delete a stack
 async function deleteStack(stackId) {
-    if (confirm('Are you sure you want to delete this stack? All items will be moved back to your space.')) {
-        try {
-            // Ensure we have a valid session before proceeding
-            if (!auth.checkAuth()) {
-                const restored = auth.restoreSession();
-                if (!restored) {
-                    showErrorMessage('Please sign in to delete stacks.');
-                    return;
-                }
-            }
-            
-            // Validate token before making API calls
-            const tokenValid = await auth.validateToken();
-            if (!tokenValid) {
-                auth.clearSession();
-                showErrorMessage('Your session has expired. Please sign in again.');
+    if (!confirm('Are you sure you want to delete this stack? All items will be moved back to your space.')) {
+        return;
+    }
+    
+    // 找到要删除的堆叠元素
+    const stackElement = document.querySelector(`[data-stack-id="${stackId}"]`);
+    if (stackElement) {
+        // 乐观更新：立即添加删除动画
+        stackElement.style.transition = 'all 0.3s ease-out';
+        stackElement.style.transform = 'scale(0.8)';
+        stackElement.style.opacity = '0';
+        
+        // 延迟移除元素
+        setTimeout(() => {
+            stackElement.remove();
+        }, 300);
+    }
+    
+    // 立即从本地数据中移除堆叠
+    const stackData = stacks.get(stackId);
+    if (stackData) {
+        stacks.delete(stackId);
+        saveStacksToLocalStorage();
+    }
+    
+    try {
+        // Ensure we have a valid session before proceeding
+        if (!auth.checkAuth()) {
+            const restored = auth.restoreSession();
+            if (!restored) {
+                showErrorMessage('Please sign in to delete stacks.');
                 return;
             }
+        }
+        
+        // Validate token before making API calls
+        const tokenValid = await auth.validateToken();
+        if (!tokenValid) {
+            auth.clearSession();
+            showErrorMessage('Your session has expired. Please sign in again.');
+            return;
+        }
+        
+        if (stackData) {
+            // Remove stack_id from all insights in the stack via insights API
+            const removePromises = stackData.cards.map(card => 
+                api.removeItemFromStack(parseInt(stackId), card.id)
+            );
             
-            const stackData = stacks.get(stackId);
-            if (stackData) {
-                // Remove stack_id from all insights in the stack via insights API
-                const removePromises = stackData.cards.map(card => 
-                    api.removeItemFromStack(parseInt(stackId), card.id)
-                );
+            const responses = await Promise.all(removePromises);
+            
+            // Check if all updates were successful
+            const allSuccessful = responses.every(response => response.success);
+            
+            if (allSuccessful) {
+                // 更新缓存和数据
+                saveInsightsToLocalStorage({ force: true });
                 
-                const responses = await Promise.all(removePromises);
+                // Invalidate ALL page caches since pagination has changed
+                pageCache.clear();
+                loadedPages.clear();
                 
-                // Check if all updates were successful
-                const allSuccessful = responses.every(response => response.success);
-                
-                if (allSuccessful) {
-                    // Don't add cards back to currentInsights - they'll be loaded from backend on next refresh
-                    // This prevents duplication issues
-                    stacks.delete(stackId);
-                    
-                    // Update localStorage to remove the deleted stack
-                    saveStacksToLocalStorage();
-                    saveInsightsToLocalStorage({ force: true });
-                    
-                    // Invalidate ALL page caches since pagination has changed
-                    pageCache.clear();
-                    loadedPages.clear();
-                    
-                    // Clear GET cache to prevent stale data
-                    if (window.apiCache) {
-                        window.apiCache.clearPattern('/api/v1/insights');
-                        window.apiCache.clearPattern('/api/v1/stacks');
-                    }
-                    
-                    // Update pagination counts
-                    updatePaginationCounts();
-                    
-                    // Re-render content
-                    await renderInsights();
-                } else {
-                    throw new Error('Failed to remove stack_id from insights');
+                // Clear GET cache to prevent stale data
+                if (window.apiCache) {
+                    window.apiCache.clearPattern('/api/v1/insights');
+                    window.apiCache.clearPattern('/api/v1/stacks');
                 }
-            }
-        } catch (error) {
-            console.error('❌ Failed to delete stack via API:', error);
-            
-            // Fallback to local storage if API is not implemented
-            if (error.message.includes('404') || error.message.includes('Not Found')) {
-                // Don't add cards back to currentInsights - they'll be loaded from backend on next refresh
-                // This prevents duplication issues
-                stacks.delete(stackId);
                 
-                // Update localStorage to remove the deleted stack
+                // Update pagination counts
+                updatePaginationCounts();
+                
+                console.log('✅ 堆叠删除成功:', stackId);
+            } else {
+                throw new Error('Failed to remove stack_id from insights');
+            }
+        }
+    } catch (error) {
+        console.error('❌ API删除堆叠失败，回滚UI状态:', error);
+        
+        // 错误回滚：恢复堆叠元素和数据
+        if (stackElement && stackElement.parentNode === null) {
+            // 重新添加堆叠到原位置
+            const stacksContainer = document.querySelector('.stacks-container, .stack-list');
+            if (stacksContainer) {
+                stacksContainer.appendChild(stackElement);
+                
+                // 重置样式
+                stackElement.style.transition = '';
+                stackElement.style.transform = '';
+                stackElement.style.opacity = '';
+            }
+        }
+        
+        // 恢复本地数据
+        if (stackData) {
+            stacks.set(stackId, stackData);
+            saveStacksToLocalStorage();
+        }
+        
+        // Fallback to local storage if API is not implemented
+        if (error.message.includes('404') || error.message.includes('Not Found')) {
+            // 如果API不存在，仍然删除本地数据
+            if (stackData) {
+                stacks.delete(stackId);
                 saveStacksToLocalStorage();
                 
                 // Invalidate ALL page caches since pagination has changed
@@ -8442,11 +8617,10 @@ async function deleteStack(stackId) {
                 // Update pagination counts
                 updatePaginationCounts();
                 
-                // Re-render content
-                await renderInsights();
-            } else {
-                showErrorMessage('Failed to delete stack. Please try again.');
+                console.log('✅ 堆叠删除成功 (本地删除):', stackId);
             }
+        } else {
+            showErrorMessage('Failed to delete stack. Please try again.');
         }
     }
 }

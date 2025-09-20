@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>乐观删除测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease-out;
+            background: white;
+        }
+        
+        .test-card.deleting {
+            transform: scale(0.8);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .delete-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: scale(0.95);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .success-message {
+            background: #2ed573;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .error-message {
+            background: #ff4757;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>乐观删除功能测试</h1>
+        <p>点击删除按钮测试乐观更新功能。前端会立即显示删除效果，后端模拟延迟响应。</p>
+        
+        <div id="successMessage" class="success-message"></div>
+        <div id="errorMessage" class="error-message"></div>
+        
+        <div id="cardContainer">
+            <div class="test-card" data-card-id="1">
+                <div>
+                    <h3>测试卡片 1</h3>
+                    <p>这是一个测试卡片，用于验证乐观删除功能。</p>
+                </div>
+                <button class="delete-btn" onclick="deleteCard(1)">删除</button>
+            </div>
+            
+            <div class="test-card" data-card-id="2">
+                <div>
+                    <h3>测试卡片 2</h3>
+                    <p>另一个测试卡片，用于验证乐观删除功能。</p>
+                </div>
+                <button class="delete-btn" onclick="deleteCard(2)">删除</button>
+            </div>
+            
+            <div class="test-card" data-card-id="3">
+                <div>
+                    <h3>测试卡片 3</h3>
+                    <p>第三个测试卡片，用于验证乐观删除功能。</p>
+                </div>
+                <button class="delete-btn" onclick="deleteCard(3)">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟API延迟
+        function mockApiCall(cardId, shouldFail = false) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    if (shouldFail) {
+                        reject(new Error('模拟API删除失败'));
+                    } else {
+                        resolve({ success: true, message: '删除成功' });
+                    }
+                }, 2000); // 2秒延迟
+            });
+        }
+        
+        // 显示消息
+        function showMessage(message, type) {
+            const messageElement = document.getElementById(type + 'Message');
+            messageElement.textContent = message;
+            messageElement.style.display = 'block';
+            
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 显示空状态
+        function showEmptyState() {
+            const container = document.getElementById('cardContainer');
+            container.innerHTML = '<div class="empty-state">暂无卡片</div>';
+        }
+        
+        // 乐观删除函数
+        async function deleteCard(cardId) {
+            if (!confirm('确定要删除这张卡片吗？')) {
+                return;
+            }
+            
+            // 找到要删除的卡片元素
+            const cardElement = document.querySelector(`[data-card-id="${cardId}"]`);
+            if (!cardElement) {
+                console.error('找不到要删除的卡片元素:', cardId);
+                return;
+            }
+            
+            // 乐观更新：立即添加删除动画
+            cardElement.classList.add('deleting');
+            
+            // 禁用删除按钮防止重复点击
+            const deleteBtn = cardElement.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.disabled = true;
+            }
+            
+            // 延迟移除元素，让动画完成
+            setTimeout(() => {
+                cardElement.remove();
+                
+                // 检查是否还有剩余卡片
+                const remainingCards = document.querySelectorAll('.test-card');
+                if (remainingCards.length === 0) {
+                    showEmptyState();
+                }
+            }, 300);
+            
+            // 模拟API调用（随机失败以测试错误回滚）
+            const shouldFail = Math.random() < 0.3; // 30% 失败率
+            
+            try {
+                await mockApiCall(cardId, shouldFail);
+                
+                // API删除成功
+                showMessage(`卡片 ${cardId} 删除成功！`, 'success');
+                console.log('✅ 卡片删除成功:', cardId);
+                
+            } catch (error) {
+                console.error('❌ API删除失败，回滚UI状态:', error);
+                
+                // 错误回滚：恢复UI状态
+                if (cardElement.parentNode === null) {
+                    // 重新添加卡片到容器
+                    const container = document.getElementById('cardContainer');
+                    container.appendChild(cardElement);
+                    
+                    // 移除删除动画类
+                    cardElement.classList.remove('deleting');
+                    
+                    // 恢复删除按钮状态
+                    if (deleteBtn) {
+                        deleteBtn.disabled = false;
+                    }
+                    
+                    // 移除空状态提示
+                    const emptyState = container.querySelector('.empty-state');
+                    if (emptyState) {
+                        emptyState.remove();
+                    }
+                }
+                
+                showMessage(`删除失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 重置测试
+        function resetTest() {
+            const container = document.getElementById('cardContainer');
+            container.innerHTML = `
+                <div class="test-card" data-card-id="1">
+                    <div>
+                        <h3>测试卡片 1</h3>
+                        <p>这是一个测试卡片，用于验证乐观删除功能。</p>
+                    </div>
+                    <button class="delete-btn" onclick="deleteCard(1)">删除</button>
+                </div>
+                
+                <div class="test-card" data-card-id="2">
+                    <div>
+                        <h3>测试卡片 2</h3>
+                        <p>另一个测试卡片，用于验证乐观删除功能。</p>
+                    </div>
+                    <button class="delete-btn" onclick="deleteCard(2)">删除</button>
+                </div>
+                
+                <div class="test-card" data-card-id="3">
+                    <div>
+                        <h3>测试卡片 3</h3>
+                        <p>第三个测试卡片，用于验证乐观删除功能。</p>
+                    </div>
+                    <button class="delete-btn" onclick="deleteCard(3)">删除</button>
+                </div>
+            `;
+        }
+        
+        // 添加重置按钮
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.container');
+            const resetBtn = document.createElement('button');
+            resetBtn.textContent = '重置测试';
+            resetBtn.style.cssText = `
+                background: #3742fa;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-top: 20px;
+            `;
+            resetBtn.onclick = resetTest;
+            container.appendChild(resetBtn);
+        });
+    </script>
+</body>
+</html>

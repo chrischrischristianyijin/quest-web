@@ -1,6 +1,57 @@
 /* My Space 页面样式 */
 @import url('./common.css');
 
+/* 删除动画样式 */
+.content-card.deleting {
+    transform: scale(0.8) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: all 0.3s ease-out !important;
+}
+
+.content-card-delete-btn {
+    transition: all 0.2s ease !important;
+}
+
+.content-card-delete-btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    transform: scale(0.95) !important;
+}
+
+/* 空状态样式 */
+.empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+/* 堆叠删除动画 */
+.stack-item {
+    transition: all 0.3s ease-out;
+}
+
+.stack-item.deleting {
+    transform: scale(0.8);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 标签删除动画 */
+.tag-item {
+    transition: all 0.3s ease-out;
+}
+
+.tag-item.deleting {
+    transform: scale(0.8);
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* Base text color reset to prevent purple cascade */
 html, body, .MySpace {
     color: var(--text-primary);
@@ -599,7 +650,7 @@ body {
     box-shadow: var(--shadow-light);
     justify-self: stretch;    /* ensure cards take full width of their grid cell */
     border: 2px solid #d1d5db;
-    transition: var(--transition-normal);
+    transition: all 0.3s ease-out; /* 支持删除动画 */
     position: relative;
     overflow: visible;
     display: flex;
