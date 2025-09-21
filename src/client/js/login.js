@@ -17,7 +17,7 @@ const messageDiv = document.getElementById('message');
 const rememberMeCheckbox = document.getElementById('rememberMe');
 
 // Show message
-function showMessage(message, type = 'error') {
+function showMessage(message, type = 'error', persistent = false) {
     if (!messageDiv) {
         console.error('❌ Message display element not found');
         return;
@@ -27,11 +27,39 @@ function showMessage(message, type = 'error') {
     messageDiv.className = `message ${type}`;
     messageDiv.style.display = 'block';
     
-    // Auto-hide error messages
-    if (type === 'error') {
-        setTimeout(() => {
+    // Add close button for persistent messages
+    if (persistent) {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'message-close-btn';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.title = 'Dismiss';
+        closeBtn.onclick = () => {
             messageDiv.style.display = 'none';
-        }, 5000);
+            // Clear logout reason from localStorage when dismissed
+            localStorage.removeItem('quest_logout_reason');
+            localStorage.removeItem('quest_logout_timestamp');
+        };
+        
+        // Clear any existing close button
+        const existingCloseBtn = messageDiv.querySelector('.message-close-btn');
+        if (existingCloseBtn) {
+            existingCloseBtn.remove();
+        }
+        
+        messageDiv.appendChild(closeBtn);
+    } else {
+        // Remove close button for non-persistent messages
+        const existingCloseBtn = messageDiv.querySelector('.message-close-btn');
+        if (existingCloseBtn) {
+            existingCloseBtn.remove();
+        }
+        
+        // Auto-hide non-persistent error messages
+        if (type === 'error') {
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
     }
 }
 
@@ -39,6 +67,80 @@ function showMessage(message, type = 'error') {
 function hideMessages() {
     if (messageDiv) {
         messageDiv.style.display = 'none';
+    }
+}
+
+// Check and display logout reason
+function checkAndDisplayLogoutReason() {
+    try {
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlReason = urlParams.get('reason');
+        const isAutoLogout = urlParams.get('auto') === 'true';
+        
+        // Check localStorage for logout reason
+        const storedReason = localStorage.getItem('quest_logout_reason');
+        const storedTimestamp = localStorage.getItem('quest_logout_timestamp');
+        
+        let logoutReason = null;
+        let shouldShow = false;
+        
+        // Determine which reason to use and if it's recent enough
+        if (storedReason && storedTimestamp) {
+            const logoutTime = parseInt(storedTimestamp);
+            const now = Date.now();
+            const timeDiff = now - logoutTime;
+            
+            // Show logout reason if it's within the last 10 minutes
+            if (timeDiff < 10 * 60 * 1000) {
+                logoutReason = storedReason;
+                shouldShow = true;
+            } else {
+                // Clear old logout reasons
+                localStorage.removeItem('quest_logout_reason');
+                localStorage.removeItem('quest_logout_timestamp');
+            }
+        }
+        
+        // Use URL reason if no stored reason or if it's more specific
+        if (urlReason && isAutoLogout) {
+            logoutReason = decodeURIComponent(urlReason);
+            shouldShow = true;
+        }
+        
+        if (shouldShow && logoutReason) {
+            console.log('🚪 Displaying logout reason:', logoutReason);
+            
+            // Format the message based on the reason
+            let displayMessage = '';
+            let messageType = 'warning';
+            
+            if (logoutReason.toLowerCase().includes('token')) {
+                displayMessage = `🔐 Session Expired: ${logoutReason}`;
+                messageType = 'warning';
+            } else if (logoutReason.toLowerCase().includes('connection')) {
+                displayMessage = `🌐 Connection Issue: ${logoutReason}`;
+                messageType = 'error';
+            } else if (logoutReason.toLowerCase().includes('database')) {
+                displayMessage = `💾 Database Issue: ${logoutReason}`;
+                messageType = 'error';
+            } else {
+                displayMessage = `⚠️ Logged Out: ${logoutReason}`;
+                messageType = 'warning';
+            }
+            
+            // Show persistent message that requires user dismissal
+            showMessage(displayMessage, messageType, true);
+            
+            // Clean up URL parameters without refreshing the page
+            if (urlReason || isAutoLogout) {
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error checking logout reason:', error);
     }
 }
 
@@ -144,7 +246,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // If user is already logged in, redirect directly
     if (auth.checkAuth()) {
         navigateTo(PATHS.MY_SPACE, { fromAuth: true });
+        return;
     }
+    
+    // Check and display logout reason
+    checkAndDisplayLogoutReason();
     
     // Focus on email input
     emailInput.focus();

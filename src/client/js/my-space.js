@@ -4,6 +4,7 @@ import { API_CONFIG } from './config.js';
 import { PATHS, navigateTo } from './paths.js';
 import { tokenManager } from './token-manager.js';
 import { tokenStatusIndicator } from './token-status-indicator.js';
+import { connectivityManager } from './connectivity-manager.js';
 
 // DOM Element Cache for Performance Optimization
 const DOM_CACHE = new Map();
@@ -125,6 +126,8 @@ window.addEventListener('quest-auth-expired', async (e) => {
     } catch (modalError) {
       console.error('❌ Error showing auth modal:', modalError);
       // Final fallback to direct navigation
+      localStorage.setItem('quest_logout_reason', 'Authentication error');
+      localStorage.setItem('quest_logout_timestamp', Date.now().toString());
       navigateTo(PATHS.LOGIN);
     }
   }
@@ -272,19 +275,31 @@ function updatePaginationUI() {
     if (totalInsightsEl) {
         const s = stacks.size;
         
-        // Count insights that are within stacks (these should not be counted separately)
-        let insightsInStacks = 0;
-        stacks.forEach(stackData => {
-            insightsInStacks += stackData.cards.length;
-        });
-        
-        // Calculate actual insights that are not in stacks
-        const standaloneInsights = Math.max(0, totalInsights - insightsInStacks);
-        const totalCards = standaloneInsights + s; // Each stack counts as one card
-        
-        totalInsightsEl.textContent = s > 0
-            ? `${totalCards} cards (${standaloneInsights} insights + ${s} stack${s > 1 ? 's' : ''})`
-            : `${standaloneInsights} insights`;
+        // Handle different content type filters
+        if (currentFilters.content_type === 'stacks_only') {
+            // For "Stacks Only", only show stack count
+            totalInsightsEl.textContent = s > 0
+                ? `${s} stack${s > 1 ? 's' : ''}`
+                : '0 stacks';
+        } else if (currentFilters.content_type === 'insights_only') {
+            // For "Insights Only", only show insight count
+            totalInsightsEl.textContent = `${totalInsights} insights`;
+        } else {
+            // For "All Content", show both insights and stacks
+            // Count insights that are within stacks (these should not be counted separately)
+            let insightsInStacks = 0;
+            stacks.forEach(stackData => {
+                insightsInStacks += stackData.cards.length;
+            });
+            
+            // Calculate actual insights that are not in stacks
+            const standaloneInsights = Math.max(0, totalInsights - insightsInStacks);
+            const totalCards = standaloneInsights + s; // Each stack counts as one card
+            
+            totalInsightsEl.textContent = s > 0
+                ? `${totalCards} cards (${standaloneInsights} insights + ${s} stack${s > 1 ? 's' : ''})`
+                : `${standaloneInsights} insights`;
+        }
     }
     
     // Update button states
@@ -718,6 +733,31 @@ async function loadUserInsightsWithPagination() {
                 }
             }
             
+            // Check for data access issues: API returns 0 but backup data exists
+            if (firstPageInsights.length === 0) {
+                const backupData = localStorage.getItem('quest_insights_backup');
+                if (backupData) {
+                    try {
+                        const parsed = JSON.parse(backupData);
+                        const backupInsights = parsed?.data || [];
+                        if (backupInsights.length > 0) {
+                            console.error('🚨 Data access issue detected: API returns 0 insights but backup has', backupInsights.length, 'insights');
+                            console.error('🚨 This indicates authentication or data access problems - triggering logout');
+                            
+                            // Store logout reason
+                            localStorage.setItem('quest_logout_reason', 'Data access issue: API returned no data but local backup exists');
+                            localStorage.setItem('quest_logout_timestamp', Date.now().toString());
+                            
+                            // Trigger automatic logout
+                            await tokenManager.autoLogout('Data access issue: API returned no data');
+                            return; // Exit early to prevent further processing
+                        }
+                    } catch (parseError) {
+                        console.warn('⚠️ Could not parse backup data for comparison:', parseError);
+                    }
+                }
+            }
+            
             // Set first page data first
             currentInsights = firstPageInsights;
             window.currentInsights = currentInsights;
@@ -939,6 +979,10 @@ async function initPage() {
             // 不要return，允许加载本地备份数据
         } else {
             console.log('✅ 用户已认证，继续加载数据');
+            
+            // Start backend connectivity monitoring for authenticated users
+            console.log('🔗 Starting backend connectivity monitoring...');
+            connectivityManager.startMonitoring();
         }
         
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
@@ -1146,6 +1190,28 @@ async function loadUserStacks() {
             console.log('📦 Final stacks map:', Array.from(stacks.entries()));
         } else {
             console.log('⚠️ No stacks found in API response or API failed');
+            
+            // Check for data access issues: API returns 0 stacks but backup data exists
+            const backupStacks = localStorage.getItem('quest_stacks');
+            if (backupStacks) {
+                try {
+                    const parsed = JSON.parse(backupStacks);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        console.error('🚨 Stack data access issue detected: API returns 0 stacks but backup has', parsed.length, 'stacks');
+                        console.error('🚨 This indicates authentication or data access problems - triggering logout');
+                        
+                        // Store logout reason
+                        localStorage.setItem('quest_logout_reason', 'Data access issue: API returned no stacks but local backup exists');
+                        localStorage.setItem('quest_logout_timestamp', Date.now().toString());
+                        
+                        // Trigger automatic logout
+                        await tokenManager.autoLogout('Data access issue: API returned no stacks');
+                        return; // Exit early to prevent further processing
+                    }
+                } catch (parseError) {
+                    console.warn('⚠️ Could not parse stack backup data for comparison:', parseError);
+                }
+            }
         }
         
         // Fetch ALL insights to properly populate stack counts
@@ -1889,9 +1955,15 @@ async function resetInsightsPaginationAndRerender() {
     console.log('📊 Filtered insights for rendering:', filteredInsights.length);
     
     // Update pagination with filtered insights count (insights only)
-    // For "All" filter, use the total available insights for proper pagination
-    if (currentFilters.tags === 'all' && !currentFilters.search) {
-        // Use all available insights for proper pagination when showing all
+    // Handle different content type filters
+    if (currentFilters.content_type === 'stacks_only') {
+        // For "Stacks Only", pagination is based only on stacks
+        const stacksCount = stacks.size;
+        totalInsights = 0; // No insights to count
+        totalPages = stacksCount > 0 ? 1 : 1; // Stacks always fit on one page
+        console.log(`🔍 DEBUG: Stacks Only pagination - stacksCount=${stacksCount}, totalPages=${totalPages}`);
+    } else if (currentFilters.tags === 'all' && !currentFilters.search && currentFilters.content_type === 'all') {
+        // Use all available insights for proper pagination when showing all content
         const allAvailableInsights = window.allInsightsForFiltering || [];
         totalInsights = allAvailableInsights.length;
         console.log(`🔍 DEBUG: Using all available insights for pagination: ${totalInsights}`);
@@ -1911,6 +1983,7 @@ async function resetInsightsPaginationAndRerender() {
         totalPages = 1 + (remaining > 0 ? Math.ceil(remaining / insightsPerPage) : 0);
         console.log(`🔍 DEBUG: All filter pagination - page1Slots=${page1SlotsForInsights}, remaining=${remaining}, totalPages=${totalPages}`);
     } else {
+        // For filtered content (insights only, tag filters, search, etc.)
         totalInsights = filteredInsights.length;
         console.log(`🔍 DEBUG: Using filtered insights for pagination: ${totalInsights}`);
         totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
@@ -2549,6 +2622,10 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
     
     // Handle tag filter changes
     if (filterType === 'tags') {
+        // Always reset to page 1 when changing tag filters
+        console.log('🔄 Tag filter changed - resetting to page 1');
+        currentPage = 1;
+        
         if (filterValue !== 'all') {
             // Clear any existing global insights to ensure fresh data
             window.allInsightsForFiltering = null;
@@ -2567,6 +2644,10 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
     
     // Handle content type filter changes
     if (filterType === 'content_type') {
+        // Always reset to page 1 when changing content type filters
+        console.log('🔄 Content type filter changed - resetting to page 1');
+        currentPage = 1;
+        
         if (filterValue === 'insights_only') {
             // For insights only, fetch all insights from database
             console.log('🔄 Switching to "Insights Only" - fetching all insights...');
@@ -4114,6 +4195,11 @@ document.addEventListener('DOMContentLoaded', initPage);
 // Helper to apply search and re-render both views consistently
 async function applySearch(query) {
     currentFilters.search = (query || '').trim();
+    
+    // Always reset to page 1 when search changes
+    console.log('🔄 Search filter changed - resetting to page 1');
+    currentPage = 1;
+    
     // keep inputs in sync across bars
     const homeInput = document.getElementById('searchInput');
     const stackInput = document.getElementById('stackSearchInput');
@@ -4133,8 +4219,8 @@ async function applySearch(query) {
         window.allInsightsForFiltering = null;
     }
 
-    await renderInsights();         // re-renders lists with new filter
-    updatePaginationUI?.();   // update pagination counts
+    // Use resetInsightsPaginationAndRerender for consistent pagination handling
+    await resetInsightsPaginationAndRerender();
 }
 
 // Initialize search functionality
@@ -7110,8 +7196,23 @@ function startSmartAISummaryRefresh(insightId) {
         clearTimeout(aiSummaryRefreshTimeouts.get(insightId));
     }
     
-    // 设置新的定时器
-    const timeoutId = setTimeout(async () => {
+    // 优化：更快的初始检查，然后逐渐增加间隔
+    let checkCount = 0;
+    const maxChecks = 8; // 最多检查8次
+    const intervals = [1000, 2000, 3000, 5000, 8000, 12000, 20000, 30000]; // 递增间隔
+    
+    const checkSummary = async () => {
+        if (checkCount >= maxChecks) {
+            console.log(`⏰ AI摘要检查达到最大次数，停止检查: insight ${insightId}`);
+            aiSummaryRefreshTimeouts.delete(insightId);
+            return;
+        }
+        
+        const currentInterval = intervals[checkCount] || 30000;
+        console.log(`🔄 检查AI摘要 (${checkCount + 1}/${maxChecks}) 下次间隔${currentInterval}ms: insight ${insightId}`);
+        
+        // 设置新的定时器
+        const timeoutId = setTimeout(async () => {
         try {
             console.log(`🔄 Auto-refreshing AI summary for insight ${insightId}`);
             
@@ -7158,24 +7259,23 @@ function startSmartAISummaryRefresh(insightId) {
                 // 如果摘要还没生成，继续等待
                 console.log(`⏳ AI summary still generating for insight ${insightId}, will retry...`);
                 
-                // 设置下次刷新（逐渐增加间隔）
-                const currentTimeout = aiSummaryRefreshTimeouts.get(insightId);
-                if (currentTimeout) {
-                    const nextInterval = Math.min(10000, 2000 * Math.pow(1.5, aiSummaryRefreshTimeouts.size)); // 最多10秒
-                    const nextTimeoutId = setTimeout(() => {
-                        startSmartAISummaryRefresh(insightId);
-                    }, nextInterval);
-                    aiSummaryRefreshTimeouts.set(insightId, nextTimeoutId);
-                }
+                // 递增检查次数并设置下次检查
+                checkCount++;
+                checkSummary();
             }
         } catch (error) {
             console.warn(`⚠️ Failed to refresh AI summary for insight ${insightId}:`, error);
             // 出错时停止刷新
             aiSummaryRefreshTimeouts.delete(insightId);
         }
-    }, 3000); // 3秒后开始第一次检查
+    }, currentInterval);
     
+    // 存储定时器ID
     aiSummaryRefreshTimeouts.set(insightId, timeoutId);
+    };
+    
+    // 开始第一次检查
+    checkSummary();
 }
 
 function stopAISummaryRefresh(insightId) {

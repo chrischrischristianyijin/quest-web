@@ -401,6 +401,7 @@ body {
     margin-bottom: 20px;
     font-size: 14px;
     display: none;
+    position: relative;
 }
 
 .message.error {
@@ -419,6 +420,44 @@ body {
     background-color: #eff6ff;
     color: #2563eb;
     border: 1px solid #bfdbfe;
+}
+
+.message.warning {
+    background-color: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fed7aa;
+}
+
+/* Close button for persistent messages */
+.message-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.message-close-btn:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.message-close-btn:focus {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 /* 响应式设计 */
