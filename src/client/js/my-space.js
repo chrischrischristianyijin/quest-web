@@ -1965,8 +1965,16 @@ async function resetInsightsPaginationAndRerender() {
     } else if (currentFilters.tags === 'all' && !currentFilters.search && currentFilters.content_type === 'all') {
         // Use all available insights for proper pagination when showing all content
         const allAvailableInsights = window.allInsightsForFiltering || [];
-        totalInsights = allAvailableInsights.length;
-        console.log(`🔍 DEBUG: Using all available insights for pagination: ${totalInsights}`);
+        
+        // If allInsightsForFiltering is not available, use the global totalInsights from API
+        if (allAvailableInsights.length === 0) {
+            // Use the global totalInsights that was set from the API response
+            // This ensures we use the actual total count, not just current page count
+            console.log(`🔍 DEBUG: Using global totalInsights for pagination: ${totalInsights}`);
+        } else {
+            totalInsights = allAvailableInsights.length;
+            console.log(`🔍 DEBUG: Using all available insights for pagination: ${totalInsights}`);
+        }
         
         // For "All" filter, calculate pagination the same way as normal pagination
         // Page 1 shows (insightsPerPage - stacksCount) insights + stacks
