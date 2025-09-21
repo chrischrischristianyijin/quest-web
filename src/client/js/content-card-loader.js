@@ -55,18 +55,38 @@ class ContentCardLoader {
             </div>
         `;
         
-        // 插入到指定位置 - 新内容在第一位（但不在模板卡片之前）
+        // 插入到指定位置
         const contentCards = document.getElementById('contentCards');
         if (contentCards) {
-            // 查找模板卡片
-            const templateCard = contentCards.querySelector('.template-card');
-            
-            if (templateCard) {
-                // 如果有模板卡片，插入到模板卡片之后
-                contentCards.insertBefore(loadingCard, templateCard.nextSibling);
+            if (position === 'after-stacks') {
+                // 插入到所有stack卡片之后
+                const stackCards = contentCards.querySelectorAll('.stack-card');
+                if (stackCards.length > 0) {
+                    // 找到最后一个stack卡片，插入到它之后
+                    const lastStackCard = stackCards[stackCards.length - 1];
+                    contentCards.insertBefore(loadingCard, lastStackCard.nextSibling);
+                } else {
+                    // 如果没有stack卡片，查找模板卡片
+                    const templateCard = contentCards.querySelector('.template-card');
+                    if (templateCard) {
+                        // 如果有模板卡片，插入到模板卡片之后
+                        contentCards.insertBefore(loadingCard, templateCard.nextSibling);
+                    } else {
+                        // 如果没有模板卡片，插入到第一位
+                        contentCards.insertBefore(loadingCard, contentCards.firstChild);
+                    }
+                }
             } else {
-                // 如果没有模板卡片，插入到第一位
-                contentCards.insertBefore(loadingCard, contentCards.firstChild);
+                // 默认行为：新内容在第一位（但不在模板卡片之前）
+                const templateCard = contentCards.querySelector('.template-card');
+                
+                if (templateCard) {
+                    // 如果有模板卡片，插入到模板卡片之后
+                    contentCards.insertBefore(loadingCard, templateCard.nextSibling);
+                } else {
+                    // 如果没有模板卡片，插入到第一位
+                    contentCards.insertBefore(loadingCard, contentCards.firstChild);
+                }
             }
         }
         

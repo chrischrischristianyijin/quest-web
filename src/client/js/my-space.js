@@ -1802,7 +1802,7 @@ async function performRenderInsights() {
     contentCards.classList.add('content-loaded');
     
     // Clear existing content cards (but keep template card and skeleton)
-    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
+    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state, .empty-stack-state');
     existingCards.forEach(card => card.remove());
     
     // Template card is now only added in edit mode, not automatically
@@ -3353,8 +3353,11 @@ function bindEvents() {
                 if (customTitle) insightData.title = customTitle;
                 if (customThought) insightData.thought = customThought;
                 
-                // 创建加载占位符卡片
-                const loadingCardId = window.contentCardLoader.createLoadingCard(url, 'prepend');
+                // 创建加载占位符卡片 - 放在正确位置（在stacks之后）
+                const loadingCardId = window.contentCardLoader.createLoadingCard(url, 'after-stacks');
+                
+                // 立即处理可能被推到下一页的insights，避免闪烁
+                handleInsightPushingImmediately();
                 
                 // 使用正确的API端点创建insight
                 console.log('📝 Creating insight with data:', insightData);
@@ -3372,8 +3375,22 @@ function bindEvents() {
                 
                 // 更新加载卡片为实际内容
                 if (result && result.success && result.data) {
-                    window.contentCardLoader.updateLoadingCard(loadingCardId, result.data);
-                    console.log('✅ Loading card updated with actual content');
+                    // For stack view, don't update the loading card immediately - keep it visible until refresh
+                    if (viewMode === 'stack' && activeStackId) {
+                        console.log('🎯 Stack view mode: keeping loading card visible until refresh completes');
+                        // Store the insight data for later use but don't update the card yet
+                        window.pendingStackInsight = result.data;
+                    } else {
+                        window.contentCardLoader.updateLoadingCard(loadingCardId, result.data);
+                        console.log('✅ Loading card updated with actual content');
+                        
+                        // 计算新insight应该在哪一页，并导航到该页
+                        // 保存当前滚动位置，以便在页面重新加载后恢复
+                        const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+                        window.tempScrollPosition = scrollPosition;
+                        
+                        await navigateToNewInsight();
+                    }
                 } else {
                     // 如果创建失败，移除加载卡片
                     window.contentCardLoader.removeLoadingCard(loadingCardId, true);
@@ -3407,20 +3424,109 @@ function bindEvents() {
                             console.log('🔄 In stack view mode, refreshing current stack');
                             
                             try {
-                                // Simply refresh the current stack view to show the new insight
-                                console.log('🎯 Refreshing stack view for stack:', activeStackId);
-                                await renderStackView(activeStackId);
+                                // Use intelligent retry mechanism instead of fixed delay
+                                console.log('🔄 Attempting to refresh stack view with new insight...');
+                                
+                                let retryCount = 0;
+                                const maxRetries = 3;
+                                let refreshSuccess = false;
+                                
+                                while (retryCount < maxRetries && !refreshSuccess) {
+                                    if (retryCount > 0) {
+                                        const delay = Math.min(500 * retryCount, 1000); // Progressive delay: 500ms, 1000ms
+                                        console.log(`⏳ Retry ${retryCount}: waiting ${delay}ms before next attempt...`);
+                                        await new Promise(resolve => setTimeout(resolve, delay));
+                                    }
+                                    
+                                    console.log(`🎯 Refreshing stack view for stack: ${activeStackId} (attempt ${retryCount + 1}/${maxRetries})`);
+                                    
+                                    // Try to refresh and check if the new insight appears
+                                    const stackBefore = stacks.get(activeStackId);
+                                    const cardCountBefore = stackBefore?.cards?.length || 0;
+                                    
+                                    await renderStackView(activeStackId);
+                                    
+                                    // Check if the insight was successfully added
+                                    const stackAfter = stacks.get(activeStackId);
+                                    const cardCountAfter = stackAfter?.cards?.length || 0;
+                                    
+                                    if (cardCountAfter > cardCountBefore) {
+                                        console.log(`✅ New insight detected in stack (${cardCountBefore} → ${cardCountAfter} cards)`);
+                                        refreshSuccess = true;
+                                    } else {
+                                        console.log(`⚠️ Insight not yet visible in stack (${cardCountAfter} cards), may need retry...`);
+                                        retryCount++;
+                                    }
+                                }
+                                
+                                if (!refreshSuccess) {
+                                    console.log('⚠️ Stack refresh completed but new insight may not be immediately visible');
+                                }
+                                
+                                // After successful refresh, remove the loading card if it still exists
+                                if (typeof loadingCardId !== 'undefined' && window.contentCardLoader) {
+                                    window.contentCardLoader.removeLoadingCard(loadingCardId, false);
+                                    console.log('🧹 Removed loading card after successful stack refresh');
+                                }
+                                
+                                // Clear the pending insight data
+                                if (window.pendingStackInsight) {
+                                    delete window.pendingStackInsight;
+                                }
+                                
                                 console.log('✅ Stack view refreshed with new insight');
                             } catch (error) {
                                 console.error('❌ Failed to reload stack data:', error);
+                                
+                                // Remove loading card on error
+                                if (typeof loadingCardId !== 'undefined' && window.contentCardLoader) {
+                                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
+                                    console.log('🧹 Removed loading card due to stack refresh error');
+                                }
+                                
+                                // Clear the pending insight data
+                                if (window.pendingStackInsight) {
+                                    delete window.pendingStackInsight;
+                                }
+                                
                                 // Fallback: just re-render the current stack view
                                 renderStackView(activeStackId);
                             }
                         } else {
-                            // Normal home view reload - only if not already loading
-                            if (!insightsLoading) {
-                                await loadUserInsightsWithPagination();
-                            }
+                              // Normal home view reload - only if not already loading
+                              if (!insightsLoading) {
+                                  // Check if we should preserve scroll position (when adding new content)
+                                  const shouldPreserveScroll = window.tempScrollPosition !== undefined;
+                                  const savedScrollPosition = window.tempScrollPosition;
+                                  
+                                  // Clear cache and force reload to get fresh data with new content at the top
+                                  clearPageCache();
+                                  currentInsights = [];
+                                  
+                                  // Reset to page 1 to show the new content immediately
+                                  currentPage = 1;
+                                  
+                                  // Force reload page 1 to get the latest data with new content
+                                  await goToPage(1, { force: true });
+                                  
+                                  // If we were adding new content, check if we need to scroll to new insight
+                                  if (shouldPreserveScroll) {
+                                      console.log('🔒 Preserving scroll position for new content navigation');
+                                      // Clear the temp scroll position
+                                      delete window.tempScrollPosition;
+                                  }
+                                  
+                                  // Check if we need to scroll to newly added insight after reload
+                                  if (window.shouldScrollToNewInsight) {
+                                      console.log('📍 Post-reload: Scrolling to newly added insight...');
+                                      // Clear the flag
+                                      delete window.shouldScrollToNewInsight;
+                                      // Scroll after a short delay to ensure rendering is complete
+                                      setTimeout(() => {
+                                          scrollToNewInsight();
+                                      }, 300);
+                                  }
+                              }
                         }
                         
                         // Also save to localStorage backup
@@ -3429,7 +3535,7 @@ function bindEvents() {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
                     }
-                }, 1500); // 减少延迟时间
+                }, 100); // Minimal delay for immediate responsiveness
                 
             } catch (error) {
                 console.error('❌ 添加内容失败:', error);
@@ -4556,7 +4662,7 @@ function renderStackInsights(stack) {
     
     // Clear existing content (but keep template card)
     console.log('🧹 Clearing existing content');
-    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
+    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state, .empty-stack-state');
     existingCards.forEach(card => card.remove());
     
     // Template card is now only added in edit mode, not automatically
@@ -7352,6 +7458,10 @@ function toggleEditMode() {
         contentCards.forEach(card => {
             card.classList.remove('shake');
         });
+        
+        // Update pagination UI after removing template card
+        // Use debounced version to avoid multiple rapid updates
+        debouncedUpdatePaginationUI();
     }
 }
 
@@ -7605,6 +7715,192 @@ function getSourceName(url) {
         return sourceMap[hostname] || hostname.replace('www.', '');
     } catch (error) {
         return 'Unknown Source';
+    }
+}
+
+// Function to immediately handle insights that will be pushed to next page to avoid flash
+function handleInsightPushingImmediately() {
+    try {
+        console.log('⚡ Handling insight pushing immediately to avoid flash...');
+        
+        const contentCards = document.getElementById('contentCards');
+        if (!contentCards) return;
+        
+        // Calculate how many insights can fit on current page
+        const stacksCount = stacks.size;
+        const insightsPerPage = 9;
+        const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+        
+        // Get current insight cards (excluding stacks, template, and loading cards)
+        const currentInsightCards = contentCards.querySelectorAll('.content-card:not(.stack-card):not(.template-card):not(.loading-card)');
+        
+        console.log(`⚡ Current page can fit ${page1SlotsForInsights} insights, currently has ${currentInsightCards.length}`);
+        
+        // If we're on page 1 and adding a new insight would exceed the limit
+        if (currentPage === 1 && currentInsightCards.length >= page1SlotsForInsights) {
+            // Find insights that need to be pushed to next page
+            const insightsToPush = Array.from(currentInsightCards).slice(page1SlotsForInsights - 1); // -1 because we're adding one
+            
+            console.log(`⚡ Need to push ${insightsToPush.length} insights to avoid flash`);
+            
+            // Immediately hide the insights that will be pushed
+            insightsToPush.forEach((card, index) => {
+                // Add a smooth fade-out animation
+                card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(-10px)';
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if (card.parentNode) {
+                        card.remove();
+                    }
+                }, 200);
+                
+                console.log(`⚡ Pushed insight ${index + 1} with smooth fade-out`);
+            });
+        }
+        // If we're on page 2+ and adding a new insight
+        else if (currentPage > 1) {
+            // On subsequent pages, the last insight will be pushed to the next page
+            const lastInsightCard = currentInsightCards[currentInsightCards.length - 1];
+            
+            if (lastInsightCard && currentInsightCards.length >= insightsPerPage) {
+                console.log('⚡ Pushing last insight from current page to avoid flash');
+                
+                // Smooth fade-out for the last insight
+                lastInsightCard.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                lastInsightCard.style.opacity = '0';
+                lastInsightCard.style.transform = 'translateY(-10px)';
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if (lastInsightCard.parentNode) {
+                        lastInsightCard.remove();
+                    }
+                }, 200);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error handling insight pushing:', error);
+    }
+}
+
+// Function to navigate to the page where the newly added insight appears
+async function navigateToNewInsight() {
+    try {
+        console.log('🧭 Calculating page for new insight...');
+        
+        // The new insight will be the first insight after stacks
+        // Page 1: stacks + (insightsPerPage - stacksCount) insights
+        // Page 2+: insightsPerPage insights each
+        
+        const stacksCount = stacks.size;
+        const insightsPerPage = 9;
+        
+        // Calculate which page the new insight should be on
+        // New insight will be at position 1 (first insight after stacks)
+        const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+        
+        let targetPage;
+        if (page1SlotsForInsights > 0) {
+            // New insight will be on page 1
+            targetPage = 1;
+            console.log('🧭 New insight will be on page 1 (after stacks)');
+        } else {
+            // New insight will be on page 2 (page 1 is full of stacks)
+            targetPage = 2;
+            console.log('🧭 New insight will be on page 2 (page 1 full of stacks)');
+        }
+        
+        // Navigate to the target page if we're not already there
+        if (currentPage !== targetPage) {
+            console.log(`🧭 Navigating from page ${currentPage} to page ${targetPage}`);
+            await goToPage(targetPage);
+        } else {
+            console.log(`🧭 Already on correct page ${targetPage}`);
+        }
+        
+        // Mark that we need to scroll to new insight after page reload
+        window.shouldScrollToNewInsight = true;
+        
+        // Don't scroll immediately - let the page reload happen first
+        console.log('🔒 Marked for post-reload scroll to new insight');
+        
+    } catch (error) {
+        console.error('❌ Error navigating to new insight:', error);
+        // Fallback: just reload current page
+        await goToPage(currentPage, { force: true });
+    }
+}
+
+// Function to scroll to the newly added insight
+function scrollToNewInsight() {
+    try {
+        console.log('📍 Scrolling to newly added insight...');
+        
+        // Find the first insight card (should be the newly added one)
+        // We look for the first insight card that's not a stack card
+        const contentCards = document.getElementById('contentCards');
+        if (!contentCards) {
+            console.warn('⚠️ Content cards container not found');
+            return;
+        }
+        
+        // Find the first insight card after all stack cards
+        const allCards = contentCards.querySelectorAll('.content-card:not(.template-card)');
+        let firstInsightCard = null;
+        
+        for (const card of allCards) {
+            if (!card.classList.contains('stack-card')) {
+                firstInsightCard = card;
+                break;
+            }
+        }
+        
+        if (firstInsightCard) {
+            console.log('📍 Found first insight card, scrolling to it...');
+            
+            // Calculate the scroll position with some offset for better visibility
+            const cardRect = firstInsightCard.getBoundingClientRect();
+            const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const targetScrollTop = currentScrollTop + cardRect.top - 100; // 100px offset from top
+            
+            // Smooth scroll to the insight
+            window.scrollTo({
+                top: targetScrollTop,
+                behavior: 'smooth'
+            });
+            
+            // Add a subtle highlight effect to draw attention
+            firstInsightCard.style.transition = 'box-shadow 0.3s ease, transform 0.3s ease';
+            firstInsightCard.style.boxShadow = '0 8px 32px rgba(59, 130, 246, 0.3)';
+            firstInsightCard.style.transform = 'translateY(-2px)';
+            
+            // Remove the highlight after 2 seconds
+            setTimeout(() => {
+                firstInsightCard.style.boxShadow = '';
+                firstInsightCard.style.transform = '';
+                // Remove the transition after animation completes
+                setTimeout(() => {
+                    firstInsightCard.style.transition = '';
+                }, 300);
+            }, 2000);
+            
+            console.log('✅ Successfully scrolled to and highlighted new insight');
+        } else {
+            console.warn('⚠️ Could not find first insight card to scroll to');
+            
+            // Fallback: scroll to the content cards area
+            contentCards.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error scrolling to new insight:', error);
     }
 }
 
