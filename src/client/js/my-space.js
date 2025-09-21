@@ -54,9 +54,9 @@ let cachedUserTags = null;
 let userTagsCacheTime = 0;
 const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
-    latest: 'latest',  // Time sorting
-    tags: 'all',       // Tag filtering - default to 'all'
-    search: ''         // Search filtering
+    content_type: 'all',  // Content type filtering - 'all', 'insights_only', 'stacks_only'
+    tags: 'all',          // Tag filtering - default to 'all'
+    search: ''            // Search filtering
 };
 let isEditMode = false; // Edit mode state
 
@@ -240,8 +240,19 @@ function getTotalInsightsCount() {
 }
 
 // Update pagination UI
+// Cache for pagination state to prevent unnecessary updates
+let lastPaginationState = { currentPage: 0, totalPages: 0, totalInsights: 0, stacksSize: 0 };
+
 function updatePaginationUI() {
     console.log(`🔍 DEBUG: updatePaginationUI called - currentPage=${currentPage}, totalPages=${totalPages}`);
+    
+    // Performance optimization: skip update if nothing changed
+    const currentState = { currentPage, totalPages, totalInsights, stacksSize: stacks.size };
+    if (JSON.stringify(currentState) === JSON.stringify(lastPaginationState)) {
+        console.log('🔍 DEBUG: Pagination state unchanged, skipping UI update');
+        return;
+    }
+    lastPaginationState = { ...currentState };
     
     const currentPageEl = document.getElementById('currentPage');
     const totalPagesEl = document.getElementById('totalPages');
@@ -541,6 +552,26 @@ function updatePaginationInfo(data) {
     console.log(`🔍 DEBUG: updatePaginationInfo - totalPages=${totalPages}, totalInsights=${totalInsights}, currentPage=${currentPage} (not updated from API)`);
 }
 
+// Ensure all insights are available for modal access across pages
+async function ensureAllInsightsAvailable() {
+    if (!window.allInsightsForFiltering) {
+        console.log('🔄 Fetching all insights to ensure modal access across pages...');
+        await fetchAllInsightsForFiltering();
+    }
+}
+
+// Debounced pagination UI update for better performance
+let paginationUpdateTimeout = null;
+function debouncedUpdatePaginationUI() {
+    if (paginationUpdateTimeout) {
+        clearTimeout(paginationUpdateTimeout);
+    }
+    paginationUpdateTimeout = setTimeout(() => {
+        updatePaginationUI();
+        paginationUpdateTimeout = null;
+    }, 100); // 100ms debounce
+}
+
 // Show loading state (disabled - no overlay to avoid blocking content)
 function showLoadingState() {
     // 不再显示加载覆盖层，避免挡住页面内容
@@ -707,6 +738,11 @@ async function loadUserInsightsWithPagination() {
             
             // Get pagination info from API response
             updatePaginationInfo(firstPageResponse.data);
+            
+            // Ensure all insights are available for modal access (async, non-blocking)
+            ensureAllInsightsAvailable().catch(err => 
+                console.warn('⚠️ Failed to preload all insights for modal access:', err)
+            );
             
             // Normalize tag structure
             currentInsights.forEach(insight => {
@@ -1611,7 +1647,8 @@ function effectiveLimitForPage(pageNum) {
 // (Over-fetch on page 1 to refill after excluding stacked insights)
 function effectiveFetchLimitForPage(pageNum) {
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-    if (hasActiveTagFilter) return insightsPerPage;  // no stacks when filtering
+    const hasActiveContentTypeFilter = currentFilters.content_type && currentFilters.content_type !== 'all';
+    if (hasActiveTagFilter || hasActiveContentTypeFilter) return insightsPerPage;  // no stacks when filtering
     if (pageNum !== 1) return insightsPerPage;       // stacks shown only on page 1
 
     // For page 1, we need to fetch enough insights to account for:
@@ -1702,8 +1739,7 @@ async function performRenderInsights() {
     const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
     existingCards.forEach(card => card.remove());
     
-    // Ensure template card exists and is first
-    addTemplateCard();
+    // Template card is now only added in edit mode, not automatically
     
     // Get filtered insights for rendering
     const filteredInsights = await getFilteredInsights();
@@ -1713,12 +1749,16 @@ async function performRenderInsights() {
     console.log('🎯 Stacks count:', stacks.size);
     console.log('🎯 Effective limit for page', currentPage, ':', effectiveLimitForPage(currentPage));
     
-    // Check if we have any content to render (insights OR stacks)
+    // Check if we have any content to render (insights OR stacks) based on content type filter
     // For page 1, check both insights and stacks. For other pages, only check insights
     const hasInsights = currentPage === 1 ? filteredInsights.length > 0 : currentInsights.length > 0;
     const hasStacks = stacks.size > 0;
+    const shouldShowStacks = currentFilters.content_type === 'all' || currentFilters.content_type === 'stacks_only';
+    const shouldShowInsights = currentFilters.content_type === 'all' || currentFilters.content_type === 'insights_only';
     
-    if (!hasInsights && !hasStacks) {
+    const hasContentToShow = (hasInsights && shouldShowInsights) || (hasStacks && shouldShowStacks);
+    
+    if (!hasContentToShow) {
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-state';
         emptyState.innerHTML = `
@@ -1736,11 +1776,12 @@ async function performRenderInsights() {
     const fragment = document.createDocumentFragment();
     
     // Page 1: render stacks first (each stack is ONE tile)
-    // Only show stacks if no specific tag filter is active AND we're on page 1
+    // Only show stacks if no specific tag filter is active AND we're on page 1 AND content type allows stacks
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
+    const hasActiveContentTypeFilter = currentFilters.content_type && currentFilters.content_type !== 'all';
+    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}, hasActiveContentTypeFilter=${hasActiveContentTypeFilter}, shouldShowStacks=${shouldShowStacks}, shouldShowInsights=${shouldShowInsights}`);
     
-    if (currentPage === 1 && hasStacks && !hasActiveTagFilter) {
+    if (currentPage === 1 && hasStacks && !hasActiveTagFilter && shouldShowStacks) {
         console.log(`🔍 DEBUG: Rendering ${stacks.size} stacks on page 1`);
         for (const [, stackData] of stacks) {
             fragment.appendChild(createStackCard(stackData));
@@ -1749,16 +1790,17 @@ async function performRenderInsights() {
         console.log(`🔍 DEBUG: Not rendering stacks - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
     }
     
-    // Then render insights (using filtered insights)
-    if (hasInsights) {
-        if (hasActiveTagFilter) {
-            // When filtering, paginate through filtered results
+    // Then render insights (using filtered insights) - only if content type allows insights
+    if (hasInsights && shouldShowInsights) {
+        if (hasActiveTagFilter || hasActiveContentTypeFilter) {
+            // When filtering (by tags or content type), paginate through filtered results
             const startIndex = (currentPage - 1) * insightsPerPage;
             const endIndex = startIndex + insightsPerPage;
             const list = filteredInsights.slice(startIndex, endIndex);
             
-            console.log(`🔍 DEBUG: Tag filter rendering - startIndex=${startIndex}, endIndex=${endIndex}, list.length=${list.length}`);
+            console.log(`🔍 DEBUG: Filter rendering - startIndex=${startIndex}, endIndex=${endIndex}, list.length=${list.length}`);
             console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, insightsPerPage=${insightsPerPage}`);
+            console.log(`🔍 DEBUG: Active filters - tag: ${hasActiveTagFilter}, content_type: ${hasActiveContentTypeFilter}`);
             
             for (const insight of list) {
                 fragment.appendChild(createInsightCard(insight));
@@ -1797,8 +1839,8 @@ async function performRenderInsights() {
     // Update edit mode state after rendering cards
     updateEditModeState();
     
-    // Update pagination UI after rendering
-    updatePaginationUI();
+    // Update pagination UI after rendering (debounced for performance)
+    debouncedUpdatePaginationUI();
     
     // 重置渲染标志
     isRendering = false;
@@ -1873,9 +1915,14 @@ async function resetInsightsPaginationAndRerender() {
         console.log(`🔍 DEBUG: Using filtered insights for pagination: ${totalInsights}`);
         totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
     }
-    currentPage = 1; // Reset to first page when filtering
     
-    console.log(`🔍 DEBUG: Pagination calculation - totalInsights=${totalInsights}, insightsPerPage=${insightsPerPage}, totalPages=${totalPages}`);
+    // Only reset to first page if current page would be invalid
+    if (currentPage > totalPages) {
+        currentPage = Math.max(1, totalPages);
+        console.log(`🔍 DEBUG: Current page ${currentPage} exceeds totalPages ${totalPages}, resetting to page ${currentPage}`);
+    }
+    
+    console.log(`🔍 DEBUG: Pagination calculation - totalInsights=${totalInsights}, insightsPerPage=${insightsPerPage}, totalPages=${totalPages}, currentPage=${currentPage}`);
     
     // DON'T overwrite currentInsights - keep original data for future filtering
     // The renderInsights function will call getFilteredInsights() to get the right data
@@ -2212,14 +2259,14 @@ async function initFilterButtons() {
         // 创建两个主要筛选按钮
         const mainFilterButtons = [
             {
-                key: 'latest',
-                label: 'Last Added',
-                translateKey: 'last_added',
+                key: 'content_type',
+                label: 'Content Type',
+                translateKey: 'content_type',
                 type: 'dropdown',
                 options: [
-                    { key: 'latest', label: 'Latest', translateKey: 'latest' },
-                    { key: 'oldest', label: 'Oldest', translateKey: 'oldest' },
-                    { key: 'alphabetical', label: 'Alphabetical', translateKey: 'alphabetical' }
+                    { key: 'all', label: 'All Content', translateKey: 'all_content' },
+                    { key: 'insights_only', label: 'Insights Only', translateKey: 'insights_only' },
+                    { key: 'stacks_only', label: 'Stacks Only', translateKey: 'stacks_only' }
                 ]
             },
             {
@@ -2317,7 +2364,7 @@ async function initFilterButtons() {
                     const option = e.target.closest('.filter-option');
                     if (option) {
                         const filterKey = option.dataset.filter;
-                        const filterType = filterConfig.key; // latest, tags
+                        const filterType = filterConfig.key; // content_type, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
                         
                         console.log('🎯 Setting filter:', { filterType, filterKey, optionLabel });
@@ -2372,7 +2419,7 @@ async function initFilterButtons() {
                     const option = e.target.closest('.filter-option');
                     if (option) {
                         const filterKey = option.dataset.filter;
-                        const filterType = filterConfig.key; // latest, tags
+                        const filterType = filterConfig.key; // content_type, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
                         setFilter(filterType, filterKey, optionLabel);
                         
@@ -2518,6 +2565,24 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
         }
     }
     
+    // Handle content type filter changes
+    if (filterType === 'content_type') {
+        if (filterValue === 'insights_only') {
+            // For insights only, fetch all insights from database
+            console.log('🔄 Switching to "Insights Only" - fetching all insights...');
+            window.allInsightsForFiltering = null;
+            await fetchAllInsightsForFiltering();
+            console.log('✅ All insights fetched for "Insights Only" filter');
+        } else if (filterValue === 'all') {
+            // For "all content", we need to fetch all insights to properly filter out stacked ones
+            console.log('🔄 Switching to "All Content" - fetching all insights to filter out stacked ones');
+            window.allInsightsForFiltering = null;
+            await fetchAllInsightsForFiltering();
+            console.log('✅ All insights fetched for "All Content" filter');
+        }
+        // For stacks_only, we don't need to fetch insights since we're only showing stacks
+    }
+    
     // 更新按钮显示文本
     updateFilterButtonDisplay(filterType, filterValue, optionLabel);
     
@@ -2553,14 +2618,14 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
         button.textContent = paraCategoryNames[filterValue];
     } else if (filterType === 'tags' && filterValue === 'all') {
         button.textContent = 'Tags';
-    } else if (filterType === 'latest') {
-        // 排序方式：显示排序方式
-        if (filterValue === 'latest') {
-            button.textContent = 'Latest';
-        } else if (filterValue === 'oldest') {
-            button.textContent = 'Oldest';
-        } else if (filterValue === 'alphabetical') {
-            button.textContent = 'Alphabetical';
+    } else if (filterType === 'content_type') {
+        // 内容类型筛选：显示内容类型
+        if (filterValue === 'all') {
+            button.textContent = 'All Content';
+        } else if (filterValue === 'insights_only') {
+            button.textContent = 'Insights Only';
+        } else if (filterValue === 'stacks_only') {
+            button.textContent = 'Stacks Only';
         }
     }
 }
@@ -2578,13 +2643,13 @@ function updateFilterButtonStates() {
 function showFilterStatus() {
     const statusParts = [];
     
-    // 排序状态
-    if (currentFilters.latest === 'latest') {
-        statusParts.push('Latest First');
-    } else if (currentFilters.latest === 'oldest') {
-        statusParts.push('Oldest First');
-    } else if (currentFilters.latest === 'alphabetical') {
-        statusParts.push('Alphabetical');
+    // 内容类型状态
+    if (currentFilters.content_type === 'insights_only') {
+        statusParts.push('Insights Only');
+    } else if (currentFilters.content_type === 'stacks_only') {
+        statusParts.push('Stacks Only');
+    } else if (currentFilters.content_type === 'all') {
+        statusParts.push('All Content');
     }
     
     // 标签筛选状态
@@ -2633,10 +2698,11 @@ async function getFilteredInsights() {
         })));
     }
     
-    // If we have an active tag filter or search filter, we need to work with all insights, not just current page
+    // If we have an active tag filter, search filter, or content type filter, we need to work with all insights, not just current page
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
     const hasActiveSearchFilter = currentFilters.search && currentFilters.search.trim() !== '';
-    const hasAnyFilter = hasActiveTagFilter || hasActiveSearchFilter;
+    const hasActiveContentTypeFilter = currentFilters.content_type && currentFilters.content_type !== 'all';
+    const hasAnyFilter = hasActiveTagFilter || hasActiveSearchFilter || hasActiveContentTypeFilter;
     let insightsToFilter = currentInsights;
     
     if (hasAnyFilter) {
@@ -2700,24 +2766,8 @@ async function getFilteredInsights() {
         console.log('📋 Keeping all insights for filtering (including those in stacks):', filteredInsights.length);
     }
     
-    // 1. 排序逻辑（始终应用）
-    if (currentFilters.latest === 'latest') {
-        // 按最新时间排序
-        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (currentFilters.latest === 'oldest') {
-        // 按最旧时间排序
-        filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    } else if (currentFilters.latest === 'alphabetical') {
-        // 按标题首字母A-Z排序
-        filteredInsights.sort((a, b) => {
-            const titleA = (a.title || a.url || '').toLowerCase();
-            const titleB = (b.title || b.url || '').toLowerCase();
-            return titleA.localeCompare(titleB);
-        });
-    } else {
-        // 默认按最新时间排序
-        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    }
+    // 1. 默认排序逻辑（按最新时间排序）
+    filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     
     // 2. Text search filter (title + metadata)
     if (currentFilters.search && currentFilters.search.trim() !== '') {
@@ -4415,8 +4465,7 @@ function renderStackInsights(stack) {
     const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
     existingCards.forEach(card => card.remove());
     
-    // Ensure template card exists and is first
-    addTemplateCard();
+    // Template card is now only added in edit mode, not automatically
     
     if (!stack.cards || stack.cards.length === 0) {
         console.log('📭 No cards in stack, rendering empty state');
@@ -6157,8 +6206,44 @@ let currentDetailInsight = null;
 
 // 打开内容详情模态框
 function openContentDetailModal(insight) {
-    // 确保使用最新的insight数据
-    const latestInsight = currentInsights.find(i => i.id === insight.id) || insight;
+    // 确保使用最新的insight数据 - search across all available sources
+    let latestInsight = null;
+    
+    // First, try to find in current page insights
+    latestInsight = currentInsights.find(i => i.id === insight.id);
+    
+    // If not found in current page, try to find in all insights for filtering
+    if (!latestInsight && window.allInsightsForFiltering) {
+        latestInsight = window.allInsightsForFiltering.find(i => i.id === insight.id);
+    }
+    
+    // If still not found, try to find in page cache
+    if (!latestInsight) {
+        for (const [pageNum, pageData] of pageCache.entries()) {
+            const foundInsight = pageData.insights.find(i => i.id === insight.id);
+            if (foundInsight) {
+                latestInsight = foundInsight;
+                break;
+            }
+        }
+    }
+    
+    // If still not found, try to find in active stack (if in stack view)
+    if (!latestInsight && viewMode === 'stack' && activeStackId) {
+        const activeStack = stacks.get(activeStackId);
+        if (activeStack && activeStack.cards) {
+            latestInsight = activeStack.cards.find(card => card.id === insight.id);
+        }
+    }
+    
+    // Fall back to the original insight if nothing found
+    latestInsight = latestInsight || insight;
+    
+    console.log('🔍 DEBUG: openContentDetailModal - found insight:', latestInsight.id, 'from source:', 
+        currentInsights.find(i => i.id === insight.id) ? 'currentInsights' :
+        window.allInsightsForFiltering?.find(i => i.id === insight.id) ? 'allInsightsForFiltering' :
+        'pageCache or fallback');
+    
     currentDetailInsight = latestInsight;
     const modal = document.getElementById('contentDetailModal');
     
@@ -7162,10 +7247,16 @@ function toggleEditMode() {
     }
 }
 
-// Add template card for adding new content - always visible and always first
+// Add template card for adding new content - only visible in edit mode
 function addTemplateCard() {
     const contentCards = document.getElementById('contentCards');
     if (!contentCards) return;
+    
+    // Only add template card if we're in edit mode
+    if (!isEditMode) {
+        console.log('ℹ️ Not in edit mode, skipping template card addition');
+        return;
+    }
     
     // Check if template card already exists
     if (contentCards.querySelector('.template-card')) return;
@@ -7202,10 +7293,13 @@ function addTemplateCard() {
     console.log('✅ Template card added at first position');
 }
 
-// Remove template card when exiting edit mode - but now we keep it always visible
+// Remove template card when exiting edit mode
 function removeTemplateCard() {
-    // Template card is now always visible, so we don't remove it
-    console.log('ℹ️ Template card is now always visible, not removing');
+    const templateCard = document.querySelector('.template-card');
+    if (templateCard) {
+        templateCard.remove();
+        console.log('✅ Template card removed');
+    }
 }
 
 // Show modal with options to create card or stack
@@ -7411,10 +7505,12 @@ function updateEditModeState() {
     const editModeBtn = document.getElementById('editModeBtn');
     const editBtnText = editModeBtn ? editModeBtn.querySelector('.edit-btn-text') : null;
     
-    // Ensure template card always exists and is first
-    const existingTemplateCard = document.querySelector('.template-card');
-    if (!existingTemplateCard) {
-        addTemplateCard();
+    // Only ensure template card exists if in edit mode
+    if (isEditMode) {
+        const existingTemplateCard = document.querySelector('.template-card');
+        if (!existingTemplateCard) {
+            addTemplateCard();
+        }
     }
     
     if (isEditMode) {

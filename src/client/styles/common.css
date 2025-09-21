@@ -353,9 +353,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Hide translation button across all pages */
-.translation-btn {
+/* .translation-btn {
     display: none !important;
-}
+} */
 
 /* Hide email preferences dropdown across all pages */
 #headerEmailPreferences {

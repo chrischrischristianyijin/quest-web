@@ -4265,13 +4265,13 @@ body.modal-open { overflow: hidden; }
     opacity: 1 !important;
 }
 
-/* Template card for adding new content - always visible */
+/* Template card for adding new content - hidden by default, visible only in edit mode */
 .template-card {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     border: 2px dashed #cbd5e1;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex !important;
+    display: none;
     align-items: center;
     justify-content: center;
     min-height: 220px;
@@ -4279,6 +4279,11 @@ body.modal-open { overflow: hidden; }
     overflow: hidden;
     border-radius: var(--radius-lg);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* Show template card only in edit mode */
+.edit-mode .template-card {
+    display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
 }
