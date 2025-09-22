@@ -2697,24 +2697,46 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
             button.textContent = optionLabel;
         }
     } else if (filterType === 'tags' && ['project', 'area', 'resource', 'archive'].includes(filterValue)) {
-        // PARA categories
-        const paraCategoryNames = {
-            'project': 'Project',
-            'area': 'Area',
-            'resource': 'Resource', 
-            'archive': 'Archive'
-        };
-        button.textContent = paraCategoryNames[filterValue];
+        // PARA categories - use translation system
+        const translationKey = filterValue; // 'project', 'area', 'resource', 'archive'
+        if (window.translationManager) {
+            button.textContent = window.translationManager.t(translationKey);
+        } else {
+            // Fallback to English
+            const paraCategoryNames = {
+                'project': 'Project',
+                'area': 'Area',
+                'resource': 'Resource', 
+                'archive': 'Archive'
+            };
+            button.textContent = paraCategoryNames[filterValue];
+        }
     } else if (filterType === 'tags' && filterValue === 'all') {
-        button.textContent = 'Tags';
+        // Use translation system for "Tags"
+        if (window.translationManager) {
+            button.textContent = window.translationManager.t('tags');
+        } else {
+            button.textContent = 'Tags';
+        }
     } else if (filterType === 'content_type') {
-        // 内容类型筛选：显示内容类型
-        if (filterValue === 'all') {
-            button.textContent = 'All Content';
-        } else if (filterValue === 'insights_only') {
-            button.textContent = 'Insights Only';
-        } else if (filterValue === 'stacks_only') {
-            button.textContent = 'Stacks Only';
+        // 内容类型筛选：使用翻译系统
+        if (window.translationManager) {
+            if (filterValue === 'all') {
+                button.textContent = window.translationManager.t('all_content');
+            } else if (filterValue === 'insights_only') {
+                button.textContent = window.translationManager.t('insights_only');
+            } else if (filterValue === 'stacks_only') {
+                button.textContent = window.translationManager.t('stacks_only');
+            }
+        } else {
+            // Fallback to English
+            if (filterValue === 'all') {
+                button.textContent = 'All Content';
+            } else if (filterValue === 'insights_only') {
+                button.textContent = 'Insights Only';
+            } else if (filterValue === 'stacks_only') {
+                button.textContent = 'Stacks Only';
+            }
         }
     }
 }
@@ -2734,11 +2756,23 @@ function showFilterStatus() {
     
     // 内容类型状态
     if (currentFilters.content_type === 'insights_only') {
-        statusParts.push('Insights Only');
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('insights_only'));
+        } else {
+            statusParts.push('Insights Only');
+        }
     } else if (currentFilters.content_type === 'stacks_only') {
-        statusParts.push('Stacks Only');
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('stacks_only'));
+        } else {
+            statusParts.push('Stacks Only');
+        }
     } else if (currentFilters.content_type === 'all') {
-        statusParts.push('All Content');
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('all_content'));
+        } else {
+            statusParts.push('All Content');
+        }
     }
     
     // 标签筛选状态
@@ -2748,26 +2782,37 @@ function showFilterStatus() {
             if (tagButton) {
                 const tagOption = tagButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.tags}"]`);
                 if (tagOption) {
-                    statusParts.push(`标签: ${tagOption.textContent.trim()}`);
+                    const tagLabel = window.translationManager ? window.translationManager.t('tags') : '标签';
+                    statusParts.push(`${tagLabel}: ${tagOption.textContent.trim()}`);
                 }
             }
         } else if (['project', 'area', 'resource', 'archive'].includes(currentFilters.tags)) {
             // Handle PARA categories
-            const paraCategoryNames = {
-                'project': 'Project',
-                'area': 'Area', 
-                'resource': 'Resource',
-                'archive': 'Archive'
-            };
-            statusParts.push(`标签: ${paraCategoryNames[currentFilters.tags]}`);
+            if (window.translationManager) {
+                const tagLabel = window.translationManager.t('tags');
+                const categoryLabel = window.translationManager.t(currentFilters.tags);
+                statusParts.push(`${tagLabel}: ${categoryLabel}`);
+            } else {
+                const paraCategoryNames = {
+                    'project': 'Project',
+                    'area': 'Area', 
+                    'resource': 'Resource',
+                    'archive': 'Archive'
+                };
+                statusParts.push(`标签: ${paraCategoryNames[currentFilters.tags]}`);
+            }
         }
     } else if (currentFilters.tags === 'all') {
-        statusParts.push('All Tags');
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('all_tags'));
+        } else {
+            statusParts.push('All Tags');
+        }
     }
     
 
     
-    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : 'Show All Content';
+    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : (window.translationManager ? window.translationManager.t('all_content') : 'Show All Content');
     
     // 可以在这里添加UI显示筛选状态
     // 比如在页面顶部显示一个小提示
@@ -7490,11 +7535,11 @@ function addTemplateCard() {
                 </svg>
             </div>
             <div class="template-card-text">
-                <h3>Add New Content</h3>
-                <p>Click to add a new insight or create a stack</p>
+                <h3 data-translate="add_new_content">Add New Content</h3>
+                <p data-translate="click_to_add_insight">Click to add a new insight or create a stack</p>
                 <div class="template-card-options">
-                    <span class="template-option">📄 Insight</span>
-                    <span class="template-option">📚 Stack</span>
+                    <span class="template-option" data-translate="insight_option">📄 Insight</span>
+                    <span class="template-option" data-translate="stack_option">📚 Stack</span>
                 </div>
             </div>
         </div>
@@ -7507,6 +7552,11 @@ function addTemplateCard() {
     templateCard.addEventListener('click', () => {
         showCreationOptionsModal();
     });
+    
+    // Apply translations to the template card
+    if (window.translationManager) {
+        window.translationManager.applyTranslations();
+    }
     
     console.log('✅ Template card added at first position');
 }
@@ -7528,7 +7578,7 @@ function showCreationOptionsModal() {
     modalOverlay.innerHTML = `
         <div class="modal-content creation-options-content">
             <div class="modal-header">
-                <h2>Create New</h2>
+                <h2 data-translate="create_new">Create New</h2>
                 <button class="modal-close-btn" id="closeCreationOptionsModal">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -7548,8 +7598,8 @@ function showCreationOptionsModal() {
                             </svg>
                         </div>
                         <div class="creation-option-content">
-                            <h3>Content Card</h3>
-                            <p>Create a single content card with a link, title, and description</p>
+                            <h3 data-translate="content_card">Content Card</h3>
+                            <p data-translate="content_card_description">Create a single content card with a link, title, and description</p>
                         </div>
                     </div>
                     
@@ -7562,8 +7612,8 @@ function showCreationOptionsModal() {
                             </svg>
                         </div>
                         <div class="creation-option-content">
-                            <h3>Stack</h3>
-                            <p>Create an empty stack to organize multiple content cards</p>
+                            <h3 data-translate="stack">Stack</h3>
+                            <p data-translate="stack_description">Create an empty stack to organize multiple content cards</p>
                         </div>
                     </div>
                 </div>
@@ -7594,6 +7644,11 @@ function showCreationOptionsModal() {
         hideCreationOptionsModal();
         createEmptyStack();
     });
+    
+    // Apply translations to the modal
+    if (window.translationManager) {
+        window.translationManager.applyTranslations();
+    }
 }
 
 // Hide creation options modal
@@ -10290,26 +10345,29 @@ async function replaceAllTagsWithDefaults() {
 
 // Setup PARA tooltips for filter options
 function setupPARATooltips(dropdownOptions) {
+    // Get current language from translation manager
+    const currentLanguage = window.translationManager ? window.translationManager.currentLanguage : 'en';
+    
     const paraExplanations = {
         'P': {
-            title: 'Projects',
-            description: 'A series of tasks linked to a specific goal, with a deadline. Once the goal is accomplished, the project moves to the archive.',
-            examples: 'Examples: Planning a vacation, publishing a blog post, or preparing a presentation.'
+            title: window.translationManager ? window.translationManager.t('para_projects_title') : 'Projects',
+            description: window.translationManager ? window.translationManager.t('para_projects_description') : 'A series of tasks linked to a specific goal, with a deadline. Once the goal is accomplished, the project moves to the archive.',
+            examples: window.translationManager ? window.translationManager.t('para_projects_examples') : 'Examples: Planning a vacation, publishing a blog post, or preparing a presentation.'
         },
         'A': {
-            title: 'Areas',
-            description: 'A sphere of ongoing activity that requires a certain standard to be maintained over time, but has no specific deadline.',
-            examples: 'Examples: Health, finances, personal development, or professional duties.'
+            title: window.translationManager ? window.translationManager.t('para_areas_title') : 'Areas',
+            description: window.translationManager ? window.translationManager.t('para_areas_description') : 'A sphere of ongoing activity that requires a certain standard to be maintained over time, but has no specific deadline.',
+            examples: window.translationManager ? window.translationManager.t('para_areas_examples') : 'Examples: Health, finances, personal development, or professional duties.'
         },
         'R': {
-            title: 'Resources',
-            description: 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
-            examples: 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
+            title: window.translationManager ? window.translationManager.t('para_resources_title') : 'Resources',
+            description: window.translationManager ? window.translationManager.t('para_resources_description') : 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
+            examples: window.translationManager ? window.translationManager.t('para_resources_examples') : 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
         },
         'Archive': {
-            title: 'Archive',
-            description: 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
-            examples: 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
+            title: window.translationManager ? window.translationManager.t('para_archive_title') : 'Archive',
+            description: window.translationManager ? window.translationManager.t('para_archive_description') : 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
+            examples: window.translationManager ? window.translationManager.t('para_archive_examples') : 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
         }
     };
 
