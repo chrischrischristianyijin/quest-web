@@ -1,6 +1,7 @@
 // 导入现有的认证系统
 import { auth } from './auth.js';
 import { tokenManager } from './token-manager.js';
+import { connectivityManager } from './connectivity-manager.js';
 
 // 🔐 Global auth-expired handler for chat page
 window.addEventListener('quest-auth-expired', async (e) => {
@@ -37,7 +38,9 @@ window.addEventListener('quest-auth-expired', async (e) => {
     } catch (modalError) {
       console.error('❌ Chat: Error showing auth modal:', modalError);
       // 最后回退到直接跳转
-      window.location.href = '/src/client/pages/login.html';
+      localStorage.setItem('quest_logout_reason', 'Chat authentication error');
+      localStorage.setItem('quest_logout_timestamp', Date.now().toString());
+      window.location.href = '/src/client/pages/login.html?reason=chat_auth_error&auto=true';
     }
   }
 });
@@ -83,11 +86,21 @@ function stopChatTokenValidation() {
   }
 }
 
-// 页面加载时启动token验证
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startChatTokenValidation);
-} else {
+// 页面加载时启动token验证和连接监控
+function initChatPage() {
   startChatTokenValidation();
+  
+  // Start backend connectivity monitoring for chat page
+  if (auth.checkAuth()) {
+    console.log('🔗 Chat: Starting backend connectivity monitoring...');
+    connectivityManager.startMonitoring();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initChatPage);
+} else {
+  initChatPage();
 }
 
 // 页面卸载时停止验证

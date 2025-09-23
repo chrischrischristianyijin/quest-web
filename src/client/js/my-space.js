@@ -4,6 +4,7 @@ import { API_CONFIG } from './config.js';
 import { PATHS, navigateTo } from './paths.js';
 import { tokenManager } from './token-manager.js';
 import { tokenStatusIndicator } from './token-status-indicator.js';
+import { connectivityManager } from './connectivity-manager.js';
 
 // DOM Element Cache for Performance Optimization
 const DOM_CACHE = new Map();
@@ -54,9 +55,9 @@ let cachedUserTags = null;
 let userTagsCacheTime = 0;
 const USER_TAGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let currentFilters = {
-    latest: 'latest',  // Time sorting
-    tags: 'all',       // Tag filtering - default to 'all'
-    search: ''         // Search filtering
+    content_type: 'all',  // Content type filtering - 'all', 'insights_only', 'stacks_only'
+    tags: 'all',          // Tag filtering - default to 'all'
+    search: ''            // Search filtering
 };
 let isEditMode = false; // Edit mode state
 
@@ -125,6 +126,8 @@ window.addEventListener('quest-auth-expired', async (e) => {
     } catch (modalError) {
       console.error('❌ Error showing auth modal:', modalError);
       // Final fallback to direct navigation
+      localStorage.setItem('quest_logout_reason', 'Authentication error');
+      localStorage.setItem('quest_logout_timestamp', Date.now().toString());
       navigateTo(PATHS.LOGIN);
     }
   }
@@ -240,8 +243,19 @@ function getTotalInsightsCount() {
 }
 
 // Update pagination UI
+// Cache for pagination state to prevent unnecessary updates
+let lastPaginationState = { currentPage: 0, totalPages: 0, totalInsights: 0, stacksSize: 0 };
+
 function updatePaginationUI() {
     console.log(`🔍 DEBUG: updatePaginationUI called - currentPage=${currentPage}, totalPages=${totalPages}`);
+    
+    // Performance optimization: skip update if nothing changed
+    const currentState = { currentPage, totalPages, totalInsights, stacksSize: stacks.size };
+    if (JSON.stringify(currentState) === JSON.stringify(lastPaginationState)) {
+        console.log('🔍 DEBUG: Pagination state unchanged, skipping UI update');
+        return;
+    }
+    lastPaginationState = { ...currentState };
     
     const currentPageEl = document.getElementById('currentPage');
     const totalPagesEl = document.getElementById('totalPages');
@@ -261,19 +275,31 @@ function updatePaginationUI() {
     if (totalInsightsEl) {
         const s = stacks.size;
         
-        // Count insights that are within stacks (these should not be counted separately)
-        let insightsInStacks = 0;
-        stacks.forEach(stackData => {
-            insightsInStacks += stackData.cards.length;
-        });
-        
-        // Calculate actual insights that are not in stacks
-        const standaloneInsights = Math.max(0, totalInsights - insightsInStacks);
-        const totalCards = standaloneInsights + s; // Each stack counts as one card
-        
-        totalInsightsEl.textContent = s > 0
-            ? `${totalCards} cards (${standaloneInsights} insights + ${s} stack${s > 1 ? 's' : ''})`
-            : `${standaloneInsights} insights`;
+        // Handle different content type filters
+        if (currentFilters.content_type === 'stacks_only') {
+            // For "Stacks Only", only show stack count
+            totalInsightsEl.textContent = s > 0
+                ? `${s} stack${s > 1 ? 's' : ''}`
+                : '0 stacks';
+        } else if (currentFilters.content_type === 'insights_only') {
+            // For "Insights Only", only show insight count
+            totalInsightsEl.textContent = `${totalInsights} insights`;
+        } else {
+            // For "All Content", show both insights and stacks
+            // Count insights that are within stacks (these should not be counted separately)
+            let insightsInStacks = 0;
+            stacks.forEach(stackData => {
+                insightsInStacks += stackData.cards.length;
+            });
+            
+            // Calculate actual insights that are not in stacks
+            const standaloneInsights = Math.max(0, totalInsights - insightsInStacks);
+            const totalCards = standaloneInsights + s; // Each stack counts as one card
+            
+            totalInsightsEl.textContent = s > 0
+                ? `${totalCards} cards (${standaloneInsights} insights + ${s} stack${s > 1 ? 's' : ''})`
+                : `${standaloneInsights} insights`;
+        }
     }
     
     // Update button states
@@ -541,6 +567,26 @@ function updatePaginationInfo(data) {
     console.log(`🔍 DEBUG: updatePaginationInfo - totalPages=${totalPages}, totalInsights=${totalInsights}, currentPage=${currentPage} (not updated from API)`);
 }
 
+// Ensure all insights are available for modal access across pages
+async function ensureAllInsightsAvailable() {
+    if (!window.allInsightsForFiltering) {
+        console.log('🔄 Fetching all insights to ensure modal access across pages...');
+        await fetchAllInsightsForFiltering();
+    }
+}
+
+// Debounced pagination UI update for better performance
+let paginationUpdateTimeout = null;
+function debouncedUpdatePaginationUI() {
+    if (paginationUpdateTimeout) {
+        clearTimeout(paginationUpdateTimeout);
+    }
+    paginationUpdateTimeout = setTimeout(() => {
+        updatePaginationUI();
+        paginationUpdateTimeout = null;
+    }, 100); // 100ms debounce
+}
+
 // Show loading state (disabled - no overlay to avoid blocking content)
 function showLoadingState() {
     // 不再显示加载覆盖层，避免挡住页面内容
@@ -687,6 +733,31 @@ async function loadUserInsightsWithPagination() {
                 }
             }
             
+            // Check for data access issues: API returns 0 but backup data exists
+            if (firstPageInsights.length === 0) {
+                const backupData = localStorage.getItem('quest_insights_backup');
+                if (backupData) {
+                    try {
+                        const parsed = JSON.parse(backupData);
+                        const backupInsights = parsed?.data || [];
+                        if (backupInsights.length > 0) {
+                            console.error('🚨 Data access issue detected: API returns 0 insights but backup has', backupInsights.length, 'insights');
+                            console.error('🚨 This indicates authentication or data access problems - triggering logout');
+                            
+                            // Store logout reason
+                            localStorage.setItem('quest_logout_reason', 'Data access issue: API returned no data but local backup exists');
+                            localStorage.setItem('quest_logout_timestamp', Date.now().toString());
+                            
+                            // Trigger automatic logout
+                            await tokenManager.autoLogout('Data access issue: API returned no data');
+                            return; // Exit early to prevent further processing
+                        }
+                    } catch (parseError) {
+                        console.warn('⚠️ Could not parse backup data for comparison:', parseError);
+                    }
+                }
+            }
+            
             // Set first page data first
             currentInsights = firstPageInsights;
             window.currentInsights = currentInsights;
@@ -707,6 +778,11 @@ async function loadUserInsightsWithPagination() {
             
             // Get pagination info from API response
             updatePaginationInfo(firstPageResponse.data);
+            
+            // Ensure all insights are available for modal access (async, non-blocking)
+            ensureAllInsightsAvailable().catch(err => 
+                console.warn('⚠️ Failed to preload all insights for modal access:', err)
+            );
             
             // Normalize tag structure
             currentInsights.forEach(insight => {
@@ -903,6 +979,10 @@ async function initPage() {
             // 不要return，允许加载本地备份数据
         } else {
             console.log('✅ 用户已认证，继续加载数据');
+            
+            // Start backend connectivity monitoring for authenticated users
+            console.log('🔗 Starting backend connectivity monitoring...');
+            connectivityManager.startMonitoring();
         }
         
         // 检查token是否过期（放宽：不过期也允许继续加载基础UI）
@@ -1110,6 +1190,28 @@ async function loadUserStacks() {
             console.log('📦 Final stacks map:', Array.from(stacks.entries()));
         } else {
             console.log('⚠️ No stacks found in API response or API failed');
+            
+            // Check for data access issues: API returns 0 stacks but backup data exists
+            const backupStacks = localStorage.getItem('quest_stacks');
+            if (backupStacks) {
+                try {
+                    const parsed = JSON.parse(backupStacks);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        console.error('🚨 Stack data access issue detected: API returns 0 stacks but backup has', parsed.length, 'stacks');
+                        console.error('🚨 This indicates authentication or data access problems - triggering logout');
+                        
+                        // Store logout reason
+                        localStorage.setItem('quest_logout_reason', 'Data access issue: API returned no stacks but local backup exists');
+                        localStorage.setItem('quest_logout_timestamp', Date.now().toString());
+                        
+                        // Trigger automatic logout
+                        await tokenManager.autoLogout('Data access issue: API returned no stacks');
+                        return; // Exit early to prevent further processing
+                    }
+                } catch (parseError) {
+                    console.warn('⚠️ Could not parse stack backup data for comparison:', parseError);
+                }
+            }
         }
         
         // Fetch ALL insights to properly populate stack counts
@@ -1611,7 +1713,8 @@ function effectiveLimitForPage(pageNum) {
 // (Over-fetch on page 1 to refill after excluding stacked insights)
 function effectiveFetchLimitForPage(pageNum) {
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-    if (hasActiveTagFilter) return insightsPerPage;  // no stacks when filtering
+    const hasActiveContentTypeFilter = currentFilters.content_type && currentFilters.content_type !== 'all';
+    if (hasActiveTagFilter || hasActiveContentTypeFilter) return insightsPerPage;  // no stacks when filtering
     if (pageNum !== 1) return insightsPerPage;       // stacks shown only on page 1
 
     // For page 1, we need to fetch enough insights to account for:
@@ -1699,11 +1802,10 @@ async function performRenderInsights() {
     contentCards.classList.add('content-loaded');
     
     // Clear existing content cards (but keep template card and skeleton)
-    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
+    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state, .empty-stack-state');
     existingCards.forEach(card => card.remove());
     
-    // Ensure template card exists and is first
-    addTemplateCard();
+    // Template card is now only added in edit mode, not automatically
     
     // Get filtered insights for rendering
     const filteredInsights = await getFilteredInsights();
@@ -1713,12 +1815,16 @@ async function performRenderInsights() {
     console.log('🎯 Stacks count:', stacks.size);
     console.log('🎯 Effective limit for page', currentPage, ':', effectiveLimitForPage(currentPage));
     
-    // Check if we have any content to render (insights OR stacks)
+    // Check if we have any content to render (insights OR stacks) based on content type filter
     // For page 1, check both insights and stacks. For other pages, only check insights
     const hasInsights = currentPage === 1 ? filteredInsights.length > 0 : currentInsights.length > 0;
     const hasStacks = stacks.size > 0;
+    const shouldShowStacks = currentFilters.content_type === 'all' || currentFilters.content_type === 'stacks_only';
+    const shouldShowInsights = currentFilters.content_type === 'all' || currentFilters.content_type === 'insights_only';
     
-    if (!hasInsights && !hasStacks) {
+    const hasContentToShow = (hasInsights && shouldShowInsights) || (hasStacks && shouldShowStacks);
+    
+    if (!hasContentToShow) {
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-state';
         emptyState.innerHTML = `
@@ -1736,11 +1842,12 @@ async function performRenderInsights() {
     const fragment = document.createDocumentFragment();
     
     // Page 1: render stacks first (each stack is ONE tile)
-    // Only show stacks if no specific tag filter is active AND we're on page 1
+    // Only show stacks if no specific tag filter is active AND we're on page 1 AND content type allows stacks
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
-    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
+    const hasActiveContentTypeFilter = currentFilters.content_type && currentFilters.content_type !== 'all';
+    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}, hasActiveContentTypeFilter=${hasActiveContentTypeFilter}, shouldShowStacks=${shouldShowStacks}, shouldShowInsights=${shouldShowInsights}`);
     
-    if (currentPage === 1 && hasStacks && !hasActiveTagFilter) {
+    if (currentPage === 1 && hasStacks && !hasActiveTagFilter && shouldShowStacks) {
         console.log(`🔍 DEBUG: Rendering ${stacks.size} stacks on page 1`);
         for (const [, stackData] of stacks) {
             fragment.appendChild(createStackCard(stackData));
@@ -1749,16 +1856,17 @@ async function performRenderInsights() {
         console.log(`🔍 DEBUG: Not rendering stacks - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
     }
     
-    // Then render insights (using filtered insights)
-    if (hasInsights) {
-        if (hasActiveTagFilter) {
-            // When filtering, paginate through filtered results
+    // Then render insights (using filtered insights) - only if content type allows insights
+    if (hasInsights && shouldShowInsights) {
+        if (hasActiveTagFilter || hasActiveContentTypeFilter) {
+            // When filtering (by tags or content type), paginate through filtered results
             const startIndex = (currentPage - 1) * insightsPerPage;
             const endIndex = startIndex + insightsPerPage;
             const list = filteredInsights.slice(startIndex, endIndex);
             
-            console.log(`🔍 DEBUG: Tag filter rendering - startIndex=${startIndex}, endIndex=${endIndex}, list.length=${list.length}`);
+            console.log(`🔍 DEBUG: Filter rendering - startIndex=${startIndex}, endIndex=${endIndex}, list.length=${list.length}`);
             console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, insightsPerPage=${insightsPerPage}`);
+            console.log(`🔍 DEBUG: Active filters - tag: ${hasActiveTagFilter}, content_type: ${hasActiveContentTypeFilter}`);
             
             for (const insight of list) {
                 fragment.appendChild(createInsightCard(insight));
@@ -1797,8 +1905,8 @@ async function performRenderInsights() {
     // Update edit mode state after rendering cards
     updateEditModeState();
     
-    // Update pagination UI after rendering
-    updatePaginationUI();
+    // Update pagination UI after rendering (debounced for performance)
+    debouncedUpdatePaginationUI();
     
     // 重置渲染标志
     isRendering = false;
@@ -1847,12 +1955,26 @@ async function resetInsightsPaginationAndRerender() {
     console.log('📊 Filtered insights for rendering:', filteredInsights.length);
     
     // Update pagination with filtered insights count (insights only)
-    // For "All" filter, use the total available insights for proper pagination
-    if (currentFilters.tags === 'all' && !currentFilters.search) {
-        // Use all available insights for proper pagination when showing all
+    // Handle different content type filters
+    if (currentFilters.content_type === 'stacks_only') {
+        // For "Stacks Only", pagination is based only on stacks
+        const stacksCount = stacks.size;
+        totalInsights = 0; // No insights to count
+        totalPages = stacksCount > 0 ? 1 : 1; // Stacks always fit on one page
+        console.log(`🔍 DEBUG: Stacks Only pagination - stacksCount=${stacksCount}, totalPages=${totalPages}`);
+    } else if (currentFilters.tags === 'all' && !currentFilters.search && currentFilters.content_type === 'all') {
+        // Use all available insights for proper pagination when showing all content
         const allAvailableInsights = window.allInsightsForFiltering || [];
-        totalInsights = allAvailableInsights.length;
-        console.log(`🔍 DEBUG: Using all available insights for pagination: ${totalInsights}`);
+        
+        // If allInsightsForFiltering is not available, use the global totalInsights from API
+        if (allAvailableInsights.length === 0) {
+            // Use the global totalInsights that was set from the API response
+            // This ensures we use the actual total count, not just current page count
+            console.log(`🔍 DEBUG: Using global totalInsights for pagination: ${totalInsights}`);
+        } else {
+            totalInsights = allAvailableInsights.length;
+            console.log(`🔍 DEBUG: Using all available insights for pagination: ${totalInsights}`);
+        }
         
         // For "All" filter, calculate pagination the same way as normal pagination
         // Page 1 shows (insightsPerPage - stacksCount) insights + stacks
@@ -1869,13 +1991,19 @@ async function resetInsightsPaginationAndRerender() {
         totalPages = 1 + (remaining > 0 ? Math.ceil(remaining / insightsPerPage) : 0);
         console.log(`🔍 DEBUG: All filter pagination - page1Slots=${page1SlotsForInsights}, remaining=${remaining}, totalPages=${totalPages}`);
     } else {
+        // For filtered content (insights only, tag filters, search, etc.)
         totalInsights = filteredInsights.length;
         console.log(`🔍 DEBUG: Using filtered insights for pagination: ${totalInsights}`);
         totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
     }
-    currentPage = 1; // Reset to first page when filtering
     
-    console.log(`🔍 DEBUG: Pagination calculation - totalInsights=${totalInsights}, insightsPerPage=${insightsPerPage}, totalPages=${totalPages}`);
+    // Only reset to first page if current page would be invalid
+    if (currentPage > totalPages) {
+        currentPage = Math.max(1, totalPages);
+        console.log(`🔍 DEBUG: Current page ${currentPage} exceeds totalPages ${totalPages}, resetting to page ${currentPage}`);
+    }
+    
+    console.log(`🔍 DEBUG: Pagination calculation - totalInsights=${totalInsights}, insightsPerPage=${insightsPerPage}, totalPages=${totalPages}, currentPage=${currentPage}`);
     
     // DON'T overwrite currentInsights - keep original data for future filtering
     // The renderInsights function will call getFilteredInsights() to get the right data
@@ -2228,14 +2356,14 @@ async function initFilterButtons() {
         // 创建两个主要筛选按钮
         const mainFilterButtons = [
             {
-                key: 'latest',
-                label: 'Last Added',
-                translateKey: 'last_added',
+                key: 'content_type',
+                label: 'Content Type',
+                translateKey: 'content_type',
                 type: 'dropdown',
                 options: [
-                    { key: 'latest', label: 'Latest', translateKey: 'latest' },
-                    { key: 'oldest', label: 'Oldest', translateKey: 'oldest' },
-                    { key: 'alphabetical', label: 'Alphabetical', translateKey: 'alphabetical' }
+                    { key: 'all', label: 'All Content', translateKey: 'all_content' },
+                    { key: 'insights_only', label: 'Insights Only', translateKey: 'insights_only' },
+                    { key: 'stacks_only', label: 'Stacks Only', translateKey: 'stacks_only' }
                 ]
             },
             {
@@ -2297,10 +2425,9 @@ async function initFilterButtons() {
                                 <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                             </div>`;
                         } else {
-                            // PARA categories with info icon
+                            // PARA categories
                             return `<div class="filter-option" data-filter="${option.key}">
                                 <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
-                                <span class="filter-option-info" data-category="${option.category}" title="Click for more info">ⓘ</span>
                             </div>`;
                         }
                     }).join('');
@@ -2333,7 +2460,7 @@ async function initFilterButtons() {
                     const option = e.target.closest('.filter-option');
                     if (option) {
                         const filterKey = option.dataset.filter;
-                        const filterType = filterConfig.key; // latest, tags
+                        const filterType = filterConfig.key; // content_type, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
                         
                         console.log('🎯 Setting filter:', { filterType, filterKey, optionLabel });
@@ -2361,6 +2488,7 @@ async function initFilterButtons() {
                 
                 buttonContainer.appendChild(button);
                 buttonContainer.appendChild(dropdownOptions);
+                
             } else {
                 // 其他按钮：创建下拉菜单
                 const dropdownOptions = document.createElement('div');
@@ -2388,7 +2516,7 @@ async function initFilterButtons() {
                     const option = e.target.closest('.filter-option');
                     if (option) {
                         const filterKey = option.dataset.filter;
-                        const filterType = filterConfig.key; // latest, tags
+                        const filterType = filterConfig.key; // content_type, tags
                         const optionLabel = option.querySelector('.filter-option-label').textContent;
                         setFilter(filterType, filterKey, optionLabel);
                         
@@ -2442,6 +2570,7 @@ async function initFilterButtons() {
             filterButtons.appendChild(button);
         });
     }
+    
 }
 
 // Fetch all insights for filtering (when tag filter is active)
@@ -2518,6 +2647,10 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
     
     // Handle tag filter changes
     if (filterType === 'tags') {
+        // Always reset to page 1 when changing tag filters
+        console.log('🔄 Tag filter changed - resetting to page 1');
+        currentPage = 1;
+        
         if (filterValue !== 'all') {
             // Clear any existing global insights to ensure fresh data
             window.allInsightsForFiltering = null;
@@ -2532,6 +2665,28 @@ async function setFilter(filterType, filterValue, optionLabel = null) {
             await fetchAllInsightsForFiltering();
             console.log('✅ All insights fetched for "All" filter');
         }
+    }
+    
+    // Handle content type filter changes
+    if (filterType === 'content_type') {
+        // Always reset to page 1 when changing content type filters
+        console.log('🔄 Content type filter changed - resetting to page 1');
+        currentPage = 1;
+        
+        if (filterValue === 'insights_only') {
+            // For insights only, fetch all insights from database
+            console.log('🔄 Switching to "Insights Only" - fetching all insights...');
+            window.allInsightsForFiltering = null;
+            await fetchAllInsightsForFiltering();
+            console.log('✅ All insights fetched for "Insights Only" filter');
+        } else if (filterValue === 'all') {
+            // For "all content", we need to fetch all insights to properly filter out stacked ones
+            console.log('🔄 Switching to "All Content" - fetching all insights to filter out stacked ones');
+            window.allInsightsForFiltering = null;
+            await fetchAllInsightsForFiltering();
+            console.log('✅ All insights fetched for "All Content" filter');
+        }
+        // For stacks_only, we don't need to fetch insights since we're only showing stacks
     }
     
     // 更新按钮显示文本
@@ -2559,24 +2714,46 @@ function updateFilterButtonDisplay(filterType, filterValue, optionLabel) {
             button.textContent = optionLabel;
         }
     } else if (filterType === 'tags' && ['project', 'area', 'resource', 'archive'].includes(filterValue)) {
-        // PARA categories
-        const paraCategoryNames = {
-            'project': 'Project',
-            'area': 'Area',
-            'resource': 'Resource', 
-            'archive': 'Archive'
-        };
-        button.textContent = paraCategoryNames[filterValue];
+        // PARA categories - use translation system
+        const translationKey = filterValue; // 'project', 'area', 'resource', 'archive'
+        if (window.translationManager) {
+            button.textContent = window.translationManager.t(translationKey);
+        } else {
+            // Fallback to English
+            const paraCategoryNames = {
+                'project': 'Project',
+                'area': 'Area',
+                'resource': 'Resource', 
+                'archive': 'Archive'
+            };
+            button.textContent = paraCategoryNames[filterValue];
+        }
     } else if (filterType === 'tags' && filterValue === 'all') {
-        button.textContent = 'Tags';
-    } else if (filterType === 'latest') {
-        // 排序方式：显示排序方式
-        if (filterValue === 'latest') {
-            button.textContent = 'Latest';
-        } else if (filterValue === 'oldest') {
-            button.textContent = 'Oldest';
-        } else if (filterValue === 'alphabetical') {
-            button.textContent = 'Alphabetical';
+        // Use translation system for "Tags"
+        if (window.translationManager) {
+            button.textContent = window.translationManager.t('tags');
+        } else {
+            button.textContent = 'Tags';
+        }
+    } else if (filterType === 'content_type') {
+        // 内容类型筛选：使用翻译系统
+        if (window.translationManager) {
+            if (filterValue === 'all') {
+                button.textContent = window.translationManager.t('all_content');
+            } else if (filterValue === 'insights_only') {
+                button.textContent = window.translationManager.t('insights_only');
+            } else if (filterValue === 'stacks_only') {
+                button.textContent = window.translationManager.t('stacks_only');
+            }
+        } else {
+            // Fallback to English
+            if (filterValue === 'all') {
+                button.textContent = 'All Content';
+            } else if (filterValue === 'insights_only') {
+                button.textContent = 'Insights Only';
+            } else if (filterValue === 'stacks_only') {
+                button.textContent = 'Stacks Only';
+            }
         }
     }
 }
@@ -2594,13 +2771,25 @@ function updateFilterButtonStates() {
 function showFilterStatus() {
     const statusParts = [];
     
-    // 排序状态
-    if (currentFilters.latest === 'latest') {
-        statusParts.push('Latest First');
-    } else if (currentFilters.latest === 'oldest') {
-        statusParts.push('Oldest First');
-    } else if (currentFilters.latest === 'alphabetical') {
-        statusParts.push('Alphabetical');
+    // 内容类型状态
+    if (currentFilters.content_type === 'insights_only') {
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('insights_only'));
+        } else {
+            statusParts.push('Insights Only');
+        }
+    } else if (currentFilters.content_type === 'stacks_only') {
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('stacks_only'));
+        } else {
+            statusParts.push('Stacks Only');
+        }
+    } else if (currentFilters.content_type === 'all') {
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('all_content'));
+        } else {
+            statusParts.push('All Content');
+        }
     }
     
     // 标签筛选状态
@@ -2610,26 +2799,37 @@ function showFilterStatus() {
             if (tagButton) {
                 const tagOption = tagButton.closest('.filter-button-container').querySelector(`[data-filter="${currentFilters.tags}"]`);
                 if (tagOption) {
-                    statusParts.push(`标签: ${tagOption.textContent.trim()}`);
+                    const tagLabel = window.translationManager ? window.translationManager.t('tags') : '标签';
+                    statusParts.push(`${tagLabel}: ${tagOption.textContent.trim()}`);
                 }
             }
         } else if (['project', 'area', 'resource', 'archive'].includes(currentFilters.tags)) {
             // Handle PARA categories
-            const paraCategoryNames = {
-                'project': 'Project',
-                'area': 'Area', 
-                'resource': 'Resource',
-                'archive': 'Archive'
-            };
-            statusParts.push(`标签: ${paraCategoryNames[currentFilters.tags]}`);
+            if (window.translationManager) {
+                const tagLabel = window.translationManager.t('tags');
+                const categoryLabel = window.translationManager.t(currentFilters.tags);
+                statusParts.push(`${tagLabel}: ${categoryLabel}`);
+            } else {
+                const paraCategoryNames = {
+                    'project': 'Project',
+                    'area': 'Area', 
+                    'resource': 'Resource',
+                    'archive': 'Archive'
+                };
+                statusParts.push(`标签: ${paraCategoryNames[currentFilters.tags]}`);
+            }
         }
     } else if (currentFilters.tags === 'all') {
-        statusParts.push('All Tags');
+        if (window.translationManager) {
+            statusParts.push(window.translationManager.t('all_tags'));
+        } else {
+            statusParts.push('All Tags');
+        }
     }
     
 
     
-    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : 'Show All Content';
+    const statusText = statusParts.length > 0 ? statusParts.join(' | ') : (window.translationManager ? window.translationManager.t('all_content') : 'Show All Content');
     
     // 可以在这里添加UI显示筛选状态
     // 比如在页面顶部显示一个小提示
@@ -2649,10 +2849,11 @@ async function getFilteredInsights() {
         })));
     }
     
-    // If we have an active tag filter or search filter, we need to work with all insights, not just current page
+    // If we have an active tag filter, search filter, or content type filter, we need to work with all insights, not just current page
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
     const hasActiveSearchFilter = currentFilters.search && currentFilters.search.trim() !== '';
-    const hasAnyFilter = hasActiveTagFilter || hasActiveSearchFilter;
+    const hasActiveContentTypeFilter = currentFilters.content_type && currentFilters.content_type !== 'all';
+    const hasAnyFilter = hasActiveTagFilter || hasActiveSearchFilter || hasActiveContentTypeFilter;
     let insightsToFilter = currentInsights;
     
     if (hasAnyFilter) {
@@ -2716,24 +2917,8 @@ async function getFilteredInsights() {
         console.log('📋 Keeping all insights for filtering (including those in stacks):', filteredInsights.length);
     }
     
-    // 1. 排序逻辑（始终应用）
-    if (currentFilters.latest === 'latest') {
-        // 按最新时间排序
-        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (currentFilters.latest === 'oldest') {
-        // 按最旧时间排序
-        filteredInsights.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    } else if (currentFilters.latest === 'alphabetical') {
-        // 按标题首字母A-Z排序
-        filteredInsights.sort((a, b) => {
-            const titleA = (a.title || a.url || '').toLowerCase();
-            const titleB = (b.title || b.url || '').toLowerCase();
-            return titleA.localeCompare(titleB);
-        });
-    } else {
-        // 默认按最新时间排序
-        filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    }
+    // 1. 默认排序逻辑（按最新时间排序）
+    filteredInsights.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     
     // 2. Text search filter (title + metadata)
     if (currentFilters.search && currentFilters.search.trim() !== '') {
@@ -3230,8 +3415,11 @@ function bindEvents() {
                 if (customTitle) insightData.title = customTitle;
                 if (customThought) insightData.thought = customThought;
                 
-                // 创建加载占位符卡片
-                const loadingCardId = window.contentCardLoader.createLoadingCard(url, 'prepend');
+                // 创建加载占位符卡片 - 放在正确位置（在stacks之后）
+                const loadingCardId = window.contentCardLoader.createLoadingCard(url, 'after-stacks');
+                
+                // 立即处理可能被推到下一页的insights，避免闪烁
+                handleInsightPushingImmediately();
                 
                 // 使用正确的API端点创建insight
                 console.log('📝 Creating insight with data:', insightData);
@@ -3249,8 +3437,22 @@ function bindEvents() {
                 
                 // 更新加载卡片为实际内容
                 if (result && result.success && result.data) {
-                    window.contentCardLoader.updateLoadingCard(loadingCardId, result.data);
-                    console.log('✅ Loading card updated with actual content');
+                    // For stack view, don't update the loading card immediately - keep it visible until refresh
+                    if (viewMode === 'stack' && activeStackId) {
+                        console.log('🎯 Stack view mode: keeping loading card visible until refresh completes');
+                        // Store the insight data for later use but don't update the card yet
+                        window.pendingStackInsight = result.data;
+                    } else {
+                        window.contentCardLoader.updateLoadingCard(loadingCardId, result.data);
+                        console.log('✅ Loading card updated with actual content');
+                        
+                        // 计算新insight应该在哪一页，并导航到该页
+                        // 保存当前滚动位置，以便在页面重新加载后恢复
+                        const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+                        window.tempScrollPosition = scrollPosition;
+                        
+                        await navigateToNewInsight();
+                    }
                 } else {
                     // 如果创建失败，移除加载卡片
                     window.contentCardLoader.removeLoadingCard(loadingCardId, true);
@@ -3284,20 +3486,109 @@ function bindEvents() {
                             console.log('🔄 In stack view mode, refreshing current stack');
                             
                             try {
-                                // Simply refresh the current stack view to show the new insight
-                                console.log('🎯 Refreshing stack view for stack:', activeStackId);
-                                await renderStackView(activeStackId);
+                                // Use intelligent retry mechanism instead of fixed delay
+                                console.log('🔄 Attempting to refresh stack view with new insight...');
+                                
+                                let retryCount = 0;
+                                const maxRetries = 3;
+                                let refreshSuccess = false;
+                                
+                                while (retryCount < maxRetries && !refreshSuccess) {
+                                    if (retryCount > 0) {
+                                        const delay = Math.min(500 * retryCount, 1000); // Progressive delay: 500ms, 1000ms
+                                        console.log(`⏳ Retry ${retryCount}: waiting ${delay}ms before next attempt...`);
+                                        await new Promise(resolve => setTimeout(resolve, delay));
+                                    }
+                                    
+                                    console.log(`🎯 Refreshing stack view for stack: ${activeStackId} (attempt ${retryCount + 1}/${maxRetries})`);
+                                    
+                                    // Try to refresh and check if the new insight appears
+                                    const stackBefore = stacks.get(activeStackId);
+                                    const cardCountBefore = stackBefore?.cards?.length || 0;
+                                    
+                                    await renderStackView(activeStackId);
+                                    
+                                    // Check if the insight was successfully added
+                                    const stackAfter = stacks.get(activeStackId);
+                                    const cardCountAfter = stackAfter?.cards?.length || 0;
+                                    
+                                    if (cardCountAfter > cardCountBefore) {
+                                        console.log(`✅ New insight detected in stack (${cardCountBefore} → ${cardCountAfter} cards)`);
+                                        refreshSuccess = true;
+                                    } else {
+                                        console.log(`⚠️ Insight not yet visible in stack (${cardCountAfter} cards), may need retry...`);
+                                        retryCount++;
+                                    }
+                                }
+                                
+                                if (!refreshSuccess) {
+                                    console.log('⚠️ Stack refresh completed but new insight may not be immediately visible');
+                                }
+                                
+                                // After successful refresh, remove the loading card if it still exists
+                                if (typeof loadingCardId !== 'undefined' && window.contentCardLoader) {
+                                    window.contentCardLoader.removeLoadingCard(loadingCardId, false);
+                                    console.log('🧹 Removed loading card after successful stack refresh');
+                                }
+                                
+                                // Clear the pending insight data
+                                if (window.pendingStackInsight) {
+                                    delete window.pendingStackInsight;
+                                }
+                                
                                 console.log('✅ Stack view refreshed with new insight');
                             } catch (error) {
                                 console.error('❌ Failed to reload stack data:', error);
+                                
+                                // Remove loading card on error
+                                if (typeof loadingCardId !== 'undefined' && window.contentCardLoader) {
+                                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
+                                    console.log('🧹 Removed loading card due to stack refresh error');
+                                }
+                                
+                                // Clear the pending insight data
+                                if (window.pendingStackInsight) {
+                                    delete window.pendingStackInsight;
+                                }
+                                
                                 // Fallback: just re-render the current stack view
                                 renderStackView(activeStackId);
                             }
                         } else {
-                            // Normal home view reload - only if not already loading
-                            if (!insightsLoading) {
-                                await loadUserInsightsWithPagination();
-                            }
+                              // Normal home view reload - only if not already loading
+                              if (!insightsLoading) {
+                                  // Check if we should preserve scroll position (when adding new content)
+                                  const shouldPreserveScroll = window.tempScrollPosition !== undefined;
+                                  const savedScrollPosition = window.tempScrollPosition;
+                                  
+                                  // Clear cache and force reload to get fresh data with new content at the top
+                                  clearPageCache();
+                                  currentInsights = [];
+                                  
+                                  // Reset to page 1 to show the new content immediately
+                                  currentPage = 1;
+                                  
+                                  // Force reload page 1 to get the latest data with new content
+                                  await goToPage(1, { force: true });
+                                  
+                                  // If we were adding new content, check if we need to scroll to new insight
+                                  if (shouldPreserveScroll) {
+                                      console.log('🔒 Preserving scroll position for new content navigation');
+                                      // Clear the temp scroll position
+                                      delete window.tempScrollPosition;
+                                  }
+                                  
+                                  // Check if we need to scroll to newly added insight after reload
+                                  if (window.shouldScrollToNewInsight) {
+                                      console.log('📍 Post-reload: Scrolling to newly added insight...');
+                                      // Clear the flag
+                                      delete window.shouldScrollToNewInsight;
+                                      // Scroll after a short delay to ensure rendering is complete
+                                      setTimeout(() => {
+                                          scrollToNewInsight();
+                                      }, 300);
+                                  }
+                              }
                         }
                         
                         // Also save to localStorage backup
@@ -3306,7 +3597,7 @@ function bindEvents() {
                         console.error('❌ 重新加载内容失败:', error);
                         // 不要显示错误，因为内容已经添加成功了
                     }
-                }, 1500); // 减少延迟时间
+                }, 100); // Minimal delay for immediate responsiveness
                 
             } catch (error) {
                 console.error('❌ 添加内容失败:', error);
@@ -4099,13 +4390,21 @@ async function createNewTag() {
 
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', initPage);
+document.addEventListener('DOMContentLoaded', () => {
+    initPage();
+    
+});
 
 // ===== SEARCH FUNCTIONALITY =====
 
 // Helper to apply search and re-render both views consistently
 async function applySearch(query) {
     currentFilters.search = (query || '').trim();
+    
+    // Always reset to page 1 when search changes
+    console.log('🔄 Search filter changed - resetting to page 1');
+    currentPage = 1;
+    
     // keep inputs in sync across bars
     const homeInput = document.getElementById('searchInput');
     const stackInput = document.getElementById('stackSearchInput');
@@ -4125,8 +4424,8 @@ async function applySearch(query) {
         window.allInsightsForFiltering = null;
     }
 
-    await renderInsights();         // re-renders lists with new filter
-    updatePaginationUI?.();   // update pagination counts
+    // Use resetInsightsPaginationAndRerender for consistent pagination handling
+    await resetInsightsPaginationAndRerender();
 }
 
 // Initialize search functionality
@@ -4454,11 +4753,10 @@ function renderStackInsights(stack) {
     
     // Clear existing content (but keep template card)
     console.log('🧹 Clearing existing content');
-    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state');
+    const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state, .empty-stack-state');
     existingCards.forEach(card => card.remove());
     
-    // Ensure template card exists and is first
-    addTemplateCard();
+    // Template card is now only added in edit mode, not automatically
     
     if (!stack.cards || stack.cards.length === 0) {
         console.log('📭 No cards in stack, rendering empty state');
@@ -6199,8 +6497,44 @@ let currentDetailInsight = null;
 
 // 打开内容详情模态框
 function openContentDetailModal(insight) {
-    // 确保使用最新的insight数据
-    const latestInsight = currentInsights.find(i => i.id === insight.id) || insight;
+    // 确保使用最新的insight数据 - search across all available sources
+    let latestInsight = null;
+    
+    // First, try to find in current page insights
+    latestInsight = currentInsights.find(i => i.id === insight.id);
+    
+    // If not found in current page, try to find in all insights for filtering
+    if (!latestInsight && window.allInsightsForFiltering) {
+        latestInsight = window.allInsightsForFiltering.find(i => i.id === insight.id);
+    }
+    
+    // If still not found, try to find in page cache
+    if (!latestInsight) {
+        for (const [pageNum, pageData] of pageCache.entries()) {
+            const foundInsight = pageData.insights.find(i => i.id === insight.id);
+            if (foundInsight) {
+                latestInsight = foundInsight;
+                break;
+            }
+        }
+    }
+    
+    // If still not found, try to find in active stack (if in stack view)
+    if (!latestInsight && viewMode === 'stack' && activeStackId) {
+        const activeStack = stacks.get(activeStackId);
+        if (activeStack && activeStack.cards) {
+            latestInsight = activeStack.cards.find(card => card.id === insight.id);
+        }
+    }
+    
+    // Fall back to the original insight if nothing found
+    latestInsight = latestInsight || insight;
+    
+    console.log('🔍 DEBUG: openContentDetailModal - found insight:', latestInsight.id, 'from source:', 
+        currentInsights.find(i => i.id === insight.id) ? 'currentInsights' :
+        window.allInsightsForFiltering?.find(i => i.id === insight.id) ? 'allInsightsForFiltering' :
+        'pageCache or fallback');
+    
     currentDetailInsight = latestInsight;
     const modal = document.getElementById('contentDetailModal');
     
@@ -7195,8 +7529,23 @@ function startSmartAISummaryRefresh(insightId) {
         clearTimeout(aiSummaryRefreshTimeouts.get(insightId));
     }
     
-    // 设置新的定时器
-    const timeoutId = setTimeout(async () => {
+    // 优化：更快的初始检查，然后逐渐增加间隔
+    let checkCount = 0;
+    const maxChecks = 8; // 最多检查8次
+    const intervals = [1000, 2000, 3000, 5000, 8000, 12000, 20000, 30000]; // 递增间隔
+    
+    const checkSummary = async () => {
+        if (checkCount >= maxChecks) {
+            console.log(`⏰ AI摘要检查达到最大次数，停止检查: insight ${insightId}`);
+            aiSummaryRefreshTimeouts.delete(insightId);
+            return;
+        }
+        
+        const currentInterval = intervals[checkCount] || 30000;
+        console.log(`🔄 检查AI摘要 (${checkCount + 1}/${maxChecks}) 下次间隔${currentInterval}ms: insight ${insightId}`);
+        
+        // 设置新的定时器
+        const timeoutId = setTimeout(async () => {
         try {
             console.log(`🔄 Auto-refreshing AI summary for insight ${insightId}`);
             
@@ -7243,24 +7592,23 @@ function startSmartAISummaryRefresh(insightId) {
                 // 如果摘要还没生成，继续等待
                 console.log(`⏳ AI summary still generating for insight ${insightId}, will retry...`);
                 
-                // 设置下次刷新（逐渐增加间隔）
-                const currentTimeout = aiSummaryRefreshTimeouts.get(insightId);
-                if (currentTimeout) {
-                    const nextInterval = Math.min(10000, 2000 * Math.pow(1.5, aiSummaryRefreshTimeouts.size)); // 最多10秒
-                    const nextTimeoutId = setTimeout(() => {
-                        startSmartAISummaryRefresh(insightId);
-                    }, nextInterval);
-                    aiSummaryRefreshTimeouts.set(insightId, nextTimeoutId);
-                }
+                // 递增检查次数并设置下次检查
+                checkCount++;
+                checkSummary();
             }
         } catch (error) {
             console.warn(`⚠️ Failed to refresh AI summary for insight ${insightId}:`, error);
             // 出错时停止刷新
             aiSummaryRefreshTimeouts.delete(insightId);
         }
-    }, 3000); // 3秒后开始第一次检查
+    }, currentInterval);
     
+    // 存储定时器ID
     aiSummaryRefreshTimeouts.set(insightId, timeoutId);
+    };
+    
+    // 开始第一次检查
+    checkSummary();
 }
 
 function stopAISummaryRefresh(insightId) {
@@ -7329,13 +7677,23 @@ function toggleEditMode() {
         contentCards.forEach(card => {
             card.classList.remove('shake');
         });
+        
+        // Update pagination UI after removing template card
+        // Use debounced version to avoid multiple rapid updates
+        debouncedUpdatePaginationUI();
     }
 }
 
-// Add template card for adding new content - always visible and always first
+// Add template card for adding new content - only visible in edit mode
 function addTemplateCard() {
     const contentCards = document.getElementById('contentCards');
     if (!contentCards) return;
+    
+    // Only add template card if we're in edit mode
+    if (!isEditMode) {
+        console.log('ℹ️ Not in edit mode, skipping template card addition');
+        return;
+    }
     
     // Check if template card already exists
     if (contentCards.querySelector('.template-card')) return;
@@ -7351,11 +7709,11 @@ function addTemplateCard() {
                 </svg>
             </div>
             <div class="template-card-text">
-                <h3>Add New Content</h3>
-                <p>Click to add a new insight or create a stack</p>
+                <h3 data-translate="add_new_content">Add New Content</h3>
+                <p data-translate="click_to_add_insight">Click to add a new insight or create a stack</p>
                 <div class="template-card-options">
-                    <span class="template-option">📄 Insight</span>
-                    <span class="template-option">📚 Stack</span>
+                    <span class="template-option" data-translate="insight_option">📄 Insight</span>
+                    <span class="template-option" data-translate="stack_option">📚 Stack</span>
                 </div>
             </div>
         </div>
@@ -7369,13 +7727,21 @@ function addTemplateCard() {
         showCreationOptionsModal();
     });
     
+    // Apply translations to the template card
+    if (window.translationManager) {
+        window.translationManager.applyTranslations();
+    }
+    
     console.log('✅ Template card added at first position');
 }
 
-// Remove template card when exiting edit mode - but now we keep it always visible
+// Remove template card when exiting edit mode
 function removeTemplateCard() {
-    // Template card is now always visible, so we don't remove it
-    console.log('ℹ️ Template card is now always visible, not removing');
+    const templateCard = document.querySelector('.template-card');
+    if (templateCard) {
+        templateCard.remove();
+        console.log('✅ Template card removed');
+    }
 }
 
 // Show modal with options to create card or stack
@@ -7386,7 +7752,7 @@ function showCreationOptionsModal() {
     modalOverlay.innerHTML = `
         <div class="modal-content creation-options-content">
             <div class="modal-header">
-                <h2>Create New</h2>
+                <h2 data-translate="create_new">Create New</h2>
                 <button class="modal-close-btn" id="closeCreationOptionsModal">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -7406,8 +7772,8 @@ function showCreationOptionsModal() {
                             </svg>
                         </div>
                         <div class="creation-option-content">
-                            <h3>Content Card</h3>
-                            <p>Create a single content card with a link, title, and description</p>
+                            <h3 data-translate="content_card">Content Card</h3>
+                            <p data-translate="content_card_description">Create a single content card with a link, title, and description</p>
                         </div>
                     </div>
                     
@@ -7420,8 +7786,8 @@ function showCreationOptionsModal() {
                             </svg>
                         </div>
                         <div class="creation-option-content">
-                            <h3>Stack</h3>
-                            <p>Create an empty stack to organize multiple content cards</p>
+                            <h3 data-translate="stack">Stack</h3>
+                            <p data-translate="stack_description">Create an empty stack to organize multiple content cards</p>
                         </div>
                     </div>
                 </div>
@@ -7452,6 +7818,11 @@ function showCreationOptionsModal() {
         hideCreationOptionsModal();
         createEmptyStack();
     });
+    
+    // Apply translations to the modal
+    if (window.translationManager) {
+        window.translationManager.applyTranslations();
+    }
 }
 
 // Hide creation options modal
@@ -7576,15 +7947,203 @@ function getSourceName(url) {
     }
 }
 
+// Function to immediately handle insights that will be pushed to next page to avoid flash
+function handleInsightPushingImmediately() {
+    try {
+        console.log('⚡ Handling insight pushing immediately to avoid flash...');
+        
+        const contentCards = document.getElementById('contentCards');
+        if (!contentCards) return;
+        
+        // Calculate how many insights can fit on current page
+        const stacksCount = stacks.size;
+        const insightsPerPage = 9;
+        const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+        
+        // Get current insight cards (excluding stacks, template, and loading cards)
+        const currentInsightCards = contentCards.querySelectorAll('.content-card:not(.stack-card):not(.template-card):not(.loading-card)');
+        
+        console.log(`⚡ Current page can fit ${page1SlotsForInsights} insights, currently has ${currentInsightCards.length}`);
+        
+        // If we're on page 1 and adding a new insight would exceed the limit
+        if (currentPage === 1 && currentInsightCards.length >= page1SlotsForInsights) {
+            // Find insights that need to be pushed to next page
+            const insightsToPush = Array.from(currentInsightCards).slice(page1SlotsForInsights - 1); // -1 because we're adding one
+            
+            console.log(`⚡ Need to push ${insightsToPush.length} insights to avoid flash`);
+            
+            // Immediately hide the insights that will be pushed
+            insightsToPush.forEach((card, index) => {
+                // Add a smooth fade-out animation
+                card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(-10px)';
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if (card.parentNode) {
+                        card.remove();
+                    }
+                }, 200);
+                
+                console.log(`⚡ Pushed insight ${index + 1} with smooth fade-out`);
+            });
+        }
+        // If we're on page 2+ and adding a new insight
+        else if (currentPage > 1) {
+            // On subsequent pages, the last insight will be pushed to the next page
+            const lastInsightCard = currentInsightCards[currentInsightCards.length - 1];
+            
+            if (lastInsightCard && currentInsightCards.length >= insightsPerPage) {
+                console.log('⚡ Pushing last insight from current page to avoid flash');
+                
+                // Smooth fade-out for the last insight
+                lastInsightCard.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                lastInsightCard.style.opacity = '0';
+                lastInsightCard.style.transform = 'translateY(-10px)';
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if (lastInsightCard.parentNode) {
+                        lastInsightCard.remove();
+                    }
+                }, 200);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error handling insight pushing:', error);
+    }
+}
+
+// Function to navigate to the page where the newly added insight appears
+async function navigateToNewInsight() {
+    try {
+        console.log('🧭 Calculating page for new insight...');
+        
+        // The new insight will be the first insight after stacks
+        // Page 1: stacks + (insightsPerPage - stacksCount) insights
+        // Page 2+: insightsPerPage insights each
+        
+        const stacksCount = stacks.size;
+        const insightsPerPage = 9;
+        
+        // Calculate which page the new insight should be on
+        // New insight will be at position 1 (first insight after stacks)
+        const page1SlotsForInsights = Math.max(0, insightsPerPage - stacksCount);
+        
+        let targetPage;
+        if (page1SlotsForInsights > 0) {
+            // New insight will be on page 1
+            targetPage = 1;
+            console.log('🧭 New insight will be on page 1 (after stacks)');
+        } else {
+            // New insight will be on page 2 (page 1 is full of stacks)
+            targetPage = 2;
+            console.log('🧭 New insight will be on page 2 (page 1 full of stacks)');
+        }
+        
+        // Navigate to the target page if we're not already there
+        if (currentPage !== targetPage) {
+            console.log(`🧭 Navigating from page ${currentPage} to page ${targetPage}`);
+            await goToPage(targetPage);
+        } else {
+            console.log(`🧭 Already on correct page ${targetPage}`);
+        }
+        
+        // Mark that we need to scroll to new insight after page reload
+        window.shouldScrollToNewInsight = true;
+        
+        // Don't scroll immediately - let the page reload happen first
+        console.log('🔒 Marked for post-reload scroll to new insight');
+        
+    } catch (error) {
+        console.error('❌ Error navigating to new insight:', error);
+        // Fallback: just reload current page
+        await goToPage(currentPage, { force: true });
+    }
+}
+
+// Function to scroll to the newly added insight
+function scrollToNewInsight() {
+    try {
+        console.log('📍 Scrolling to newly added insight...');
+        
+        // Find the first insight card (should be the newly added one)
+        // We look for the first insight card that's not a stack card
+        const contentCards = document.getElementById('contentCards');
+        if (!contentCards) {
+            console.warn('⚠️ Content cards container not found');
+            return;
+        }
+        
+        // Find the first insight card after all stack cards
+        const allCards = contentCards.querySelectorAll('.content-card:not(.template-card)');
+        let firstInsightCard = null;
+        
+        for (const card of allCards) {
+            if (!card.classList.contains('stack-card')) {
+                firstInsightCard = card;
+                break;
+            }
+        }
+        
+        if (firstInsightCard) {
+            console.log('📍 Found first insight card, scrolling to it...');
+            
+            // Calculate the scroll position with some offset for better visibility
+            const cardRect = firstInsightCard.getBoundingClientRect();
+            const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const targetScrollTop = currentScrollTop + cardRect.top - 100; // 100px offset from top
+            
+            // Smooth scroll to the insight
+            window.scrollTo({
+                top: targetScrollTop,
+                behavior: 'smooth'
+            });
+            
+            // Add a subtle highlight effect to draw attention
+            firstInsightCard.style.transition = 'box-shadow 0.3s ease, transform 0.3s ease';
+            firstInsightCard.style.boxShadow = '0 8px 32px rgba(59, 130, 246, 0.3)';
+            firstInsightCard.style.transform = 'translateY(-2px)';
+            
+            // Remove the highlight after 2 seconds
+            setTimeout(() => {
+                firstInsightCard.style.boxShadow = '';
+                firstInsightCard.style.transform = '';
+                // Remove the transition after animation completes
+                setTimeout(() => {
+                    firstInsightCard.style.transition = '';
+                }, 300);
+            }, 2000);
+            
+            console.log('✅ Successfully scrolled to and highlighted new insight');
+        } else {
+            console.warn('⚠️ Could not find first insight card to scroll to');
+            
+            // Fallback: scroll to the content cards area
+            contentCards.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error scrolling to new insight:', error);
+    }
+}
+
 // Function to update edit mode state when content cards are re-rendered
 function updateEditModeState() {
     const editModeBtn = document.getElementById('editModeBtn');
     const editBtnText = editModeBtn ? editModeBtn.querySelector('.edit-btn-text') : null;
     
-    // Ensure template card always exists and is first
-    const existingTemplateCard = document.querySelector('.template-card');
-    if (!existingTemplateCard) {
-        addTemplateCard();
+    // Only ensure template card exists if in edit mode
+    if (isEditMode) {
+        const existingTemplateCard = document.querySelector('.template-card');
+        if (!existingTemplateCard) {
+            addTemplateCard();
+        }
     }
     
     if (isEditMode) {
@@ -9961,81 +10520,315 @@ async function replaceAllTagsWithDefaults() {
 
 // Setup PARA tooltips for filter options
 function setupPARATooltips(dropdownOptions) {
+  if (!dropdownOptions) return;
+
+  const t = (key, fallback) =>
+    (window.translationManager ? window.translationManager.t(key) : fallback);
+
+  const paraMap = {
+    project: {
+      title: t('para_projects_title', 'Projects'),
+      description: t('para_projects_description',
+        'A series of tasks linked to a specific goal, with a deadline. Once the goal is accomplished, the project moves to the archive.'
+      ),
+      examples: t('para_projects_examples',
+        'Examples: Planning a vacation, publishing a blog post, or preparing a presentation.'
+      )
+    },
+    area: {
+      title: t('para_areas_title', 'Areas'),
+      description: t('para_areas_description',
+        'A sphere of ongoing activity that requires a certain standard to be maintained over time, but has no specific deadline.'
+      ),
+      examples: t('para_areas_examples',
+        'Examples: Health, finances, personal development, or professional duties.'
+      )
+    },
+    resource: {
+      title: t('para_resources_title', 'Resources'),
+      description: t('para_resources_description',
+        'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.'
+      ),
+      examples: t('para_resources_examples',
+        'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
+      )
+    },
+    archive: {
+      title: t('para_archive_title', 'Archive'),
+      description: t('para_archive_description',
+        'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.'
+      ),
+      examples: t('para_archive_examples',
+        'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
+      )
+    }
+  };
+
+  // Create a single tooltip element that will be reused
+  const tooltip = document.createElement('div');
+  tooltip.className = 'para-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(17, 24, 39, 0.95);
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    max-width: 280px;
+    min-width: 200px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease;
+    z-index: 10000;
+    pointer-events: none;
+    white-space: pre-line;
+    text-align: left;
+  `;
+  document.body.appendChild(tooltip);
+
+  // Append a hover "i" to each PARA option
+  dropdownOptions.querySelectorAll('.filter-option').forEach(opt => {
+    const key = opt.dataset.filter;
+    if (!paraMap[key]) return; // skip "All Tags" and user tags
+
+    // Build tooltip text: Title, Description, and Examples with better formatting
+    const tip = `${paraMap[key].title}\n\n${paraMap[key].description}\n\n${paraMap[key].examples}`;
+
+    // Create the little "i" icon
+    const info = document.createElement('span');
+    info.className = 'filter-option-info';
+    info.setAttribute('role', 'img');
+    info.setAttribute('aria-label', `${paraMap[key].title} info`);
+    info.textContent = 'i';
+
+    // Prevent clicks on the "i" from selecting the filter
+    info.addEventListener('click', (e) => e.stopPropagation());
+    info.addEventListener('mousedown', (e) => e.stopPropagation());
+
+    // Add hover events
+    info.addEventListener('mouseenter', (e) => {
+      const rect = info.getBoundingClientRect();
+      tooltip.textContent = tip;
+      tooltip.style.left = `${rect.left + rect.width / 2}px`;
+      tooltip.style.top = `${rect.bottom + 8}px`;
+      tooltip.style.transform = 'translateX(-50%)';
+      tooltip.style.opacity = '1';
+      tooltip.style.visibility = 'visible';
+    });
+
+    info.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+      tooltip.style.visibility = 'hidden';
+    });
+
+    opt.appendChild(info);
+  });
+}
+
+
+// Show PARA info modal
+function showPARAInfoModal() {
+    // Get current language from translation manager
+    const currentLanguage = window.translationManager ? window.translationManager.currentLanguage : 'en';
+    
     const paraExplanations = {
         'P': {
-            title: 'Projects',
-            description: 'A series of tasks linked to a specific goal, with a deadline. Once the goal is accomplished, the project moves to the archive.',
-            examples: 'Examples: Planning a vacation, publishing a blog post, or preparing a presentation.'
+            title: window.translationManager ? window.translationManager.t('para_projects_title') : 'Projects',
+            description: window.translationManager ? window.translationManager.t('para_projects_description') : 'A series of tasks linked to a specific goal, with a deadline. Once the goal is accomplished, the project moves to the archive.',
+            examples: window.translationManager ? window.translationManager.t('para_projects_examples') : 'Examples: Planning a vacation, publishing a blog post, or preparing a presentation.'
         },
         'A': {
-            title: 'Areas',
-            description: 'A sphere of ongoing activity that requires a certain standard to be maintained over time, but has no specific deadline.',
-            examples: 'Examples: Health, finances, personal development, or professional duties.'
+            title: window.translationManager ? window.translationManager.t('para_areas_title') : 'Areas',
+            description: window.translationManager ? window.translationManager.t('para_areas_description') : 'A sphere of ongoing activity that requires a certain standard to be maintained over time, but has no specific deadline.',
+            examples: window.translationManager ? window.translationManager.t('para_areas_examples') : 'Examples: Health, finances, personal development, or professional duties.'
         },
         'R': {
-            title: 'Resources',
-            description: 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
-            examples: 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
+            title: window.translationManager ? window.translationManager.t('para_resources_title') : 'Resources',
+            description: window.translationManager ? window.translationManager.t('para_resources_description') : 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
+            examples: window.translationManager ? window.translationManager.t('para_resources_examples') : 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
         },
-        'Archive': {
-            title: 'Archive',
-            description: 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
-            examples: 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
+        'archive': {
+            title: window.translationManager ? window.translationManager.t('para_archive_title') : 'Archive',
+            description: window.translationManager ? window.translationManager.t('para_archive_description') : 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
+            examples: window.translationManager ? window.translationManager.t('para_archive_examples') : 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
         }
     };
-
-    // Create tooltip element
-    const tooltip = document.createElement('div');
-    tooltip.className = 'para-tooltip';
-    tooltip.style.cssText = `
-        position: absolute;
-        background: #1f2937;
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        max-width: 300px;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    modalOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s ease, visibility 0.2s ease;
-        pointer-events: none;
+        transition: opacity 0.3s ease;
     `;
-    document.body.appendChild(tooltip);
-
-    // Add event listeners to info icons
-    dropdownOptions.addEventListener('mouseenter', (e) => {
-        const infoIcon = e.target.closest('.filter-option-info');
-        if (infoIcon) {
-            const category = infoIcon.dataset.category;
-            const explanation = paraExplanations[category];
-            
-            if (explanation) {
-                tooltip.innerHTML = `
-                    <div style="font-weight: 600; margin-bottom: 8px; color: #f3f4f6;">${explanation.title}</div>
-                    <div style="margin-bottom: 8px; line-height: 1.4;">${explanation.description}</div>
-                    <div style="font-size: 12px; color: #9ca3af; font-style: italic;">${explanation.examples}</div>
-                `;
-                
-                // Position tooltip
-                const rect = infoIcon.getBoundingClientRect();
-                tooltip.style.left = `${rect.right + 8}px`;
-                tooltip.style.top = `${rect.bottom + 200}px`;
-                
-                tooltip.style.opacity = '1';
-                tooltip.style.visibility = 'visible';
-            }
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'para-info-modal';
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    `;
+    
+    // Create modal header
+    const modalHeader = document.createElement('div');
+    modalHeader.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e5e7eb;
+    `;
+    
+    const modalTitle = document.createElement('h2');
+    modalTitle.textContent = 'PARA System Categories';
+    modalTitle.style.cssText = `
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1f2937;
+    `;
+    
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = `
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+    `;
+    
+    closeButton.addEventListener('click', () => {
+        modalOverlay.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(modalOverlay);
+        }, 300);
+    });
+    
+    closeButton.addEventListener('mouseenter', () => {
+        closeButton.style.backgroundColor = '#f3f4f6';
+    });
+    
+    closeButton.addEventListener('mouseleave', () => {
+        closeButton.style.backgroundColor = 'transparent';
+    });
+    
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeButton);
+    
+    // Create categories content
+    const categoriesContent = document.createElement('div');
+    categoriesContent.style.cssText = `
+        display: grid;
+        gap: 20px;
+    `;
+    
+    // Add each PARA category
+    Object.entries(paraExplanations).forEach(([key, explanation]) => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.style.cssText = `
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        `;
+        
+        const categoryTitle = document.createElement('h3');
+        categoryTitle.textContent = explanation.title;
+        categoryTitle.style.cssText = `
+            margin: 0 0 8px 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+        `;
+        
+        const categoryDescription = document.createElement('p');
+        categoryDescription.textContent = explanation.description;
+        categoryDescription.style.cssText = `
+            margin: 0 0 8px 0;
+            color: #4b5563;
+            line-height: 1.5;
+        `;
+        
+        const categoryExamples = document.createElement('p');
+        categoryExamples.textContent = explanation.examples;
+        categoryExamples.style.cssText = `
+            margin: 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-style: italic;
+        `;
+        
+        categoryDiv.appendChild(categoryTitle);
+        categoryDiv.appendChild(categoryDescription);
+        categoryDiv.appendChild(categoryExamples);
+        categoriesContent.appendChild(categoryDiv);
+    });
+    
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(categoriesContent);
+    modalOverlay.appendChild(modalContent);
+    
+    // Add to DOM and animate
+    document.body.appendChild(modalOverlay);
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        modalOverlay.style.opacity = '1';
+        modalContent.style.transform = 'scale(1)';
+    });
+    
+    // Close on overlay click
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            modalOverlay.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(modalOverlay);
+            }, 300);
         }
-    }, true);
-
-    dropdownOptions.addEventListener('mouseleave', (e) => {
-        const infoIcon = e.target.closest('.filter-option-info');
-        if (infoIcon) {
-            tooltip.style.opacity = '0';
-            tooltip.style.visibility = 'hidden';
+    });
+    
+    // Close on Escape key
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            modalOverlay.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(modalOverlay);
+            }, 300);
+            document.removeEventListener('keydown', handleEscape);
         }
-    }, true);
+    };
+    document.addEventListener('keydown', handleEscape);
 }
 
 // Test function to verify filter functionality

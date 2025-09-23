@@ -138,9 +138,13 @@ class TokenManager {
                 } 
             }));
             
+            // Store logout reason for login page display
+            localStorage.setItem('quest_logout_reason', reason);
+            localStorage.setItem('quest_logout_timestamp', Date.now().toString());
+            
             // 延迟跳转到登录页面，让用户看到通知
             setTimeout(() => {
-                window.location.href = '/login';
+                window.location.href = `/login?reason=${encodeURIComponent(reason)}&auto=true`;
             }, 2000);
             
         } catch (error) {

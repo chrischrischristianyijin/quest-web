@@ -56,8 +56,13 @@ class AuthExpiredModal {
         // 登录按钮点击事件
         loginBtn.addEventListener('click', () => {
             this.hide();
+            // Store logout reason if not already stored
+            if (!localStorage.getItem('quest_logout_reason')) {
+                localStorage.setItem('quest_logout_reason', 'Session expired');
+                localStorage.setItem('quest_logout_timestamp', Date.now().toString());
+            }
             // 跳转到登录页面
-            window.location.href = '/src/client/pages/login.html';
+            window.location.href = '/src/client/pages/login.html?reason=session_expired&auto=true';
         });
 
         // 点击遮罩层关闭（这里不允许关闭，必须登录）

@@ -30,10 +30,67 @@ class TranslationManager {
                 'oldest': 'Oldest',
                 'alphabetical': 'Alphabetical',
                 'new_stack': 'New Stack',
+                'new_stack_description': 'A new stack for organizing content',
                 'stack': 'STACK',
                 'items': 'items',
+                'insights': 'insights',
+                'no_insights_yet': 'No insights yet',
+                'stack_is_empty': 'This stack is empty. Add some insights to get started!',
+                'add_insight': 'Add Insight',
+                'back_to_my_space': 'Back to My Space',
+                'no_content_collected': 'No content collected yet',
+                'start_adding_content': 'Start adding your favorite media content to your collection',
+                'add_content': 'Add Content',
+                'created': 'Created',
+                'modified': 'Modified',
                 'welcome': 'Welcome',
                 'welcome_user': 'Welcome, {username}!',
+                
+                // Modal translations
+                'add_new_content': 'Add New Content',
+                'content_url': 'Content URL',
+                'custom_title_optional': 'Custom Title (Optional)',
+                'enter_custom_title_placeholder': 'Enter custom title or leave empty to use webpage title',
+                'your_thoughts_optional': 'Your Thoughts (Optional)',
+                'share_thoughts_placeholder': 'Share your thoughts, insights, or notes about this content',
+                'tag_optional': 'Tag (Optional)',
+                'select_tag_placeholder': 'Select a tag...',
+                'cancel': 'Cancel',
+                'add_content': 'Add Content',
+                'add': 'Add',
+                
+                // Template card for adding content
+                'add_new_content': 'Add New Content',
+                'click_to_add_insight': 'Click to add a new insight or create a stack',
+                'insight_option': '📄 Insight',
+                'stack_option': '📚 Stack',
+                
+                // Create New modal
+                'create_new': 'Create New',
+                'content_card': 'Content Card',
+                'content_card_description': 'Create a single content card with a link, title, and description',
+                'stack': 'Stack',
+                'stack_description': 'Create an empty stack to organize multiple content cards',
+                
+                // Content type filtering
+                'content_type': 'Content Type',
+                'all_content': 'All Content',
+                'insights_only': 'Insights Only',
+                'stacks_only': 'Stacks Only',
+                
+                // PARA descriptions
+                'para_projects_title': 'Projects',
+                'para_projects_description': 'A series of tasks linked to a specific goal, with a deadline. Once the goal is accomplished, the project moves to the archive.',
+                'para_projects_examples': 'Examples: Planning a vacation, publishing a blog post, or preparing a presentation.',
+                'para_areas_title': 'Areas',
+                'para_areas_description': 'A sphere of ongoing activity that requires a certain standard to be maintained over time, but has no specific deadline.',
+                'para_areas_examples': 'Examples: Health, finances, personal development, or professional duties.',
+                'para_resources_title': 'Resources',
+                'para_resources_description': 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
+                'para_resources_examples': 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.',
+                'para_archive_title': 'Archive',
+                'para_archive_description': 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
+                'para_archive_examples': 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.',
                 
                 // Footer
                 'footer_description': 'Your personal knowledge hub for discovering and organizing what matters.',
@@ -229,10 +286,67 @@ class TranslationManager {
                 'oldest': '最旧',
                 'alphabetical': '字母顺序',
                 'new_stack': '新堆栈',
+                'new_stack_description': '用于组织内容的新堆栈',
                 'stack': '堆栈',
                 'items': '项',
+                'insights': '见解',
+                'no_insights_yet': '暂无见解',
+                'stack_is_empty': '这个堆栈是空的。添加一些见解开始吧！',
+                'add_insight': '添加见解',
+                'back_to_my_space': '返回我的空间',
+                'no_content_collected': '尚未收集任何内容',
+                'start_adding_content': '开始添加您喜欢的媒体内容到您的收藏中',
+                'add_content': '添加内容',
+                'created': '创建于',
+                'modified': '修改于',
                 'welcome': '欢迎',
                 'welcome_user': '欢迎，{username}！',
+                
+                // Modal translations
+                'add_new_content': '添加新内容',
+                'content_url': '内容链接',
+                'custom_title_optional': '自定义标题（可选）',
+                'enter_custom_title_placeholder': '输入自定义标题或留空使用网页标题',
+                'your_thoughts_optional': '您的想法（可选）',
+                'share_thoughts_placeholder': '分享您对此内容的想法、见解或笔记',
+                'tag_optional': '标签（可选）',
+                'select_tag_placeholder': '选择标签...',
+                'cancel': '取消',
+                'add_content': '添加内容',
+                'add': '添加',
+                
+                // Template card for adding content
+                'add_new_content': '添加新内容',
+                'click_to_add_insight': '点击添加新见解或创建堆栈',
+                'insight_option': '📄 见解',
+                'stack_option': '📚 堆栈',
+                
+                // Create New modal
+                'create_new': '创建新内容',
+                'content_card': '内容卡片',
+                'content_card_description': '创建包含链接、标题和描述的单个内容卡片',
+                'stack': '堆栈',
+                'stack_description': '创建空堆栈以组织多个内容卡片',
+                
+                // Content type filtering
+                'content_type': '内容类型',
+                'all_content': '所有内容',
+                'insights_only': '仅见解',
+                'stacks_only': '仅堆栈',
+                
+                // PARA descriptions
+                'para_projects_title': '项目',
+                'para_projects_description': '与特定目标相关的一系列任务，有截止日期。目标完成后，项目移至归档。',
+                'para_projects_examples': '例如：计划假期、发布博客文章或准备演示文稿。',
+                'para_areas_title': '领域',
+                'para_areas_description': '需要持续维护一定标准的持续活动领域，但没有特定截止日期。',
+                'para_areas_examples': '例如：健康、财务、个人发展或职业职责。',
+                'para_resources_title': '资源',
+                'para_resources_description': '未来可能有用的持续兴趣主题。不绑定到特定项目或责任领域。',
+                'para_resources_examples': '例如：书籍笔记、未来项目想法或关于爱好的文章收藏。',
+                'para_archive_title': '归档',
+                'para_archive_description': '已完成的项目和非活跃项目，不再积极处理但将来可能被引用。',
+                'para_archive_examples': '例如：完成的演示文稿、完成的报告或保留供参考的旧项目文件。',
                 
                 // Footer
                 'footer_description': '您的个人知识中心，用于发现和组织重要内容。',
@@ -505,7 +619,244 @@ class TranslationManager {
         if (typeof updatePaginationUI === 'function') {
             updatePaginationUI();
         }
+        
+        // Update filter buttons if they exist and have translation attributes
+        const filterButtons = document.querySelectorAll('.filter-label[data-translate]');
+        filterButtons.forEach(button => {
+            const key = button.getAttribute('data-translate');
+            const translation = this.translations[this.currentLanguage][key];
+            if (translation) {
+                button.textContent = translation;
+            }
+        });
+        
+        // Update stack item counts
+        const itemCountElements = document.querySelectorAll('.content-card-source-name, .stack-count');
+        itemCountElements.forEach(element => {
+            const text = element.textContent;
+            if (text.includes(' items')) {
+                const count = text.match(/(\d+)/)?.[1];
+                if (count) {
+                    const itemsText = this.translations[this.currentLanguage]['items'];
+                    element.textContent = `${count} ${itemsText}`;
+                }
+            }
+        });
+        
+        // Update stack names and descriptions
+        const stackTitles = document.querySelectorAll('.content-card-title, .stack-name-horizontal, .stack-name, #stackBreadcrumbName');
+        stackTitles.forEach(title => {
+            const originalText = title.textContent;
+            if (originalText === 'New Stack' || originalText === '新堆栈') {
+                title.textContent = this.translations[this.currentLanguage]['new_stack'];
+            }
+        });
+        
+        const stackDescriptions = document.querySelectorAll('.stack-description .description-text');
+        stackDescriptions.forEach(description => {
+            const originalText = description.textContent;
+            if (originalText === 'A new stack for organizing content' || originalText === '用于组织内容的新堆栈') {
+                description.textContent = this.translations[this.currentLanguage]['new_stack_description'];
+            }
+        });
+        
+        // Update stack context bar insights count
+        const stackCountElements = document.querySelectorAll('#stackCount');
+        stackCountElements.forEach(element => {
+            const text = element.textContent;
+            if (text.includes(' insights') || text.includes(' 见解')) {
+                const count = text.match(/(\d+)/)?.[1];
+                if (count) {
+                    const insightsText = this.translations[this.currentLanguage]['insights'];
+                    element.textContent = `${count} ${insightsText}`;
+                }
+            }
+        });
+        
+        // Update stack context bar dates
+        const stackDatesElements = document.querySelectorAll('#stackDates');
+        stackDatesElements.forEach(element => {
+            let text = element.textContent;
+            // Only update if the text doesn't match the current language
+            const currentCreatedText = this.translations[this.currentLanguage]['created'];
+            const currentModifiedText = this.translations[this.currentLanguage]['modified'];
+            
+            // Check if text needs updating - only if it contains text from the opposite language
+            const hasEnglishText = text.includes('Created') || text.includes('Modified');
+            const hasChineseText = text.includes('创建于') || text.includes('修改于');
+            
+            if ((this.currentLanguage === 'zh' && hasEnglishText) || 
+                (this.currentLanguage === 'en' && hasChineseText)) {
+                // Replace both English and Chinese versions with the current language
+                text = text.replace(/Created/g, currentCreatedText)
+                          .replace(/创建于/g, currentCreatedText)
+                          .replace(/Modified/g, currentModifiedText)
+                          .replace(/修改于/g, currentModifiedText);
+                element.textContent = text;
+            }
+        });
+        
+        // Update empty stack state elements
+        const emptyStackTitles = document.querySelectorAll('.empty-stack-state h3');
+        emptyStackTitles.forEach(title => {
+            const originalText = title.textContent;
+            if (originalText === 'No insights yet' || originalText === '暂无见解') {
+                title.textContent = this.translations[this.currentLanguage]['no_insights_yet'];
+            }
+        });
+        
+        const emptyStackDescriptions = document.querySelectorAll('.empty-stack-state p');
+        emptyStackDescriptions.forEach(description => {
+            const originalText = description.textContent;
+            if (originalText === 'This stack is empty. Add some insights to get started!' || originalText === '这个堆栈是空的。添加一些见解开始吧！') {
+                description.textContent = this.translations[this.currentLanguage]['stack_is_empty'];
+            }
+        });
+        
+        const addInsightButtons = document.querySelectorAll('#emptyStackAddInsightBtn');
+        addInsightButtons.forEach(button => {
+            const originalText = button.textContent.trim();
+            if (originalText === 'Add Insight' || originalText === '添加见解') {
+                button.innerHTML = button.innerHTML.replace(originalText, this.translations[this.currentLanguage]['add_insight']);
+            }
+        });
+        
+        const backToHomeButtons = document.querySelectorAll('#emptyStackBackToHomeBtn');
+        backToHomeButtons.forEach(button => {
+            const originalText = button.textContent.trim();
+            if (originalText === 'Back to My Space' || originalText === '返回我的空间') {
+                button.innerHTML = button.innerHTML.replace(originalText, this.translations[this.currentLanguage]['back_to_my_space']);
+            }
+        });
+        
+        // Update general empty state elements
+        const emptyStateTitles = document.querySelectorAll('.empty-state h3');
+        emptyStateTitles.forEach(title => {
+            const originalText = title.textContent;
+            if (originalText === 'No content collected yet' || originalText === '尚未收集任何内容') {
+                title.textContent = this.translations[this.currentLanguage]['no_content_collected'];
+            }
+        });
+        
+        const emptyStateDescriptions = document.querySelectorAll('.empty-state p');
+        emptyStateDescriptions.forEach(description => {
+            const originalText = description.textContent;
+            if (originalText === 'Start adding your favorite media content to your collection' || originalText === '开始添加您喜欢的媒体内容到您的收藏中') {
+                description.textContent = this.translations[this.currentLanguage]['start_adding_content'];
+            }
+        });
+        
+        const addContentButtons = document.querySelectorAll('.add-content-btn');
+        addContentButtons.forEach(button => {
+            const originalText = button.textContent.trim();
+            if (originalText === 'Add Content' || originalText === '添加内容') {
+                button.textContent = this.translations[this.currentLanguage]['add_content'];
+            }
+        });
+        
+        // Update "Add" button in stack context bar
+        const stackAddButtons = document.querySelectorAll('#stackAddBtn');
+        stackAddButtons.forEach(button => {
+            const originalText = button.textContent.trim();
+            if (originalText === 'Add' || originalText === '添加') {
+                button.textContent = this.translations[this.currentLanguage]['add'];
+            }
+        });
+        
+        // Update template card content
+        const templateCardTitles = document.querySelectorAll('.template-card-text h3');
+        templateCardTitles.forEach(title => {
+            const originalText = title.textContent;
+            if (originalText === 'Add New Content' || originalText === '添加新内容') {
+                title.textContent = this.translations[this.currentLanguage]['add_new_content'];
+            }
+        });
+        
+        const templateCardDescriptions = document.querySelectorAll('.template-card-text p');
+        templateCardDescriptions.forEach(description => {
+            const originalText = description.textContent;
+            if (originalText === 'Click to add a new insight or create a stack' || originalText === '点击添加新见解或创建堆栈') {
+                description.textContent = this.translations[this.currentLanguage]['click_to_add_insight'];
+            }
+        });
+        
+        const templateOptions = document.querySelectorAll('.template-option');
+        templateOptions.forEach(option => {
+            const originalText = option.textContent;
+            if (originalText === '📄 Insight' || originalText === '📄 见解') {
+                option.textContent = this.translations[this.currentLanguage]['insight_option'];
+            } else if (originalText === '📚 Stack' || originalText === '📚 堆栈') {
+                option.textContent = this.translations[this.currentLanguage]['stack_option'];
+            }
+        });
+        
+        // Update content type filter buttons
+        const contentTypeButtons = document.querySelectorAll('[data-filter="content_type"] .filter-label');
+        contentTypeButtons.forEach(button => {
+            const originalText = button.textContent;
+            if (originalText === 'Content Type' || originalText === '内容类型') {
+                button.textContent = this.translations[this.currentLanguage]['content_type'];
+            } else if (originalText === 'All Content' || originalText === '所有内容') {
+                button.textContent = this.translations[this.currentLanguage]['all_content'];
+            } else if (originalText === 'Insights Only' || originalText === '仅见解') {
+                button.textContent = this.translations[this.currentLanguage]['insights_only'];
+            } else if (originalText === 'Stacks Only' || originalText === '仅堆栈') {
+                button.textContent = this.translations[this.currentLanguage]['stacks_only'];
+            }
+        });
+        
+        // Update Create New modal content
+        this.updateCreateNewModal();
+        
+        // PARA descriptions are now shown in a modal, no need to update here
     }
+    
+    // Update Create New modal content
+    updateCreateNewModal() {
+        // Update modal title
+        const modalTitles = document.querySelectorAll('.creation-options-modal h2');
+        modalTitles.forEach(title => {
+            const originalText = title.textContent;
+            if (originalText === 'Create New' || originalText === '创建新内容') {
+                title.textContent = this.translations[this.currentLanguage]['create_new'];
+            }
+        });
+        
+        // Update Content Card option
+        const contentCardTitles = document.querySelectorAll('#createCardOption h3');
+        contentCardTitles.forEach(title => {
+            const originalText = title.textContent;
+            if (originalText === 'Content Card' || originalText === '内容卡片') {
+                title.textContent = this.translations[this.currentLanguage]['content_card'];
+            }
+        });
+        
+        const contentCardDescriptions = document.querySelectorAll('#createCardOption p');
+        contentCardDescriptions.forEach(description => {
+            const originalText = description.textContent;
+            if (originalText === 'Create a single content card with a link, title, and description' || originalText === '创建包含链接、标题和描述的单个内容卡片') {
+                description.textContent = this.translations[this.currentLanguage]['content_card_description'];
+            }
+        });
+        
+        // Update Stack option
+        const stackTitles = document.querySelectorAll('#createStackOption h3');
+        stackTitles.forEach(title => {
+            const originalText = title.textContent;
+            if (originalText === 'Stack' || originalText === '堆栈') {
+                title.textContent = this.translations[this.currentLanguage]['stack'];
+            }
+        });
+        
+        const stackDescriptions = document.querySelectorAll('#createStackOption p');
+        stackDescriptions.forEach(description => {
+            const originalText = description.textContent;
+            if (originalText === 'Create an empty stack to organize multiple content cards' || originalText === '创建空堆栈以组织多个内容卡片') {
+                description.textContent = this.translations[this.currentLanguage]['stack_description'];
+            }
+        });
+    }
+    
 }
 
 // Initialize translation manager when DOM is loaded

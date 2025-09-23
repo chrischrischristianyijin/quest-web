@@ -1,5 +1,6 @@
 import { API_CONFIG } from './config.js';
 import { tokenManager } from './token-manager.js';
+import { connectivityManager } from './connectivity-manager.js';
 import { autoReloginManager } from './auto-relogin.js';
 
 // API服务类
@@ -123,6 +124,9 @@ class ApiService {
             const data = await response.json();
             console.log('✅ API响应成功:', data);
             
+            // Report successful API request to connectivity manager
+            connectivityManager.reportApiSuccess();
+            
             // Cache successful GET responses
             if ((options.method || 'GET') === 'GET' && window.apiCache) {
                 window.apiCache.set(url, data);
@@ -141,6 +145,11 @@ class ApiService {
             return data;
         } catch (error) {
             console.error('❌ API请求错误:', error);
+            
+            // Report API failure to connectivity manager (extract status if available)
+            const status = error.message.match(/HTTP (\d+):/)?.[1] || 0;
+            connectivityManager.reportApiFailure(error.message, parseInt(status));
+            
             throw error;
         }
     }

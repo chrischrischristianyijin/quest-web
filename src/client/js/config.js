@@ -95,3 +95,12 @@ export const API_CONFIG = {
         HEALTH: '/api/v1/chat/health'
     }
 };
+
+// Brevo Email Service Configuration
+export const BREVO_CONFIG = {
+    API_KEY: window.BREVO_API_KEY || 'your-brevo-api-key-here',
+    API_URL: 'https://api.brevo.com/v3',
+    TEMPLATE_ID: window.BREVO_TEMPLATE_ID || null,
+    SENDER_EMAIL: 'noreply@quest.example.com',
+    SENDER_NAME: 'Quest Team'
+};
