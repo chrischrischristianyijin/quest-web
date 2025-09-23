@@ -6,13 +6,29 @@ class AuthManager {
         this.user = null;
         this.isAuthenticated = false;
         this.listeners = [];
-        this.init();
+        this.initialized = false;
+        // Defer initialization to avoid circular dependency
+        setTimeout(() => this.init(), 0);
+    }
+
+    // Safe API access helper
+    safeApiCall(method, ...args) {
+        try {
+            if (api && typeof api[method] === 'function') {
+                return api[method](...args);
+            }
+        } catch (error) {
+            console.log(`⚠️ API method ${method} not available:`, error.message);
+        }
+        return null;
     }
 
     // 初始化
     init() {
+        if (this.initialized) return;
+        this.initialized = true;
         // 检查本地存储的用户会话
-            const session = localStorage.getItem('quest_user_session');
+        const session = localStorage.getItem('quest_user_session');
         if (session) {
             try {
                 const parsed = JSON.parse(session);
@@ -27,8 +43,8 @@ class AuthManager {
                         // 恢复 token - 只从 quest_user_session 恢复
                         if (parsed.token) {
                             console.log('🔑 从会话恢复 token...');
-                            api.setAuthToken(parsed.token);
-                            console.log('✅ Token恢复成功，当前API token状态:', api.authToken ? '已设置' : '未设置');
+                            this.safeApiCall('setAuthToken', parsed.token);
+                            console.log('✅ Token恢复成功，当前API token状态:', api?.authToken ? '已设置' : '未设置');
                         } else {
                             console.log('⚠️ 会话中没有token，清除会话');
                             this.clearSession();
@@ -209,8 +225,8 @@ class AuthManager {
         this.user = null;
         this.isAuthenticated = false;
         
-        // 清除所有token存储
-        api.setAuthToken(null);
+        // 清除所有token存储 (only if api is available)
+        this.safeApiCall('setAuthToken', null);
         localStorage.removeItem('quest_user_session');
         localStorage.removeItem('authToken'); // 清理可能存在的旧存储
         
