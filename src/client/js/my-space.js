@@ -3303,10 +3303,14 @@ function bindEvents() {
     
     // Header email preferences button
     if (headerEmailPreferences) {
+        console.log('✅ Email preferences button found, adding click listener');
         headerEmailPreferences.addEventListener('click', () => {
+            console.log('📧 Email preferences button clicked');
             // Open email preferences modal
             openEmailPreferencesModal();
         });
+    } else {
+        console.log('❌ Email preferences button not found');
     }
     
     // 添加内容表单
@@ -5315,10 +5319,15 @@ window.testDatabaseStackId = async function() {
 // 测试函数 - 检查特定stack的内容
 // Email Preferences Modal Functions
 function openEmailPreferencesModal() {
+    console.log('🔧 Opening email preferences modal...');
     const modal = document.getElementById('emailPreferencesModal');
+    console.log('Modal element found:', !!modal);
     if (modal) {
         modal.style.display = 'block';
+        console.log('✅ Modal display set to block');
         loadEmailPreferencesInModal();
+    } else {
+        console.error('❌ Modal element not found in DOM');
     }
 }
 
