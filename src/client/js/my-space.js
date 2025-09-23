@@ -3304,8 +3304,8 @@ function bindEvents() {
     // Header email preferences button
     if (headerEmailPreferences) {
         headerEmailPreferences.addEventListener('click', () => {
-            // Navigate to email preferences page
-            window.location.href = '/email-preferences';
+            // Open email preferences modal
+            openEmailPreferencesModal();
         });
     }
     
@@ -5313,6 +5313,124 @@ window.testDatabaseStackId = async function() {
 };
 
 // 测试函数 - 检查特定stack的内容
+// Email Preferences Modal Functions
+function openEmailPreferencesModal() {
+    const modal = document.getElementById('emailPreferencesModal');
+    if (modal) {
+        modal.style.display = 'block';
+        loadEmailPreferencesInModal();
+    }
+}
+
+function closeEmailPreferencesModal() {
+    const modal = document.getElementById('emailPreferencesModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+async function loadEmailPreferencesInModal() {
+    try {
+        // Load preferences from localStorage or API
+        const savedPreferences = localStorage.getItem('quest_email_preferences');
+        let preferences = {
+            weekly_digest_enabled: false,
+            preferred_day: 1, // Monday
+            preferred_hour: 9, // 9 AM
+            timezone: 'America/Los_Angeles',
+            no_activity_policy: 'skip'
+        };
+
+        if (savedPreferences) {
+            preferences = JSON.parse(savedPreferences);
+        }
+
+        // Populate modal form
+        document.getElementById('weeklyDigestEnabledModal').checked = preferences.weekly_digest_enabled;
+        document.getElementById('preferredDayModal').value = preferences.preferred_day;
+        document.getElementById('preferredHourModal').value = preferences.preferred_hour;
+        document.getElementById('timezoneModal').value = preferences.timezone;
+        document.getElementById('noActivityPolicyModal').value = preferences.no_activity_policy;
+
+        // Setup event listeners for modal
+        setupEmailPreferencesModalListeners();
+    } catch (error) {
+        console.error('Error loading email preferences in modal:', error);
+    }
+}
+
+function setupEmailPreferencesModalListeners() {
+    // Save button
+    const saveBtn = document.getElementById('saveEmailPreferencesModal');
+    if (saveBtn) {
+        saveBtn.onclick = saveEmailPreferencesFromModal;
+    }
+
+    // Test email button
+    const testBtn = document.getElementById('sendTestEmailModal');
+    if (testBtn) {
+        testBtn.onclick = sendTestEmailFromModal;
+    }
+}
+
+async function saveEmailPreferencesFromModal() {
+    try {
+        const preferences = {
+            weekly_digest_enabled: document.getElementById('weeklyDigestEnabledModal').checked,
+            preferred_day: parseInt(document.getElementById('preferredDayModal').value),
+            preferred_hour: parseInt(document.getElementById('preferredHourModal').value),
+            timezone: document.getElementById('timezoneModal').value,
+            no_activity_policy: document.getElementById('noActivityPolicyModal').value
+        };
+
+        // Save to localStorage
+        localStorage.setItem('quest_email_preferences', JSON.stringify(preferences));
+        
+        // Try to save to API if available
+        try {
+            if (typeof api !== 'undefined') {
+                await api.request('/api/v1/email/preferences', {
+                    method: 'PUT',
+                    body: JSON.stringify(preferences)
+                });
+            }
+        } catch (apiError) {
+            console.log('API not available, saved to localStorage only');
+        }
+
+        alert('Email preferences saved successfully!');
+        closeEmailPreferencesModal();
+    } catch (error) {
+        console.error('Error saving email preferences:', error);
+        alert('Failed to save email preferences');
+    }
+}
+
+async function sendTestEmailFromModal() {
+    try {
+        const email = prompt('Enter email address for test:');
+        if (!email) return;
+
+        if (typeof emailService !== 'undefined') {
+            const result = await emailService.sendTestEmail(email);
+            if (result.success) {
+                alert('Test email sent successfully! Check your inbox.');
+            } else {
+                alert(`Failed to send test email: ${result.error}`);
+            }
+        } else {
+            alert('Email service not available');
+        }
+    } catch (error) {
+        console.error('Error sending test email:', error);
+        alert('Failed to send test email');
+    }
+}
+
+// Make functions globally available
+window.openEmailPreferencesModal = openEmailPreferencesModal;
+window.closeEmailPreferencesModal = closeEmailPreferencesModal;
+
 window.testStackContent = async function(stackId = null) {
     const targetStackId = stackId || activeStackId;
     console.log('🧪 Testing stack content for stack:', targetStackId);

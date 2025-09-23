@@ -499,11 +499,122 @@
     <!-- File input for stack cover upload -->
     <input id="stackCoverUploader" type="file" accept="image/*" style="display:none">
 
+    <!-- Email Preferences Modal -->
+    <div id="emailPreferencesModal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeEmailPreferencesModal()">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h3>Email Preferences</h3>
+                    <button class="close-btn" onclick="closeEmailPreferencesModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="emailPreferencesFormModal" class="email-preferences-form">
+                        <div class="form-section">
+                            <h4>Weekly Digest</h4>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="weeklyDigestEnabledModal" class="checkbox">
+                                    <span class="checkmark"></span>
+                                    <span>Enable weekly digest emails</span>
+                                </label>
+                                <p class="form-help">Receive a weekly summary of your insights and activity</p>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>Delivery Schedule</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="preferredDayModal" class="form-label">Preferred Day</label>
+                                    <select id="preferredDayModal" class="form-select">
+                                        <option value="0">Sunday</option>
+                                        <option value="1">Monday</option>
+                                        <option value="2">Tuesday</option>
+                                        <option value="3">Wednesday</option>
+                                        <option value="4">Thursday</option>
+                                        <option value="5">Friday</option>
+                                        <option value="6">Saturday</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="preferredHourModal" class="form-label">Preferred Hour</label>
+                                    <select id="preferredHourModal" class="form-select">
+                                        <option value="6">6:00 AM</option>
+                                        <option value="7">7:00 AM</option>
+                                        <option value="8">8:00 AM</option>
+                                        <option value="9">9:00 AM</option>
+                                        <option value="10">10:00 AM</option>
+                                        <option value="11">11:00 AM</option>
+                                        <option value="12">12:00 PM</option>
+                                        <option value="13">1:00 PM</option>
+                                        <option value="14">2:00 PM</option>
+                                        <option value="15">3:00 PM</option>
+                                        <option value="16">4:00 PM</option>
+                                        <option value="17">5:00 PM</option>
+                                        <option value="18">6:00 PM</option>
+                                        <option value="19">7:00 PM</option>
+                                        <option value="20">8:00 PM</option>
+                                        <option value="21">9:00 PM</option>
+                                        <option value="22">10:00 PM</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>Timezone</h4>
+                            <div class="form-group">
+                                <label for="timezoneModal" class="form-label">Your Timezone</label>
+                                <select id="timezoneModal" class="form-select">
+                                    <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
+                                    <option value="America/Denver">Mountain Time (Denver)</option>
+                                    <option value="America/Chicago">Central Time (Chicago)</option>
+                                    <option value="America/New_York">Eastern Time (New York)</option>
+                                    <option value="Europe/London">London (GMT)</option>
+                                    <option value="Europe/Paris">Paris (CET)</option>
+                                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                                    <option value="Asia/Shanghai">Shanghai (CST)</option>
+                                    <option value="Australia/Sydney">Sydney (AEST)</option>
+                                    <option value="UTC">UTC</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>No Activity Policy</h4>
+                            <div class="form-group">
+                                <label for="noActivityPolicyModal" class="form-label">When you have no activity this week</label>
+                                <select id="noActivityPolicyModal" class="form-select">
+                                    <option value="skip">Skip sending (don't send email)</option>
+                                    <option value="brief">Send brief email with suggestions</option>
+                                    <option value="suggestions">Send email with "what you missed" content</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="saveEmailPreferencesModal" class="btn btn-primary">
+                                Save Preferences
+                            </button>
+                            <button type="button" id="sendTestEmailModal" class="btn btn-outline">
+                                Send Test Email
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Performance optimization scripts -->
     <script src="/js/logger.js"></script>
     <script src="/js/cache.js"></script>
     <script type="module" src="/js/token-debug.js"></script>
     <script type="module" src="/js/content-card-loader.js"></script>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/email-service.js"></script>
+    <script type="module" src="/js/email-preferences.js"></script>
     <script type="module" src="/js/translation.js"></script>
     <script type="module" src="/js/my-space.js"></script>
 
