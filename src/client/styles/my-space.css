@@ -3718,6 +3718,80 @@ body.modal-open { overflow: hidden; }
 
 /* Old modal styles removed */
 
+/* 标题与编辑按钮容器样式 */
+.title-with-edit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+
+.title-with-edit .content-title {
+    flex: 1;
+    margin: 0;
+    min-width: 0; /* 允许标题收缩 */
+}
+
+/* 编辑标题按钮样式 */
+.edit-title-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0; /* 防止按钮被压缩 */
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+    border: 1.5px solid rgba(139, 92, 246, 0.3);
+    border-radius: 8px;
+    color: var(--quest-purple);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.7;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.edit-title-btn:hover {
+    opacity: 1;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
+    border-color: var(--quest-purple);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.edit-title-btn:active {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+}
+
+.edit-title-btn svg {
+    transition: all 0.3s ease;
+}
+
+.edit-title-btn:hover svg {
+    transform: rotate(5deg);
+}
+
+.edit-title-btn::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, var(--quest-purple), var(--quest-blue));
+    border-radius: 10px;
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+}
+
+.edit-title-btn:hover::before {
+    opacity: 0.1;
+}
+
 /* Title edit mode styles */
 .title-edit-mode .content-title {
     display: none;
@@ -3727,24 +3801,33 @@ body.modal-open { overflow: hidden; }
     display: none;
 }
 
+.title-edit-mode .title-with-edit {
+    align-items: flex-start;
+}
+
 .title-edit-input {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--text-primary);
-    background: transparent;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
     border: 2px solid var(--quest-purple);
-    border-radius: 8px;
-    padding: 8px 12px;
+    border-radius: 12px;
+    padding: 12px 16px;
     width: 100%;
     outline: none;
     font-family: inherit;
     line-height: 1.3;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .title-edit-actions {
     display: flex;
     gap: 8px;
     margin-left: 8px;
+    align-items: center;
 }
 
 .title-edit-save,
@@ -3752,20 +3835,41 @@ body.modal-open { overflow: hidden; }
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    color: var(--text-secondary);
-    transition: all 0.2s ease;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.title-edit-save {
+    color: #10b981;
+    border: 1.5px solid rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
 }
 
 .title-edit-save:hover {
-    background: var(--success-color);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+    border-color: #10b981;
     color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.title-edit-cancel {
+    color: #ef4444;
+    border: 1.5px solid rgba(239, 68, 68, 0.3);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
 }
 
 .title-edit-cancel:hover {
-    background: var(--error-color);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+    border-color: #ef4444;
     color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .content-tags {
@@ -5720,11 +5824,12 @@ body.modal-open { overflow: hidden; }
 /* Center the footer tag */
 .content-card-footer {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     margin-top: auto;
     padding-top: var(--spacing-md);
     border-top: 1px solid var(--border-light);
+    gap: 8px;
 }
 
 /* Tag Edit Modal Styles */
@@ -8153,4 +8258,153 @@ body.modal-open { overflow: hidden; }
     .loading-card .content-card-footer {
         padding: 0 var(--spacing-md) var(--spacing-md);
     }
+}
+
+/* 访问原网页按钮样式 */
+.visit-original-section {
+    display: flex;
+    justify-content: center;
+    padding: 16px 0;
+}
+
+.visit-original-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--quest-purple), var(--quest-blue));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+    text-decoration: none;
+}
+
+.visit-original-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+}
+
+.visit-original-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.visit-original-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* 卡片外部链接按钮样式 */
+.content-card-external-link {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 6px;
+    color: var(--quest-purple);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0;
+    transform: translateY(-2px);
+    z-index: 10;
+}
+
+.content-card:hover .content-card-external-link {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.content-card-external-link:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: var(--quest-purple);
+    transform: translateY(-1px) scale(1.1);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.content-card-external-link:active {
+    transform: translateY(0) scale(1.05);
+}
+
+.content-card-external-link svg {
+    width: 12px;
+    height: 12px;
+    transition: all 0.3s ease;
+}
+
+.content-card-external-link:hover svg {
+    transform: rotate(5deg);
+}
+
+/* 卡片底部链接按钮样式 */
+.content-card-footer-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 4px;
+    color: var(--quest-purple);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.content-card-footer-link:hover {
+    opacity: 1;
+    background: rgba(139, 92, 246, 0.2);
+    border-color: var(--quest-purple);
+    transform: scale(1.1);
+}
+
+.content-card-footer-link:active {
+    transform: scale(1.05);
+}
+
+.content-card-footer-link svg {
+    width: 10px;
+    height: 10px;
+    transition: all 0.3s ease;
+}
+
+.content-card-footer-link:hover svg {
+    transform: rotate(5deg);
+}
+
+/* 网站favicon样式 */
+.source-favicon {
+    width: 16px !important;
+    height: 16px !important;
+    border-radius: 2px;
+    object-fit: contain;
+    display: block;
+}
+
+/* 默认链接图标样式 */
+.content-card-source-logo svg {
+    color: var(--quest-purple);
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.content-card-source-logo:hover svg {
+    opacity: 1;
+    transform: scale(1.1);
 }

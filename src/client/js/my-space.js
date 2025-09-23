@@ -2054,8 +2054,9 @@ function createInsightCard(insight) {
     
     const sourceLogo = document.createElement('div');
     sourceLogo.className = 'content-card-source-logo';
-    // You can customize this based on the source
-    sourceLogo.innerHTML = '🎵'; // Default music icon, can be replaced with actual logos
+    // Use favicon based on the website URL
+    const faviconElement = createFaviconElement(insight.url);
+    sourceLogo.appendChild(faviconElement);
     
     const sourceName = document.createElement('span');
     sourceName.className = 'content-card-source-name';
@@ -2139,7 +2140,22 @@ function createInsightCard(insight) {
     tag.style.cursor = 'pointer';
     tag.onclick = () => openTagEditModal(insight);
     
+    // Add link button next to tag
+    const footerLinkBtn = document.createElement('button');
+    footerLinkBtn.className = 'content-card-footer-link';
+    footerLinkBtn.title = 'Visit original page';
+    footerLinkBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15,3 21,3 21,9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+    `;
+    footerLinkBtn.dataset.insightId = insight.id;
+    footerLinkBtn.dataset.url = insight.url;
+    
     cardFooter.appendChild(tag);
+    cardFooter.appendChild(footerLinkBtn);
     
     // 组装卡片内容
     cardContent.appendChild(cardHeader);
@@ -3412,11 +3428,37 @@ function handleCardClick(e) {
         return;
     }
     
+    // Handle external link button clicks (top-right corner)
+    if (e.target.matches('.content-card-external-link') || e.target.closest('.content-card-external-link')) {
+        console.log('🔗 External link button clicked');
+        e.stopPropagation();
+        const linkBtn = e.target.matches('.content-card-external-link') ? e.target : e.target.closest('.content-card-external-link');
+        const url = linkBtn.dataset.url;
+        if (url) {
+            const urlWithSource = addSourceParameter(url);
+            window.open(urlWithSource, '_blank', 'noopener,noreferrer');
+        }
+        return;
+    }
+    
+    // Handle footer link button clicks (bottom right with tag)
+    if (e.target.matches('.content-card-footer-link') || e.target.closest('.content-card-footer-link')) {
+        console.log('🔗 Footer link button clicked');
+        e.stopPropagation();
+        const linkBtn = e.target.matches('.content-card-footer-link') ? e.target : e.target.closest('.content-card-footer-link');
+        const url = linkBtn.dataset.url;
+        if (url) {
+            const urlWithSource = addSourceParameter(url);
+            window.open(urlWithSource, '_blank', 'noopener,noreferrer');
+        }
+        return;
+    }
+    
     // Handle card clicks for details
     const card = e.target.closest('.content-card');
     console.log('🖱️ Closest card element:', card);
     
-    if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn')) {
+    if (card && !e.target.matches('.content-card-delete-btn') && !e.target.closest('.content-card-delete-btn') && !e.target.matches('.content-card-external-link') && !e.target.closest('.content-card-external-link') && !e.target.matches('.content-card-footer-link') && !e.target.closest('.content-card-footer-link')) {
         const insightId = card.dataset.insightId;
         console.log('🖱️ Card clicked with insight ID:', insightId);
         
@@ -6615,6 +6657,9 @@ function setupModalActions(insight) {
     // 设置标题编辑功能
     setupTitleEditing();
     
+    // 设置跳转到原网页按钮
+    setupVisitOriginalButton(insight);
+    
     // Note: Share button removed from user info section
     
     // 设置分享我的空间按钮
@@ -6626,6 +6671,131 @@ function setupModalActions(insight) {
         };
     }
     
+}
+
+// 获取网站favicon的函数
+function getWebsiteFavicon(url) {
+    try {
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname;
+        
+        // 常见网站的favicon URL
+        const faviconUrls = {
+            'youtube.com': 'https://www.youtube.com/favicon.ico',
+            'youtu.be': 'https://www.youtube.com/favicon.ico',
+            'github.com': 'https://github.com/favicon.ico',
+            'stackoverflow.com': 'https://stackoverflow.com/favicon.ico',
+            'wikipedia.org': 'https://en.wikipedia.org/favicon.ico',
+            'medium.com': 'https://medium.com/favicon.ico',
+            'dev.to': 'https://dev.to/favicon.ico',
+            'reddit.com': 'https://www.reddit.com/favicon.ico',
+            'twitter.com': 'https://abs.twimg.com/favicons/twitter.ico',
+            'x.com': 'https://abs.twimg.com/favicons/twitter.ico',
+            'linkedin.com': 'https://www.linkedin.com/favicon.ico',
+            'facebook.com': 'https://www.facebook.com/favicon.ico',
+            'instagram.com': 'https://www.instagram.com/favicon.ico',
+            'tiktok.com': 'https://www.tiktok.com/favicon.ico',
+            'spotify.com': 'https://open.spotify.com/favicon.ico',
+            'apple.com': 'https://www.apple.com/favicon.ico',
+            'google.com': 'https://www.google.com/favicon.ico',
+            'microsoft.com': 'https://www.microsoft.com/favicon.ico',
+            'amazon.com': 'https://www.amazon.com/favicon.ico',
+            'netflix.com': 'https://www.netflix.com/favicon.ico'
+        };
+        
+        // 检查是否有预定义的favicon
+        for (const [key, faviconUrl] of Object.entries(faviconUrls)) {
+            if (domain.includes(key)) {
+                return faviconUrl;
+            }
+        }
+        
+        // 如果没有预定义的，使用通用favicon服务
+        return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+        
+    } catch (error) {
+        console.warn('⚠️ Failed to get favicon for URL:', url, error);
+        return null;
+    }
+}
+
+// 创建favicon图标的HTML元素
+function createFaviconElement(url) {
+    const faviconUrl = getWebsiteFavicon(url);
+    
+    if (faviconUrl) {
+        const faviconImg = document.createElement('img');
+        faviconImg.src = faviconUrl;
+        faviconImg.alt = 'Website icon';
+        faviconImg.className = 'source-favicon';
+        faviconImg.style.width = '16px';
+        faviconImg.style.height = '16px';
+        faviconImg.style.borderRadius = '2px';
+        
+        // 添加错误处理，如果favicon加载失败，显示默认图标
+        faviconImg.onerror = function() {
+            this.style.display = 'none';
+            this.parentElement.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
+        };
+        
+        return faviconImg;
+    } else {
+        // 如果无法获取favicon，返回默认图标
+        const defaultIcon = document.createElement('div');
+        defaultIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
+        defaultIcon.style.color = 'var(--quest-purple)';
+        return defaultIcon;
+    }
+}
+
+// 添加来源参数到URL
+function addSourceParameter(url) {
+    try {
+        const urlObj = new URL(url);
+        
+        // 添加来源参数，让目标网站知道用户是从Quest跳转的
+        urlObj.searchParams.set('utm_source', 'quest');
+        urlObj.searchParams.set('utm_medium', 'referral');
+        urlObj.searchParams.set('utm_campaign', 'content-discovery');
+        urlObj.searchParams.set('ref', 'quest');
+        urlObj.searchParams.set('from', 'myquestspace.com');
+        
+        console.log('🔗 Added source parameters to URL:', urlObj.toString());
+        return urlObj.toString();
+    } catch (error) {
+        console.warn('⚠️ Failed to add source parameters to URL:', url, error);
+        // 如果URL解析失败，返回原始URL
+        return url;
+    }
+}
+
+// 设置跳转到原网页按钮
+function setupVisitOriginalButton(insight) {
+    const visitOriginalBtn = document.getElementById('visitOriginalBtn');
+    if (visitOriginalBtn && insight && insight.url) {
+        // 移除现有的事件监听器（防止重复添加）
+        const newBtn = visitOriginalBtn.cloneNode(true);
+        visitOriginalBtn.parentNode.replaceChild(newBtn, visitOriginalBtn);
+        
+        // 重新获取按钮引用
+        const freshBtn = document.getElementById('visitOriginalBtn');
+        
+        freshBtn.onclick = () => {
+            console.log('🔗 Opening original page:', insight.url);
+            // 添加来源参数，让目标网站知道用户是从Quest跳转的
+            const urlWithSource = addSourceParameter(insight.url);
+            // 在新标签页中打开原网页
+            window.open(urlWithSource, '_blank', 'noopener,noreferrer');
+        };
+        
+        console.log('✅ Visit original button setup completed');
+    } else {
+        console.warn('⚠️ Visit original button or insight URL not found:', {
+            button: !!visitOriginalBtn,
+            insight: !!insight,
+            url: insight?.url
+        });
+    }
 }
 
 // 更新页面缓存中的洞察数据
@@ -9481,8 +9651,9 @@ function createStackHorizontalCard(insight, stackId) {
     
     const sourceLogo = document.createElement('div');
     sourceLogo.className = 'content-card-source-logo';
-    // You can customize this based on the source
-    sourceLogo.innerHTML = '🎵'; // Default music icon, can be replaced with actual logos
+    // Use favicon based on the website URL
+    const faviconElement = createFaviconElement(insight.url);
+    sourceLogo.appendChild(faviconElement);
     
     const sourceName = document.createElement('span');
     sourceName.className = 'content-card-source-name';
