@@ -2409,10 +2409,9 @@ async function initFilterButtons() {
                                 <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
                             </div>`;
                         } else {
-                            // PARA categories with info icon
+                            // PARA categories
                             return `<div class="filter-option" data-filter="${option.key}">
                                 <span class="filter-option-label" data-translate="${option.translateKey}">${option.label}</span>
-                                <span class="filter-option-info" data-category="${option.category}" title="Click for more info">ⓘ</span>
                             </div>`;
                         }
                     }).join('');
@@ -2473,6 +2472,7 @@ async function initFilterButtons() {
                 
                 buttonContainer.appendChild(button);
                 buttonContainer.appendChild(dropdownOptions);
+                
             } else {
                 // 其他按钮：创建下拉菜单
                 const dropdownOptions = document.createElement('div');
@@ -2554,6 +2554,7 @@ async function initFilterButtons() {
             filterButtons.appendChild(button);
         });
     }
+    
 }
 
 // Fetch all insights for filtering (when tag filter is active)
@@ -4347,7 +4348,10 @@ async function createNewTag() {
 
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', initPage);
+document.addEventListener('DOMContentLoaded', () => {
+    initPage();
+    
+});
 
 // ===== SEARCH FUNCTIONALITY =====
 
@@ -10345,6 +10349,116 @@ async function replaceAllTagsWithDefaults() {
 
 // Setup PARA tooltips for filter options
 function setupPARATooltips(dropdownOptions) {
+  if (!dropdownOptions) return;
+
+  const t = (key, fallback) =>
+    (window.translationManager ? window.translationManager.t(key) : fallback);
+
+  const paraMap = {
+    project: {
+      title: t('para_projects_title', 'Projects'),
+      description: t('para_projects_description',
+        'A series of tasks linked to a specific goal, with a deadline. Once the goal is accomplished, the project moves to the archive.'
+      ),
+      examples: t('para_projects_examples',
+        'Examples: Planning a vacation, publishing a blog post, or preparing a presentation.'
+      )
+    },
+    area: {
+      title: t('para_areas_title', 'Areas'),
+      description: t('para_areas_description',
+        'A sphere of ongoing activity that requires a certain standard to be maintained over time, but has no specific deadline.'
+      ),
+      examples: t('para_areas_examples',
+        'Examples: Health, finances, personal development, or professional duties.'
+      )
+    },
+    resource: {
+      title: t('para_resources_title', 'Resources'),
+      description: t('para_resources_description',
+        'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.'
+      ),
+      examples: t('para_resources_examples',
+        'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
+      )
+    },
+    archive: {
+      title: t('para_archive_title', 'Archive'),
+      description: t('para_archive_description',
+        'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.'
+      ),
+      examples: t('para_archive_examples',
+        'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
+      )
+    }
+  };
+
+  // Create a single tooltip element that will be reused
+  const tooltip = document.createElement('div');
+  tooltip.className = 'para-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(17, 24, 39, 0.95);
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    max-width: 280px;
+    min-width: 200px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease;
+    z-index: 10000;
+    pointer-events: none;
+    white-space: pre-line;
+    text-align: left;
+  `;
+  document.body.appendChild(tooltip);
+
+  // Append a hover "i" to each PARA option
+  dropdownOptions.querySelectorAll('.filter-option').forEach(opt => {
+    const key = opt.dataset.filter;
+    if (!paraMap[key]) return; // skip "All Tags" and user tags
+
+    // Build tooltip text: Title, Description, and Examples with better formatting
+    const tip = `${paraMap[key].title}\n\n${paraMap[key].description}\n\n${paraMap[key].examples}`;
+
+    // Create the little "i" icon
+    const info = document.createElement('span');
+    info.className = 'filter-option-info';
+    info.setAttribute('role', 'img');
+    info.setAttribute('aria-label', `${paraMap[key].title} info`);
+    info.textContent = 'i';
+
+    // Prevent clicks on the "i" from selecting the filter
+    info.addEventListener('click', (e) => e.stopPropagation());
+    info.addEventListener('mousedown', (e) => e.stopPropagation());
+
+    // Add hover events
+    info.addEventListener('mouseenter', (e) => {
+      const rect = info.getBoundingClientRect();
+      tooltip.textContent = tip;
+      tooltip.style.left = `${rect.left + rect.width / 2}px`;
+      tooltip.style.top = `${rect.bottom + 8}px`;
+      tooltip.style.transform = 'translateX(-50%)';
+      tooltip.style.opacity = '1';
+      tooltip.style.visibility = 'visible';
+    });
+
+    info.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+      tooltip.style.visibility = 'hidden';
+    });
+
+    opt.appendChild(info);
+  });
+}
+
+
+// Show PARA info modal
+function showPARAInfoModal() {
     // Get current language from translation manager
     const currentLanguage = window.translationManager ? window.translationManager.currentLanguage : 'en';
     
@@ -10364,65 +10478,186 @@ function setupPARATooltips(dropdownOptions) {
             description: window.translationManager ? window.translationManager.t('para_resources_description') : 'A topic of ongoing interest that may be useful in the future. It is not tied to a specific project or area of responsibility.',
             examples: window.translationManager ? window.translationManager.t('para_resources_examples') : 'Examples: Notes on a book, an idea for a future project, or a collection of articles about a hobby.'
         },
-        'Archive': {
+        'archive': {
             title: window.translationManager ? window.translationManager.t('para_archive_title') : 'Archive',
             description: window.translationManager ? window.translationManager.t('para_archive_description') : 'Completed projects and inactive items that are no longer actively being worked on but may be referenced in the future.',
             examples: window.translationManager ? window.translationManager.t('para_archive_examples') : 'Examples: Finished presentations, completed reports, or old project files that are kept for reference.'
         }
     };
-
-    // Create tooltip element
-    const tooltip = document.createElement('div');
-    tooltip.className = 'para-tooltip';
-    tooltip.style.cssText = `
-        position: absolute;
-        background: #1f2937;
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        max-width: 300px;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    modalOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s ease, visibility 0.2s ease;
-        pointer-events: none;
+        transition: opacity 0.3s ease;
     `;
-    document.body.appendChild(tooltip);
-
-    // Add event listeners to info icons
-    dropdownOptions.addEventListener('mouseenter', (e) => {
-        const infoIcon = e.target.closest('.filter-option-info');
-        if (infoIcon) {
-            const category = infoIcon.dataset.category;
-            const explanation = paraExplanations[category];
-            
-            if (explanation) {
-                tooltip.innerHTML = `
-                    <div style="font-weight: 600; margin-bottom: 8px; color: #f3f4f6;">${explanation.title}</div>
-                    <div style="margin-bottom: 8px; line-height: 1.4;">${explanation.description}</div>
-                    <div style="font-size: 12px; color: #9ca3af; font-style: italic;">${explanation.examples}</div>
-                `;
-                
-                // Position tooltip
-                const rect = infoIcon.getBoundingClientRect();
-                tooltip.style.left = `${rect.right + 8}px`;
-                tooltip.style.top = `${rect.bottom + 200}px`;
-                
-                tooltip.style.opacity = '1';
-                tooltip.style.visibility = 'visible';
-            }
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'para-info-modal';
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    `;
+    
+    // Create modal header
+    const modalHeader = document.createElement('div');
+    modalHeader.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e5e7eb;
+    `;
+    
+    const modalTitle = document.createElement('h2');
+    modalTitle.textContent = 'PARA System Categories';
+    modalTitle.style.cssText = `
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1f2937;
+    `;
+    
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = `
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+    `;
+    
+    closeButton.addEventListener('click', () => {
+        modalOverlay.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(modalOverlay);
+        }, 300);
+    });
+    
+    closeButton.addEventListener('mouseenter', () => {
+        closeButton.style.backgroundColor = '#f3f4f6';
+    });
+    
+    closeButton.addEventListener('mouseleave', () => {
+        closeButton.style.backgroundColor = 'transparent';
+    });
+    
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeButton);
+    
+    // Create categories content
+    const categoriesContent = document.createElement('div');
+    categoriesContent.style.cssText = `
+        display: grid;
+        gap: 20px;
+    `;
+    
+    // Add each PARA category
+    Object.entries(paraExplanations).forEach(([key, explanation]) => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.style.cssText = `
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        `;
+        
+        const categoryTitle = document.createElement('h3');
+        categoryTitle.textContent = explanation.title;
+        categoryTitle.style.cssText = `
+            margin: 0 0 8px 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+        `;
+        
+        const categoryDescription = document.createElement('p');
+        categoryDescription.textContent = explanation.description;
+        categoryDescription.style.cssText = `
+            margin: 0 0 8px 0;
+            color: #4b5563;
+            line-height: 1.5;
+        `;
+        
+        const categoryExamples = document.createElement('p');
+        categoryExamples.textContent = explanation.examples;
+        categoryExamples.style.cssText = `
+            margin: 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-style: italic;
+        `;
+        
+        categoryDiv.appendChild(categoryTitle);
+        categoryDiv.appendChild(categoryDescription);
+        categoryDiv.appendChild(categoryExamples);
+        categoriesContent.appendChild(categoryDiv);
+    });
+    
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(categoriesContent);
+    modalOverlay.appendChild(modalContent);
+    
+    // Add to DOM and animate
+    document.body.appendChild(modalOverlay);
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        modalOverlay.style.opacity = '1';
+        modalContent.style.transform = 'scale(1)';
+    });
+    
+    // Close on overlay click
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            modalOverlay.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(modalOverlay);
+            }, 300);
         }
-    }, true);
-
-    dropdownOptions.addEventListener('mouseleave', (e) => {
-        const infoIcon = e.target.closest('.filter-option-info');
-        if (infoIcon) {
-            tooltip.style.opacity = '0';
-            tooltip.style.visibility = 'hidden';
+    });
+    
+    // Close on Escape key
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            modalOverlay.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(modalOverlay);
+            }, 300);
+            document.removeEventListener('keydown', handleEscape);
         }
-    }, true);
+    };
+    document.addEventListener('keydown', handleEscape);
 }
 
 // Test function to verify filter functionality

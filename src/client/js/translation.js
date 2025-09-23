@@ -808,8 +808,7 @@ class TranslationManager {
         // Update Create New modal content
         this.updateCreateNewModal();
         
-        // Update PARA tooltip content
-        this.updatePARATooltips();
+        // PARA descriptions are now shown in a modal, no need to update here
     }
     
     // Update Create New modal content
@@ -858,45 +857,6 @@ class TranslationManager {
         });
     }
     
-    // Update PARA tooltips with current language
-    updatePARATooltips() {
-        const paraExplanations = {
-            'P': {
-                title: this.translations[this.currentLanguage]['para_projects_title'],
-                description: this.translations[this.currentLanguage]['para_projects_description'],
-                examples: this.translations[this.currentLanguage]['para_projects_examples']
-            },
-            'A': {
-                title: this.translations[this.currentLanguage]['para_areas_title'],
-                description: this.translations[this.currentLanguage]['para_areas_description'],
-                examples: this.translations[this.currentLanguage]['para_areas_examples']
-            },
-            'R': {
-                title: this.translations[this.currentLanguage]['para_resources_title'],
-                description: this.translations[this.currentLanguage]['para_resources_description'],
-                examples: this.translations[this.currentLanguage]['para_resources_examples']
-            },
-            'Archive': {
-                title: this.translations[this.currentLanguage]['para_archive_title'],
-                description: this.translations[this.currentLanguage]['para_archive_description'],
-                examples: this.translations[this.currentLanguage]['para_archive_examples']
-            }
-        };
-        
-        // Update existing tooltip if it exists
-        const existingTooltip = document.querySelector('.para-tooltip');
-        if (existingTooltip) {
-            // Update the tooltip content based on current language
-            const infoIcons = document.querySelectorAll('.filter-option-info');
-            infoIcons.forEach(icon => {
-                const category = icon.getAttribute('data-category');
-                if (category && paraExplanations[category]) {
-                    const explanation = paraExplanations[category];
-                    icon.setAttribute('title', `${explanation.title}: ${explanation.description}`);
-                }
-            });
-        }
-    }
 }
 
 // Initialize translation manager when DOM is loaded

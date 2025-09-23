@@ -93,7 +93,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="preferredDay" class="form-label" data-translate="preferred_day">Preferred Day</label>
-                <select id="preferredDay" class="form-select" disabled>
+                <select id="preferredDay" class="form-select">
                   <option value="0" data-translate="sunday">Sunday</option>
                   <option value="1" data-translate="monday">Monday</option>
                   <option value="2" data-translate="tuesday">Tuesday</option>
@@ -105,7 +105,7 @@
               </div>
               <div class="form-group">
                 <label for="preferredHour" class="form-label" data-translate="preferred_hour">Preferred Hour</label>
-                <select id="preferredHour" class="form-select" disabled>
+                <select id="preferredHour" class="form-select">
                   <option value="6">6:00 AM</option>
                   <option value="7">7:00 AM</option>
                   <option value="8">8:00 AM</option>
@@ -132,7 +132,7 @@
             <h2 data-translate="timezone">Timezone</h2>
             <div class="form-group">
               <label for="timezone" class="form-label" data-translate="your_timezone">Your Timezone</label>
-              <select id="timezone" class="form-select" disabled>
+              <select id="timezone" class="form-select">
                 <option value="America/Los_Angeles" data-translate="pacific_time">Pacific Time (Los Angeles)</option>
                 <option value="America/Denver" data-translate="mountain_time">Mountain Time (Denver)</option>
                 <option value="America/Chicago" data-translate="central_time">Central Time (Chicago)</option>
@@ -154,7 +154,7 @@
             <div class="form-group">
               <label for="noActivityPolicy" class="form-label" data-translate="no_activity_label">When you have no
                 activity this week</label>
-              <select id="noActivityPolicy" class="form-select" disabled>
+              <select id="noActivityPolicy" class="form-select">
                 <option value="skip" data-translate="skip_sending">Skip sending (don't send email)</option>
                 <option value="brief" data-translate="brief_email">Send brief email with suggestions</option>
                 <option value="suggestions" data-translate="missed_content">Send email with "what you missed" content
@@ -176,6 +176,9 @@
             <button type="button" id="sendTestEmail" class="btn btn-outline" data-translate="send_test_email">
               Send Test Email
             </button>
+            <a href="/email-test.html" class="btn btn-secondary" style="margin-left: 10px;">
+              Advanced Email Test
+            </a>
           </div>
         </form>
 
