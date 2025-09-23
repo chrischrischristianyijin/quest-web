@@ -12,7 +12,7 @@ class AuthManager {
     // 初始化
     init() {
         // 检查本地存储的用户会话
-        const session = localStorage.getItem('quest_user_session');
+            const session = localStorage.getItem('quest_user_session');
         if (session) {
             try {
                 const parsed = JSON.parse(session);
