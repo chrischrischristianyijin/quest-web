@@ -12,19 +12,21 @@
 console.log('🧪 Quest Email System Console Test Suite - MAIN BRANCH');
 console.log('====================================================');
 
-// Note: API key is handled server-side for security
-console.log('🔒 Email system uses secure server-side API key handling');
+// Check email system mode
+console.log('🔒 Email system supports both development and production modes');
 
 // Test 1: Check if email service is available
 console.log('\n1. 📧 Checking Email Service Availability...');
 try {
     if (typeof emailService !== 'undefined') {
         console.log('✅ Email Service: Available');
-        console.log('   API Key: Handled server-side (secure)');
+        console.log('   Mode:', emailService.isDevelopment ? 'Development (Direct API)' : 'Production (Server API)');
+        console.log('   API Key:', emailService.apiKey ? (emailService.apiKey === 'dev-testing-key' ? 'Test key' : 'Set') : 'Not set');
         console.log('   API URL:', emailService.apiUrl);
         console.log('   Template ID:', emailService.templateId || 'Not set');
         console.log('   Sender Email:', emailService.senderEmail);
         console.log('   Sender Name:', emailService.senderName);
+        console.log('   Use Server API:', emailService.useServerAPI);
     } else {
         console.log('❌ Email Service: Not available');
         console.log('   Make sure you are on the email-preferences page');

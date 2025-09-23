@@ -8,15 +8,20 @@ import { api } from './api.js';
 
 class EmailService {
     constructor() {
-        // API key is handled server-side for security
+        // API key handling: dev/testing vs production
+        this.apiKey = BREVO_CONFIG.API_KEY; // For development/testing only
         this.apiUrl = BREVO_CONFIG.API_URL;
         this.templateId = BREVO_CONFIG.TEMPLATE_ID;
         this.senderEmail = BREVO_CONFIG.SENDER_EMAIL;
         this.senderName = BREVO_CONFIG.SENDER_NAME;
+        
+        // Check if we're in development mode
+        this.isDevelopment = this.apiKey && this.apiKey !== 'dev-testing-key';
+        this.useServerAPI = !this.isDevelopment; // Use server API for production
     }
 
     /**
-     * Send a transactional email via server-side API (secure)
+     * Send a transactional email (dev mode: direct API, production: server-side)
      * @param {Object} emailData - Email data object
      * @param {string} emailData.to - Recipient email
      * @param {string} emailData.toName - Recipient name
@@ -26,6 +31,26 @@ class EmailService {
      * @returns {Promise<Object>} API response
      */
     async sendTransactionalEmail(emailData) {
+        const {
+            to,
+            toName,
+            params = {},
+            templateId = this.templateId,
+            templateName = 'My Quest Space Weekly Knowledge Digest'
+        } = emailData;
+
+        // Use server API for production, direct API for development with real key
+        if (this.useServerAPI) {
+            return this.sendViaServerAPI(emailData);
+        } else {
+            return this.sendViaDirectAPI(emailData);
+        }
+    }
+
+    /**
+     * Send email via server-side API (production mode)
+     */
+    async sendViaServerAPI(emailData) {
         const {
             to,
             toName,
@@ -52,29 +77,101 @@ class EmailService {
                 params: Object.keys(params)
             });
 
-            // Call server-side email endpoint (API key handled server-side)
             const response = await api.request('/api/v1/email/send', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
 
             if (response.success) {
-                console.log('✅ Email sent successfully:', response);
+                console.log('✅ Email sent successfully via server API:', response);
                 return {
                     success: true,
                     messageId: response.messageId,
                     data: response
                 };
             } else {
-                console.error('❌ Email sending failed:', response.error);
+                console.error('❌ Server API email failed:', response.error);
                 return {
                     success: false,
-                    error: response.error || 'Unknown error'
+                    error: response.error || 'Server API error'
                 };
             }
 
         } catch (error) {
-            console.error('❌ Email sending failed:', error);
+            console.error('❌ Server API email failed:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Send email via direct Brevo API (development mode only)
+     */
+    async sendViaDirectAPI(emailData) {
+        const {
+            to,
+            toName,
+            params = {},
+            templateId = this.templateId,
+            templateName = 'My Quest Space Weekly Knowledge Digest'
+        } = emailData;
+
+        const payload = {
+            sender: {
+                name: this.senderName,
+                email: this.senderEmail
+            },
+            to: [
+                {
+                    email: to,
+                    name: toName || to
+                }
+            ],
+            subject: "My Quest Space Weekly Knowledge Digest",
+            htmlContent: this.generateEmailHTML(params),
+            textContent: this.generateEmailText(params),
+            params: params
+        };
+
+        // Use template ID if available
+        if (templateId) {
+            payload.templateId = templateId;
+        }
+
+        try {
+            console.log('📧 Sending email via direct Brevo API (dev mode):', {
+                to: to,
+                templateId: templateId,
+                params: Object.keys(params)
+            });
+
+            const response = await fetch(`${this.apiUrl}/smtp/email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': this.apiKey
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                console.error('❌ Brevo API error:', result);
+                throw new Error(`Brevo API error: ${result.message || 'Unknown error'}`);
+            }
+
+            console.log('✅ Email sent successfully via direct API:', result);
+            return {
+                success: true,
+                messageId: result.messageId,
+                data: result
+            };
+
+        } catch (error) {
+            console.error('❌ Direct API email failed:', error);
             return {
                 success: false,
                 error: error.message
