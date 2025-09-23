@@ -4,10 +4,11 @@
  */
 
 import { BREVO_CONFIG } from './config.js';
+import { api } from './api.js';
 
 class EmailService {
     constructor() {
-        this.apiKey = BREVO_CONFIG.API_KEY;
+        // API key is handled server-side for security
         this.apiUrl = BREVO_CONFIG.API_URL;
         this.templateId = BREVO_CONFIG.TEMPLATE_ID;
         this.senderEmail = BREVO_CONFIG.SENDER_EMAIL;
@@ -15,7 +16,7 @@ class EmailService {
     }
 
     /**
-     * Send a transactional email using Brevo API
+     * Send a transactional email via server-side API (secure)
      * @param {Object} emailData - Email data object
      * @param {string} emailData.to - Recipient email
      * @param {string} emailData.toName - Recipient name
@@ -34,58 +35,43 @@ class EmailService {
         } = emailData;
 
         const payload = {
-            sender: {
-                name: this.senderName,
-                email: this.senderEmail
-            },
-            to: [
-                {
-                    email: to,
-                    name: toName || to
-                }
-            ],
+            to: to,
+            toName: toName || to,
+            params: params,
+            templateId: templateId,
+            templateName: templateName,
             subject: "My Quest Space Weekly Knowledge Digest",
             htmlContent: this.generateEmailHTML(params),
-            textContent: this.generateEmailText(params),
-            params: params
+            textContent: this.generateEmailText(params)
         };
 
-        // Use template ID if available, otherwise use template name
-        if (templateId) {
-            payload.templateId = templateId;
-        } else {
-            payload.templateName = templateName;
-        }
-
         try {
-            console.log('📧 Sending email via Brevo:', {
+            console.log('📧 Sending email via server API:', {
                 to: to,
                 templateId: templateId,
                 params: Object.keys(params)
             });
 
-            const response = await fetch(`${this.apiUrl}/smtp/email`, {
+            // Call server-side email endpoint (API key handled server-side)
+            const response = await api.request('/api/v1/email/send', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'api-key': this.apiKey
-                },
                 body: JSON.stringify(payload)
             });
 
-            const result = await response.json();
-
-            if (!response.ok) {
-                console.error('❌ Brevo API error:', result);
-                throw new Error(`Brevo API error: ${result.message || 'Unknown error'}`);
+            if (response.success) {
+                console.log('✅ Email sent successfully:', response);
+                return {
+                    success: true,
+                    messageId: response.messageId,
+                    data: response
+                };
+            } else {
+                console.error('❌ Email sending failed:', response.error);
+                return {
+                    success: false,
+                    error: response.error || 'Unknown error'
+                };
             }
-
-            console.log('✅ Email sent successfully:', result);
-            return {
-                success: true,
-                messageId: result.messageId,
-                data: result
-            };
 
         } catch (error) {
             console.error('❌ Email sending failed:', error);
@@ -287,24 +273,17 @@ Contact Support: contact@myquestspace.com
     }
 
     /**
-     * Get email delivery status
+     * Get email delivery status via server API (secure)
      * @param {string} messageId - Message ID from send response
      * @returns {Promise<Object>} Delivery status
      */
     async getEmailStatus(messageId) {
         try {
-            const response = await fetch(`${this.apiUrl}/smtp/emails/${messageId}`, {
-                method: 'GET',
-                headers: {
-                    'api-key': this.apiKey
-                }
+            const response = await api.request(`/api/v1/email/status/${messageId}`, {
+                method: 'GET'
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            return await response.json();
+            return response;
         } catch (error) {
             console.error('❌ Failed to get email status:', error);
             throw error;
@@ -312,25 +291,18 @@ Contact Support: contact@myquestspace.com
     }
 
     /**
-     * Get Brevo account info (for testing connection)
-     * @returns {Promise<Object>} Account info
+     * Get email service status via server API (secure)
+     * @returns {Promise<Object>} Service status
      */
-    async getAccountInfo() {
+    async getServiceStatus() {
         try {
-            const response = await fetch(`${this.apiUrl}/account`, {
-                method: 'GET',
-                headers: {
-                    'api-key': this.apiKey
-                }
+            const response = await api.request('/api/v1/email/status', {
+                method: 'GET'
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            return await response.json();
+            return response;
         } catch (error) {
-            console.error('❌ Failed to get Brevo account info:', error);
+            console.error('❌ Failed to get email service status:', error);
             throw error;
         }
     }

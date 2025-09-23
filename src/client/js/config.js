@@ -96,11 +96,12 @@ export const API_CONFIG = {
     }
 };
 
-// Brevo Email Service Configuration
+// Brevo Email Service Configuration - Secure version
+// API_KEY is handled server-side for security - never expose in frontend
 export const BREVO_CONFIG = {
-    API_KEY: window.BREVO_API_KEY || 'your-brevo-api-key-here',
+    // API_KEY: Handled server-side for security
     API_URL: 'https://api.brevo.com/v3',
-    TEMPLATE_ID: window.BREVO_TEMPLATE_ID || null,
+    TEMPLATE_ID: 1, // Will be set after creating template in Brevo
     SENDER_EMAIL: 'noreply@quest.example.com',
     SENDER_NAME: 'Quest Team'
 };
