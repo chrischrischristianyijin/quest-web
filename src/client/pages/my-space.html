@@ -448,7 +448,8 @@
                                 <button class="edit-title-btn" id="editTitleBtn" title="Edit title">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z">
+                                        </path>
                                         <circle cx="18" cy="5" r="1"></circle>
                                     </svg>
                                 </button>
@@ -496,7 +497,8 @@
                     <div class="section-card">
                         <div class="visit-original-section">
                             <button class="visit-original-btn" id="visitOriginalBtn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                                     <polyline points="15,3 21,3 21,9"></polyline>
                                     <line x1="10" y1="14" x2="21" y2="3"></line>
@@ -618,11 +620,14 @@
                             <div class="form-actions">
                                 <button type="submit" id="saveEmailPreferencesModal" class="btn btn-primary">Save
                                     Preferences</button>
-                                <button type="button" id="previewDigestBtnModal" class="btn btn-secondary"
-                                    disabled>Preview
-                                    Digest</button>
-                                <button type="button" id="sendTestEmailModal" class="btn btn-outline">Send Test
-                                    Email</button>
+                            </div>
+
+                            <!-- Success message area -->
+                            <div id="saveSuccessMessage" class="success-message" style="display: none;">
+                                <div class="success-content">
+                                    <span class="success-icon">✓</span>
+                                    <span class="success-text">Preferences saved successfully!</span>
+                                </div>
                             </div>
                         </form>
                     </div>

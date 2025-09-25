@@ -5367,6 +5367,8 @@ function openEmailPreferencesModal() {
     if (modal) {
         modal.style.display = 'block';
         console.log('✅ Modal display set to block');
+        // Hide any existing success message when opening modal
+        hideSaveSuccessMessage();
         loadEmailPreferencesInModal();
     } else {
         console.error('❌ Modal element not found in DOM');
@@ -5377,6 +5379,8 @@ function closeEmailPreferencesModal() {
     const modal = document.getElementById('emailPreferencesModal');
     if (modal) {
         modal.style.display = 'none';
+        // Hide success message when closing modal
+        hideSaveSuccessMessage();
     }
 }
 
@@ -5420,18 +5424,6 @@ function setupEmailPreferencesModalListeners() {
         saveBtn.onclick = saveEmailPreferencesFromModal;
     }
 
-    // Preview digest button
-    const previewBtn = document.getElementById('previewDigestBtnModal');
-    if (previewBtn) {
-        previewBtn.onclick = previewDigestFromModal;
-    }
-
-    // Test email button
-    const testBtn = document.getElementById('sendTestEmailModal');
-    if (testBtn) {
-        testBtn.onclick = sendTestEmailFromModal;
-    }
-
     // Weekly digest toggle
     const toggle = document.getElementById('weeklyDigestEnabledModal');
     if (toggle) {
@@ -5464,53 +5456,36 @@ async function saveEmailPreferencesFromModal() {
             console.log('API not available, saved to localStorage only');
         }
 
-        alert('Email preferences saved successfully!');
-        closeEmailPreferencesModal();
+        // Show success message
+        showSaveSuccessMessage();
     } catch (error) {
         console.error('Error saving email preferences:', error);
         alert('Failed to save email preferences');
     }
 }
 
-async function sendTestEmailFromModal() {
-    try {
-        const email = prompt('Enter email address for test:');
-        if (!email) return;
+function showSaveSuccessMessage() {
+    const successMessage = document.getElementById('saveSuccessMessage');
+    if (successMessage) {
+        successMessage.style.display = 'block';
+        
+        // Hide the message after 3 seconds
+        setTimeout(() => {
+            successMessage.style.display = 'none';
+        }, 3000);
+    }
+}
 
-        if (typeof emailService !== 'undefined') {
-            const result = await emailService.sendTestEmail(email);
-            if (result.success) {
-                alert('Test email sent successfully! Check your inbox.');
-            } else {
-                alert(`Failed to send test email: ${result.error}`);
-            }
-        } else {
-            alert('Email service not available');
-        }
-    } catch (error) {
-        console.error('Error sending test email:', error);
-        alert('Failed to send test email');
+function hideSaveSuccessMessage() {
+    const successMessage = document.getElementById('saveSuccessMessage');
+    if (successMessage) {
+        successMessage.style.display = 'none';
     }
 }
 
 function updateEmailPreferencesUIState() {
-    const isEnabled = document.getElementById('weeklyDigestEnabledModal').checked;
-    
-    // Update preview button state (only enabled when digest is enabled)
-    const previewBtn = document.getElementById('previewDigestBtnModal');
-    if (previewBtn) {
-        previewBtn.disabled = !isEnabled;
-    }
-}
-
-async function previewDigestFromModal() {
-    try {
-        // For now, just show a message
-        alert('Digest preview functionality will be implemented soon!');
-    } catch (error) {
-        console.error('Error generating digest preview:', error);
-        alert('Failed to generate digest preview');
-    }
+    // This function can be used for future UI state updates if needed
+    // Currently no specific UI state changes are required
 }
 
 // Make functions globally available
