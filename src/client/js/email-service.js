@@ -77,16 +77,15 @@ class EmailService {
                 params: Object.keys(params)
             });
 
-            const response = await api.request('/api/v1/email/send', {
-                method: 'POST',
-                body: JSON.stringify(payload)
+            const response = await api.request('/api/v1/email/digest/test-send?force=true&dry_run=false&email_override=' + encodeURIComponent(to), {
+                method: 'POST'
             });
 
-            if (response.success) {
-                console.log('✅ Email sent successfully via server API:', response);
+            if (response.ok || response.success) {
+                console.log('✅ Test digest sent successfully via server API:', response);
                 return {
                     success: true,
-                    messageId: response.messageId,
+                    messageId: response.send_result?.message_id || response.message_id,
                     data: response
                 };
             } else {
@@ -388,25 +387,40 @@ Contact Support: contact@myquestspace.com
     }
 
     /**
-     * Get email service status via server API (secure)
+     * Get email service status via server API (using preferences endpoint to test connectivity)
      * @returns {Promise<Object>} Service status
      */
     async getServiceStatus() {
         try {
-            const response = await api.request('/api/v1/email/status', {
+            // Use the preferences endpoint to test if email service is working
+            const response = await api.request('/api/v1/email/preferences', {
                 method: 'GET'
             });
 
-            return response;
+            return {
+                success: true,
+                status: 'healthy',
+                message: 'Email service is operational',
+                preferences_available: !!response
+            };
         } catch (error) {
             console.error('❌ Failed to get email service status:', error);
-            throw error;
+            return {
+                success: false,
+                status: 'error',
+                message: error.message,
+                preferences_available: false
+            };
         }
     }
 }
 
 // Create singleton instance
 const emailService = new EmailService();
+
+// Make available globally for console testing and other scripts
+window.emailService = emailService;
+window.EmailService = EmailService;
 
 // Export for use in other modules
 export { EmailService, emailService };

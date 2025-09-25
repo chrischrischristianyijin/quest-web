@@ -5361,6 +5361,9 @@ async function loadEmailPreferencesInModal() {
         document.getElementById('timezoneModal').value = preferences.timezone;
         document.getElementById('noActivityPolicyModal').value = preferences.no_activity_policy;
 
+        // Update UI state based on preferences
+        updateEmailPreferencesUIState();
+
         // Setup event listeners for modal
         setupEmailPreferencesModalListeners();
     } catch (error) {
@@ -5375,10 +5378,22 @@ function setupEmailPreferencesModalListeners() {
         saveBtn.onclick = saveEmailPreferencesFromModal;
     }
 
+    // Preview digest button
+    const previewBtn = document.getElementById('previewDigestBtnModal');
+    if (previewBtn) {
+        previewBtn.onclick = previewDigestFromModal;
+    }
+
     // Test email button
     const testBtn = document.getElementById('sendTestEmailModal');
     if (testBtn) {
         testBtn.onclick = sendTestEmailFromModal;
+    }
+
+    // Weekly digest toggle
+    const toggle = document.getElementById('weeklyDigestEnabledModal');
+    if (toggle) {
+        toggle.addEventListener('change', updateEmailPreferencesUIState);
     }
 }
 
@@ -5433,6 +5448,26 @@ async function sendTestEmailFromModal() {
     } catch (error) {
         console.error('Error sending test email:', error);
         alert('Failed to send test email');
+    }
+}
+
+function updateEmailPreferencesUIState() {
+    const isEnabled = document.getElementById('weeklyDigestEnabledModal').checked;
+    
+    // Update preview button state (only enabled when digest is enabled)
+    const previewBtn = document.getElementById('previewDigestBtnModal');
+    if (previewBtn) {
+        previewBtn.disabled = !isEnabled;
+    }
+}
+
+async function previewDigestFromModal() {
+    try {
+        // For now, just show a message
+        alert('Digest preview functionality will be implemented soon!');
+    } catch (error) {
+        console.error('Error generating digest preview:', error);
+        alert('Failed to generate digest preview');
     }
 }
 

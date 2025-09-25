@@ -356,3 +356,575 @@ h1, h2, h3, h4, h5, h6 {
 /* #headerEmailPreferences {
     display: none !important;
 } */
+
+/* === Email Preferences Modal Styles === */
+.email-preferences-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.email-preferences-modal .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 12, 28, 0.55);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+}
+
+.email-preferences-modal .modal-content {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 1000px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: var(--shadow-medium);
+    border: 1px solid var(--border-light);
+    margin: 0 auto;
+}
+
+.email-preferences-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.email-preferences-modal .modal-header h3 {
+    margin: 0;
+    color: var(--quest-purple);
+    font-weight: 800;
+}
+
+.email-preferences-modal .close-btn {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border: 1px solid rgba(226,232,240,0.8);
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #475569;
+    padding: 6px 10px;
+    border-radius: 10px;
+}
+
+.email-preferences-modal .close-btn:hover {
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+}
+
+.email-preferences-modal .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+/* Email Preferences Layout */
+.email-preferences-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    height: 100%;
+}
+
+.email-preferences-form-container {
+    overflow: visible;
+}
+
+.email-info-section {
+    overflow: visible;
+    max-height: none;
+}
+
+/* Email Preferences Form Styles */
+.email-preferences-form .form-section {
+    margin-bottom: 24px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.email-preferences-form .form-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.email-preferences-form .form-section h2 {
+    color: var(--quest-purple);
+    margin: 0 0 10px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.email-preferences-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.email-preferences-form .form-group {
+    margin-bottom: 14px;
+}
+
+.email-preferences-form .form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.email-preferences-form .form-select {
+    width: 100%;
+    padding: 12px 12px;
+    border: 2px solid var(--border-light);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    background: var(--bg-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.email-preferences-form .form-select:focus {
+    outline: none;
+    border-color: var(--quest-purple);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+.email-preferences-form .form-select:disabled {
+    background: #f8f9fa;
+    color: var(--text-secondary);
+    cursor: not-allowed;
+}
+
+.email-preferences-form .checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.email-preferences-form .checkbox {
+    margin-right: 10px;
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--quest-purple);
+}
+
+.email-preferences-form .form-help {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.email-preferences-form .form-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border-light);
+}
+
+.email-preferences-form .btn {
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+    box-shadow: 0 2px 0 rgba(101, 85, 143, 0.0);
+}
+
+.email-preferences-form .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.email-preferences-form .btn-primary {
+    background: linear-gradient(135deg, var(--quest-purple), var(--quest-purple)) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--quest-purple) !important;
+    font-weight: 700 !important;
+}
+
+.email-preferences-form .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(101, 85, 143, 0.25);
+    background: linear-gradient(135deg, var(--quest-purple), var(--quest-purple)) !important;
+    color: #ffffff !important;
+}
+
+.email-preferences-form .btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--quest-purple);
+    border: 2px solid var(--quest-light-purple);
+}
+
+.email-preferences-form .btn-secondary:hover:not(:disabled) {
+    background: rgba(139, 92, 246, 0.08);
+    border-color: var(--quest-purple);
+    transform: translateY(-1px);
+}
+
+.email-preferences-form .btn-outline {
+    background: transparent;
+    color: var(--quest-purple);
+    border: 2px solid var(--quest-purple);
+}
+
+.email-preferences-form .btn-outline:hover:not(:disabled) {
+    background: var(--quest-purple);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* Force white text on save preferences button */
+#saveEmailPreferencesModal {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--quest-purple), var(--quest-purple)) !important;
+    border: 1px solid var(--quest-purple) !important;
+}
+
+#saveEmailPreferencesModal:hover {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--quest-purple), var(--quest-purple)) !important;
+}
+
+/* Email Info Section Styles */
+.email-info-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-light);
+    height: fit-content;
+}
+
+.email-info-card h3 {
+    color: var(--quest-purple);
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.email-info-card p {
+    color: var(--text-secondary);
+    margin: 0 0 16px;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+.info-features {
+    margin-bottom: 20px;
+}
+
+.feature-item {
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.feature-item:last-child {
+    border-bottom: none;
+}
+
+.feature-item strong {
+    color: var(--quest-purple);
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.feature-item p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.info-tips, .info-unsubscribe {
+    margin-bottom: 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-light);
+}
+
+.info-tips h4, .info-unsubscribe h4 {
+    color: var(--quest-purple);
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.info-tips ul, .info-unsubscribe ul {
+    margin: 0;
+    padding-left: 16px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.info-tips li, .info-unsubscribe li {
+    margin-bottom: 4px;
+}
+
+.info-unsubscribe p {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1200px) {
+    .email-preferences-layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .email-info-section {
+        max-height: none;
+    }
+}
+
+/* === Email Preferences Modal polish === */
+
+/* ensure the modal centers perfectly and never hugs the left edge */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(17, 12, 28, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.modal .modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    cursor: pointer;
+}
+
+.modal .modal-content {
+    position: relative;
+    max-width: 720px;
+    width: 100%;
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(27, 16, 54, 0.28);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    overflow: hidden;
+    background:
+        radial-gradient(1200px 500px at -10% -10%, rgba(139,92,246,.08), transparent 60%),
+        #fff;
+    z-index: 1001;
+    max-height: 85vh;
+    transform: scale(1);
+    transition: transform 0.2s ease;
+}
+
+/* sticky header so title/close remain accessible while scrolling */
+.modal .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #e9edf3;
+    padding: 18px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* title + subtle accent bar */
+.modal .modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: #1e293b;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* close button touch target + hover */
+.modal .close-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #64748b;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.modal .close-btn:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+    transform: scale(1.1);
+}
+
+/* body becomes the scroll area; keep nice rhythm for form blocks */
+.modal .modal-body {
+    max-height: calc(85vh - 64px);
+    padding: 18px 22px 6px;
+    overflow: auto;
+    background: white;
+}
+
+/* footer with actions anchored at bottom */
+.modal .modal-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 14px 22px 18px;
+    background: linear-gradient(to top, #fff 75%, rgba(255,255,255,0));
+    border-top: 1px solid #eef2f7;
+}
+
+/* section headings (e.g., Weekly Digest, Delivery Schedule) */
+.modal .section-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin: 14px 0 10px;
+}
+
+/* helper/description text under toggles */
+.modal .helper-text {
+    color: var(--text-light, #6b7280);
+    font-size: 0.86rem;
+    margin-top: 6px;
+}
+
+/* unify inputs/selects for denser forms */
+.modal .form-group {
+    margin-bottom: 14px;
+}
+
+.modal .form-label {
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    color: var(--text-secondary, #6b7280);
+}
+
+.modal select.form-input,
+.modal input.form-input,
+.modal .form-input {
+    height: 42px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #e3e8ef;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.modal .form-input:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    outline: none;
+}
+
+/* checkbox row alignment */
+.modal .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal .checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+/* buttons */
+.modal .btn {
+    min-width: 132px;
+    height: 40px;
+    border-radius: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal .btn-ghost {
+    background: #f6f7fb;
+    border: 1px solid #e7eaf3;
+    color: #4b5563;
+}
+
+.modal .btn-ghost:hover {
+    background: #eef1f8;
+}
+
+.modal .btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+}
+
+.modal .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Smooth modal animations */
+.modal[style*="display: block"] .modal-content {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (max-width: 540px) {
+    .modal { padding: 12px; }
+    .modal .modal-content { max-width: 100%; }
+    .modal .modal-header,
+    .modal .modal-body,
+    .modal .modal-footer { padding-left: 16px; padding-right: 16px; }
+}

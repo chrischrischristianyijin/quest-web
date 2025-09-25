@@ -694,3 +694,7 @@ class ApiService {
 
 // 创建API实例
 export const api = new ApiService();
+
+// Make available globally for console testing and other scripts
+window.api = api;
+window.ApiService = ApiService;
