@@ -5370,6 +5370,11 @@ function openEmailPreferencesModal() {
         // Hide any existing success message when opening modal
         hideSaveSuccessMessage();
         loadEmailPreferencesInModal();
+        
+        // Apply translations to the modal
+        if (window.translationManager) {
+            window.translationManager.applyTranslations();
+        }
     } else {
         console.error('❌ Modal element not found in DOM');
     }

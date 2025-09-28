@@ -520,7 +520,7 @@
         <div class="modal-overlay" onclick="closeEmailPreferencesModal()"></div>
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3>Email Preferences</h3>
+                <h3 data-translate="email_preferences">Email Preferences</h3>
                 <button class="close-btn" onclick="closeEmailPreferencesModal()" aria-label="Close">✕</button>
             </div>
 
@@ -530,34 +530,37 @@
                         <form id="emailPreferencesFormModal" class="email-preferences-form">
                             <!-- Weekly Digest toggle -->
                             <div class="form-section">
-                                <h2>Weekly Digest</h2>
+                                <h2 data-translate="weekly_digest">Weekly Digest</h2>
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="weeklyDigestEnabledModal" class="checkbox">
                                         <span class="checkmark"></span>
-                                        <span>Enable weekly digest emails</span>
+                                        <span data-translate="enable_weekly_digest">Enable weekly digest emails</span>
                                     </label>
-                                    <p class="form-help">Receive a weekly summary of your insights and activity</p>
+                                    <p class="form-help" data-translate="receive_weekly_summary">Receive a weekly
+                                        summary of your insights and activity</p>
                                 </div>
                             </div>
 
                             <div class="form-section email-preference-field">
-                                <h2>Delivery Schedule</h2>
+                                <h2 data-translate="delivery_schedule">Delivery Schedule</h2>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="preferredDayModal" class="form-label">Preferred Day</label>
+                                        <label for="preferredDayModal" class="form-label"
+                                            data-translate="preferred_day">Preferred Day</label>
                                         <select id="preferredDayModal" class="form-select">
-                                            <option value="0">Sunday</option>
-                                            <option value="1">Monday</option>
-                                            <option value="2">Tuesday</option>
-                                            <option value="3">Wednesday</option>
-                                            <option value="4">Thursday</option>
-                                            <option value="5">Friday</option>
-                                            <option value="6">Saturday</option>
+                                            <option value="0" data-translate="sunday">Sunday</option>
+                                            <option value="1" data-translate="monday">Monday</option>
+                                            <option value="2" data-translate="tuesday">Tuesday</option>
+                                            <option value="3" data-translate="wednesday">Wednesday</option>
+                                            <option value="4" data-translate="thursday">Thursday</option>
+                                            <option value="5" data-translate="friday">Friday</option>
+                                            <option value="6" data-translate="saturday">Saturday</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="preferredHourModal" class="form-label">Preferred Hour</label>
+                                        <label for="preferredHourModal" class="form-label"
+                                            data-translate="preferred_hour">Preferred Hour</label>
                                         <select id="preferredHourModal" class="form-select">
                                             <option value="6">6:00 AM</option>
                                             <option value="7">7:00 AM</option>
@@ -582,9 +585,10 @@
                             </div>
 
                             <div class="form-section email-preference-field">
-                                <h2>Timezone</h2>
+                                <h2 data-translate="timezone">Timezone</h2>
                                 <div class="form-group">
-                                    <label for="timezoneModal" class="form-label">Your Timezone</label>
+                                    <label for="timezoneModal" class="form-label" data-translate="your_timezone">Your
+                                        Timezone</label>
                                     <select id="timezoneModal" class="form-select">
                                         <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
                                         <option value="America/Denver">Mountain Time (Denver)</option>
@@ -597,28 +601,35 @@
                                         <option value="Australia/Sydney">Sydney (AEST)</option>
                                         <option value="UTC">UTC</option>
                                     </select>
-                                    <p class="form-help">We'll send your digest at your preferred time in this timezone
+                                    <p class="form-help" data-translate="timezone_help">We'll send your digest at your
+                                        preferred time in this timezone
                                     </p>
                                 </div>
                             </div>
 
                             <div class="form-section email-preference-field">
-                                <h2>No Activity Policy</h2>
+                                <h2 data-translate="no_activity_policy">No Activity Policy</h2>
                                 <div class="form-group">
-                                    <label for="noActivityPolicyModal" class="form-label">When you have no activity this
+                                    <label for="noActivityPolicyModal" class="form-label"
+                                        data-translate="no_activity_label">When you have no activity this
                                         week</label>
                                     <select id="noActivityPolicyModal" class="form-select">
-                                        <option value="skip">Skip sending (don't send email)</option>
-                                        <option value="brief">Send brief email with suggestions</option>
-                                        <option value="suggestions">Send email with "what you missed" content</option>
+                                        <option value="skip" data-translate="skip_sending">Skip sending (don't send
+                                            email)</option>
+                                        <option value="brief" data-translate="brief_email">Send brief email with
+                                            suggestions</option>
+                                        <option value="suggestions" data-translate="missed_content">Send email with
+                                            "what you missed" content</option>
                                     </select>
-                                    <p class="form-help">Choose how to handle weeks when you haven't added any insights
+                                    <p class="form-help" data-translate="no_activity_help">Choose how to handle weeks
+                                        when you haven't added any insights
                                     </p>
                                 </div>
                             </div>
 
                             <div class="form-actions">
-                                <button type="submit" id="saveEmailPreferencesModal" class="btn btn-primary">Save
+                                <button type="submit" id="saveEmailPreferencesModal" class="btn btn-primary"
+                                    data-translate="save_preferences">Save
                                     Preferences</button>
                             </div>
 
@@ -626,7 +637,9 @@
                             <div id="saveSuccessMessage" class="success-message" style="display: none;">
                                 <div class="success-content">
                                     <span class="success-icon">✓</span>
-                                    <span class="success-text">Preferences saved successfully!</span>
+                                    <span class="success-text"
+                                        data-translate="preferences_saved_successfully">Preferences saved
+                                        successfully!</span>
                                 </div>
                             </div>
                         </form>
@@ -634,54 +647,64 @@
 
                     <div class="email-info-section">
                         <div class="email-info-card">
-                            <h3>📧 About Your Weekly Digest</h3>
-                            <p>Your weekly digest is a personalized summary of your knowledge journey, designed to help
+                            <h3 data-translate="about_digest">📧 About Your Weekly Digest</h3>
+                            <p data-translate="digest_description">Your weekly digest is a personalized summary of your
+                                knowledge journey, designed to help
                                 you stay connected with your insights and discoveries.</p>
 
                             <div class="info-features">
                                 <div class="feature-item">
-                                    <strong>📝 Weekly Summary</strong>
-                                    <p>Get a curated overview of your insights from the past week</p>
+                                    <strong data-translate="weekly_summary">📝 Weekly Summary</strong>
+                                    <p data-translate="weekly_summary_desc">Get a curated overview of your insights from
+                                        the past week</p>
                                 </div>
 
                                 <div class="feature-item">
-                                    <strong>🎯 Personalized Content</strong>
-                                    <p>Highlights are chosen based on your engagement and recency</p>
+                                    <strong data-translate="personalized_content">🎯 Personalized Content</strong>
+                                    <p data-translate="personalized_content_desc">Highlights are chosen based on your
+                                        engagement and recency</p>
                                 </div>
 
                                 <div class="feature-item">
-                                    <strong>📚 Stack Updates</strong>
-                                    <p>See what's new in your knowledge stacks and collections</p>
+                                    <strong data-translate="stack_updates">📚 Stack Updates</strong>
+                                    <p data-translate="stack_updates_desc">See what's new in your knowledge stacks and
+                                        collections</p>
                                 </div>
 
                                 <div class="feature-item">
-                                    <strong>💡 Smart Suggestions</strong>
-                                    <p>Get recommendations to improve your knowledge management</p>
+                                    <strong data-translate="smart_suggestions">💡 Smart Suggestions</strong>
+                                    <p data-translate="smart_suggestions_desc">Get recommendations to improve your
+                                        knowledge management</p>
                                 </div>
 
                                 <div class="feature-item">
-                                    <strong>🔒 Privacy First</strong>
-                                    <p>Your data stays private and secure - we never share your insights</p>
+                                    <strong data-translate="privacy_first">🔒 Privacy First</strong>
+                                    <p data-translate="privacy_first_desc">Your data stays private and secure - we never
+                                        share your insights</p>
                                 </div>
                             </div>
 
                             <div class="info-tips">
-                                <h4>💡 Pro Tips</h4>
+                                <h4 data-translate="pro_tips">💡 Pro Tips</h4>
                                 <ul>
-                                    <li>Choose a day when you typically review your notes</li>
-                                    <li>Set a time that works with your schedule</li>
-                                    <li>Use the preview feature to see what your digest will look like</li>
-                                    <li>Test emails help you verify your settings work correctly</li>
+                                    <li data-translate="pro_tip_1">Choose a day when you typically review your notes
+                                    </li>
+                                    <li data-translate="pro_tip_2">Set a time that works with your schedule</li>
+                                    <li data-translate="pro_tip_3">Use the preview feature to see what your digest will
+                                        look like</li>
+                                    <li data-translate="pro_tip_4">Test emails help you verify your settings work
+                                        correctly</li>
                                 </ul>
                             </div>
 
                             <div class="info-unsubscribe">
-                                <h4>🔕 Unsubscribe</h4>
-                                <p>You can unsubscribe at any time by:</p>
+                                <h4 data-translate="unsubscribe">🔕 Unsubscribe</h4>
+                                <p data-translate="unsubscribe_help">You can unsubscribe at any time by:</p>
                                 <ul>
-                                    <li>Using the unsubscribe link in any digest email</li>
-                                    <li>Disabling the weekly digest option above</li>
-                                    <li>Contacting support if you need help</li>
+                                    <li data-translate="unsubscribe_link">Using the unsubscribe link in any digest email
+                                    </li>
+                                    <li data-translate="disable_option">Disabling the weekly digest option above</li>
+                                    <li data-translate="contact_support">Contacting support if you need help</li>
                                 </ul>
                             </div>
                         </div>
