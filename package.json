@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node src/server/dev-server.js",
     "dev": "node src/server/dev-server.js",
-    "build": "echo 'Frontend build completed'"
+    "build": "node build-config.js",
+    "build:prod": "NODE_ENV=production node build-config.js",
+    "build:secure": "node build-config.js && echo 'Secure production build completed'"
   },
   "devDependencies": {
     "http-server": "^14.1.1"

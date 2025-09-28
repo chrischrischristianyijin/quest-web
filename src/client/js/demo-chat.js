@@ -114,7 +114,9 @@ const sendBtn = document.getElementById('sendBtn');
 const apiStatus = document.getElementById('apiStatus');
 
 // API Configuration - 根据实际API端点更新
-const API_BASE_URL = 'https://quest-api-edz1.onrender.com';
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:8000' 
+    : 'https://quest-api-edz1.onrender.com';
 const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat`;  // 主要聊天接口
 const HEALTH_ENDPOINT = `${API_BASE_URL}/api/v1/chat/health`;  // 健康检查
 const SESSIONS_ENDPOINT = `${API_BASE_URL}/api/v1/chat/sessions`;  // 会话管理 - 根据API文档修正

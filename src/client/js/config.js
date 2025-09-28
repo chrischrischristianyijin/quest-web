@@ -1,7 +1,10 @@
+// Import environment configuration
+import { API_CONFIG as ENV_CONFIG } from './environment.js';
+
 // Quest 应用配置
 export const CONFIG = {
-    // API 配置 - 直接使用后端地址
-    API_BASE_URL: 'https://quest-api-edz1.onrender.com',
+    // API 配置 - 使用环境检测
+    API_BASE_URL: ENV_CONFIG.BASE_URL,
     API_VERSION: 'v1',
     
     // 应用配置
@@ -13,13 +16,21 @@ export const CONFIG = {
         GOOGLE_AUTH: true,
         USER_TAGS: true,
         SHARING: true
+    },
+    
+    // 调试功能开关 - 仅开发环境启用
+    DEBUG: {
+        ENABLED: ENV_CONFIG.IS_LOCAL,
+        TOKEN_DEBUG: ENV_CONFIG.IS_LOCAL,
+        VERBOSE_LOGGING: ENV_CONFIG.IS_LOCAL,
+        CONSOLE_TOOLS: ENV_CONFIG.IS_LOCAL
     }
 };
 
 // API配置
 export const API_CONFIG = {
-    // 基础URL
-    API_BASE_URL: 'https://quest-api-edz1.onrender.com',
+    // 基础URL - 使用环境检测
+    API_BASE_URL: ENV_CONFIG.BASE_URL,
     
     // 认证相关接口
     AUTH: {

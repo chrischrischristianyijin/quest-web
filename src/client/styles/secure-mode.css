@@ -1,0 +1,194 @@
+/**
+ * Secure Mode Styles
+ * Additional styling for production/secure version
+ */
+
+/* Security Indicator */
+.security-indicator {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.security-badge {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+/* Security Notice */
+.security-notice {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(76, 175, 80, 0.95);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    animation: slideInUp 0.5s ease-out;
+}
+
+.security-notice p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Disabled Debug Elements */
+.debug-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(50%);
+}
+
+.debug-disabled::after {
+    content: "🚫 Debug Disabled";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Minimal Sidebar in Secure Mode */
+.session-sidebar.secure-mode {
+    width: 280px;
+    background: rgba(255, 255, 255, 0.98);
+    border-right: 1px solid #e0e0e0;
+}
+
+.session-sidebar.secure-mode .sidebar-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 1px solid #dee2e6;
+}
+
+.session-sidebar.secure-mode .sidebar-header h3 {
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Hidden Debug Elements */
+.debug-tools,
+.token-debugger,
+.console-tools {
+    display: none !important;
+}
+
+/* Production-safe error styling */
+.error-production {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 8px 0;
+}
+
+.error-production::before {
+    content: "⚠️ ";
+    font-weight: bold;
+}
+
+/* Secure API Status */
+.api-status.secure {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* Animation for secure mode activation */
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+/* Auto-hide security notice */
+.security-notice.auto-hide {
+    animation: fadeOut 0.5s ease-out 3s forwards;
+}
+
+/* Responsive adjustments for secure mode */
+@media (max-width: 768px) {
+    .security-notice {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        text-align: center;
+    }
+    
+    .security-badge {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+}
+
+/* Dark mode support for secure mode */
+@media (prefers-color-scheme: dark) {
+    .security-notice {
+        background: rgba(33, 150, 243, 0.95);
+    }
+    
+    .session-sidebar.secure-mode {
+        background: rgba(33, 37, 41, 0.98);
+        border-right: 1px solid #495057;
+    }
+    
+    .session-sidebar.secure-mode .sidebar-header {
+        background: linear-gradient(135deg, #343a40, #495057);
+        border-bottom: 1px solid #495057;
+    }
+    
+    .session-sidebar.secure-mode .sidebar-header h3 {
+        color: #f8f9fa;
+    }
+    
+    .error-production {
+        background: #664d03;
+        border-color: #ffc107;
+        color: #fff3cd;
+    }
+}
+
+/* Print styles for secure mode */
+@media print {
+    .security-notice,
+    .security-indicator,
+    .debug-disabled::after {
+        display: none !important;
+    }
+}
+
+
