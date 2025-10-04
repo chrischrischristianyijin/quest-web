@@ -1099,6 +1099,7 @@ body {
     flex-wrap: wrap;
     gap: 8px;
     margin: 12px 0;
+    justify-content: center;
 }
 
 .content-card-tag {
@@ -4176,6 +4177,7 @@ body.modal-open { overflow: hidden; }
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    justify-content: center;
 }
 
 .quest-card-tag {
@@ -5839,7 +5841,7 @@ body.modal-open { overflow: hidden; }
 /* Center the footer tag */
 .content-card-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-top: auto;
     padding-top: var(--spacing-md);

@@ -1279,14 +1279,22 @@ async function loadUserStacks() {
                         stackEntries.forEach(([stackId, stackData]) => {
                             const stringStackId = String(stackId); // Ensure string format
                             if (stacks.has(stringStackId)) {
-                                // Merge metadata from localStorage with database data
+                                // Merge ONLY UI metadata from localStorage (never overwrite database data)
                                 const existingStack = stacks.get(stringStackId);
-                                if (existingStack && stackData.name) {
-                                    existingStack.name = stackData.name;
+                                const localStorageName = stackData.name;
+                                const databaseName = existingStack.name;
+
+                                console.log(`🔄 Merging stack ${stringStackId}: DB name="${databaseName}", localStorage name="${localStorageName}"`);
+
+                                if (existingStack) {
+                                    // Only merge UI state, NOT data that comes from database
                                     existingStack.isExpanded = stackData.isExpanded || false;
+                                    // DO NOT overwrite name - database is source of truth
+                                    console.log(`✅ Kept database name "${databaseName}" for stack ${stringStackId}`);
                                 }
                             } else {
                                 // Load stack from localStorage if not found in database
+                                console.log(`📦 Loading stack ${stringStackId} from localStorage only (not in database)`);
                                 stackData.id = stringStackId; // Ensure ID is string
                                 stacks.set(stringStackId, stackData);
                             }
@@ -1540,160 +1548,7 @@ function updateUserProfileUI() {
     }
 }
 
-// 加载用户见解
-async function loadUserInsights() {
-    try {
-        // 使用分页API方法获取insights
-        insightsLoading = true;
-        const effectiveLimit = effectiveFetchLimitForPage(1);
-        const uid = (auth.getCurrentUser()?.id || currentUser?.id || undefined);
-        const response = await api.getInsightsPaginated(1, effectiveLimit, uid, '', true);
-        
-        if (response?.success) {
-            const { items, hasMore } = normalizePaginatedInsightsResponse(response);
-            const firstBatch = (items || []).filter(x => !x.stack_id);
-            // normalize tags to {id,name,color} (you already do this later; keep it)
-            currentInsights = firstBatch;
-            window.currentInsights = currentInsights;
-            insightsPage = 1;
-            insightsHasMore = hasMore;
-            renderedInsightIds.clear();
-            firstBatch.forEach(i => renderedInsightIds.add(i.id));
-            if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
-            
-            // Save insights to localStorage as backup with timestamp
-            try {
-                const insightsBackup = {
-                    data: currentInsights,
-                    timestamp: Date.now(),
-                    version: '1.0'
-                };
-                localStorage.setItem('quest_insights_backup', JSON.stringify(insightsBackup));
-            } catch (storageError) {
-                console.warn('⚠️ Failed to save insights to localStorage:', storageError);
-            }
-            
-            // Normalize tag structure for all insights first
-            currentInsights.forEach(insight => {
-                if (insight.tags && insight.tags.length > 0) {
-                    // Normalize tag structure - backend returns {tag_id, name, color}, frontend expects {id, name, color}
-                    insight.tags = insight.tags.map(tag => ({
-                        id: tag.tag_id || tag.id,
-                        name: tag.name,
-                        color: tag.color
-                    }));
-                }
-            });
-            
-            // Check if insights have tags, if not, try to load them separately
-            const insightsWithoutTags = currentInsights.filter(insight => !insight.tags || insight.tags.length === 0);
-            if (insightsWithoutTags.length > 0) {
-                await loadTagsForInsights(insightsWithoutTags);
-            }
-            
-            renderInsightsInitial();      // 只渲染当前页面的数据
-        } else {
-            // Try loading from localStorage backup
-            const backupInsights = localStorage.getItem('quest_insights_backup');
-            if (backupInsights) {
-                try {
-                    const backup = JSON.parse(backupInsights);
-                    // Check if backup is recent (within 24 hours)
-                    const isRecent = backup.timestamp && (Date.now() - backup.timestamp < 24 * 60 * 60 * 1000);
-                    // For unexpected response format, prefer backup if present (even if stale)
-                    if (Array.isArray(backup.data)) {
-                        currentInsights = backup.data;
-                        window.currentInsights = currentInsights;
-                        if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
-                    } else {
-                        currentInsights = [];
-                        window.currentInsights = currentInsights;
-                    }
-                } catch (error) {
-                    console.error('❌ Failed to parse backup insights:', error);
-                    currentInsights = [];
-                    window.currentInsights = currentInsights;
-                }
-            } else {
-                currentInsights = [];
-                window.currentInsights = currentInsights;
-            }
-            await renderInsights();
-        }
-    } catch (error) {
-        console.error('❌ 加载用户insights失败:', error);
-        
-        // Try loading from localStorage backup before showing error
-        // 检查是否因认证过期导致，如果是则不恢复本地数据
-        if (window.__QUEST_AUTH_EXPIRED__) {
-            console.log('🚫 Auth expired, skipping backup restore in error handler');
-            currentInsights = [];
-            window.currentInsights = currentInsights;
-            return;
-        }
-        
-        const backupInsights = localStorage.getItem('quest_insights_backup');
-        const isAuthErr = /401|403|unauthor/i.test(error?.message || '');
-        const isNetErr = (typeof navigator !== 'undefined' && navigator.onLine === false) ||
-                        /Failed to fetch|NetworkError/i.test(error?.message || '');
-        if (backupInsights) {
-            try {
-                const backup = JSON.parse(backupInsights);
-                // Check if backup is recent (within 24 hours)
-                const isRecent = backup.timestamp && (Date.now() - backup.timestamp < 24 * 60 * 60 * 1000);
-                // 认证/网络错误时允许使用"过期"备份，避免空数据
-                if ((isRecent || isAuthErr || isNetErr) && Array.isArray(backup.data)) {
-                    currentInsights = backup.data;
-                    window.currentInsights = currentInsights;
-                    if (currentInsights.length > 0) hasLoadedInsightsOnce = true;
-                    await renderInsights();
-                    return; // Don't show error if we successfully loaded from backup
-                } else {
-                    currentInsights = [];
-                    window.currentInsights = currentInsights;
-                }
-            } catch (parseError) {
-                console.error('❌ Failed to parse backup insights:', parseError);
-                currentInsights = [];
-                window.currentInsights = currentInsights;
-            }
-        } else {
-            currentInsights = [];
-            window.currentInsights = currentInsights;
-        }
-        
-        // 检查是否是后端服务问题
-        if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
-            showErrorMessage('Backend service temporarily unavailable due to expired token, please relogin.');
-        } else if (error.message.includes('401') || error.message.includes('403')) {
-            showErrorMessage('Authentication failed. Please log in again.');
-            // 重定向到登录页面
-            setTimeout(() => {
-                window.location.href = PATHS.LOGIN;
-            }, 2000);
-        } else {
-            showErrorMessage('Failed to load insights. Please refresh and try again.');
-        }
-        
-        renderInsightsInitial();
-    } finally {
-        insightsLoading = false;
-    }
-}
 
-// Helper to get visible IDs of a page (for de-duplication)
-function getVisibleIdsForPage(pageNum) {
-    const cached = pageCache.get(pageNum);
-    if (!cached) return new Set();
-
-    // defensive: normalize cache shape
-    const raw = cached.insights;
-    const arr = Array.isArray(raw?.[0]) ? raw[0] : raw;
-
-    // Cache now stores exactly what was displayed, so no need to slice
-    const visible = arr || [];
-    return new Set(visible.map(i => i.id));
-}
 
 // Helper function to calculate effective limit for a page
 function effectiveLimitForPage(pageNum) {
@@ -1912,25 +1767,12 @@ async function performRenderInsights() {
     isRendering = false;
 }
 
-// Create insight card element (using original structure)
-function createInsightCardEl(insight) {
-    // Use the original createInsightCard function
-    return createInsightCard(insight);
-}
 
 async function renderInsightsInitial() {
     // Use the main renderInsights function to avoid duplication
     await renderInsights();
 }
 
-// 强制立即渲染（用于需要立即更新的情况）
-function forceRenderInsights() {
-    if (renderTimeout) {
-        clearTimeout(renderTimeout);
-    }
-    lastRenderData = null; // 清除缓存，强制重新渲染
-    performRenderInsights();
-}
 
 // appendInsightsBatch function removed - using pagination only
 
@@ -2308,31 +2150,6 @@ function createInsightCard(insight) {
 window.createInsightCard = createInsightCard;
 window.setupCardEventDelegation = setupCardEventDelegation;
 
-// 为标签筛选器加载用户标签
-async function loadUserTagsForFilter(dropdownOptions) {
-    try {
-        const response = await getCachedUserTags();
-        const tags = response.success ? response.data : [];
-        
-        if (tags.length > 0) {
-            // 为每个标签创建选项
-            tags.forEach(tag => {
-                const tagOption = document.createElement('div');
-                tagOption.className = 'filter-option';
-                tagOption.dataset.filter = `tag_${tag.id}`;
-                tagOption.innerHTML = `
-                    <span class="filter-option-label">
-                        <span class="tag-color-dot" style="background-color: ${tag.color || '#8B5CF6'}; width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
-                        ${tag.name}
-                    </span>
-                `;
-                dropdownOptions.appendChild(tagOption);
-            });
-        }
-    } catch (error) {
-        console.error('❌ 加载用户标签失败:', error);
-    }
-}
 
 // 初始化筛选按钮
 async function initFilterButtons() {
@@ -3788,75 +3605,6 @@ function handleCardClick(e) {
     }
 }
 
-// Test function to debug card clickability issues
-function testCardClickability() {
-    console.log('🧪 Testing card clickability...');
-    
-    // Check if contentCards exists
-    if (!contentCards) {
-        console.error('❌ contentCards element not found');
-        return;
-    }
-    
-    // Check how many cards are in the DOM
-    const cards = contentCards.querySelectorAll('.content-card');
-    console.log(`📊 Found ${cards.length} cards in DOM`);
-    
-    // Check if event listener is attached
-    const hasEventListener = contentCards.onclick !== null || 
-                           contentCards.addEventListener !== undefined;
-    console.log(`🔧 Event listener attached:`, hasEventListener);
-    
-    // Check each card's structure
-    cards.forEach((card, index) => {
-        const insightId = card.dataset.insightId;
-        const classes = card.className;
-        console.log(`📄 Card ${index + 1}:`, {
-            insightId,
-            classes,
-            hasClickHandler: card.onclick !== null
-        });
-    });
-    
-    // Test clicking on the first card programmatically
-    if (cards.length > 0) {
-        console.log('🖱️ Testing programmatic click on first card...');
-        const firstCard = cards[0];
-        const clickEvent = new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-        });
-        firstCard.dispatchEvent(clickEvent);
-    }
-    
-    // Check window.currentInsights
-    console.log('📋 window.currentInsights:', window.currentInsights);
-    
-    // Check current view mode and active stack
-    console.log('📋 Current view mode:', viewMode);
-    console.log('📋 Active stack ID:', activeStackId);
-    
-    if (viewMode === 'stack' && activeStackId) {
-        const activeStack = stacks.get(activeStackId);
-        console.log('📋 Active stack data:', activeStack);
-        console.log('📋 Active stack cards:', activeStack?.cards);
-    }
-    
-    return {
-        cardCount: cards.length,
-        hasEventListener,
-        viewMode,
-        activeStackId,
-        cards: Array.from(cards).map(card => ({
-            insightId: card.dataset.insightId,
-            classes: card.className
-        }))
-    };
-}
-
-// Make test function available globally
-window.testCardClickability = testCardClickability;
 
 // Cached version of getUserTags to reduce API calls
 async function getCachedUserTags() {
@@ -3878,11 +3626,6 @@ async function getCachedUserTags() {
     return response;
 }
 
-// Clear user tags cache (call this when tags are updated)
-function clearUserTagsCache() {
-    cachedUserTags = null;
-    userTagsCacheTime = 0;
-}
 
 // Utility to normalize various response shapes
 function normalizePaginatedInsightsResponse(response) {
@@ -4137,34 +3880,6 @@ function getSelectedTags() {
     return selectedTags;
 }
 
-// 显示创建标签模态框
-function showCreateTagModal() {
-    const modal = document.getElementById('createTagModal');
-    
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        
-        // 确保弹窗居中
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.zIndex = '1000';
-        
-        // 聚焦到输入框
-        const tagNameInput = document.getElementById('newTagName');
-        if (tagNameInput) {
-            tagNameInput.focus();
-        } else {
-            console.error('❌ 找不到标签名称输入框');
-        }
-    } else {
-        console.error('❌ 找不到创建标签模态框');
-    }
-}
 
 // 隐藏创建标签模态框
 function hideCreateTagModal() {
@@ -4175,14 +3890,6 @@ function hideCreateTagModal() {
     }
 }
 
-// 显示管理标签模态框
-function showManageTagsModal() {
-    const modal = document.getElementById('manageTagsModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        // loadTagsForManagement() 已删除
-    }
-}
 
 // 隐藏管理标签模态框
 function hideManageTagsModal() {
@@ -4664,14 +4371,6 @@ async function renderStackView(stackId) {
     hidePagination();
 }
 
-// Professional skeleton loading state with smooth transitions and layout stability
-let __SKELETON_STARTED_AT__ = 0;
-
-function skeletonMarkup(count = 6) {
-    const cards = Array.from({length: count}, () => '<div class="skeleton-card"></div>').join('');
-    return `<div class="progress-bar" role="progressbar" aria-valuetext="Loading"></div>
-            <div class="skeleton-grid" aria-hidden="true">${cards}</div>`;
-}
 
 // Show loading state for stack view to prevent layout shift
 function showStackLoadingState() {
@@ -4683,7 +4382,6 @@ function showStackLoadingState() {
 
     // 不再显示加载覆盖层，避免挡住页面内容
     console.log('📡 Stack loading state requested (overlay disabled)');
-    __SKELETON_STARTED_AT__ = performance.now();
 }
 
 // Hide loading state for stack view
@@ -5283,82 +4981,7 @@ window.updateUserTag = updateUserTag;
 window.deleteUserTag = deleteUserTag;
 window.editTagInManagement = editTagInManagement;
 
-// 测试函数 - 可以在控制台调用
-window.testStackIdFunctionality = async function() {
-    console.log('🧪 Starting stack_id functionality test...');
-    
-    // 检查当前状态
-    console.log('🔍 Current viewMode:', viewMode);
-    console.log('🔍 Current activeStackId:', activeStackId);
-    console.log('🔍 Current stacks:', Array.from(stacks.entries()));
-    
-    // 测试数据
-    const testData = {
-        url: 'https://example.com/test-stack-insight',
-        title: 'Test Stack Insight',
-        thought: 'This is a test insight for stack functionality',
-        stack_id: isNaN(activeStackId) ? activeStackId : parseInt(activeStackId)
-    };
-    
-    console.log('🧪 Test data:', testData);
-    console.log('🧪 Test data stack_id type:', typeof testData.stack_id);
-    
-    try {
-        // 测试API调用
-        console.log('🧪 Testing API call...');
-        const result = await api.createInsight(testData);
-        console.log('🧪 API result:', result);
-        
-        // 检查结果
-        if (result.success && result.data) {
-            console.log('✅ Insight created successfully');
-            console.log('🔍 Created insight data:', result.data);
-            console.log('🔍 Created insight stack_id:', result.data.stack_id);
-            console.log('🔍 Created insight stack_id type:', typeof result.data.stack_id);
-        } else {
-            console.error('❌ Insight creation failed:', result);
-        }
-        
-    } catch (error) {
-        console.error('❌ Test failed with error:', error);
-    }
-};
 
-// 测试函数 - 检查数据库中的stack_id
-window.testDatabaseStackId = async function() {
-    console.log('🧪 Testing database stack_id storage...');
-    
-    try {
-        // 获取最新的insights
-        const response = await api.getInsightsPaginated(1, 10, null, '', true);
-        console.log('🧪 Latest insights from API:', response);
-        
-        if (response.success && response.data) {
-            const insights = response.data.items || response.data.insights || [];
-            console.log('🧪 Found insights:', insights.length);
-            
-            insights.forEach((insight, index) => {
-                console.log(`🧪 Insight ${index + 1}:`, {
-                    id: insight.id,
-                    title: insight.title,
-                    stack_id: insight.stack_id,
-                    stack_id_type: typeof insight.stack_id,
-                    url: insight.url
-                });
-            });
-            
-            // 检查是否有任何 insights with stack_id
-            const insightsWithStackId = insights.filter(i => i.stack_id);
-            console.log('🧪 Insights with stack_id:', insightsWithStackId.length);
-            console.log('🧪 Insights with stack_id details:', insightsWithStackId);
-        }
-        
-    } catch (error) {
-        console.error('❌ Database test failed:', error);
-    }
-};
-
-// 测试函数 - 检查特定stack的内容
 // Email Preferences Modal Functions
 function openEmailPreferencesModal() {
     console.log('🔧 Opening email preferences modal...');
@@ -5497,51 +5120,6 @@ function updateEmailPreferencesUIState() {
 window.openEmailPreferencesModal = openEmailPreferencesModal;
 window.closeEmailPreferencesModal = closeEmailPreferencesModal;
 
-window.testStackContent = async function(stackId = null) {
-    const targetStackId = stackId || activeStackId;
-    console.log('🧪 Testing stack content for stack:', targetStackId);
-    
-    if (!targetStackId) {
-        console.error('❌ No stack ID provided and no active stack');
-        return;
-    }
-    
-    try {
-        // 获取stack数据
-        const stackResponse = await api.getUserStacksWithInsights(currentUser?.id);
-        console.log('🧪 Stack API response:', stackResponse);
-        
-        if (stackResponse.success && stackResponse.data) {
-            const targetStack = stackResponse.data.find(s => String(s.id) === String(targetStackId));
-            console.log('🧪 Target stack:', targetStack);
-            
-            if (targetStack) {
-                console.log('🧪 Stack insights count:', targetStack.insights?.length || 0);
-                console.log('🧪 Stack insights:', targetStack.insights || []);
-                
-                // 检查每个insight的stack_id
-                if (targetStack.insights) {
-                    targetStack.insights.forEach((insight, index) => {
-                        console.log(`🧪 Stack insight ${index + 1}:`, {
-                            id: insight.id,
-                            title: insight.title,
-                            stack_id: insight.stack_id,
-                            stack_id_type: typeof insight.stack_id,
-                            matches_stack: insight.stack_id === targetStackId
-                        });
-                    });
-                }
-            } else {
-                console.error('❌ Stack not found:', targetStackId);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Stack content test failed:', error);
-    }
-};
-
-// 测试函数 - 调用后端调试端点
 // 调试函数 - 检查后端数据库状态
 window.debugBackendDatabase = async function() {
     console.log('🔍 Checking backend database state...');
@@ -8682,15 +8260,6 @@ function saveStacksToLocalStorage() {
     }
 }
 
-// Clear all stacks from localStorage (used when deleting all stacks)
-function clearStacksFromLocalStorage() {
-    try {
-        localStorage.removeItem('quest_stacks');
-        console.log('🗑️ Cleared stacks from localStorage');
-    } catch (error) {
-        console.error('❌ Failed to clear stacks from localStorage:', error);
-    }
-}
 
 // Save insights to localStorage backup (safe version that prevents data loss)
 function saveInsightsToLocalStorage({ force = false } = {}) {
@@ -8794,10 +8363,6 @@ function getStackByInsightId(insightId) {
     );
 }
 
-// Check if insight is in any stack
-function isInsightInStack(insightId) {
-    return getStackByInsightId(insightId) !== undefined;
-}
 
 // Create stack card element
 function createStackCard(stackData) {
@@ -9024,15 +8589,36 @@ function startInlineNameEdit(stackId, nameElement) {
         
         if (wasEdited) {
             try {
+                console.log('🔄 Updating stack name in UI:', { stackId, oldName: currentName, newName });
                 await updateStackName(stackId, newName);
-                // Update the stack data
+
+                // Update the stack data IMMEDIATELY
                 const stackData = stacks.get(stackId);
                 if (stackData) {
+                    console.log('📝 Updating local stack data:', { stackId, oldName: stackData.name, newName });
                     stackData.name = newName;
+                    stackData.modifiedAt = new Date().toISOString();
                     stacks.set(String(stackId), stackData);
-                    
+
                     // Save to localStorage immediately
                     saveStacksToLocalStorage();
+
+                    // Update the stack context bar to reflect the new name
+                    updateStackContextBar(stackData);
+
+                    // Force immediate UI update by updating all visible stack name elements
+                    const allStackNameElements = document.querySelectorAll(`[data-stack-id="${stackId}"] .content-card-title, .stack-name-horizontal[data-stack-id="${stackId}"]`);
+                    allStackNameElements.forEach(el => {
+                        console.log('🎨 Updating DOM element with new name:', el.className);
+                        el.textContent = newName;
+                    });
+
+                    // Re-render the main view to update the stack card
+                    await renderInsights();
+
+                    console.log('✅ Stack name update complete');
+                } else {
+                    console.warn('⚠️ Stack data not found for ID:', stackId);
                 }
             } catch (error) {
                 console.error('Failed to update stack name:', error);
@@ -9126,6 +8712,10 @@ async function updateStackName(stackId, newName) {
     try {
         const response = await api.updateStack(parseInt(stackId), { name: newName });
         if (response && response.success) {
+            // Invalidate cache to ensure fresh data on next load
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
             showNotification('Stack name updated successfully', 'success');
             return response;
         } else {
@@ -9548,90 +9138,6 @@ function formatDate(dateString) {
     });
 }
 
-// Expand stack horizontally in place
-function expandStack(stackData) {
-    console.log('📂 Expanding stack horizontally:', stackData.name);
-    
-    // Find the stack card element
-    const stackCard = document.querySelector(`[data-stack-id="${stackData.id}"]`);
-    if (!stackCard) return;
-    
-    // Mark this stack as expanded
-    stackData.isExpanded = true;
-    
-    // Add expanded class to the card
-    stackCard.classList.add('stack-expanded');
-    
-    // Replace the stack card content with expanded view
-    stackCard.innerHTML = `
-        <div class="stack-expanded-header">
-            <div class="stack-info-horizontal">
-                <div class="stack-name-container">
-                    <h3 class="stack-name-horizontal editable-name" data-stack-id="${stackData.id}">${stackData.name}</h3>
-                    <svg class="edit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </div>
-                <div class="stack-meta-horizontal">
-                    <span class="stack-created">Created: ${formatDate(stackData.createdAt)}</span>
-                    <span class="stack-modified">Last Modified: ${formatDate(stackData.modifiedAt)}</span>
-                </div>
-            </div>
-            <div class="stack-actions-horizontal">
-                <button class="stack-collapse-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-        
-        <div class="stack-cards-horizontal" id="stackCardsHorizontal-${stackData.id}">
-            <!-- Cards will be populated here -->
-        </div>
-        
-        <div class="stack-footer-horizontal">
-            <button class="stack-edit-mode-btn-horizontal" data-stack-id="${stackData.id}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <span class="stack-edit-btn-text-horizontal">Edit</span>
-            </button>
-        </div>
-    `;
-    
-    // Add event listeners
-    const collapseBtn = stackCard.querySelector('.stack-collapse-btn');
-    const editModeBtn = stackCard.querySelector('.stack-edit-mode-btn-horizontal');
-    const editableName = stackCard.querySelector('.editable-name');
-    
-    collapseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        collapseStack(stackData.id);
-    });
-    
-    editModeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleStackEditModeHorizontal(stackData.id);
-    });
-    
-    // Set up inline name editing
-    if (editableName) {
-        editableName.addEventListener('click', (e) => {
-            e.stopPropagation();
-            startInlineNameEdit(stackData.id, editableName);
-        });
-    }
-    
-    // Populate cards horizontally
-    const stackCardsContainer = document.getElementById(`stackCardsHorizontal-${stackData.id}`);
-    stackData.cards.forEach(cardData => {
-        const card = createStackHorizontalCard(cardData, stackData.id);
-        stackCardsContainer.appendChild(card);
-    });
-}
 
 // Create card for stack expansion view
 function createStackExpandedCard(insight, stackId) {
@@ -10130,27 +9636,35 @@ async function editStackName(stackId) {
             });
             
             if (response.success) {
+                console.log('🔄 Updating stack name via prompt:', { stackId, oldName: stackData.name, newName: newName.trim() });
+
                 // Update local data
                 stackData.name = newName.trim();
                 stackData.modifiedAt = response.data?.modified_at || new Date().toISOString();
-                
-                // Update UI
-                const stackNameEl = document.querySelector('.stack-name');
-                if (stackNameEl) {
-                    stackNameEl.textContent = stackData.name;
-                }
-        
+
+                // Force immediate UI update by updating all visible stack name elements
+                const allStackNameElements = document.querySelectorAll(`[data-stack-id="${stackId}"] .content-card-title, .stack-name-horizontal[data-stack-id="${stackId}"], .stack-name`);
+                allStackNameElements.forEach(el => {
+                    console.log('🎨 Updating DOM element with new name (prompt):', el.className);
+                    el.textContent = stackData.name;
+                });
+
                 // Update stack dates
                 const stackDatesEl = document.querySelector('.stack-dates');
                 if (stackDatesEl) {
                     stackDatesEl.innerHTML = `
-                        Created: ${formatDate(stackData.createdAt)} • 
+                        Created: ${formatDate(stackData.createdAt)} •
                         Modified: ${formatDate(stackData.modifiedAt)}
                     `;
                 }
-        
-                // Re-render main view to update stack card
+
+                // Update the stack context bar to reflect the new name
+                updateStackContextBar(stackData);
+
+                // Re-render main view to update the stack card
                 await renderInsights();
+
+                console.log('✅ Stack name update complete (prompt)');
         
                 showSuccessMessage('Stack name updated successfully!');
             } else {
@@ -10182,6 +9696,9 @@ async function editStackName(stackId) {
         
                 // Re-render main view to update stack card
                 await renderInsights();
+                
+                // Update the stack context bar to reflect the new name
+                updateStackContextBar(stackData);
         
                 showSuccessMessage('Stack name updated successfully! (Local storage)');
             } else {
@@ -10973,69 +10490,6 @@ function showPARAInfoModal() {
     document.addEventListener('keydown', handleEscape);
 }
 
-// Test function to verify filter functionality
-function testFilterFunctionality() {
-    console.log('🧪 Testing filter functionality...');
-    
-    // Test 1: Check if filter buttons exist
-    const filterButtons = document.getElementById('filterButtons');
-    if (!filterButtons) {
-        console.error('❌ Filter buttons container not found');
-        return false;
-    }
-    
-    // Test 2: Check if filter button containers exist
-    const filterContainers = filterButtons.querySelectorAll('.filter-button-container');
-    console.log('🔍 Found filter containers:', filterContainers.length);
-    
-    // Test 3: Check if PARA options exist
-    const tagFilterContainer = filterButtons.querySelector('[data-filter="tags"]')?.closest('.filter-button-container');
-    if (tagFilterContainer) {
-        const paraOptions = tagFilterContainer.querySelectorAll('.filter-option[data-filter="project"], .filter-option[data-filter="area"], .filter-option[data-filter="resource"], .filter-option[data-filter="archive"]');
-        console.log('🔍 Found PARA options:', paraOptions.length);
-        
-        // Test 4: Check if info icons exist
-        const infoIcons = tagFilterContainer.querySelectorAll('.filter-option-info');
-        console.log('🔍 Found info icons:', infoIcons.length);
-    }
-    
-    // Test 5: Check current filters
-    console.log('🔍 Current filters:', currentFilters);
-    
-    // Test 6: Check if insights exist
-    console.log('🔍 Current insights count:', currentInsights.length);
-    
-    console.log('✅ Filter functionality test completed');
-    return true;
-}
-
-// Make test function globally available
-window.testFilterFunctionality = testFilterFunctionality;
-
-// Test function to manually test filtering with current data
-async function testFiltering() {
-    console.log('🧪 Testing filtering with current data...');
-    
-    // Test with 'area' filter
-    console.log('🔍 Testing area filter...');
-    const testFilter = { latest: 'latest', tags: 'area' };
-    const originalFilters = { ...currentFilters };
-    
-    // Temporarily set the filter
-    currentFilters.tags = 'area';
-    
-    // Get filtered insights
-    const filtered = await getFilteredInsights();
-    console.log('📊 Filtered insights for area:', filtered.length);
-    
-    // Restore original filters
-    currentFilters.tags = originalFilters.tags;
-    
-    return filtered;
-}
-
-// Make test function globally available
-window.testFiltering = testFiltering;
 
 // Function to clear all filters and show all insights
 async function clearAllFilters() {
@@ -11298,223 +10752,5 @@ function updatePrimaryTagDisplay(primaryTag) {
     }
 })();
 
-// ===== DEBUG AND TEST FUNCTIONS =====
-
-// Test function to debug comment functionality
-window.testCommentFunctionality = async function() {
-    console.log('🧪 Starting comment functionality tests...');
-    
-    // Test 1: Check if modal elements exist
-    console.log('\n📋 Test 1: Checking modal elements...');
-    const commentElement = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
-    const commentDisplay = document.getElementById('commentDisplay');
-    const editCommentBtn = document.getElementById('editCommentBtn');
-    
-    console.log('commentDisplay:', commentElement);
-    console.log('commentTextarea:', commentTextarea);
-    console.log('commentDisplay:', commentDisplay);
-    console.log('editCommentBtn:', editCommentBtn);
-    
-    if (!commentElement || !commentTextarea || !commentDisplay || !editCommentBtn) {
-        console.error('❌ Missing modal elements!');
-        return;
-    }
-    
-    // Test 2: Check current insight data
-    console.log('\n📋 Test 2: Checking current insight data...');
-    console.log('currentDetailInsight:', currentDetailInsight);
-    
-    if (currentDetailInsight) {
-        console.log('insight.thought:', currentDetailInsight.thought);
-        console.log('insight.insight_contents:', currentDetailInsight.insight_contents);
-        
-        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
-            console.log('insight.insight_contents[0].thought:', currentDetailInsight.insight_contents[0].thought);
-        }
-    } else {
-        console.warn('⚠️ No current insight selected');
-    }
-    
-    // Test 3: Check current display values
-    console.log('\n📋 Test 3: Checking current display values...');
-    console.log('commentElement.textContent:', commentElement.textContent);
-    console.log('commentTextarea.value:', commentTextarea.value);
-    console.log('commentDisplay.textContent:', commentDisplay.textContent);
-    
-    // Test 4: Test comment extraction logic
-    console.log('\n📋 Test 4: Testing comment extraction logic...');
-    if (currentDetailInsight) {
-        let thought = null;
-        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
-            thought = currentDetailInsight.insight_contents[0].thought;
-        }
-        thought = thought || currentDetailInsight.thought;
-        console.log('Extracted thought:', thought);
-    }
-    
-    // Test 5: Test API call
-    console.log('\n📋 Test 5: Testing API call...');
-    if (currentDetailInsight && currentDetailInsight.id) {
-        try {
-            const response = await api.getInsight(currentDetailInsight.id);
-            console.log('API response:', response);
-            
-            if (response.success && response.data) {
-                console.log('API data.thought:', response.data.thought);
-                console.log('API data.insight_contents:', response.data.insight_contents);
-            }
-        } catch (error) {
-            console.error('API call failed:', error);
-        }
-    }
-    
-    console.log('\n✅ Comment functionality tests completed!');
-};
-
-// Test function to debug edit button behavior
-window.testEditButtonBehavior = function() {
-    console.log('🧪 Testing edit button behavior...');
-    
-    const editCommentBtn = document.getElementById('editCommentBtn');
-    const commentDisplay = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
-    
-    if (!editCommentBtn || !commentDisplay || !commentTextarea) {
-        console.error('❌ Missing elements for edit button test');
-        return;
-    }
-    
-    console.log('Initial state:');
-    console.log('Button text:', editCommentBtn.textContent);
-    console.log('isCommentEditing:', isCommentEditing);
-    console.log('commentDisplay.style.display:', commentDisplay.style.display);
-    console.log('commentTextarea.style.display:', commentTextarea.style.display);
-    
-    // Check for multiple event listeners
-    console.log('Event listeners on button:', getEventListeners ? getEventListeners(editCommentBtn) : 'getEventListeners not available');
-    
-    // Simulate click
-    console.log('\n🖱️ Simulating edit button click...');
-    editCommentBtn.click();
-    
-    setTimeout(() => {
-        console.log('After click:');
-        console.log('Button text:', editCommentBtn.textContent);
-        console.log('isCommentEditing:', isCommentEditing);
-        console.log('commentDisplay.style.display:', commentDisplay.style.display);
-        console.log('commentTextarea.style.display:', commentTextarea.style.display);
-        console.log('commentTextarea.value:', commentTextarea.value);
-    }, 100);
-};
-
-// Test function to force populate comment data
-window.testPopulateComment = function(testComment = 'Test comment from console') {
-    console.log('🧪 Testing comment population...');
-    
-    const commentElement = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
-    const commentDisplay = document.getElementById('commentDisplay');
-    
-    if (!commentElement || !commentTextarea || !commentDisplay) {
-        console.error('❌ Missing elements for comment population test');
-        return;
-    }
-    
-    console.log('Setting comment to:', testComment);
-    
-    // Update all comment elements
-    commentElement.textContent = testComment;
-    commentTextarea.value = testComment;
-    commentDisplay.textContent = testComment;
-    
-    console.log('Updated values:');
-    console.log('commentElement.textContent:', commentElement.textContent);
-    console.log('commentTextarea.value:', commentTextarea.value);
-    console.log('commentDisplay.textContent:', commentDisplay.textContent);
-};
-
-// Test function to check all insights for thought data
-window.testAllInsightsThoughts = function() {
-    console.log('🧪 Testing all insights for thought data...');
-    
-    if (window.currentInsights) {
-        console.log(`Found ${window.currentInsights.length} insights`);
-        
-        window.currentInsights.forEach((insight, index) => {
-            console.log(`\nInsight ${index + 1} (${insight.id}):`);
-            console.log('  title:', insight.title);
-            console.log('  thought:', insight.thought);
-            console.log('  insight_contents:', insight.insight_contents);
-            
-            if (insight.insight_contents && insight.insight_contents.length > 0) {
-                console.log('  insight_contents[0].thought:', insight.insight_contents[0].thought);
-            }
-        });
-    } else {
-        console.warn('⚠️ No currentInsights found');
-    }
-    
-    if (stacks && stacks.size > 0) {
-        console.log(`\nFound ${stacks.size} stacks`);
-        stacks.forEach((stackData, stackId) => {
-            console.log(`\nStack ${stackId} (${stackData.name}):`);
-            stackData.cards.forEach((card, index) => {
-                console.log(`  Card ${index + 1} (${card.id}):`);
-                console.log('    title:', card.title);
-                console.log('    thought:', card.thought);
-                console.log('    insight_contents:', card.insight_contents);
-                
-                if (card.insight_contents && card.insight_contents.length > 0) {
-                    console.log('    insight_contents[0].thought:', card.insight_contents[0].thought);
-                }
-            });
-        });
-    }
-};
-
-// Test function to simulate API update
-window.testCommentUpdate = async function(testComment = 'Updated comment from console test') {
-    console.log('🧪 Testing comment update...');
-    
-    if (!currentDetailInsight || !currentDetailInsight.id) {
-        console.error('❌ No current insight selected');
-        return;
-    }
-    
-    try {
-        console.log('Updating insight:', currentDetailInsight.id, 'with comment:', testComment);
-        
-        const response = await api.updateInsight(currentDetailInsight.id, { 
-            thought: testComment 
-        });
-        
-        console.log('API response:', response);
-        
-        if (response.success) {
-            console.log('✅ Update successful');
-            // Refresh the modal to see the changes
-            if (typeof showDetailModal === 'function') {
-                showDetailModal(currentDetailInsight.id);
-            }
-        } else {
-            console.error('❌ Update failed:', response.message);
-        }
-    } catch (error) {
-        console.error('❌ Update error:', error);
-    }
-};
-
-// Quick test runner
-window.runAllCommentTests = async function() {
-    console.log('🚀 Running all comment tests...');
-    
-    await window.testCommentFunctionality();
-    window.testEditButtonBehavior();
-    window.testAllInsightsThoughts();
-    
-    console.log('\n🎯 To test comment update, run: testCommentUpdate("Your test comment")');
-    console.log('🎯 To test comment population, run: testPopulateComment("Your test comment")');
-};
 
 
