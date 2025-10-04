@@ -182,8 +182,8 @@ body {
     font-weight: 400;
 }
 
-/* 底部Logo */
-.bottom-logo {
+/* 底部品牌文字 */
+.bottom-brand {
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -192,20 +192,22 @@ body {
     transition: all 0.3s ease;
 }
 
-.bottom-logo:hover {
+.bottom-brand:hover {
     opacity: 1;
     transform: scale(1.05);
 }
 
-.logo-link {
+.brand-link {
     display: block;
     text-decoration: none;
-}
-
-.logo-link img {
-    width: 80px;
-    height: 27px;
-    object-fit: contain;
+    color: #332564;
+    font-size: 1.2rem;
+    font-weight: 700;
+    font-family: 'Rubik', sans-serif;
+    background: linear-gradient(135deg, #332564 0%, #4B264F 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 /* 按钮样式 */
@@ -373,14 +375,19 @@ body {
         padding: 1rem;
     }
     
-    .bottom-logo {
+    .bottom-brand {
         bottom: 15px;
         right: 15px;
     }
     
-    .logo-link img {
-        width: 70px;
-        height: 23px;
+    .brand-link {
+        font-size: 1rem;
+    }
+    
+    .translation-btn {
+        top: 15px;
+        right: 15px;
+        padding: 8px 12px;
     }
     
     .signup-container {
@@ -441,19 +448,21 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 12px;
+    padding: 10px 14px;
     background: rgba(75, 38, 79, 0.05);
     border: 1px solid rgba(75, 38, 79, 0.2);
-    border-radius: 8px;
+    border-radius: 12px;
     color: #332564;
     text-decoration: none;
     font-size: 0.875rem;
     font-weight: 600;
     transition: all 0.2s ease;
     cursor: pointer;
-    position: absolute;
-    top: 0;
-    right: 0;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
 }
 
 .translation-btn:hover {
@@ -461,6 +470,7 @@ body {
     border-color: #54497D;
     transform: translateY(-1px);
     text-decoration: none;
+    box-shadow: 0 4px 12px rgba(84, 73, 125, 0.15);
 }
 
 .translation-flag {
@@ -469,16 +479,4 @@ body {
 
 .translation-text {
     font-size: 0.875rem;
-}
-
-/* Header positioning for translation button */
-.signup-header-top {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-}
-
-.signup-title {
-    margin-bottom: 1rem;
 }
