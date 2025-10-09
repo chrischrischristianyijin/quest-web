@@ -7865,31 +7865,28 @@ function startSmartAISummaryRefresh(insightId) {
     if (aiSummaryRefreshTimeouts.has(insightId)) {
         clearTimeout(aiSummaryRefreshTimeouts.get(insightId));
     }
-    
+
     // 优化：更快的初始检查，然后逐渐增加间隔
     let checkCount = 0;
-    const maxChecks = 8; // 最多检查8次
-    const intervals = [1000, 2000, 3000, 5000, 8000, 12000, 20000, 30000]; // 递增间隔
-    
+    const maxChecks = 12; // 最多检查12次（约2分钟）
+    const intervals = [2000, 3000, 4000, 5000, 6000, 8000, 10000, 12000, 15000, 20000, 25000, 30000]; // 递增间隔
+
     const checkSummary = async () => {
+        console.log(`🔄 [ENTRY] checkSummary called, checkCount=${checkCount}, maxChecks=${maxChecks}`);
+
         if (checkCount >= maxChecks) {
             console.log(`⏰ AI摘要检查达到最大次数，停止检查: insight ${insightId}`);
             aiSummaryRefreshTimeouts.delete(insightId);
             return;
         }
-        
-        const currentInterval = intervals[checkCount] || 30000;
-        console.log(`🔄 检查AI摘要 (${checkCount + 1}/${maxChecks}) 下次间隔${currentInterval}ms: insight ${insightId}`);
-        
-        // 设置新的定时器
-        const timeoutId = setTimeout(async () => {
+
         try {
             const timestamp = new Date().toISOString();
-            console.log(`🔄 [${timestamp}] Auto-refreshing AI summary for insight ${insightId} (attempt ${checkCount + 1}/${maxChecks})`);
+            console.log(`🔄 [${timestamp}] 正在检查AI摘要 for insight ${insightId} (attempt ${checkCount + 1}/${maxChecks})`);
 
-            // 获取最新的insight数据
-            const response = await api.getInsight(insightId);
-            console.log(`🔍 [${timestamp}] DEBUG: API response for getInsight:`, response);
+            // 获取最新的insight数据（绕过缓存以获取最新数据）
+            const response = await api.getInsight(insightId, { noCache: true });
+            console.log(`🔍 [${timestamp}] DEBUG: API response for getInsight (noCache):`, response);
 
             if (response?.success && response.data) {
                 const insight = response.data;
@@ -7903,12 +7900,33 @@ function startSmartAISummaryRefresh(insightId) {
                 } else {
                     console.log('🔍 DEBUG: No insight_contents in response');
                 }
-                
+
                 // 如果摘要已经生成，更新UI并停止刷新
                 if (summary && summary.trim()) {
+                    console.log(`✅ AI summary found! Updating UI for insight ${insightId}`);
+
+                    // 更新全局 currentInsights 数组中的数据
+                    const insightIndex = currentInsights.findIndex(i => i.id === insightId);
+                    if (insightIndex !== -1) {
+                        if (!currentInsights[insightIndex].insight_contents) {
+                            currentInsights[insightIndex].insight_contents = [];
+                        }
+                        if (currentInsights[insightIndex].insight_contents.length === 0) {
+                            currentInsights[insightIndex].insight_contents.push({ summary: summary });
+                        } else {
+                            currentInsights[insightIndex].insight_contents[0].summary = summary;
+                        }
+                        window.currentInsights = currentInsights;
+                        console.log(`📝 Updated currentInsights data for insight ${insightId}`);
+                    }
+
+                    // 重新渲染insights以更新卡片显示
+                    console.log('🔄 Re-rendering insights to show AI summary on card...');
+                    await renderInsights();
+
                     const summaryText = document.getElementById('summaryText');
                     const modal = document.getElementById('contentDetailModal');
-                    
+
                     // 只有在模态框打开且是当前insight时才更新UI
                     if (summaryText && modal && modal.classList.contains('show') && currentDetailInsight && currentDetailInsight.id === insightId) {
                         // Add a smooth fade-in animation
@@ -7935,43 +7953,49 @@ function startSmartAISummaryRefresh(insightId) {
                             // Show a subtle notification
                             showNotification('AI summary loaded', 'success');
                         }, 100);
-                    }
-                    
-                    // 更新全局insights数据
-                    const insightIndex = currentInsights.findIndex(i => i.id === insightId);
-                    if (insightIndex !== -1) {
-                        // 确保insight_contents数组存在
-                        if (!currentInsights[insightIndex].insight_contents) {
-                            currentInsights[insightIndex].insight_contents = [];
-                        }
-                        if (currentInsights[insightIndex].insight_contents.length === 0) {
-                            currentInsights[insightIndex].insight_contents.push({ summary: summary });
-                        } else {
-                            currentInsights[insightIndex].insight_contents[0].summary = summary;
-                        }
-                        // 同时更新window.currentInsights
-                        window.currentInsights = currentInsights;
-                        console.log(`📝 Updated global insights data for insight ${insightId}`);
                     } else {
-                        console.warn(`⚠️ Insight ${insightId} not found in currentInsights array`);
+                        // 如果模态框没打开，只显示通知
+                        showNotification('AI summary loaded', 'success');
                     }
-                    
+
                     // 清除定时器，停止刷新
                     aiSummaryRefreshTimeouts.delete(insightId);
                     return;
                 }
-                
+
                 // 如果摘要还没生成，继续等待
-                console.log(`⏳ AI summary still generating for insight ${insightId}, will retry...`);
-                
-                // 递增检查次数并设置下次检查
+                console.log(`⏳ AI summary still generating for insight ${insightId}, will retry in ${intervals[checkCount]}ms...`);
+
+                // 递增检查次数
                 checkCount++;
-                checkSummary();
+
+                // 设置下次检查
+                const nextInterval = intervals[checkCount - 1] || 30000;
+                console.log(`⏱️ Scheduling next check in ${nextInterval}ms (checkCount now = ${checkCount})`);
+                const timeoutId = setTimeout(() => {
+                    console.log(`⏰ Timer fired! Calling checkSummary again... (checkCount=${checkCount})`);
+                    checkSummary().catch(err => {
+                        console.error('❌ Error in checkSummary recursive call:', err);
+                    });
+                }, nextInterval);
+                console.log(`✅ Timeout scheduled with ID: ${timeoutId}`);
+                aiSummaryRefreshTimeouts.set(insightId, timeoutId);
+                console.log(`📝 Stored timeout in Map, Map size: ${aiSummaryRefreshTimeouts.size}`);
             } else {
                 console.warn(`⚠️ API call failed or returned no data for insight ${insightId}`);
                 // 继续重试
                 checkCount++;
-                checkSummary();
+                const nextInterval = intervals[checkCount - 1] || 30000;
+                console.log(`⏱️ Scheduling retry in ${nextInterval}ms after API failure (checkCount=${checkCount})`);
+                const timeoutId = setTimeout(() => {
+                    console.log(`⏰ Timer fired after API failure! (checkCount=${checkCount})`);
+                    checkSummary().catch(err => {
+                        console.error('❌ Error in checkSummary after API failure:', err);
+                    });
+                }, nextInterval);
+                console.log(`✅ Timeout scheduled with ID: ${timeoutId}`);
+                aiSummaryRefreshTimeouts.set(insightId, timeoutId);
+                console.log(`📝 Stored timeout in Map, Map size: ${aiSummaryRefreshTimeouts.size}`);
             }
         } catch (error) {
             console.error(`❌ Error refreshing AI summary for insight ${insightId}:`, error);
@@ -7979,18 +8003,26 @@ function startSmartAISummaryRefresh(insightId) {
             // 继续重试而不是停止
             checkCount++;
             if (checkCount < maxChecks) {
-                checkSummary();
+                const nextInterval = intervals[checkCount - 1] || 30000;
+                console.log(`⏱️ Scheduling retry in ${nextInterval}ms after error (checkCount=${checkCount})`);
+                const timeoutId = setTimeout(() => {
+                    console.log(`⏰ Timer fired after error! (checkCount=${checkCount})`);
+                    checkSummary().catch(err => {
+                        console.error('❌ Error in checkSummary after error:', err);
+                    });
+                }, nextInterval);
+                console.log(`✅ Timeout scheduled with ID: ${timeoutId}`);
+                aiSummaryRefreshTimeouts.set(insightId, timeoutId);
+                console.log(`📝 Stored timeout in Map, Map size: ${aiSummaryRefreshTimeouts.size}`);
             } else {
+                console.log(`🛑 Reached maxChecks, stopping polling for insight ${insightId}`);
                 aiSummaryRefreshTimeouts.delete(insightId);
             }
         }
-    }, currentInterval);
-    
-    // 存储定时器ID
-    aiSummaryRefreshTimeouts.set(insightId, timeoutId);
     };
-    
-    // 开始第一次检查
+
+    // 立即开始第一次检查（不等待）
+    console.log(`🚀 Starting immediate first check for insight ${insightId}`);
     checkSummary();
 }
 

@@ -19,7 +19,7 @@ class ApiService {
     // 通用请求方法
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
-        
+
         // Debug: Log token status for non-GET requests
         if ((options.method || 'GET') !== 'GET') {
             console.log('🔍 API Request Debug:', {
@@ -29,14 +29,16 @@ class ApiService {
                 tokenPreview: this.authToken ? `${this.authToken.substring(0, 20)}...` : 'None'
             });
         }
-        
-        // Check cache for GET requests
-        if ((options.method || 'GET') === 'GET' && window.apiCache) {
+
+        // Check cache for GET requests (unless noCache is specified)
+        if ((options.method || 'GET') === 'GET' && window.apiCache && !options.noCache) {
             const cached = window.apiCache.get(url);
             if (cached) {
                 console.log(`📦 Cache hit: ${url}`);
                 return cached;
             }
+        } else if (options.noCache) {
+            console.log(`🔓 Cache bypassed for: ${url}`);
         }
         
         // 设置默认headers
@@ -126,9 +128,9 @@ class ApiService {
             
             // Report successful API request to connectivity manager
             connectivityManager.reportApiSuccess();
-            
-            // Cache successful GET responses
-            if ((options.method || 'GET') === 'GET' && window.apiCache) {
+
+            // Cache successful GET responses (unless noCache is specified)
+            if ((options.method || 'GET') === 'GET' && window.apiCache && !options.noCache) {
                 window.apiCache.set(url, data);
             }
             
@@ -342,8 +344,8 @@ class ApiService {
     }
 
     // 获取单个insight
-    async getInsight(insightId) {
-        return await this.request(`${API_CONFIG.INSIGHTS.GET}/${insightId}`);
+    async getInsight(insightId, options = {}) {
+        return await this.request(`${API_CONFIG.INSIGHTS.GET}/${insightId}`, options);
     }
 
     // 获取分页insights
