@@ -433,18 +433,19 @@
 
             <!-- Main Content -->
             <div class="modal-content">
-                <!-- LEFT: image -->
-                <div class="content-media" id="modalMedia">
-                    <img id="modalImage" class="content-image" src="" alt="Preview">
-                    <!-- If no image, add class "no-image" to .content-media -->
-                </div>
+                <!-- Image removed as per requirements -->
 
-                <!-- RIGHT: details -->
+                <!-- Full-width details -->
                 <div class="details-scroll">
                     <div class="title-row">
-                        <div>
+                        <div style="width: 100%;">
                             <div class="title-with-edit">
-                                <h1 class="content-title" id="modalContentTitle">Wikipedia, the free encyclopedia</h1>
+                                <h1 class="content-title" id="modalContentTitle">
+                                    <a href="#" id="modalTitleLink" class="title-link" target="_blank"
+                                        rel="noopener noreferrer">
+                                        Wikipedia, the free encyclopedia
+                                    </a>
+                                </h1>
                                 <button class="edit-title-btn" id="editTitleBtn" title="Edit title">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -454,11 +455,13 @@
                                     </svg>
                                 </button>
                             </div>
-                            <div class="chip-row">
-                                <span class="tag-pill" id="primaryTag">Archive</span>
-                                <span class="date-chip" id="summaryDate">09/07/2025</span>
-                            </div>
                         </div>
+                    </div>
+
+                    <!-- Tag and Date Row - moved below title -->
+                    <div class="modal-meta-row">
+                        <span class="modal-tag-badge" id="primaryTag" style="display: none;">Archive</span>
+                        <span class="modal-date-text" id="summaryDate">September 7, 2025</span>
                     </div>
 
                     <!-- Inline Tag Editing Section -->
@@ -477,34 +480,65 @@
                         </div>
                     </div>
 
-                    <div class="section-card">
+                    <!-- My Comment Section with Timeline Design -->
+                    <div class="section-card comment-timeline-section">
                         <div class="section-head">
                             <h3>My Comment</h3>
-                            <button class="ghost-btn" id="editCommentBtn">Edit</button>
+                            <button class="ghost-btn" id="addCommentBtn">Add Comment</button>
                         </div>
-                        <p class="comment-display" id="commentDisplay">No comment added yet.</p>
-                        <textarea class="comment-box" id="commentTextarea" style="display:none;"></textarea>
+                        <div class="comment-timeline" id="commentTimeline">
+                            <!-- Comments will be dynamically generated here -->
+                        </div>
                     </div>
 
-                    <div class="section-card">
+                    <!-- AI Summary Section with Toggle and Edit -->
+                    <div class="section-card ai-summary-section">
                         <div class="section-head">
                             <h3>AI Summary</h3>
+                            <div class="ai-summary-actions">
+                                <button class="ghost-btn" id="toggleSummaryBtn" title="Toggle visibility">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                                <button class="ghost-btn" id="editSummaryBtn" title="Edit summary">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z">
+                                        </path>
+                                    </svg>
+                                </button>
+                                <div class="highlight-colors" id="highlightColors">
+                                    <button class="highlight-color-btn" data-color="transparent"
+                                        title="Remove highlight"
+                                        style="background: white; border: 2px solid #ddd; position: relative;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666"
+                                            stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                    <button class="highlight-color-btn" data-color="#FFEB3B" title="Yellow"
+                                        style="background: #FFEB3B;"></button>
+                                    <button class="highlight-color-btn" data-color="#FFB74D" title="Orange"
+                                        style="background: #FFB74D;"></button>
+                                    <button class="highlight-color-btn" data-color="#FF8A80" title="Pink"
+                                        style="background: #FF8A80;"></button>
+                                    <button class="highlight-color-btn" data-color="#81C784" title="Green"
+                                        style="background: #81C784;"></button>
+                                    <button class="highlight-color-btn" data-color="#64B5F6" title="Blue"
+                                        style="background: #64B5F6;"></button>
+                                    <button class="highlight-color-btn" data-color="#BA68C8" title="Purple"
+                                        style="background: #BA68C8;"></button>
+                                </div>
+                            </div>
                         </div>
-                        <p class="summary-text" id="summaryText">Loading AI summary...</p>
-                    </div>
-
-                    <!-- Visit Original Page Button -->
-                    <div class="section-card">
-                        <div class="visit-original-section">
-                            <button class="visit-original-btn" id="visitOriginalBtn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                    <polyline points="15,3 21,3 21,9"></polyline>
-                                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                                </svg>
-                                <span>Visit Original Page</span>
-                            </button>
+                        <div class="summary-display-wrapper" id="summaryDisplayWrapper">
+                            <p class="summary-text" id="summaryText">Loading AI summary...</p>
+                            <textarea class="summary-edit-box" id="summaryTextarea" style="display:none;"
+                                placeholder="Edit AI summary..."></textarea>
                         </div>
                     </div>
                 </div>

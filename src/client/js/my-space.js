@@ -71,7 +71,7 @@ let stacks = new Map(); // Store stacks data
 let stackIdCounter = 1;
 
 // Pagination state for insights
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 8;
 let insightsPage = 1;
 let insightsHasMore = true;
 let insightsLoading = false;
@@ -210,7 +210,7 @@ window.addEventListener('beforeunload', stopTokenValidation);
 let currentPage = 1;
 let totalPages = 1;
 let totalInsights = 0;
-let insightsPerPage = 9; // Show 9 insights per page
+let insightsPerPage = 8; // Show 8 insights per page
 
 // Page caching mechanism
 let pageCache = new Map(); // Cache data for each page
@@ -1660,7 +1660,8 @@ async function performRenderInsights() {
     const existingCards = contentCards.querySelectorAll('.content-card:not(.template-card), .empty-state, .empty-stack-state');
     existingCards.forEach(card => card.remove());
     
-    // Template card is now only added in edit mode, not automatically
+    // Ensure template card is always present at the front
+    addTemplateCard();
     
     // Get filtered insights for rendering
     const filteredInsights = await getFilteredInsights();
@@ -1700,12 +1701,33 @@ async function performRenderInsights() {
     // Only show stacks if no specific tag filter is active AND we're on page 1 AND content type allows stacks
     const hasActiveTagFilter = currentFilters.tags && currentFilters.tags !== 'all';
     const hasActiveContentTypeFilter = currentFilters.content_type && currentFilters.content_type !== 'all';
-    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}, hasActiveContentTypeFilter=${hasActiveContentTypeFilter}, shouldShowStacks=${shouldShowStacks}, shouldShowInsights=${shouldShowInsights}`);
-    
+    const hasActiveSearchFilter = currentFilters.search && currentFilters.search.trim() !== '';
+    console.log(`🔍 DEBUG: Stack rendering check - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}, hasActiveContentTypeFilter=${hasActiveContentTypeFilter}, hasActiveSearchFilter=${hasActiveSearchFilter}, shouldShowStacks=${shouldShowStacks}, shouldShowInsights=${shouldShowInsights}`);
+
     if (currentPage === 1 && hasStacks && !hasActiveTagFilter && shouldShowStacks) {
-        console.log(`🔍 DEBUG: Rendering ${stacks.size} stacks on page 1`);
-        for (const [, stackData] of stacks) {
-            fragment.appendChild(createStackCard(stackData));
+        // If there's a search filter, only show stacks whose names match the search query
+        if (hasActiveSearchFilter) {
+            const searchQuery = currentFilters.search.trim().toLowerCase();
+            let matchedStacksCount = 0;
+
+            for (const [, stackData] of stacks) {
+                const stackName = (stackData.name || '').toLowerCase();
+                const stackDescription = (stackData.description || '').toLowerCase();
+
+                // Show stack if name or description matches search query
+                if (stackName.includes(searchQuery) || stackDescription.includes(searchQuery)) {
+                    fragment.appendChild(createStackCard(stackData));
+                    matchedStacksCount++;
+                }
+            }
+
+            console.log(`🔍 DEBUG: Search filter active - rendered ${matchedStacksCount} matching stacks out of ${stacks.size}`);
+        } else {
+            // No search filter - show all stacks
+            console.log(`🔍 DEBUG: Rendering ${stacks.size} stacks on page 1`);
+            for (const [, stackData] of stacks) {
+                fragment.appendChild(createStackCard(stackData));
+            }
         }
     } else {
         console.log(`🔍 DEBUG: Not rendering stacks - currentPage=${currentPage}, hasStacks=${hasStacks}, hasActiveTagFilter=${hasActiveTagFilter}`);
@@ -1713,16 +1735,16 @@ async function performRenderInsights() {
     
     // Then render insights (using filtered insights) - only if content type allows insights
     if (hasInsights && shouldShowInsights) {
-        if (hasActiveTagFilter || hasActiveContentTypeFilter) {
-            // When filtering (by tags or content type), paginate through filtered results
+        if (hasActiveTagFilter || hasActiveContentTypeFilter || hasActiveSearchFilter) {
+            // When filtering (by tags, content type, or search), paginate through filtered results
             const startIndex = (currentPage - 1) * insightsPerPage;
             const endIndex = startIndex + insightsPerPage;
             const list = filteredInsights.slice(startIndex, endIndex);
-            
+
             console.log(`🔍 DEBUG: Filter rendering - startIndex=${startIndex}, endIndex=${endIndex}, list.length=${list.length}`);
             console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, insightsPerPage=${insightsPerPage}`);
-            console.log(`🔍 DEBUG: Active filters - tag: ${hasActiveTagFilter}, content_type: ${hasActiveContentTypeFilter}`);
-            
+            console.log(`🔍 DEBUG: Active filters - tag: ${hasActiveTagFilter}, content_type: ${hasActiveContentTypeFilter}, search: ${hasActiveSearchFilter}`);
+
             for (const insight of list) {
                 fragment.appendChild(createInsightCard(insight));
             }
@@ -1731,12 +1753,12 @@ async function performRenderInsights() {
             const limit = effectiveLimitForPage(currentPage);
             console.log(`🔍 DEBUG: Rendering logic - currentPage=${currentPage}, limit=${limit}`);
             console.log(`🔍 DEBUG: filteredInsights.length=${filteredInsights.length}, currentInsights.length=${currentInsights.length}`);
-            
+
             // For page 1, slice to account for stacks. For other pages, use the insights loaded for that page
             const list = currentPage === 1 ? filteredInsights.slice(0, limit) : currentInsights;
             console.log(`🔍 DEBUG: Final list to render:`, list.length, 'insights');
             console.log(`🔍 DEBUG: List items:`, list.map(i => ({ id: i.id, title: i.title })));
-            
+
             for (const insight of list) {
                 console.log(`🔍 DEBUG: Creating card for insight:`, insight.id, insight.title);
                 fragment.appendChild(createInsightCard(insight));
@@ -1836,7 +1858,30 @@ async function resetInsightsPaginationAndRerender() {
         // For filtered content (insights only, tag filters, search, etc.)
         totalInsights = filteredInsights.length;
         console.log(`🔍 DEBUG: Using filtered insights for pagination: ${totalInsights}`);
-        totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
+
+        // If there's a search filter, account for matching stacks on page 1
+        let matchingStacksCount = 0;
+        if (currentFilters.search && currentFilters.search.trim() !== '') {
+            const searchQuery = currentFilters.search.trim().toLowerCase();
+            for (const [, stackData] of stacks) {
+                const stackName = (stackData.name || '').toLowerCase();
+                const stackDescription = (stackData.description || '').toLowerCase();
+                if (stackName.includes(searchQuery) || stackDescription.includes(searchQuery)) {
+                    matchingStacksCount++;
+                }
+            }
+            console.log(`🔍 DEBUG: Search found ${matchingStacksCount} matching stacks`);
+        }
+
+        // Calculate pagination accounting for stacks on page 1
+        if (matchingStacksCount > 0) {
+            const page1SlotsForInsights = Math.max(0, insightsPerPage - matchingStacksCount);
+            const remainingInsights = Math.max(0, totalInsights - page1SlotsForInsights);
+            totalPages = 1 + (remainingInsights > 0 ? Math.ceil(remainingInsights / insightsPerPage) : 0);
+            console.log(`🔍 DEBUG: Search pagination with stacks - page1Slots=${page1SlotsForInsights}, remainingInsights=${remainingInsights}, totalPages=${totalPages}`);
+        } else {
+            totalPages = Math.max(1, Math.ceil(totalInsights / insightsPerPage));
+        }
     }
     
     // Only reset to first page if current page would be invalid
@@ -2017,7 +2062,11 @@ function createInsightCard(insight) {
     
     const headerDate = document.createElement('div');
     headerDate.className = 'content-card-date';
-    headerDate.textContent = new Date(insight.created_at).toLocaleDateString('en-US');
+    headerDate.textContent = new Date(insight.created_at).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    });
     
     const sourceInfo = document.createElement('div');
     sourceInfo.className = 'content-card-source';
@@ -2083,15 +2132,15 @@ function createInsightCard(insight) {
     // 卡片底部
     const cardFooter = document.createElement('div');
     cardFooter.className = 'content-card-footer';
-    
+
     // Tag based on actual insight tags or default to Project
     const tag = document.createElement('div');
     tag.className = 'content-card-tag-main';
-    
+
     // Use the first tag from insight.tags, or default to "Archive"
     let tagText = 'Archive'; // Default
     let tagId = null;
-    
+
     if (insight.tags && insight.tags.length > 0) {
         const firstTag = insight.tags[0];
         if (typeof firstTag === 'string') {
@@ -2101,15 +2150,68 @@ function createInsightCard(insight) {
             tagId = firstTag.id;
         }
     }
-    
+
     tag.textContent = tagText;
     tag.dataset.tagId = tagId || '';
     tag.dataset.insightId = insight.id;
-    
+
+    // Hide tag from UI (keep logic intact)
+    tag.style.display = 'none';
+
     // Make tag clickable to edit tags
     tag.style.cursor = 'pointer';
     tag.onclick = () => openTagEditModal(insight);
     
+    // Add stack indicator if this insight belongs to a stack
+    if (insight.stack_id) {
+        const stackIndicator = document.createElement('div');
+        stackIndicator.className = 'content-card-stack-indicator';
+        stackIndicator.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--quest-purple);
+            background: rgba(139, 92, 246, 0.1);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        `;
+
+        // Get stack name
+        const stack = stacks.get(String(insight.stack_id));
+        const stackName = stack ? stack.name : 'Stack';
+
+        stackIndicator.innerHTML = `
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>${stackName}</span>
+        `;
+
+        // Click to navigate to stack
+        stackIndicator.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigateToStack(insight.stack_id);
+        });
+
+        // Hover effect
+        stackIndicator.addEventListener('mouseenter', () => {
+            stackIndicator.style.background = 'rgba(139, 92, 246, 0.2)';
+            stackIndicator.style.transform = 'translateY(-1px)';
+        });
+
+        stackIndicator.addEventListener('mouseleave', () => {
+            stackIndicator.style.background = 'rgba(139, 92, 246, 0.1)';
+            stackIndicator.style.transform = 'translateY(0)';
+        });
+
+        cardFooter.appendChild(stackIndicator);
+    }
+
     // Add link button next to tag
     const footerLinkBtn = document.createElement('button');
     footerLinkBtn.className = 'content-card-footer-link';
@@ -2123,7 +2225,7 @@ function createInsightCard(insight) {
     `;
     footerLinkBtn.dataset.insightId = insight.id;
     footerLinkBtn.dataset.url = insight.url;
-    
+
     cardFooter.appendChild(tag);
     cardFooter.appendChild(footerLinkBtn);
     
@@ -2210,7 +2312,10 @@ async function initFilterButtons() {
         // 创建筛选按钮
         console.log('🎯 Creating filter buttons:', mainFilterButtons);
         
-        mainFilterButtons.forEach(filterConfig => {
+        // Filter out the tags button to hide it from UI
+        const visibleFilterButtons = mainFilterButtons.filter(button => button.key !== 'tags');
+
+        visibleFilterButtons.forEach(filterConfig => {
             console.log('🔧 Creating filter button for:', filterConfig.key);
             
             const buttonContainer = document.createElement('div');
@@ -3150,15 +3255,15 @@ function bindEvents() {
     if (addContentForm) {
         addContentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const url = document.getElementById('contentUrl').value.trim();
             const tagSelector = document.getElementById('tagSelector');
-            
+
             if (!url) {
                 alert('Please enter a content URL');
                 return;
             }
-            
+
             // 验证 URL 格式
             try {
                 new URL(url);
@@ -3166,24 +3271,43 @@ function bindEvents() {
                 alert('Please enter a valid URL');
                 return;
             }
-            
+
+            // 立即隐藏模态框并禁用按钮，给用户即时反馈
+            const submitBtn = document.getElementById('addContentBtn');
+            submitBtn.disabled = true;
+            hideAddContentModal();
+
+            // 立即创建加载占位符卡片
+            const loadingCardId = window.contentCardLoader.createLoadingCard(url, 'after-stacks');
+
+            // 滚动到加载卡片位置
+            setTimeout(() => {
+                const loadingCard = document.querySelector(`[data-loading-id="${loadingCardId}"]`);
+                if (loadingCard) {
+                    loadingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    console.log('📍 Scrolled to loading card');
+                } else {
+                    console.warn('⚠️ Loading card not found for scroll');
+                }
+            }, 200);
+
             try {
                 // 检查用户认证状态
                 if (!auth.checkAuth()) {
+                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
                     showErrorMessage('Please log in to add content.');
+                    submitBtn.disabled = false;
                     return;
                 }
-                
+
                 // 验证token是否有效
                 const tokenValid = await auth.validateToken();
                 if (!tokenValid) {
+                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
                     showErrorMessage('Your session has expired. Please log in again.');
+                    submitBtn.disabled = false;
                     return;
                 }
-                
-                // 禁用按钮防止重复提交
-                const submitBtn = document.getElementById('addContentBtn');
-                submitBtn.disabled = true;
                 
                 // 获取选中的标签
                 const selectedTags = getSelectedTags();
@@ -3235,13 +3359,10 @@ function bindEvents() {
                 // 添加自定义字段（如果用户输入了的话）
                 if (customTitle) insightData.title = customTitle;
                 if (customThought) insightData.thought = customThought;
-                
-                // 创建加载占位符卡片 - 放在正确位置（在stacks之后）
-                const loadingCardId = window.contentCardLoader.createLoadingCard(url, 'after-stacks');
-                
+
                 // 立即处理可能被推到下一页的insights，避免闪烁
                 handleInsightPushingImmediately();
-                
+
                 // 使用正确的API端点创建insight
                 console.log('📝 Creating insight with data:', insightData);
                 console.log('🔍 DEBUG: Full insightData object:', JSON.stringify(insightData, null, 2));
@@ -3258,81 +3379,48 @@ function bindEvents() {
                 
                 // 更新加载卡片为实际内容
                 if (result && result.success && result.data) {
+                    console.log('✅ Insight created successfully with data:', result.data);
+                    console.log('🔍 Checking for AI summary in response:', result.data.insight_contents);
+
                     // For stack view, don't update the loading card immediately - keep it visible until refresh
                     if (viewMode === 'stack' && activeStackId) {
                         console.log('🎯 Stack view mode: keeping loading card visible until refresh completes');
                         // Store the insight data for later use but don't update the card yet
                         window.pendingStackInsight = result.data;
-                    } else {
-                        window.contentCardLoader.updateLoadingCard(loadingCardId, result.data);
-                        console.log('✅ Loading card updated with actual content');
-                        
-                        // 计算新insight应该在哪一页，并导航到该页
-                        // 保存当前滚动位置，以便在页面重新加载后恢复
-                        const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
-                        window.tempScrollPosition = scrollPosition;
-                        
-                        await navigateToNewInsight();
-                    }
-                } else {
-                    // 如果创建失败，移除加载卡片
-                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
-                    console.log('❌ Failed to create insight, removed loading card');
-                }
-                
-                // 立即隐藏模态框，避免被后续操作影响
-                hideAddContentModal();
-                
-                // 清空表单
-                addContentForm.reset();
-                // 手动清空自定义字段
-                document.getElementById('customTitle').value = '';
-                document.getElementById('customThought').value = '';
-                
-                // 显示成功消息
-                showSuccessMessage('Content added successfully!');
-                
-                // 等待一下再重新加载内容，确保后端处理完成
-                setTimeout(async () => {
-                    try {
-                        // Clear cache for insights endpoint to ensure fresh data
-                        if (window.apiCache) {
-                            window.apiCache.clearPattern('/api/v1/insights');
-                        }
-                        
-                        clearPageCache(); // 清除缓存，因为数据已变化
-                        
-                        // Check if we're in stack view mode
-                        if (viewMode === 'stack' && activeStackId) {
-                            console.log('🔄 In stack view mode, refreshing current stack');
-                            
+
+                        // Refresh stack view to show the new insight
+                        setTimeout(async () => {
                             try {
-                                // Use intelligent retry mechanism instead of fixed delay
+                                // Clear cache for insights endpoint to ensure fresh data
+                                if (window.apiCache) {
+                                    window.apiCache.clearPattern('/api/v1/insights');
+                                }
+
+                                clearPageCache();
+
                                 console.log('🔄 Attempting to refresh stack view with new insight...');
-                                
+
                                 let retryCount = 0;
                                 const maxRetries = 3;
                                 let refreshSuccess = false;
-                                
+
                                 while (retryCount < maxRetries && !refreshSuccess) {
                                     if (retryCount > 0) {
-                                        const delay = Math.min(500 * retryCount, 1000); // Progressive delay: 500ms, 1000ms
+                                        const delay = Math.min(500 * retryCount, 1000);
                                         console.log(`⏳ Retry ${retryCount}: waiting ${delay}ms before next attempt...`);
                                         await new Promise(resolve => setTimeout(resolve, delay));
                                     }
-                                    
+
                                     console.log(`🎯 Refreshing stack view for stack: ${activeStackId} (attempt ${retryCount + 1}/${maxRetries})`);
-                                    
-                                    // Try to refresh and check if the new insight appears
+
                                     const stackBefore = stacks.get(activeStackId);
                                     const cardCountBefore = stackBefore?.cards?.length || 0;
-                                    
+
                                     await renderStackView(activeStackId);
-                                    
-                                    // Check if the insight was successfully added
+
                                     const stackAfter = stacks.get(activeStackId);
                                     const cardCountAfter = stackAfter?.cards?.length || 0;
-                                    
+
                                     if (cardCountAfter > cardCountBefore) {
                                         console.log(`✅ New insight detected in stack (${cardCountBefore} → ${cardCountAfter} cards)`);
                                         refreshSuccess = true;
@@ -3341,84 +3429,68 @@ function bindEvents() {
                                         retryCount++;
                                     }
                                 }
-                                
+
                                 if (!refreshSuccess) {
                                     console.log('⚠️ Stack refresh completed but new insight may not be immediately visible');
                                 }
-                                
-                                // After successful refresh, remove the loading card if it still exists
+
                                 if (typeof loadingCardId !== 'undefined' && window.contentCardLoader) {
                                     window.contentCardLoader.removeLoadingCard(loadingCardId, false);
                                     console.log('🧹 Removed loading card after successful stack refresh');
                                 }
-                                
-                                // Clear the pending insight data
+
                                 if (window.pendingStackInsight) {
                                     delete window.pendingStackInsight;
                                 }
-                                
+
                                 console.log('✅ Stack view refreshed with new insight');
                             } catch (error) {
                                 console.error('❌ Failed to reload stack data:', error);
-                                
-                                // Remove loading card on error
+
                                 if (typeof loadingCardId !== 'undefined' && window.contentCardLoader) {
                                     window.contentCardLoader.removeLoadingCard(loadingCardId, true);
-                                    console.log('🧹 Removed loading card due to stack refresh error');
                                 }
-                                
-                                // Clear the pending insight data
+
                                 if (window.pendingStackInsight) {
                                     delete window.pendingStackInsight;
                                 }
-                                
-                                // Fallback: just re-render the current stack view
+
                                 renderStackView(activeStackId);
                             }
-                        } else {
-                              // Normal home view reload - only if not already loading
-                              if (!insightsLoading) {
-                                  // Check if we should preserve scroll position (when adding new content)
-                                  const shouldPreserveScroll = window.tempScrollPosition !== undefined;
-                                  const savedScrollPosition = window.tempScrollPosition;
-                                  
-                                  // Clear cache and force reload to get fresh data with new content at the top
-                                  clearPageCache();
-                                  currentInsights = [];
-                                  
-                                  // Reset to page 1 to show the new content immediately
-                                  currentPage = 1;
-                                  
-                                  // Force reload page 1 to get the latest data with new content
-                                  await goToPage(1, { force: true });
-                                  
-                                  // If we were adding new content, check if we need to scroll to new insight
-                                  if (shouldPreserveScroll) {
-                                      console.log('🔒 Preserving scroll position for new content navigation');
-                                      // Clear the temp scroll position
-                                      delete window.tempScrollPosition;
-                                  }
-                                  
-                                  // Check if we need to scroll to newly added insight after reload
-                                  if (window.shouldScrollToNewInsight) {
-                                      console.log('📍 Post-reload: Scrolling to newly added insight...');
-                                      // Clear the flag
-                                      delete window.shouldScrollToNewInsight;
-                                      // Scroll after a short delay to ensure rendering is complete
-                                      setTimeout(() => {
-                                          scrollToNewInsight();
-                                      }, 300);
-                                  }
-                              }
+                        }, 100);
+                    } else {
+                        // Backend returns immediately, AI summary generates in background
+                        console.log('✅ Updating loading card with insight data (AI summary generating in background)');
+                        window.contentCardLoader.updateLoadingCard(loadingCardId, result.data);
+
+                        // Add the new insight to currentInsights so modal can access it
+                        currentInsights.unshift(result.data);
+
+                        // Start polling for AI summary in the background
+                        if (result.data.id) {
+                            console.log('🔄 Starting AI summary polling for insight:', result.data.id);
+                            startSmartAISummaryRefresh(result.data.id);
                         }
-                        
-                        // Also save to localStorage backup
-                        saveInsightsToLocalStorage({ force: true });
-                    } catch (error) {
-                        console.error('❌ 重新加载内容失败:', error);
-                        // 不要显示错误，因为内容已经添加成功了
+
+                        console.log('✅ Loading card updated, AI summary will appear when ready');
                     }
-                }, 100); // Minimal delay for immediate responsiveness
+                } else {
+                    // 如果创建失败，移除加载卡片
+                    window.contentCardLoader.removeLoadingCard(loadingCardId, true);
+                    console.log('❌ Failed to create insight, removed loading card');
+                }
+
+                // 清空表单
+                addContentForm.reset();
+                // 手动清空自定义字段
+                document.getElementById('customTitle').value = '';
+                document.getElementById('customThought').value = '';
+
+                // 重新启用按钮
+                submitBtn.disabled = false;
+
+                // 显示成功消息
+                showSuccessMessage('Content added successfully!');
                 
             } catch (error) {
                 console.error('❌ 添加内容失败:', error);
@@ -4486,12 +4558,10 @@ function renderStackInsights(stack) {
     console.log(`🔍 ContentCards HTML:`, contentCards.innerHTML.substring(0, 200) + '...');
     
     console.log(`📊 Total cards in DOM after rendering:`, contentCards.querySelectorAll('.content-card').length);
-    
-    // Add template card if in edit mode
-    if (document.body.classList.contains('edit-mode')) {
-        addTemplateCard();
-    }
-    
+
+    // Add template card (always visible)
+    addTemplateCard();
+
     // Re-setup event delegation for the newly rendered cards
     console.log('🔧 Re-setting up event delegation');
     setupCardEventDelegation();
@@ -6295,6 +6365,9 @@ function closeContentDetailModal() {
 // 填充模态框内容
 function populateModalContent(insight) {
     
+    // 重置任何现有的编辑模式
+    resetTitleEditMode();
+    
     // 调试：打印insight数据结构
     console.log('🔍 DEBUG: populateModalContent called with insight:', insight);
     console.log('🔍 DEBUG: insight.insight_contents:', insight.insight_contents);
@@ -6303,61 +6376,110 @@ function populateModalContent(insight) {
         console.log('🔍 DEBUG: Summary from insight_contents:', insight.insight_contents[0].summary);
     }
     
-    // 标题
-    const titleElement = document.getElementById('modalContentTitle');
-    if (titleElement) {
-        titleElement.textContent = insight.title || new URL(insight.url).hostname;
+    // 标题 - now as a clickable link
+    const titleLink = document.getElementById('modalTitleLink');
+    if (titleLink) {
+        titleLink.textContent = insight.title || new URL(insight.url).hostname;
+        titleLink.href = insight.url;
     }
+
+    // Image removed from modal display as per requirements
     
-    // 图片处理 - 使用与卡片相同的逻辑
-    const modalImage = document.getElementById('modalImage');
-    const modalMedia = document.getElementById('modalMedia');
-    
-    if (modalImage && modalMedia) {
-        // 使用原始图片URL，如果没有则使用确定性随机图片
-        const imageUrl = insight.image_url || getDeterministicRandomImage(insight.id);
-        
-        modalImage.src = imageUrl;
-        modalImage.alt = insight.title || 'Content image';
-        modalImage.style.display = 'block';
-        modalMedia.classList.remove('no-image');
-        
-        // 图片加载错误处理
-        modalImage.onerror = function() {
-            // 如果原始图片加载失败且我们还没有尝试随机图片，则尝试随机图片
-            if (insight.image_url && !this.dataset.randomImageUsed) {
-                this.src = getDeterministicRandomImage(insight.id);
-                this.dataset.randomImageUsed = 'true';
-            } else {
-                // 如果随机图片也失败，隐藏图片
-                this.style.display = 'none';
-                modalMedia.classList.add('no-image');
-            }
-        };
-    }
-    
-    // 用户评论 - 从insight_contents表中获取thought字段
-    const commentElement = document.getElementById('commentDisplay');
-    if (commentElement) {
+    // 用户评论 - 从insight_contents表中获取thought字段并解析多条评论
+    const commentTimeline = document.getElementById('commentTimeline');
+    if (commentTimeline) {
         // 优先从insight_contents中获取thought，如果没有则使用insight.thought作为后备
         let thought = null;
         if (insight.insight_contents && insight.insight_contents.length > 0) {
             thought = insight.insight_contents[0].thought;
         }
         thought = thought || insight.thought; // 后备方案
-        commentElement.textContent = thought || 'No comment added yet.';
-    }
-    
-    // 填充评论编辑表单
-    const commentTextarea = document.getElementById('commentTextarea');
-    if (commentTextarea) {
-        // 优先从insight_contents中获取thought，如果没有则使用insight.thought作为后备
-        let thought = null;
-        if (insight.insight_contents && insight.insight_contents.length > 0) {
-            thought = insight.insight_contents[0].thought;
+
+        // Parse multiple comments using delimiter ###
+        const comments = thought ? thought.split('###').filter(c => c.trim()) : [];
+
+        // Clear existing comments
+        commentTimeline.innerHTML = '';
+
+        if (comments.length === 0) {
+            // Show placeholder if no comments
+            commentTimeline.innerHTML = `
+                <div class="timeline-entry">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-date">${new Date().toLocaleDateString('en-US', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            year: 'numeric'
+                        })}</div>
+                        <div class="comment-display">No comment added yet.</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Display all comments
+            comments.forEach((commentData, index) => {
+                // Each comment format: "MM/DD/YYYY|||Comment text"
+                const parts = commentData.split('|||');
+
+                // Determine which part is date and which is comment
+                // Date format is MM/DD/YYYY (numbers and slashes)
+                const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+                let commentDate, commentText;
+
+                if (parts.length >= 2) {
+                    // Check if parts[0] is a valid date
+                    if (dateRegex.test(parts[0].trim())) {
+                        commentDate = parts[0].trim();
+                        commentText = parts[1].trim();
+                    } else if (dateRegex.test(parts[1].trim())) {
+                        // Swapped format - parts[1] is the date
+                        commentDate = parts[1].trim();
+                        commentText = parts[0].trim();
+                    } else {
+                        // Neither part is a valid date, use defaults
+                        commentDate = new Date().toLocaleDateString('en-US', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            year: 'numeric'
+                        });
+                        commentText = commentData;
+                    }
+                } else {
+                    // No delimiter found, treat whole thing as comment
+                    commentDate = new Date().toLocaleDateString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric'
+                    });
+                    commentText = commentData;
+                }
+
+                // If comment is empty, show placeholder
+                const displayText = commentText || 'No comment added yet.';
+                const textareaValue = commentText || '';
+
+                const timelineEntry = document.createElement('div');
+                timelineEntry.className = 'timeline-entry';
+                timelineEntry.dataset.commentIndex = index;
+                timelineEntry.dataset.commentDate = commentDate; // Store original date
+                timelineEntry.innerHTML = `
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                            <div class="timeline-date">${commentDate}</div>
+                            <div class="comment-actions" style="display: flex; gap: 8px;">
+                                <button class="ghost-btn edit-comment-btn" data-index="${index}" style="padding: 4px 8px; font-size: 12px;">Edit</button>
+                                <button class="ghost-btn delete-comment-btn" data-index="${index}" style="padding: 4px 8px; font-size: 12px; color: #dc3545;">Delete</button>
+                            </div>
+                        </div>
+                        <div class="comment-display">${displayText}</div>
+                        <textarea class="comment-box" style="display:none;" placeholder="Add your thoughts, reflections, or notes...">${textareaValue}</textarea>
+                    </div>
+                `;
+                commentTimeline.appendChild(timelineEntry);
+            });
         }
-        thought = thought || insight.thought; // 后备方案
-        commentTextarea.value = thought || '';
     }
     
     // 填充AI摘要
@@ -6370,7 +6492,8 @@ function populateModalContent(insight) {
         }
         
         if (summary) {
-            summaryText.textContent = summary;
+            // Use innerHTML to preserve highlight tags
+            summaryText.innerHTML = summary;
         } else {
             summaryText.textContent = 'AI summary is being generated...';
             // 启动智能自动刷新机制
@@ -6378,15 +6501,15 @@ function populateModalContent(insight) {
         }
     }
     
-    // 填充AI摘要日期
-    const aiSummaryDate = document.querySelector('.ai-summary-date');
-    if (aiSummaryDate) {
+    // 填充模态框日期 - new format
+    const summaryDate = document.getElementById('summaryDate');
+    if (summaryDate) {
         const date = new Date(insight.created_at || Date.now()).toLocaleDateString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
+            month: 'long',
+            day: 'numeric',
             year: 'numeric'
-        }).replace(',', '');
-        aiSummaryDate.textContent = date;
+        });
+        summaryDate.textContent = date;
     }
     
     
@@ -6418,11 +6541,14 @@ function bindTitleEditEvents() {
     const titleElement = document.getElementById('modalContentTitle');
     const editTitleBtn = document.getElementById('modalEditTitleBtn');
     
-    if (titleElement) {
+    // 防止重复添加事件监听器
+    if (titleElement && !titleElement.dataset.hasListener) {
+        titleElement.dataset.hasListener = 'true';
         titleElement.addEventListener('click', startTitleEdit);
     }
     
-    if (editTitleBtn) {
+    if (editTitleBtn && !editTitleBtn.dataset.hasListener) {
+        editTitleBtn.dataset.hasListener = 'true';
         editTitleBtn.addEventListener('click', startTitleEdit);
     }
 }
@@ -6435,6 +6561,9 @@ function startTitleEdit() {
     const titleElement = document.getElementById('modalContentTitle');
     
     if (!titleContainer || !titleElement) return;
+    
+    // 检查是否已经在编辑模式，防止重复创建输入框
+    if (titleContainer.classList.contains('title-edit-mode')) return;
     
     // 进入编辑模式
     titleContainer.classList.add('title-edit-mode');
@@ -6515,6 +6644,22 @@ function cancelTitleEdit() {
     if (!titleContainer) return;
     
     // 移除编辑模式
+    titleContainer.classList.remove('title-edit-mode');
+    
+    // 移除输入框和按钮
+    const input = titleContainer.querySelector('.title-edit-input');
+    const actions = titleContainer.querySelector('.title-edit-actions');
+    
+    if (input) input.remove();
+    if (actions) actions.remove();
+}
+
+// 重置标题编辑模式（用于切换卡片时）
+function resetTitleEditMode() {
+    const titleContainer = document.querySelector('.title-container');
+    if (!titleContainer) return;
+    
+    // 移除编辑模式类
     titleContainer.classList.remove('title-edit-mode');
     
     // 移除输入框和按钮
@@ -6707,15 +6852,20 @@ function setupCommentUX({
 function setupModalActions(insight) {
     // 设置评论编辑功能
     setupCommentEditing();
-    
+
+    // 设置添加评论功能
+    setupAddComment();
+
     // 设置标题编辑功能
     setupTitleEditing();
-    
-    // 设置跳转到原网页按钮
-    setupVisitOriginalButton(insight);
-    
+
+    // Visit original button is now in the title link - remove old button functionality
+
+    // Setup AI Summary toggle and edit
+    setupAISummaryControls(insight);
+
     // Note: Share button removed from user info section
-    
+
     // 设置分享我的空间按钮
     const shareMySpaceBtn = document.querySelector('.share-my-space-btn');
     if (shareMySpaceBtn) {
@@ -6724,7 +6874,7 @@ function setupModalActions(insight) {
             console.log('Share My Space clicked');
         };
     }
-    
+
 }
 
 // 获取网站favicon的函数
@@ -6871,153 +7021,129 @@ function updatePageCacheWithInsight(insightId, updateData) {
 
 // 设置评论编辑功能
 function setupCommentEditing() {
-    const editCommentBtn = document.getElementById('editCommentBtn');
-    const commentDisplay = document.getElementById('commentDisplay');
-    const commentTextarea = document.getElementById('commentTextarea');
-    
-    if (!editCommentBtn || !commentDisplay || !commentTextarea) return;
-    
-    // 移除现有的事件监听器（防止重复添加）
-    const newEditBtn = editCommentBtn.cloneNode(true);
-    editCommentBtn.parentNode.replaceChild(newEditBtn, editCommentBtn);
-    
-    // 重新获取按钮引用
-    const freshEditBtn = document.getElementById('editCommentBtn');
-    
-    // 编辑按钮点击事件
-    freshEditBtn.addEventListener('click', (e) => {
+    const commentTimeline = document.getElementById('commentTimeline');
+    if (!commentTimeline) return;
+
+    // Remove existing listener if any to prevent duplicates
+    const newTimeline = commentTimeline.cloneNode(true);
+    commentTimeline.parentNode.replaceChild(newTimeline, commentTimeline);
+    const freshTimeline = document.getElementById('commentTimeline');
+
+    // Set up event delegation for dynamically created edit and delete buttons
+    freshTimeline.addEventListener('click', async (e) => {
+        // Handle delete button
+        const deleteBtn = e.target.closest('.delete-comment-btn');
+        if (deleteBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const commentIndex = parseInt(deleteBtn.dataset.index);
+            await deleteComment(commentIndex);
+            return;
+        }
+
+        // Handle edit button
+        const editBtn = e.target.closest('.edit-comment-btn');
+        if (!editBtn) return;
+
         e.preventDefault();
         e.stopPropagation();
-        
+
+        const commentIndex = parseInt(editBtn.dataset.index);
+        const timelineEntry = editBtn.closest('.timeline-entry');
+        const commentDisplay = timelineEntry.querySelector('.comment-display');
+        const commentTextarea = timelineEntry.querySelector('.comment-box');
+        const commentActions = timelineEntry.querySelector('.comment-actions');
+
         // 如果当前是编辑模式，则保存
-        if (freshEditBtn.textContent === 'Save') {
-            saveComment();
+        if (editBtn.textContent === 'Save') {
+            await saveComment(commentIndex, timelineEntry, editBtn);
             return;
         }
-        
-        // 防止重复进入编辑模式
-        if (isCommentEditing) {
-            console.log('⚠️ Already in editing mode, ignoring click');
-            return;
-        }
-        
-        console.log('🖱️ Entering edit mode...');
-        
+
         // 进入编辑模式
+        console.log('🖱️ Entering edit mode for comment', commentIndex);
         commentDisplay.style.display = 'none';
         commentTextarea.style.display = 'block';
         commentTextarea.focus();
-        
-        // 设置编辑模式标志
-        isCommentEditing = true;
-        
+
         // 更新按钮文本
-        freshEditBtn.textContent = 'Save';
-        
+        editBtn.textContent = 'Save';
+
         // 添加取消按钮
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'ghost-btn';
-        cancelBtn.textContent = 'Cancel';
-        cancelBtn.style.marginLeft = '8px';
-        cancelBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            cancelComment();
-        });
-        freshEditBtn.parentNode.appendChild(cancelBtn);
-    });
-    
-    // 保存评论函数
-    async function saveComment() {
-        // 防止重复保存
-        if (isCommentEditing === false) {
-            console.log('⚠️ Not in editing mode, ignoring save');
-            return;
+        const existingCancelBtn = timelineEntry.querySelector('.cancel-comment-btn');
+        if (!existingCancelBtn) {
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'ghost-btn cancel-comment-btn';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.style.marginLeft = '8px';
+            commentActions.appendChild(cancelBtn);
+
+            // 取消按钮事件
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                cancelComment(timelineEntry, editBtn);
+            });
         }
-        
-        console.log('💾 Saving comment...');
-        const newComment = commentTextarea.value.trim();
-        
+    });
+
+    // 保存评论函数
+    async function saveComment(commentIndex, timelineEntry, editBtn) {
+        console.log('💾 Saving comment at index', commentIndex);
+
+        const commentDisplay = timelineEntry.querySelector('.comment-display');
+        const commentTextarea = timelineEntry.querySelector('.comment-box');
+        const newCommentText = commentTextarea.value.trim();
+        // Get date from dataset instead of DOM content to avoid corrupted data
+        const commentDate = timelineEntry.dataset.commentDate;
+
         try {
             // 检查认证状态
             if (!auth.checkAuth()) {
                 showErrorMessage('Please log in to save comments');
                 return;
             }
-            
+
             // 获取当前洞察的ID
             const currentInsight = currentDetailInsight;
             if (!currentInsight || !currentInsight.id) {
                 showErrorMessage('Unable to identify content to update');
                 return;
             }
-            
+
+            // Get all existing comments
+            let thought = null;
+            if (currentInsight.insight_contents && currentInsight.insight_contents.length > 0) {
+                thought = currentInsight.insight_contents[0].thought;
+            }
+            thought = thought || currentInsight.thought || '';
+
+            // Parse existing comments
+            const comments = thought ? thought.split('###').filter(c => c.trim()) : [];
+
+            // Update the specific comment with correct format: date|||comment
+            const updatedCommentData = `${commentDate}|||${newCommentText}`;
+            comments[commentIndex] = updatedCommentData;
+
+            // Join all comments back together
+            const updatedThought = comments.join('###');
+
             console.log('📡 Calling API to update comment...');
-            
+
             // 调用API更新评论
-            const response = await api.updateInsight(currentInsight.id, { 
-                thought: newComment 
+            const response = await api.updateInsight(currentInsight.id, {
+                thought: updatedThought
             });
-            
+
             if (response.success) {
                 console.log('✅ Comment saved successfully via API');
-                
-                // 更新显示的评论
-                commentDisplay.textContent = newComment || 'No comment added yet.';
-                
-                // 更新本地数据 - 同时更新insight_contents和thought字段
-                if (currentInsight) {
-                    currentInsight.thought = newComment;
-                    // 确保insight_contents数组存在
-                    if (!currentInsight.insight_contents) {
-                        currentInsight.insight_contents = [{}];
-                    }
-                    if (currentInsight.insight_contents.length === 0) {
-                        currentInsight.insight_contents = [{}];
-                    }
-                    // 更新thought字段
-                    currentInsight.insight_contents[0].thought = newComment;
-                }
-                
-                // 更新全局insights数组
-                if (window.currentInsights) {
-                    const insightIndex = window.currentInsights.findIndex(i => i.id === currentInsight.id);
-                    if (insightIndex !== -1) {
-                        window.currentInsights[insightIndex].thought = newComment;
-                        // 确保insight_contents数组存在
-                        if (!window.currentInsights[insightIndex].insight_contents) {
-                            window.currentInsights[insightIndex].insight_contents = [{}];
-                        }
-                        if (window.currentInsights[insightIndex].insight_contents.length === 0) {
-                            window.currentInsights[insightIndex].insight_contents = [{}];
-                        }
-                        // 更新thought字段
-                        window.currentInsights[insightIndex].insight_contents[0].thought = newComment;
-                    }
-                }
-                
-                // 更新stacks中的insight数据
-                if (stacks) {
-                    stacks.forEach(stack => {
-                        const insightIndex = stack.cards.findIndex(card => card.id === currentInsight.id);
-                        if (insightIndex !== -1) {
-                            stack.cards[insightIndex].thought = newComment;
-                            // 确保insight_contents数组存在
-                            if (!stack.cards[insightIndex].insight_contents) {
-                                stack.cards[insightIndex].insight_contents = [{}];
-                            }
-                            if (stack.cards[insightIndex].insight_contents.length === 0) {
-                                stack.cards[insightIndex].insight_contents = [{}];
-                            }
-                            // 更新thought字段
-                            stack.cards[insightIndex].insight_contents[0].thought = newComment;
-                        }
-                    });
-                }
-                
-                // 更新页面缓存
-                updatePageCacheWithInsight(currentInsight.id, { thought: newComment });
-                
+
+                // 更新显示的评论 - show placeholder if empty
+                commentDisplay.textContent = newCommentText || 'No comment added yet.';
+
+                // 更新本地数据
+                updateInsightThought(currentInsight.id, updatedThought);
+
                 showSuccessMessage('Comment saved successfully!');
             } else {
                 showErrorMessage(response.message || 'Failed to save comment');
@@ -7026,53 +7152,541 @@ function setupCommentEditing() {
             console.error('Error saving comment:', error);
             showErrorMessage('Failed to save comment. Please try again.');
         }
-        
+
         // 切换回显示模式
         commentDisplay.style.display = 'block';
         commentTextarea.style.display = 'none';
-        freshEditBtn.textContent = 'Edit';
-        
-        // 清除编辑模式标志
-        isCommentEditing = false;
-        
+        editBtn.textContent = 'Edit';
+
         // 移除取消按钮
-        const cancelBtn = freshEditBtn.parentNode.querySelector('.ghost-btn:last-child');
-        if (cancelBtn && cancelBtn.textContent === 'Cancel') {
+        const cancelBtn = timelineEntry.querySelector('.cancel-comment-btn');
+        if (cancelBtn) {
             cancelBtn.remove();
         }
     }
-    
+
+    // 删除评论函数
+    async function deleteComment(commentIndex) {
+        console.log('🗑️ Deleting comment at index', commentIndex);
+
+        // Confirm deletion
+        if (!confirm('Are you sure you want to delete this comment?')) {
+            return;
+        }
+
+        try {
+            // 检查认证状态
+            if (!auth.checkAuth()) {
+                showErrorMessage('Please log in to delete comments');
+                return;
+            }
+
+            // 获取当前洞察的ID
+            const currentInsight = currentDetailInsight;
+            if (!currentInsight || !currentInsight.id) {
+                showErrorMessage('Unable to identify content to update');
+                return;
+            }
+
+            // Get all existing comments
+            let thought = null;
+            if (currentInsight.insight_contents && currentInsight.insight_contents.length > 0) {
+                thought = currentInsight.insight_contents[0].thought;
+            }
+            thought = thought || currentInsight.thought || '';
+
+            // Parse existing comments
+            const comments = thought ? thought.split('###').filter(c => c.trim()) : [];
+
+            // Remove the comment at the specified index
+            if (commentIndex >= 0 && commentIndex < comments.length) {
+                comments.splice(commentIndex, 1);
+            } else {
+                showErrorMessage('Comment not found');
+                return;
+            }
+
+            // Join all comments back together
+            const updatedThought = comments.join('###');
+
+            console.log('📡 Calling API to delete comment...');
+
+            // 调用API更新评论
+            const response = await api.updateInsight(currentInsight.id, {
+                thought: updatedThought
+            });
+
+            if (response.success) {
+                console.log('✅ Comment deleted successfully via API');
+
+                // 更新本地数据
+                updateInsightThought(currentInsight.id, updatedThought);
+
+                // Refresh the modal content
+                populateModalContent(currentInsight);
+
+                // Re-setup modal actions
+                setupModalActions(currentInsight);
+
+                showSuccessMessage('Comment deleted successfully!');
+            } else {
+                showErrorMessage(response.message || 'Failed to delete comment');
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+            showErrorMessage('Failed to delete comment. Please try again.');
+        }
+    }
+
     // 取消评论函数
-    function cancelComment() {
+    async function cancelComment(timelineEntry, editBtn) {
         console.log('❌ Canceling comment edit...');
-        
-        // 恢复原始内容
-        commentTextarea.value = commentDisplay.textContent;
-        
+
+        const commentDisplay = timelineEntry.querySelector('.comment-display');
+        const commentTextarea = timelineEntry.querySelector('.comment-box');
+        const commentIndex = parseInt(editBtn.dataset.index);
+
+        // Check if this is an empty comment (newly added, not saved yet)
+        const isEmptyComment = commentDisplay.textContent === 'No comment added yet.' ||
+                               commentDisplay.textContent.trim() === '' ||
+                               commentTextarea.value.trim() === '';
+
+        if (isEmptyComment && commentIndex === 0) {
+            // This is likely a newly added empty comment - delete it
+            console.log('🗑️ Removing empty comment...');
+
+            // Get current insight
+            const currentInsight = currentDetailInsight;
+            if (currentInsight && currentInsight.id) {
+                // Get all existing comments
+                let thought = null;
+                if (currentInsight.insight_contents && currentInsight.insight_contents.length > 0) {
+                    thought = currentInsight.insight_contents[0].thought;
+                }
+                thought = thought || currentInsight.thought || '';
+
+                // Parse existing comments
+                const comments = thought ? thought.split('###').filter(c => c.trim()) : [];
+
+                // Remove the empty comment at index 0
+                if (comments.length > 0) {
+                    comments.shift(); // Remove first comment
+
+                    // Join all comments back together
+                    const updatedThought = comments.join('###');
+
+                    // Update local data only (don't save to DB if it was never saved)
+                    updateInsightThought(currentInsight.id, updatedThought);
+
+                    // Refresh the modal content
+                    populateModalContent(currentInsight);
+
+                    // Re-setup modal actions
+                    setupModalActions(currentInsight);
+
+                    console.log('✅ Empty comment removed');
+                    return;
+                }
+            }
+        }
+
+        // Otherwise, just restore original content
+        commentTextarea.value = commentDisplay.textContent === 'No comment added yet.' ? '' : commentDisplay.textContent;
+
         // 切换回显示模式
         commentDisplay.style.display = 'block';
         commentTextarea.style.display = 'none';
-        freshEditBtn.textContent = 'Edit';
-        
-        // 清除编辑模式标志
-        isCommentEditing = false;
-        
+        editBtn.textContent = 'Edit';
+
         // 移除取消按钮
-        const cancelBtn = freshEditBtn.parentNode.querySelector('.ghost-btn:last-child');
-        if (cancelBtn && cancelBtn.textContent === 'Cancel') {
+        const cancelBtn = timelineEntry.querySelector('.cancel-comment-btn');
+        if (cancelBtn) {
             cancelBtn.remove();
         }
     }
-    
+
+    // Helper function to update insight thought in all data structures
+    function updateInsightThought(insightId, newThought) {
+        // 更新本地数据 - 同时更新insight_contents和thought字段
+        if (currentDetailInsight && currentDetailInsight.id === insightId) {
+            currentDetailInsight.thought = newThought;
+            if (!currentDetailInsight.insight_contents) {
+                currentDetailInsight.insight_contents = [{}];
+            }
+            if (currentDetailInsight.insight_contents.length === 0) {
+                currentDetailInsight.insight_contents = [{}];
+            }
+            currentDetailInsight.insight_contents[0].thought = newThought;
+        }
+
+        // 更新全局insights数组
+        if (window.currentInsights) {
+            const insightIndex = window.currentInsights.findIndex(i => i.id === insightId);
+            if (insightIndex !== -1) {
+                window.currentInsights[insightIndex].thought = newThought;
+                if (!window.currentInsights[insightIndex].insight_contents) {
+                    window.currentInsights[insightIndex].insight_contents = [{}];
+                }
+                if (window.currentInsights[insightIndex].insight_contents.length === 0) {
+                    window.currentInsights[insightIndex].insight_contents = [{}];
+                }
+                window.currentInsights[insightIndex].insight_contents[0].thought = newThought;
+            }
+        }
+
+        // 更新stacks中的insight数据
+        if (stacks) {
+            stacks.forEach(stack => {
+                const insightIndex = stack.cards.findIndex(card => card.id === insightId);
+                if (insightIndex !== -1) {
+                    stack.cards[insightIndex].thought = newThought;
+                    if (!stack.cards[insightIndex].insight_contents) {
+                        stack.cards[insightIndex].insight_contents = [{}];
+                    }
+                    if (stack.cards[insightIndex].insight_contents.length === 0) {
+                        stack.cards[insightIndex].insight_contents = [{}];
+                    }
+                    stack.cards[insightIndex].insight_contents[0].thought = newThought;
+                }
+            });
+        }
+
+        // 更新页面缓存
+        updatePageCacheWithInsight(insightId, { thought: newThought });
+    }
+
+}
+
+// 设置添加评论功能
+function setupAddComment() {
+    const addCommentBtn = document.getElementById('addCommentBtn');
+    if (!addCommentBtn) return;
+
+    // Remove existing event listeners
+    const newAddBtn = addCommentBtn.cloneNode(true);
+    addCommentBtn.parentNode.replaceChild(newAddBtn, addCommentBtn);
+
+    // Get fresh reference
+    const freshAddBtn = document.getElementById('addCommentBtn');
+
+    freshAddBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('➕ Adding new comment...');
+
+        // Check authentication
+        if (!auth.checkAuth()) {
+            showErrorMessage('Please log in to add comments');
+            return;
+        }
+
+        // Get current insight
+        const currentInsight = currentDetailInsight;
+        if (!currentInsight || !currentInsight.id) {
+            showErrorMessage('Unable to identify content to update');
+            return;
+        }
+
+        // Get all existing comments
+        let thought = null;
+        if (currentInsight.insight_contents && currentInsight.insight_contents.length > 0) {
+            thought = currentInsight.insight_contents[0].thought;
+        }
+        thought = thought || currentInsight.thought || '';
+
+        // Parse existing comments
+        const comments = thought ? thought.split('###').filter(c => c.trim()) : [];
+
+        // Create new comment with current date
+        const currentDate = new Date().toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric'
+        });
+        const newCommentData = `${currentDate}|||`; // Empty comment text initially
+
+        // Add new comment to the beginning of the array (temporarily)
+        comments.unshift(newCommentData);
+
+        // Join all comments back together (temporarily)
+        const updatedThought = comments.join('###');
+
+        // Update local data ONLY (don't save to database yet)
+        updateInsightThought(currentInsight.id, updatedThought);
+
+        // Refresh the modal content to show the new comment
+        populateModalContent(currentInsight);
+
+        // Re-setup modal actions to bind events to new elements
+        setupModalActions(currentInsight);
+
+        console.log('✅ New comment created in edit mode (not saved yet)');
+
+        // Auto-focus on the new comment's textarea to let user type
+        setTimeout(() => {
+            const firstEditBtn = document.querySelector('.edit-comment-btn[data-index="0"]');
+            if (firstEditBtn) {
+                firstEditBtn.click();
+            }
+        }, 100);
+    });
+
+    // Helper function to update insight thought in all data structures
+    function updateInsightThought(insightId, newThought) {
+        // 更新本地数据 - 同时更新insight_contents和thought字段
+        if (currentDetailInsight && currentDetailInsight.id === insightId) {
+            currentDetailInsight.thought = newThought;
+            if (!currentDetailInsight.insight_contents) {
+                currentDetailInsight.insight_contents = [{}];
+            }
+            if (currentDetailInsight.insight_contents.length === 0) {
+                currentDetailInsight.insight_contents = [{}];
+            }
+            currentDetailInsight.insight_contents[0].thought = newThought;
+        }
+
+        // 更新全局insights数组
+        if (window.currentInsights) {
+            const insightIndex = window.currentInsights.findIndex(i => i.id === insightId);
+            if (insightIndex !== -1) {
+                window.currentInsights[insightIndex].thought = newThought;
+                if (!window.currentInsights[insightIndex].insight_contents) {
+                    window.currentInsights[insightIndex].insight_contents = [{}];
+                }
+                if (window.currentInsights[insightIndex].insight_contents.length === 0) {
+                    window.currentInsights[insightIndex].insight_contents = [{}];
+                }
+                window.currentInsights[insightIndex].insight_contents[0].thought = newThought;
+            }
+        }
+
+        // 更新stacks中的insight数据
+        if (stacks) {
+            stacks.forEach(stack => {
+                const insightIndex = stack.cards.findIndex(card => card.id === insightId);
+                if (insightIndex !== -1) {
+                    stack.cards[insightIndex].thought = newThought;
+                    if (!stack.cards[insightIndex].insight_contents) {
+                        stack.cards[insightIndex].insight_contents = [{}];
+                    }
+                    if (stack.cards[insightIndex].insight_contents.length === 0) {
+                        stack.cards[insightIndex].insight_contents = [{}];
+                    }
+                    stack.cards[insightIndex].insight_contents[0].thought = newThought;
+                }
+            });
+        }
+
+        // 更新页面缓存
+        updatePageCacheWithInsight(insightId, { thought: newThought });
+    }
+}
+
+// Setup AI Summary controls (toggle, edit, highlight colors)
+function setupAISummaryControls(insight) {
+    const toggleBtn = document.getElementById('toggleSummaryBtn');
+    const editBtn = document.getElementById('editSummaryBtn');
+    const highlightColors = document.getElementById('highlightColors');
+    const summaryWrapper = document.getElementById('summaryDisplayWrapper');
+    const summaryText = document.getElementById('summaryText');
+    const summaryTextarea = document.getElementById('summaryTextarea');
+
+    if (!toggleBtn || !editBtn || !summaryWrapper || !summaryText) return;
+
+    // Toggle visibility
+    let isSummaryVisible = true;
+    toggleBtn.addEventListener('click', () => {
+        isSummaryVisible = !isSummaryVisible;
+        summaryWrapper.style.display = isSummaryVisible ? 'block' : 'none';
+
+        // Update icon
+        toggleBtn.innerHTML = isSummaryVisible ?
+            `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>` :
+            `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>`;
+    });
+
+    // Edit summary
+    let isEditingSummary = false;
+    editBtn.addEventListener('click', async () => {
+        if (!isEditingSummary) {
+            // Enter edit mode
+            summaryText.style.display = 'none';
+            if (summaryTextarea) {
+                // Use textContent to show plain text without HTML tags in edit mode
+                summaryTextarea.value = summaryText.textContent;
+                summaryTextarea.style.display = 'block';
+                summaryTextarea.focus();
+            }
+            editBtn.textContent = 'Save';
+            isEditingSummary = true;
+        } else {
+            // Save mode
+            if (summaryTextarea) {
+                const newSummary = summaryTextarea.value.trim();
+
+                try {
+                    // Update via API
+                    const response = await api.updateInsight(insight.id, {
+                        summary: newSummary
+                    });
+
+                    if (response.success) {
+                        // When saving text edits, preserve existing highlights by updating innerHTML
+                        // This keeps any highlights that were applied in display mode
+                        summaryText.innerHTML = newSummary;
+                        summaryTextarea.style.display = 'none';
+                        summaryText.style.display = 'block';
+                        editBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>`;
+                        isEditingSummary = false;
+                        showNotification('Summary updated successfully. Note: Highlights are removed when editing text.', 'success');
+                    } else {
+                        showErrorMessage('Failed to update summary');
+                    }
+                } catch (error) {
+                    console.error('Error updating summary:', error);
+                    showErrorMessage('Failed to update summary');
+                }
+            }
+        }
+    });
+
+    // Highlight color buttons for text highlighting (works only in display mode)
+    if (highlightColors) {
+        let savedRange = null;
+
+        // Save the current selection when user interacts with summary text
+        if (summaryText) {
+            summaryText.addEventListener('mouseup', () => {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0 && !selection.isCollapsed) {
+                    savedRange = selection.getRangeAt(0).cloneRange();
+                }
+            });
+        }
+
+        // Add click listeners to all highlight color buttons
+        const colorButtons = highlightColors.querySelectorAll('.highlight-color-btn');
+        colorButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const color = btn.dataset.color;
+
+                // Check if we're in edit mode
+                if (summaryTextarea && summaryTextarea.style.display !== 'none') {
+                    // In edit mode - show message to exit edit mode first
+                    showNotification('Please exit edit mode to highlight text', 'info');
+                    return;
+                }
+
+                // Use saved range if available
+                if (savedRange) {
+                    if (color === 'transparent') {
+                        // Remove highlight - extract text content from any existing span
+                        try {
+                            const fragment = savedRange.extractContents();
+
+                            // Get all text from the fragment, removing any span wrappers
+                            const textContent = fragment.textContent;
+                            const textNode = document.createTextNode(textContent);
+
+                            savedRange.insertNode(textNode);
+                        } catch (e) {
+                            console.error('Error removing highlight:', e);
+                        }
+                    } else {
+                        // Apply new highlight
+                        try {
+                            // First, check if the selection contains existing highlights
+                            const fragment = savedRange.cloneContents();
+                            const hasExistingHighlight = fragment.querySelector('span[style*="background"]');
+
+                            if (hasExistingHighlight) {
+                                // Extract and replace existing highlight
+                                const extractedContent = savedRange.extractContents();
+                                const textContent = extractedContent.textContent;
+                                const textNode = document.createTextNode(textContent);
+                                savedRange.insertNode(textNode);
+
+                                // Create new range for the text we just inserted
+                                const newRange = document.createRange();
+                                newRange.selectNodeContents(textNode);
+                                savedRange = newRange;
+                            }
+
+                            // Apply the new highlight
+                            const span = document.createElement('span');
+                            span.style.backgroundColor = color;
+                            span.style.padding = '1px 0';
+                            span.style.borderRadius = '2px';
+
+                            savedRange.surroundContents(span);
+                        } catch (e) {
+                            // If surroundContents fails, use alternative approach
+                            try {
+                                const contents = savedRange.extractContents();
+                                const span = document.createElement('span');
+                                span.style.backgroundColor = color;
+                                span.style.padding = '1px 0';
+                                span.style.borderRadius = '2px';
+                                span.appendChild(contents);
+                                savedRange.insertNode(span);
+                            } catch (err) {
+                                console.error('Error applying highlight:', err);
+                            }
+                        }
+                    }
+
+                    // Clear the saved range
+                    savedRange = null;
+
+                    // Clear selection
+                    window.getSelection().removeAllRanges();
+
+                    // Save the updated HTML back to the database
+                    const updatedSummary = summaryText.innerHTML;
+                    api.updateInsight(insight.id, {
+                        summary: updatedSummary
+                    }).then(response => {
+                        if (response.success) {
+                            showNotification(color === 'transparent' ? 'Highlight removed!' : 'Highlight applied!', 'success');
+                        } else {
+                            showNotification('Failed to save highlight', 'error');
+                        }
+                    }).catch(error => {
+                        console.error('Error saving highlight:', error);
+                        showNotification('Failed to save highlight', 'error');
+                    });
+                } else {
+                    showNotification('Please select text to highlight', 'info');
+                }
+            });
+        });
+    }
 }
 
 // 设置标题编辑功能
 function setupTitleEditing() {
+    // 重置任何现有的编辑模式
+    resetTitleEditMode();
+    
     const editTitleBtn = document.getElementById('editTitleBtn');
     const titleElement = document.getElementById('modalContentTitle');
     const titleContainer = document.querySelector('.title-with-edit');
     
     if (!editTitleBtn || !titleElement || !titleContainer) return;
+    
+    // 防止重复添加事件监听器
+    if (editTitleBtn.dataset.hasListener) return;
+    editTitleBtn.dataset.hasListener = 'true';
     
     // 编辑按钮点击事件
     editTitleBtn.addEventListener('click', () => {
@@ -7082,6 +7696,9 @@ function setupTitleEditing() {
     // 进入标题编辑模式
     function enterTitleEditMode() {
         const currentTitle = titleElement.textContent;
+        
+        // 检查是否已经在编辑模式，防止重复创建输入框
+        if (titleContainer.classList.contains('title-edit-mode')) return;
         
         // 添加编辑模式类
         titleContainer.classList.add('title-edit-mode');
@@ -7267,17 +7884,24 @@ function startSmartAISummaryRefresh(insightId) {
         // 设置新的定时器
         const timeoutId = setTimeout(async () => {
         try {
-            console.log(`🔄 Auto-refreshing AI summary for insight ${insightId}`);
-            
+            const timestamp = new Date().toISOString();
+            console.log(`🔄 [${timestamp}] Auto-refreshing AI summary for insight ${insightId} (attempt ${checkCount + 1}/${maxChecks})`);
+
             // 获取最新的insight数据
             const response = await api.getInsight(insightId);
+            console.log(`🔍 [${timestamp}] DEBUG: API response for getInsight:`, response);
+
             if (response?.success && response.data) {
                 const insight = response.data;
+                console.log('🔍 DEBUG: insight.insight_contents:', insight.insight_contents);
                 let summary = '';
-                
+
                 // 检查是否有摘要内容
                 if (insight.insight_contents && insight.insight_contents.length > 0) {
                     summary = insight.insight_contents[0].summary;
+                    console.log('🔍 DEBUG: Found summary:', summary ? `${summary.substring(0, 100)}...` : 'EMPTY');
+                } else {
+                    console.log('🔍 DEBUG: No insight_contents in response');
                 }
                 
                 // 如果摘要已经生成，更新UI并停止刷新
@@ -7287,21 +7911,49 @@ function startSmartAISummaryRefresh(insightId) {
                     
                     // 只有在模态框打开且是当前insight时才更新UI
                     if (summaryText && modal && modal.classList.contains('show') && currentDetailInsight && currentDetailInsight.id === insightId) {
-                        summaryText.textContent = summary;
-                        // 同时更新currentDetailInsight的数据
-                        if (currentDetailInsight.insight_contents && currentDetailInsight.insight_contents.length > 0) {
-                            currentDetailInsight.insight_contents[0].summary = summary;
-                        }
-                        console.log(`✅ AI summary updated for insight ${insightId}`);
+                        // Add a smooth fade-in animation
+                        summaryText.style.opacity = '0';
+                        summaryText.style.transition = 'opacity 0.5s ease-in-out';
+
+                        setTimeout(() => {
+                            // Use innerHTML to preserve highlight tags
+                            summaryText.innerHTML = summary;
+                            summaryText.style.opacity = '1';
+
+                            // 同时更新currentDetailInsight的数据
+                            if (!currentDetailInsight.insight_contents) {
+                                currentDetailInsight.insight_contents = [];
+                            }
+                            if (currentDetailInsight.insight_contents.length === 0) {
+                                currentDetailInsight.insight_contents.push({ summary: summary });
+                            } else {
+                                currentDetailInsight.insight_contents[0].summary = summary;
+                            }
+
+                            console.log(`✅ AI summary updated in modal for insight ${insightId}`);
+
+                            // Show a subtle notification
+                            showNotification('AI summary loaded', 'success');
+                        }, 100);
                     }
                     
                     // 更新全局insights数据
                     const insightIndex = currentInsights.findIndex(i => i.id === insightId);
-                    if (insightIndex !== -1 && currentInsights[insightIndex].insight_contents && currentInsights[insightIndex].insight_contents.length > 0) {
-                        currentInsights[insightIndex].insight_contents[0].summary = summary;
+                    if (insightIndex !== -1) {
+                        // 确保insight_contents数组存在
+                        if (!currentInsights[insightIndex].insight_contents) {
+                            currentInsights[insightIndex].insight_contents = [];
+                        }
+                        if (currentInsights[insightIndex].insight_contents.length === 0) {
+                            currentInsights[insightIndex].insight_contents.push({ summary: summary });
+                        } else {
+                            currentInsights[insightIndex].insight_contents[0].summary = summary;
+                        }
                         // 同时更新window.currentInsights
                         window.currentInsights = currentInsights;
                         console.log(`📝 Updated global insights data for insight ${insightId}`);
+                    } else {
+                        console.warn(`⚠️ Insight ${insightId} not found in currentInsights array`);
                     }
                     
                     // 清除定时器，停止刷新
@@ -7315,11 +7967,22 @@ function startSmartAISummaryRefresh(insightId) {
                 // 递增检查次数并设置下次检查
                 checkCount++;
                 checkSummary();
+            } else {
+                console.warn(`⚠️ API call failed or returned no data for insight ${insightId}`);
+                // 继续重试
+                checkCount++;
+                checkSummary();
             }
         } catch (error) {
-            console.warn(`⚠️ Failed to refresh AI summary for insight ${insightId}:`, error);
-            // 出错时停止刷新
-            aiSummaryRefreshTimeouts.delete(insightId);
+            console.error(`❌ Error refreshing AI summary for insight ${insightId}:`, error);
+            console.error('Error stack:', error.stack);
+            // 继续重试而不是停止
+            checkCount++;
+            if (checkCount < maxChecks) {
+                checkSummary();
+            } else {
+                aiSummaryRefreshTimeouts.delete(insightId);
+            }
         }
     }, currentInterval);
     
@@ -7389,8 +8052,8 @@ function toggleEditMode() {
         editBtnText.textContent = 'Edit';
         document.body.classList.remove('edit-mode');
         
-        // Remove template card
-        removeTemplateCard();
+        // Keep template card (no longer removing it when exiting edit mode)
+        // Template card is now always visible
         
         // Remove shaking animation from all content cards
         const contentCards = document.querySelectorAll('.content-card');
@@ -7398,22 +8061,16 @@ function toggleEditMode() {
             card.classList.remove('shake');
         });
         
-        // Update pagination UI after removing template card
+        // Update pagination UI
         // Use debounced version to avoid multiple rapid updates
         debouncedUpdatePaginationUI();
     }
 }
 
-// Add template card for adding new content - only visible in edit mode
+// Add template card for adding new content - always visible
 function addTemplateCard() {
     const contentCards = document.getElementById('contentCards');
     if (!contentCards) return;
-    
-    // Only add template card if we're in edit mode
-    if (!isEditMode) {
-        console.log('ℹ️ Not in edit mode, skipping template card addition');
-        return;
-    }
     
     // Check if template card already exists
     if (contentCards.querySelector('.template-card')) return;
@@ -7521,6 +8178,12 @@ function showCreationOptionsModal() {
     const closeBtn = document.getElementById('closeCreationOptionsModal');
     const createCardOption = document.getElementById('createCardOption');
     const createStackOption = document.getElementById('createStackOption');
+    
+    // Hide stack option when inside a stack view
+    if (viewMode === 'stack') {
+        createStackOption.style.display = 'none';
+        console.log('🚫 Stack creation disabled - already in stack view');
+    }
     
     closeBtn.addEventListener('click', hideCreationOptionsModal);
     modalOverlay.addEventListener('click', (e) => {
@@ -7858,12 +8521,10 @@ function updateEditModeState() {
     const editModeBtn = document.getElementById('editModeBtn');
     const editBtnText = editModeBtn ? editModeBtn.querySelector('.edit-btn-text') : null;
     
-    // Only ensure template card exists if in edit mode
-    if (isEditMode) {
-        const existingTemplateCard = document.querySelector('.template-card');
-        if (!existingTemplateCard) {
-            addTemplateCard();
-        }
+    // Ensure template card always exists
+    const existingTemplateCard = document.querySelector('.template-card');
+    if (!existingTemplateCard) {
+        addTemplateCard();
     }
     
     if (isEditMode) {
@@ -7939,61 +8600,69 @@ function setupCardDragAndDrop(card, insight) {
 function startDrag(card, event) {
     draggedCard = card;
     const rect = card.getBoundingClientRect();
-    
+
     dragOffset.x = event.clientX - rect.left;
     dragOffset.y = event.clientY - rect.top;
-    
+
     // Add dragging class
     card.classList.add('dragging');
     card.classList.remove('shake'); // Stop shaking while dragging
-    
+
     // Create ghost element
     const ghost = card.cloneNode(true);
     ghost.classList.add('drag-ghost');
     ghost.classList.remove('dragging'); // Remove dragging class from ghost
-    ghost.style.position = 'fixed';
-    ghost.style.pointerEvents = 'none';
-    ghost.style.zIndex = '10000';
-    ghost.style.width = rect.width + 'px';
-    ghost.style.height = rect.height + 'px';
-    ghost.style.transform = 'rotate(2deg) scale(1.05)';
-    ghost.style.opacity = '0.95';
-    ghost.style.transition = 'none';
-    ghost.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.3)';
-    ghost.style.border = '2px solid var(--quest-purple)';
+    ghost.style.cssText = `
+        position: fixed;
+        pointer-events: none;
+        z-index: 10000;
+        width: ${rect.width}px;
+        height: ${rect.height}px;
+        opacity: 0.95;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        border: 2px solid var(--quest-purple);
+        will-change: left, top;
+        border-radius: var(--radius-lg);
+        background: white;
+        cursor: grabbing;
+        transform: rotate(2deg) scale(1.05);
+        transition: none;
+    `;
     document.body.appendChild(ghost);
-    
+
     // Position ghost
     updateGhostPosition(ghost, event);
-    
-    // Add event listeners
-    document.addEventListener('mousemove', handleDragMove);
+
+    // Add event listeners with passive: false for smooth dragging
+    document.addEventListener('mousemove', handleDragMove, { passive: false });
     document.addEventListener('mouseup', handleDragEnd);
-    document.addEventListener('touchmove', handleDragMove);
+    document.addEventListener('touchmove', handleDragMove, { passive: false });
     document.addEventListener('touchend', handleDragEnd);
 }
 
 // Handle drag move
 function handleDragMove(e) {
     if (!draggedCard) return;
-    
+
+    e.preventDefault(); // Prevent default to ensure smooth dragging
+
     const event = e.touches ? e.touches[0] : e;
     const ghost = document.querySelector('.drag-ghost');
-    
+
     if (ghost) {
         updateGhostPosition(ghost, event);
     }
-    
+
     // Check for potential stack creation
     checkForStackHover(event);
 }
 
 // Update ghost position
 function updateGhostPosition(ghost, event) {
-    const left = (event.clientX - dragOffset.x) + 'px';
-    const top = (event.clientY - dragOffset.y) + 'px';
-    ghost.style.left = left;
-    ghost.style.top = top;
+    const left = (event.clientX - dragOffset.x);
+    const top = (event.clientY - dragOffset.y);
+    ghost.style.left = left + 'px';
+    ghost.style.top = top + 'px';
 }
 
 // Check if dragging over a stack for joining
@@ -8369,7 +9038,7 @@ function createStackCard(stackData) {
     const card = document.createElement('div');
     card.className = 'content-card stack-card';
     card.dataset.stackId = stackData.id;
-    
+
     // Add delete button for edit mode
     const editDeleteBtn = document.createElement('button');
     editDeleteBtn.className = 'content-card-delete-btn';
@@ -8380,132 +9049,322 @@ function createStackCard(stackData) {
         deleteStack(stackData.id);
     };
     card.appendChild(editDeleteBtn);
-    
+
     // Stack visual indicator - removed count display
     // const stackIndicator = document.createElement('div');
     // stackIndicator.className = 'stack-indicator';
     // stackIndicator.innerHTML = `<span class="stack-count">${stackData.cards.length}</span>`;
     // card.appendChild(stackIndicator);
-    
-    // Use first card's image as preview, or deterministic random image if no image
-    const firstCard = stackData.cards[0];
-    const imageContainer = document.createElement('div');
-    imageContainer.className = 'content-card-image-container';
-    
-    const img = document.createElement('img');
-    img.src = (firstCard && firstCard.image_url) ? firstCard.image_url : getDeterministicRandomImage(stackData.id);
-    img.alt = firstCard ? (firstCard.title || 'Stack Preview') : 'Stack Preview';
-    img.className = 'content-card-image';
-    img.loading = 'lazy';
-    
-    // Image loading error handling
-    img.onerror = function() {
-        // If the original image fails to load and we haven't tried a random image yet, try a random one
-        if (firstCard && firstCard.image_url && !this.dataset.randomImageUsed) {
-            this.src = getDeterministicRandomImage(stackData.id);
-            this.dataset.randomImageUsed = 'true';
+
+    // Folder-style visual (entire card wrapper with folder design)
+    card.style.cssText = `
+        background: transparent;
+        border: none;
+        padding: 8px;
+        position: relative;
+    `;
+
+    // Create folder structure wrapper
+    const folderWrapper = document.createElement('div');
+    folderWrapper.style.cssText = `
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    // Folder tab at the very top
+    const folderTab = document.createElement('div');
+    folderTab.style.cssText = `
+        width: 60px;
+        height: 12px;
+        background: linear-gradient(145deg, #f0f4f8, #d6e1ec);
+        border: 1px solid #c7d2dc;
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        margin-left: 12px;
+        z-index: 2;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    `;
+
+    // Folder body (replaces the image container)
+    const folderBody = document.createElement('div');
+    folderBody.className = 'content-card-image-container';
+    folderBody.style.cssText = `
+        background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+        border: 1px solid #c7d2dc;
+        border-radius: 0 12px 12px 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: box-shadow 0.2s ease;
+    `;
+
+    // Folder icon in the center
+    const folderIcon = document.createElement('div');
+    folderIcon.style.cssText = `
+        color: #64748b;
+        opacity: 0.6;
+    `;
+    folderIcon.innerHTML = `
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+    `;
+    folderBody.appendChild(folderIcon);
+
+    // Preview thumbnails (mini cards inside folder)
+    const previewContainer = document.createElement('div');
+    previewContainer.style.cssText = `
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        display: flex;
+        gap: 2px;
+    `;
+
+    // Show up to 3 preview thumbnails
+    const previewItems = stackData.cards.slice(0, 3);
+    previewItems.forEach((item, index) => {
+        const thumbnail = document.createElement('div');
+        thumbnail.style.cssText = `
+            width: 20px;
+            height: 14px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transform: translateX(${index * -2}px) translateY(${index * 1}px);
+            z-index: ${3 - index};
+        `;
+
+        if (item.image_url) {
+            const img = document.createElement('img');
+            img.src = item.image_url;
+            img.alt = item.title || 'Preview';
+            img.style.cssText = `
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            `;
+            img.onerror = () => {
+                thumbnail.innerHTML = '<div style="font-size: 8px; text-align: center; line-height: 14px;">📄</div>';
+            };
+            thumbnail.appendChild(img);
         } else {
-            // If random image also fails, hide the image
-            this.style.display = 'none';
-            this.parentElement.classList.add('no-image');
+            thumbnail.innerHTML = '<div style="font-size: 8px; text-align: center; line-height: 14px;">📄</div>';
         }
-    };
-    
-    imageContainer.appendChild(img);
-    card.appendChild(imageContainer);
-    
+
+        previewContainer.appendChild(thumbnail);
+    });
+    folderBody.appendChild(previewContainer);
+
+    // Assemble folder structure
+    folderWrapper.appendChild(folderTab);
+    folderWrapper.appendChild(folderBody);
+    card.appendChild(folderWrapper);
+
+    // Add hover effects
+    card.addEventListener('mouseenter', () => {
+        if (!isEditMode) {
+            card.style.transform = 'translateY(-2px)';
+            folderBody.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)';
+        }
+    });
+
+    card.addEventListener('mouseleave', () => {
+        if (!isEditMode) {
+            card.style.transform = 'translateY(0)';
+            folderBody.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+        }
+    });
+
     // Stack content
     const content = document.createElement('div');
     content.className = 'content-card-content';
-    
+
     // Card header - Top row with date and source info (matching insight card structure)
     const cardHeader = document.createElement('div');
     cardHeader.className = 'content-card-header';
-    
+
     // Top row: Date on left, item count on right (where source info would be)
     const topRow = document.createElement('div');
     topRow.className = 'content-card-top-row';
-    
+
     const headerDate = document.createElement('div');
     headerDate.className = 'content-card-date';
-    headerDate.textContent = new Date(stackData.createdAt).toLocaleDateString('en-US');
-    
+    headerDate.textContent = new Date(stackData.createdAt).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    });
+
     const itemCountInfo = document.createElement('div');
     itemCountInfo.className = 'content-card-source';
-    
+
     const itemCountLogo = document.createElement('div');
     itemCountLogo.className = 'content-card-source-logo';
     itemCountLogo.innerHTML = '📚'; // Stack icon
-    
+
     const itemCountName = document.createElement('span');
     itemCountName.className = 'content-card-source-name';
     itemCountName.textContent = `${stackData.cards.length} items`;
-    
+
     itemCountInfo.appendChild(itemCountLogo);
     itemCountInfo.appendChild(itemCountName);
-    
+
     topRow.appendChild(headerDate);
     topRow.appendChild(itemCountInfo);
-    
-    // Title below the top row
+
+    // Title below the top row (editable with visual hint)
+    const titleContainer = document.createElement('div');
+    titleContainer.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    `;
+
     const title = document.createElement('div');
-    title.className = 'content-card-title';
+    title.className = 'content-card-title stack-title-editable';
     title.textContent = stackData.name;
-    
+    title.setAttribute('contenteditable', 'true');
+    title.setAttribute('data-stack-id', stackData.id);
+    title.style.cssText = `
+        flex: 1;
+        cursor: text;
+        outline: none;
+        border-radius: 4px;
+        padding: 2px 4px;
+        transition: background-color 0.2s ease;
+    `;
+
+    // Edit hint icon
+    const editHintIcon = document.createElement('span');
+    editHintIcon.className = 'title-edit-hint';
+    editHintIcon.style.cssText = `
+        opacity: 0.4;
+        font-size: 12px;
+        transition: opacity 0.2s ease;
+    `;
+    editHintIcon.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+    `;
+
+    titleContainer.appendChild(title);
+    titleContainer.appendChild(editHintIcon);
+
     cardHeader.appendChild(topRow);
-    cardHeader.appendChild(title);
-    
-    // Description (editable)
+    cardHeader.appendChild(titleContainer);
+
+    // Description (editable) - made longer by removing footer and tag
     const description = document.createElement('div');
     description.className = 'content-card-description stack-description';
     description.setAttribute('data-stack-id', stackData.id);
+    description.style.cssText = `
+        min-height: 80px;
+        padding: 12px;
+        margin-bottom: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    `;
     description.innerHTML = `
-        <span class="description-text">${stackData.description || 'A collection of related content'}</span>
-        <button class="edit-description-btn" title="Edit description">
+        <span class="description-text" style="flex: 1; line-height: 1.5;">${stackData.description || 'A collection of related content'}</span>
+        <button class="edit-description-btn" title="Edit description" style="align-self: flex-end; margin-top: 8px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </button>
     `;
-    
-    // Footer with main tag
-    const footer = document.createElement('div');
-    footer.className = 'content-card-footer';
-    
-    const mainTag = document.createElement('div');
-    mainTag.className = 'content-card-tag-main';
-    mainTag.textContent = 'STACK';
-    
-    footer.appendChild(mainTag);
-    
-    // Assemble card content
+
+    // Assemble card content (removed footer with STACK tag)
     content.appendChild(cardHeader);
     content.appendChild(description);
-    content.appendChild(footer);
     card.appendChild(content);
     
-    // Click handler to navigate to stack view
-    card.addEventListener('click', (e) => {
+    // Click handler ONLY on folder area to navigate to stack view
+    folderWrapper.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        // Don't navigate if clicking on delete button or in edit mode
-        if (e.target.closest('.content-card-delete-btn') || isEditMode) {
+
+        // Don't navigate if in edit mode
+        if (isEditMode) {
             return;
         }
-        
+
         // Ensure stackData is properly initialized
         if (!stackData || !stackData.id) {
             console.error('❌ Invalid stack data:', stackData);
             return;
         }
-        
-        console.log('🖱️ Stack card clicked, navigating to stack view:', stackData.name);
-        
+
+        console.log('🖱️ Stack folder clicked, navigating to stack view:', stackData.name);
+
         // Navigate to stack view
         navigateToStack(stackData.id);
     });
-    
+
+    // Stop propagation on content area to prevent navigation when editing
+    content.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // Add title editing functionality
+    title.addEventListener('focus', (e) => {
+        e.stopPropagation();
+        title.style.backgroundColor = 'rgba(139, 92, 246, 0.1)';
+        editHintIcon.style.opacity = '0.7';
+    });
+
+    title.addEventListener('blur', async (e) => {
+        e.stopPropagation();
+        title.style.backgroundColor = '';
+        editHintIcon.style.opacity = '0.4';
+
+        const newName = title.textContent.trim();
+        const oldName = stackData.name;
+
+        if (newName && newName !== oldName) {
+            try {
+                await updateStackName(stackData.id, newName);
+                stackData.name = newName;
+                showNotification('Stack name updated successfully', 'success');
+            } catch (error) {
+                console.error('❌ Error updating stack name:', error);
+                title.textContent = oldName; // Revert on error
+                showErrorMessage('Failed to update stack name');
+            }
+        } else if (!newName) {
+            title.textContent = oldName; // Revert if empty
+        }
+    });
+
+    title.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            title.blur();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            title.textContent = stackData.name;
+            title.blur();
+        }
+    });
+
+    title.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
     // Add event listener for edit description button
     const editDescriptionBtn = description.querySelector('.edit-description-btn');
     if (editDescriptionBtn) {
@@ -8515,7 +9374,7 @@ function createStackCard(stackData) {
             startInlineDescriptionEdit(stackData.id, description);
         });
     }
-    
+
     // Add event listener for description text click (also starts editing)
     const descriptionText = description.querySelector('.description-text');
     if (descriptionText) {
@@ -9044,38 +9903,47 @@ async function deleteStack(stackId) {
             return;
         }
         
-        if (stackData) {
-            // Remove stack_id from all insights in the stack via insights API
-            const removePromises = stackData.cards.map(card => 
-                api.removeItemFromStack(parseInt(stackId), card.id)
-            );
-            
-            const responses = await Promise.all(removePromises);
-            
-            // Check if all updates were successful
-            const allSuccessful = responses.every(response => response.success);
-            
-            if (allSuccessful) {
-                // 更新缓存和数据
-                saveInsightsToLocalStorage({ force: true });
-                
-                // Invalidate ALL page caches since pagination has changed
-                pageCache.clear();
-                loadedPages.clear();
-                
-                // Clear GET cache to prevent stale data
-                if (window.apiCache) {
-                    window.apiCache.clearPattern('/api/v1/insights');
-                    window.apiCache.clearPattern('/api/v1/stacks');
-                }
-                
-                // Update pagination counts
-                updatePaginationCounts();
-                
-                console.log('✅ 堆叠删除成功:', stackId);
-            } else {
-                throw new Error('Failed to remove stack_id from insights');
+        // Delete the stack via API (this also removes stack_id from all insights)
+        const response = await api.deleteStack(parseInt(stackId));
+
+        if (response.success) {
+            // Update local data - set stack_id to null for all insights that were in this stack
+            if (stackData) {
+                stackData.cards.forEach(card => {
+                    card.stack_id = null;
+                    // Also update in allInsightsForFiltering if it exists
+                    if (window.allInsightsForFiltering) {
+                        const insightInGlobalArray = window.allInsightsForFiltering.find(i => i.id === card.id);
+                        if (insightInGlobalArray) {
+                            insightInGlobalArray.stack_id = null;
+                        }
+                    }
+                });
             }
+
+            // 更新缓存和数据
+            saveInsightsToLocalStorage({ force: true });
+
+            // Invalidate ALL page caches since pagination has changed
+            pageCache.clear();
+            loadedPages.clear();
+
+            // Clear GET cache to prevent stale data
+            if (window.apiCache) {
+                window.apiCache.clearPattern('/api/v1/insights');
+                window.apiCache.clearPattern('/api/v1/stacks');
+            }
+
+            // Update pagination counts
+            updatePaginationCounts();
+
+            // Refresh the view to show the insights that were in the stack
+            await renderInsights();
+
+            console.log('✅ Stack deleted successfully:', stackId);
+            showNotification('Stack deleted successfully. Items have been moved back to your space.', 'success');
+        } else {
+            throw new Error('Failed to delete stack from database');
         }
     } catch (error) {
         console.error('❌ API删除堆叠失败，回滚UI状态:', error);
@@ -9862,7 +10730,11 @@ function createStackHorizontalCard(insight, stackId) {
     
     const headerDate = document.createElement('div');
     headerDate.className = 'content-card-date';
-    headerDate.textContent = new Date(insight.created_at).toLocaleDateString('en-US');
+    headerDate.textContent = new Date(insight.created_at).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    });
     
     const sourceInfo = document.createElement('div');
     sourceInfo.className = 'content-card-source';
@@ -9948,7 +10820,10 @@ function createStackHorizontalCard(insight, stackId) {
     tag.textContent = tagText;
     tag.dataset.tagId = tagId || '';
     tag.dataset.insightId = insight.id;
-    
+
+    // Hide tag from UI (keep logic intact)
+    tag.style.display = 'none';
+
     // Make tag clickable to edit tags
     tag.style.cursor = 'pointer';
     tag.onclick = () => openTagEditModal(insight);
@@ -10730,10 +11605,17 @@ function hideInlineTagEditor() {
 }
 
 // Update primary tag display
-function updatePrimaryTagDisplay(primaryTag) {
+function updatePrimaryTagDisplay() {
     const primaryTagElement = document.getElementById('primaryTag');
-    if (primaryTagElement && primaryTag) {
-        primaryTagElement.textContent = primaryTag.name;
+    if (primaryTagElement) {
+        // Hide the tag badge completely
+        primaryTagElement.style.display = 'none';
+    }
+
+    // Also hide the entire meta row that contains the tag
+    const metaRow = document.querySelector('.modal-meta-row');
+    if (metaRow) {
+        metaRow.style.display = 'none';
     }
 }
 
